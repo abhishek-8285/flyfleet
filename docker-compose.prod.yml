@@ -1,0 +1,388 @@
+version: '3.8'
+
+networks:
+  flyfleet-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
+  grafana_data:
+  prometheus_data:
+
+services:
+  # Traefik Reverse Proxy with automatic HTTPS
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.myresolver.acme.email=your-email@example.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.yourdomain.com`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+    restart: unless-stopped
+
+  # PostgreSQL with TimescaleDB
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: flyfleet-postgres
+    environment:
+      POSTGRES_DB: fleetdb
+      POSTGRES_USER: fleet
+      POSTGRES_PASSWORD: fleet
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - flyfleet-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleet -d fleetdb"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: flyfleet-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-fleet_redis_secret}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - flyfleet-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # NATS JetStream for messaging
+  nats:
+    image: nats:latest
+    container_name: flyfleet-nats
+    command: ["--jetstream", "--config", "/etc/nats/nats.conf"]
+    volumes:
+      - nats_data:/data
+      - ./configs/nats.conf:/etc/nats/nats.conf:ro
+    ports:
+      - "4222:4222"
+      - "6222:6222"
+      - "8222:8222"
+    networks:
+      - flyfleet-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/varz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # Centrifugo WebSocket server
+  centrifugo:
+    image: centrifugo/centrifugo:latest
+    container_name: flyfleet-centrifugo
+    command: ["centrifugo", "serve", "--config", "/centrifugo/config.json"]
+    volumes:
+      - ./configs/centrifugo-config.json:/centrifugo/config.json:ro
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    networks:
+      - flyfleet-net
+    restart: unless-stopped
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-auth-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key}
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`api.yourdomain.com`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.services.auth.loadbalancer.server.port=8080"
+    restart: unless-stopped
+
+  # Vehicle Service
+  vehicle-service:
+    build:
+      context: ./services/vehicle-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-vehicle-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      NATS_URL: nats://nats:4222
+      PORT: 8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vehicle.rule=Host(`api.yourdomain.com`) && PathPrefix(`/vehicles`)"
+      - "traefik.http.routers.vehicle.entrypoints=websecure"
+      - "traefik.http.services.vehicle.loadbalancer.server.port=8081"
+    restart: unless-stopped
+
+  # Tracking Service
+  tracking-service:
+    build:
+      context: ./services/tracking-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-tracking-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      NATS_URL: nats://nats:4222
+      PORT: 8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tracking.rule=Host(`api.yourdomain.com`) && PathPrefix(`/telemetry`)"
+      - "traefik.http.routers.tracking.entrypoints=websecure"
+      - "traefik.http.services.tracking.loadbalancer.server.port=8082"
+    restart: unless-stopped
+
+  # Driver Service
+  driver-service:
+    build:
+      context: ./services/driver-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-driver-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      NATS_URL: nats://nats:4222
+      PORT: 8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.driver.rule=Host(`api.yourdomain.com`) && PathPrefix(`/drivers`)"
+      - "traefik.http.routers.driver.entrypoints=websecure"
+      - "traefik.http.services.driver.loadbalancer.server.port=8083"
+    restart: unless-stopped
+
+  # Trip Service
+  trip-service:
+    build:
+      context: ./services/trip-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-trip-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      NATS_URL: nats://nats:4222
+      OSRM_URL: http://osrm:5000
+      PORT: 8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.trip.rule=Host(`api.yourdomain.com`) && PathPrefix(`/trips`)"
+      - "traefik.http.routers.trip.entrypoints=websecure"
+      - "traefik.http.services.trip.loadbalancer.server.port=8084"
+    restart: unless-stopped
+
+  # Alert Service
+  alert-service:
+    build:
+      context: ./services/alert-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-alert-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      NATS_URL: nats://nats:4222
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMS_API_KEY: ${SMS_API_KEY}
+      PORT: 8085
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alert.rule=Host(`api.yourdomain.com`) && PathPrefix(`/alerts`)"
+      - "traefik.http.routers.alert.entrypoints=websecure"
+      - "traefik.http.services.alert.loadbalancer.server.port=8085"
+    restart: unless-stopped
+
+  # Geofencing Service
+  geofencing-service:
+    build:
+      context: ./services/geofencing-service
+      dockerfile: Dockerfile
+    container_name: flyfleet-geofencing-service
+    environment:
+      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      NATS_URL: nats://nats:4222
+      PORT: 8086
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      - flyfleet-net
+    restart: unless-stopped
+
+  # API Gateway (Caddy)
+  api-gateway:
+    image: caddy:2-alpine
+    container_name: flyfleet-api-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - flyfleet-net
+    depends_on:
+      - auth-service
+      - vehicle-service
+      - tracking-service
+      - driver-service
+      - trip-service
+      - alert-service
+    restart: unless-stopped
+
+  # OSRM Routing Service
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: flyfleet-osrm
+    command: sh -c "osrm-datastore /data/india-latest.osrm && osrm-routed --algorithm mld /data/india-latest.osrm"
+    volumes:
+      - ./data/osrm:/data
+    ports:
+      - "5000:5000"
+    networks:
+      - flyfleet-net
+    restart: unless-stopped
+
+  # Monitoring Stack: Prometheus + Grafana
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flyfleet-prometheus
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - flyfleet-net
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: flyfleet-grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - flyfleet-net
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Backup service
+  backup:
+    image: tiredofit/db-backup
+    container_name: flyfleet-backup
+    volumes:
+      - ./backups:/backup
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      BACKUP_DIR: /backup
+      DAYS_TO_KEEP: 30
+      SCHEDULE: 0 2 * * *
+      DB_TYPE: postgresql
+      DB_HOST: postgres
+      DB_NAME: fleetdb
+      DB_USER: fleet
+      DB_PASS: fleet
+      HEALTHCHECK_SMTP: ${HEALTHCHECK_SMTP:-""}
+    networks:
+      - flyfleet-net
+    depends_on:
+      - postgres
+    restart: unless-stopped

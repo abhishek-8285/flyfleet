@@ -1,0 +1,17 @@
+go 1.25.7
+
+use (
+	./services/alert-service
+	./services/analytics-service
+	./services/auth-service
+	./services/driver-service
+	./services/geofencing-service
+	./services/india-integration-service
+	./services/maintenance-service
+	./services/route-optimization-service
+	./services/tracking-service
+	./services/trip-service
+	./services/vehicle-service
+	./services/video-service
+	./packages/common/go
+)

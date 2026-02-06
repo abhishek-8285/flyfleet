@@ -1,0 +1,99 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert.rules"
+
+scrape_configs:
+  # Self monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Auth Service
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Vehicle Service
+  - job_name: 'vehicle-service'
+    static_configs:
+      - targets: ['vehicle-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Driver Service
+  - job_name: 'driver-service'
+    static_configs:
+      - targets: ['driver-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Trip Service
+  - job_name: 'trip-service'
+    static_configs:
+      - targets: ['trip-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Maintenance Service
+  - job_name: 'maintenance-service'
+    static_configs:
+      - targets: ['maintenance-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Tracking Service
+  - job_name: 'tracking-service'
+    static_configs:
+      - targets: ['tracking-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Alert Service
+  - job_name: 'alert-service'
+    static_configs:
+      - targets: ['alert-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Geofencing Service
+  - job_name: 'geofencing-service'
+    static_configs:
+      - targets: ['geofencing-service:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Database
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # NATS
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats-exporter:7777']
+    scrape_interval: 30s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093

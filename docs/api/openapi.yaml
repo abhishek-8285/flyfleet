@@ -1,0 +1,675 @@
+openapi: 3.0.3
+info:
+  title: FlyFleet API
+  description: |
+    Enterprise Fleet Management Platform API
+    
+    ## Key Features
+    - Real-time vehicle tracking and monitoring
+    - Intelligent trip management and dispatch
+    - Predictive maintenance scheduling
+    - Driver management and performance tracking
+    - Analytics and reporting
+    - Payment processing integration
+    - Geofencing and alerting
+    
+    ## Authentication
+    All API endpoints require a valid JWT token in the Authorization header:
+    `Authorization: Bearer <token>`
+    
+    ## Rate Limiting
+    - 1000 requests per hour for authenticated users
+    - 100 requests per hour for anonymous endpoints
+  version: 1.0.0
+  contact:
+    name: FlyFleet API Support
+    email: api-support@flyfleet.com
+  license:
+    name: Proprietary
+    url: https://flyfleet.com/terms
+
+servers:
+  - url: https://api.flyfleet.com/v1
+    description: Production server
+  - url: https://staging-api.flyfleet.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticate user and receive JWT token
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+        '429':
+          description: Too many requests
+
+  /vehicles:
+    get:
+      summary: List vehicles
+      description: Retrieve vehicles with optional filtering
+      tags: [Vehicles]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/status'
+        - name: license_plate
+          in: query
+          schema:
+            type: string
+          description: Filter by license plate
+      responses:
+        '200':
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleListResponse'
+    
+    post:
+      summary: Create vehicle
+      description: Register a new vehicle in the fleet
+      tags: [Vehicles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVehicleRequest'
+      responses:
+        '201':
+          description: Vehicle created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+
+  /vehicles/{id}:
+    get:
+      summary: Get vehicle details
+      description: Retrieve detailed information about a specific vehicle
+      tags: [Vehicles]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Vehicle details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '404':
+          description: Vehicle not found
+
+  /drivers:
+    get:
+      summary: List drivers
+      description: Retrieve drivers with optional filtering
+      tags: [Drivers]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended]
+      responses:
+        '200':
+          description: List of drivers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverListResponse'
+
+  /trips:
+    get:
+      summary: List trips
+      description: Retrieve trips with filtering and pagination
+      tags: [Trips]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [requested, assigned, in_progress, completed, cancelled]
+        - name: driver_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicle_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripListResponse'
+    
+    post:
+      summary: Create trip
+      description: Request a new trip
+      tags: [Trips]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTripRequest'
+      responses:
+        '201':
+          description: Trip created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+
+  /maintenance/schedules:
+    get:
+      summary: List maintenance schedules
+      description: Retrieve maintenance schedules with filtering
+      tags: [Maintenance]
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [scheduled, in_progress, completed, cancelled]
+        - name: vehicle_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of maintenance schedules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceScheduleListResponse'
+    
+    post:
+      summary: Create maintenance schedule
+      description: Schedule vehicle maintenance
+      tags: [Maintenance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMaintenanceScheduleRequest'
+      responses:
+        '201':
+          description: Maintenance schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceSchedule'
+
+  /tracking/vehicles/{id}/location:
+    get:
+      summary: Get vehicle location
+      description: Retrieve current location of a vehicle
+      tags: [Tracking]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: timestamp
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Specific timestamp for location history
+      responses:
+        '200':
+          description: Vehicle location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleLocation'
+
+  /analytics/dashboard:
+    get:
+      summary: Get dashboard analytics
+      description: Retrieve key metrics and statistics for dashboard
+      tags: [Analytics]
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [today, week, month, quarter, year]
+        - name: org_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMetrics'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+    
+    pageSize:
+      name: page_size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page
+    
+    status:
+      name: status
+      in: query
+      schema:
+        type: string
+      description: Filter by status
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, driver, customer]
+        org_id:
+          type: string
+          format: uuid
+    
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        license_plate:
+          type: string
+          example: "KA01AB1234"
+        model:
+          type: string
+          example: "Toyota Innova"
+        make:
+          type: string
+          example: "Toyota"
+        year:
+          type: integer
+          example: 2023
+        status:
+          type: string
+          enum: [active, inactive, maintenance, retired]
+        capacity:
+          type: integer
+          example: 7
+        fuel_type:
+          type: string
+          enum: [petrol, diesel, electric, hybrid]
+        current_location:
+          $ref: '#/components/schemas/GeoPoint'
+    
+    CreateVehicleRequest:
+      type: object
+      required:
+        - license_plate
+        - model
+        - make
+        - year
+      properties:
+        license_plate:
+          type: string
+        model:
+          type: string
+        make:
+          type: string
+        year:
+          type: integer
+        capacity:
+          type: integer
+        fuel_type:
+          type: string
+          enum: [petrol, diesel, electric, hybrid]
+    
+    VehicleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehicle'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    
+    Driver:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        license_number:
+          type: string
+        rating:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        current_location:
+          $ref: '#/components/schemas/GeoPoint'
+    
+    DriverListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Driver'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    
+    Trip:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        driver_id:
+          type: string
+          format: uuid
+        vehicle_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [requested, assigned, accepted, in_progress, completed, cancelled]
+        pickup_location:
+          $ref: '#/components/schemas/GeoPoint'
+        dropoff_location:
+          $ref: '#/components/schemas/GeoPoint'
+        distance:
+          type: number
+          format: float
+        duration:
+          type: integer
+        price:
+          type: number
+          format: float
+        created_at:
+          type: string
+          format: date-time
+    
+    CreateTripRequest:
+      type: object
+      required:
+        - pickup_location
+        - dropoff_location
+      properties:
+        pickup_location:
+          $ref: '#/components/schemas/GeoPoint'
+        dropoff_location:
+          $ref: '#/components/schemas/GeoPoint'
+        preferred_time:
+          type: string
+          format: date-time
+        passenger_count:
+          type: integer
+          minimum: 1
+    
+    TripListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Trip'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    
+    MaintenanceSchedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        vehicle_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [routine, preventive, corrective, emergency]
+        name:
+          type: string
+        description:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+        due_odometer:
+          type: integer
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [scheduled, in_progress, completed, cancelled]
+        estimated_cost:
+          type: number
+          format: float
+    
+    CreateMaintenanceScheduleRequest:
+      type: object
+      required:
+        - vehicle_id
+        - type
+        - name
+        - due_date
+      properties:
+        vehicle_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [routine, preventive, corrective, emergency]
+        name:
+          type: string
+        description:
+          type: string
+        due_date:
+          type: string
+          format: date-time
+        due_odometer:
+          type: integer
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+    
+    MaintenanceScheduleListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceSchedule'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+    
+    VehicleLocation:
+      type: object
+      properties:
+        vehicle_id:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        speed:
+          type: number
+          format: float
+        heading:
+          type: number
+          format: float
+        timestamp:
+          type: string
+          format: date-time
+    
+    DashboardMetrics:
+      type: object
+      properties:
+        total_vehicles:
+          type: integer
+        active_trips:
+          type: integer
+        completed_trips_today:
+          type: integer
+        revenue_today:
+          type: number
+          format: float
+        utilization_rate:
+          type: number
+          format: float
+        avg_trip_rating:
+          type: number
+          format: float
+    
+    GeoPoint:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        address:
+          type: string
+    
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer

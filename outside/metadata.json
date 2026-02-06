@@ -1,0 +1,5 @@
+{
+  "name": "FleetCommand Enterprise",
+  "description": "A high-fidelity enterprise fleet management authentication portal featuring login, MFA, and organization selection workflows with dark mode support.",
+  "requestFramePermissions": []
+}

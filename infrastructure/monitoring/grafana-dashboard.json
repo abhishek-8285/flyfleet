@@ -1,0 +1,217 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "FlyFleet Operations Dashboard",
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "type": "stat",
+        "title": "Active Vehicles",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(flyfleet_vehicle_status{status=\"active\"})",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Active Trips",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(flyfleet_trip_status{status=\"in_progress\"})",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Online Drivers",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "sum(flyfleet_driver_status{status=\"online\"})",
+            "instant": true
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "System Uptime",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "time() - process_start_time_seconds{job=\"api-gateway\"}",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "graph",
+        "title": "API Request Rate",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{handler}}"
+          }
+        ],
+        "xaxis": {
+          "mode": "time"
+        },
+        "yaxes": [
+          {
+            "format": "req/s",
+            "label": "Requests per second"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "type": "graph",
+        "title": "API Response Time",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))",
+            "legendFormat": "95th percentile - {{handler}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))",
+            "legendFormat": "Median - {{handler}}"
+          }
+        ],
+        "xaxis": {
+          "mode": "time"
+        },
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Response time"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "type": "graph",
+        "title": "Database Connections",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"flyfleet\"}",
+            "legendFormat": "Active connections"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "table",
+        "title": "Recent Alerts",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "format": "table"
+          }
+        ],
+        "columns": [
+          {"text": "Alert", "value": "__name__"},
+          {"text": "Severity", "value": "severity"},
+          {"text": "Instance", "value": "instance"},
+          {"text": "Time", "value": "Time"}
+        ]
+      },
+      {
+        "id": 9,
+        "type": "graph",
+        "title": "Vehicle Locations Updates/sec",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "rate(vehicle_location_updates_total[1m])",
+            "legendFormat": "Updates per second"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "type": "graph",
+        "title": "System Resource Usage",
+        "datasource": "Prometheus",
+        "targets": [
+          {
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU Usage %"
+          },
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory Usage %"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "iconColor": "rgba(255, 96, 96, 1)",
+          "enable": true,
+          "expr": "changes(process_start_time_seconds[1m]) > 0"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ]
+    }
+  }
+}

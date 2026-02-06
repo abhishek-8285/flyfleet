@@ -1,0 +1,30 @@
+{
+    "token_hmac_secret_key": "centrifugo-secret-key-change-in-production",
+    "admin_password": "admin",
+    "admin_secret": "admin-secret",
+    "api_key": "api-key",
+    "allowed_origins": [
+        "*"
+    ],
+    "port": 8000,
+    "engine": "redis",
+    "redis_address": "redis:6379",
+    "redis_db": 0,
+    "namespaces": [
+        {
+            "name": "gps",
+            "presence": true,
+            "join_leave": true,
+            "force_push_join_leave": true,
+            "history_size": 100,
+            "history_ttl": "300s"
+        },
+        {
+            "name": "notifications",
+            "presence": true,
+            "join_leave": true,
+            "history_size": 50,
+            "history_ttl": "600s"
+        }
+    ]
+}

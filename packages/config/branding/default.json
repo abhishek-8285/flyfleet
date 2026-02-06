@@ -1,0 +1,21 @@
+{
+  "companyName": "FlyFleet",
+  "productName": "FlyFleet Enterprise",
+  "tagline": "The Future of Fleet Intelligence",
+  "contact": {
+    "salesEmail": "sales@flyfleet.ai",
+    "supportEmail": "support@flyfleet.ai",
+    "phone": "+1 (555) 123-4567"
+  },
+  "branding": {
+    "primaryColor": "#137fec",
+    "logoUrl": "/logo.svg",
+    "faviconUrl": "/favicon.ico"
+  },
+  "legal": {
+    "copyrightYear": "2026",
+    "companyLegalName": "FlyFleet Inc.",
+    "privacyPolicyUrl": "/privacy",
+    "termsOfServiceUrl": "/terms"
+  }
+}

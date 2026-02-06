@@ -1,0 +1,344 @@
+# Qoder Skills Configuration for Fleet Management Platform
+
+skills:
+  # Go Backend Development
+  go:
+    patterns:
+      - "internal/**/*.go"
+      - "cmd/**/*.go"
+      - "pkg/**/*.go"
+    rules:
+      - "Use gin-gonic/gin for HTTP handlers"
+      - "Use jackc/pgx/v5 for PostgreSQL"
+      - "Use uber-go/zap for structured logging"
+      - "Use golang-jwt/jwt/v5 for authentication"
+      - "Use stretchr/testify for testing"
+      - "Follow clean architecture: handler -> service -> repository"
+      - "Always use context.Context as first parameter"
+      - "Return errors wrapped with fmt.Errorf and %w verb"
+      - "Use pgxpool for database connections"
+      - "Implement interface for testability"
+      - "Use functional options pattern for configuration"
+      - "Implement graceful shutdown for all services"
+      - "Use structured logging with contextual fields"
+      - "Implement circuit breakers for external calls"
+      - "Use connection pooling for all clients"
+      - "Use prepared statements for SQL queries"
+      - "Validate input with go-playground/validator"
+      - "Handle errors explicitly, never ignore"
+      - "Never use panic() in production code"
+      - "Never ignore errors from defer statements"
+      - "Use transactions for multi-statement operations"
+    conventions:
+      - "File naming: entity.go, service.go, repository.go, handler.go"
+      - "Struct naming: Entity (e.g., Vehicle, User, Trip)"
+      - "Interface naming: EntityService, EntityRepository"
+      - "Error naming: ErrEntityNotFound"
+      - "Test file naming: entity_test.go"
+
+  # Database & SQL
+  sql:
+    patterns:
+      - "migrations/**/*.sql"
+      - "**/*.sql"
+    rules:
+      - "Use TimescaleDB hypertables for time-series data"
+      - "Always add IF NOT EXISTS for idempotent migrations"
+      - "Use UUID primary keys with uuid_generate_v4()"
+      - "Add deleted_at for soft deletes"
+      - "Create BRIN indexes for time-series tables"
+      - "Use GEOGRAPHY type for spatial data"
+      - "Add compression policies for hypertables"
+      - "Set appropriate chunk_time_interval"
+      - "Always use migrations for schema changes"
+      - "Always add indexes for foreign keys and query patterns"
+      - "Always use transactions for multi-statement operations"
+      - "Never use SELECT * in production queries"
+      - "Always set appropriate retention policies for time-series data"
+      - "Use proper foreign key constraints"
+      - "Add CHECK constraints for data validation"
+      - "Always use EXPLAIN ANALYZE for query optimization"
+      - "Set up proper backup and recovery procedures"
+    naming:
+      tables: "snake_case, plural (e.g., gps_readings)"
+      columns: "snake_case"
+      indexes: "idx_table_column"
+
+  # React/TypeScript Frontend
+  react:
+    patterns:
+      - "web-admin/src/**/*.{ts,tsx}"
+    rules:
+      - "Use functional components with hooks"
+      - "Use Redux Toolkit for state management"
+      - "Use React-Leaflet for maps"
+      - "Use Recharts for data visualization"
+      - "Implement proper TypeScript interfaces"
+      - "Use Tailwind CSS for styling"
+      - "Follow feature-based folder structure"
+      - "Use React Query for server state management"
+      - "Implement optimistic updates for better UX"
+      - "Use virtual scrolling for large lists"
+      - "Implement proper loading skeletons"
+      - "Use error boundaries for crash isolation"
+      - "Define interfaces for all data structures"
+      - "Use proper error boundaries"
+      - "Implement loading states"
+      - "Never use any type - use unknown with type guards"
+      - "Always use React.memo for expensive renders"
+      - "Always clean up useEffect subscriptions"
+      - "Use absolute imports with path aliases (@/components, @/services)"
+    component_structure: |
+      ComponentName/
+        ├── index.tsx          # Main component
+        ├── ComponentName.tsx  # Component logic
+        ├── types.ts           # TypeScript interfaces
+        ├── hooks.ts           # Custom hooks
+        └── styles.ts          # Styled components (optional)
+
+  # Kotlin Android
+  kotlin:
+    patterns:
+      - "android-driver/**/*.kt"
+    rules:
+      - "Use Jetpack Compose for UI"
+      - "Use Hilt for dependency injection"
+      - "Use Room for local database"
+      - "Use Retrofit for API calls"
+      - "Use Kotlin Coroutines for async operations"
+      - "Use Flow for reactive streams"
+      - "Implement MVVM architecture"
+      - "Use sealed classes for state management"
+      - "Use ViewModel for UI logic"
+      - "Use Repository pattern for data access"
+      - "Handle permissions properly"
+      - "Never block main thread with I/O operations"
+      - "Always implement proper offline-first sync"
+      - "Use Kotlin DSL for build configuration"
+      - "Implement WorkManager for background tasks"
+      - "Use DataStore for preferences"
+      - "Implement biometric authentication where sensitive"
+      - "Use cameraX for image capture"
+      - "Use explicit import lists, no wildcard imports"
+    architecture:
+      - "ui/ - Compose screens and components"
+      - "data/ - Repositories and data sources"
+      - "domain/ - Use cases and models"
+      - "di/ - Dependency injection modules"
+
+  # Docker & DevOps
+  docker:
+    patterns:
+      - "Dockerfile*"
+      - "docker-compose*.yml"
+      - "**/deploy/**"
+    rules:
+      - "Use multi-stage builds for Go applications"
+      - "Use distroless or alpine images for production"
+      - "Never hardcode secrets in Dockerfiles"
+      - "Use Docker secrets or env files for sensitive data"
+      - "Implement health checks in all services"
+      - "Use proper .dockerignore files"
+      - "Implement proper ingress routing with TLS"
+      - "Use persistent volumes for stateful services"
+      - "Use Helm charts for complex deployments"
+      - "Follow GitOps practices"
+
+  # Kubernetes
+  kubernetes:
+    patterns:
+      - "infra/k8s/**/*.yaml"
+      - "**/*.k8s.yaml"
+    rules:
+      - "Use ConfigMaps for non-sensitive configuration"
+      - "Use Secrets for sensitive data"
+      - "Implement resource limits and requests"
+      - "Use liveness and readiness probes"
+      - "Follow GitOps practices"
+      - "Use Helm charts for complex deployments"
+      - "Implement proper ingress routing with TLS"
+      - "Use persistent volumes for stateful services"
+      - "Use proper network policies"
+      - "Implement pod disruption budgets"
+      - "Use proper service mesh configuration"
+      - "Set up proper monitoring and logging"
+      - "Implement proper backup strategies"
+
+  # Monitoring & Observability
+  observability:
+    patterns:
+      - "**/prometheus.yml"
+      - "**/grafana/**/*.json"
+      - "**/otel-config.yaml"
+    rules:
+      - "Instrument all services with OpenTelemetry"
+      - "Use Prometheus for metrics collection"
+      - "Use Grafana for dashboard visualization"
+      - "Implement distributed tracing with Jaeger"
+      - "Set up proper alerting rules"
+      - "Log in structured JSON format"
+      - "Use appropriate metric naming conventions"
+      - "Implement proper log aggregation"
+      - "Set up SLI/SLO monitoring"
+      - "Use proper sampling strategies for traces"
+      - "Implement proper correlation IDs"
+      - "Set up proper dashboard hierarchies"
+      - "Use proper alert severity levels"
+
+  # Testing
+  testing:
+    patterns:
+      - "**/*_test.go"
+      - "**/*.test.ts"
+      - "**/*.spec.kt"
+    rules:
+      - "Write tests before implementation (TDD)"
+      - "Achieve minimum 80% code coverage"
+      - "Use table-driven tests for multiple scenarios"
+      - "Mock external dependencies properly"
+      - "Test error conditions and edge cases"
+      - "Use property-based testing for complex logic"
+      - "Implement integration tests for API endpoints"
+      - "Run tests in CI pipeline"
+      - "All new code must have tests"
+      - "Use React Testing Library for components"
+      - "Use Espresso for Android UI tests"
+      - "Implement load testing for performance validation"
+      - "Use contract testing for API compatibility"
+      - "Implement mutation testing for critical logic"
+      - "Use snapshot testing for UI components"
+      - "Implement chaos engineering tests"
+      - "Use fuzz testing for security validation"
+
+  # Security
+  security:
+    rules:
+      - "Never log sensitive information (passwords, tokens, keys)"
+      - "Always use parameterized queries to prevent SQL injection"
+      - "Validate and sanitize all user inputs"
+      - "Implement proper authentication and authorization"
+      - "Use HTTPS/TLS for all external communications"
+      - "Store secrets in environment variables or vault"
+      - "Implement rate limiting for API endpoints"
+      - "Regularly update dependencies and scan for vulnerabilities"
+      - "Use Content Security Policy headers"
+      - "Implement proper CORS configuration"
+      - "Implement proper RBAC checks"
+      - "Never store secrets in code - use environment variables"
+      - "Certificate pinning in mobile applications"
+      - "XSS prevention in frontend"
+      - "CSRF protection for web forms"
+      - "Input validation on all endpoints"
+      - "Proper authorization checks"
+      - "Audit logging for sensitive operations"
+      - "Secure session management"
+      - "Proper encryption for data at rest and in transit"
+
+  # Performance
+  performance:
+    rules:
+      - "Database queries must complete in < 100ms (p99)"
+      - "API responses must complete in < 200ms (p99)"
+      - "GPS ingestion must handle 1000+ points/second"
+      - "WebSocket connections must support 10,000+ concurrent"
+      - "Mobile app must work offline for 7+ days"
+      - "Web app Lighthouse score must be > 90"
+      - "Bundle size must be < 2MB gzipped"
+      - "Mobile APK size must be < 50MB"
+      - "Cold start time must be < 2 seconds"
+      - "Use connection pooling for database access"
+      - "Implement proper caching strategies"
+      - "Use CDN for static assets"
+      - "Database: EXPLAIN ANALYZE all new queries"
+      - "API: Benchmark all new endpoints"
+      - "Frontend: Lighthouse score > 90"
+      - "Mobile: APK size < 50MB, cold start < 2s"
+      - "Implement proper pagination for large datasets"
+      - "Use efficient data structures and algorithms"
+      - "Minimize network round trips"
+      - "Implement proper lazy loading"
+      - "Use efficient serialization formats"
+      - "Implement proper connection reuse"
+      - "Use appropriate compression algorithms"
+      - "Implement proper resource cleanup"
+      - "Monitor and optimize garbage collection"
+
+  # Git & Version Control
+  git:
+    commit_convention:
+      types:
+        - "feat: New feature"
+        - "fix: Bug fix"
+        - "refactor: Code refactoring"
+        - "test: Adding or updating tests"
+        - "docs: Documentation changes"
+        - "chore: Maintenance tasks"
+        - "perf: Performance improvements"
+        - "ci: CI/CD configuration changes"
+      scopes:
+        - "api: Backend/API changes"
+        - "web: Frontend/web changes"
+        - "mobile: Mobile application changes"
+        - "db: Database/migration changes"
+        - "infra: Infrastructure/deployment changes"
+        - "auth: Authentication/authorization changes"
+        - "analytics: Analytics/reporting changes"
+      format: "<type>(<scope>): <description>"
+      examples:
+        - "feat(api): add vehicle tracking endpoint"
+        - "fix(web): resolve map rendering issue"
+        - "refactor(db): optimize GPS data queries"
+    pre_commit_checks:
+      go:
+        - "go mod tidy"
+        - "gofumpt -w ."
+        - "golangci-lint run --fast"
+        - "go test -short ./..."
+      typescript:
+        - "npm run lint"
+        - "npm run type-check"
+        - "npm run test:ci"
+      kotlin:
+        - "./gradlew ktlintCheck"
+        - "./gradlew detekt"
+        - "./gradlew testDebugUnitTest"
+      sql:
+        - "sqlfluff lint migrations/"
+      docker:
+        - "hadolint Dockerfile*"
+      security:
+        - "gitleaks detect"
+        - "trivy fs ."
+        - "npm audit --production"
+
+  # Code Review
+  code_review:
+    checklist:
+      - "Proper error handling implemented"
+      - "Database queries optimized and indexed"
+      - "Test coverage meets minimum requirements"
+      - "Security best practices followed"
+      - "Code follows established patterns"
+      - "Resource cleanup properly implemented"
+      - "Documentation updated if needed"
+      - "Performance implications considered"
+      - "Breaking changes properly communicated"
+      - "Dependencies updated and secure"
+      - "No hardcoded secrets"
+      - "Input validation on all endpoints"
+      - "Proper authorization checks"
+      - "SQL injection prevention"
+      - "XSS prevention in frontend"
+      - "Certificate pinning in mobile"
+      - "Proper logging without sensitive data"
+      - "Correct use of context cancellation"
+      - "Appropriate error wrapping and handling"
+      - "Proper resource management and cleanup"
+      - "Correct implementation of business logic"
+      - "Appropriate use of design patterns"
+      - "Proper test coverage including edge cases"
+      - "Correct API contract implementation"
+      - "Proper mobile offline handling"
+      - "Correct state management implementation"
+      - "Appropriate performance optimizations"
+      - "Proper observability instrumentation"

@@ -1,0 +1,299 @@
+version: '3.8'
+
+networks:
+  fleet-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  nats-data:
+
+services:
+  # Database Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: fleet-postgres
+    environment:
+      POSTGRES_DB: fleet_db
+      POSTGRES_USER: fleet_user
+      POSTGRES_PASSWORD: fleet_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - fleet-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleet_user -d fleet_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fleet-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - fleet-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: fleet-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats-data:/data
+    networks:
+      - fleet-network
+    command: ["--jetstream", "--store_dir", "/data"]
+    healthcheck:
+      test: ["CMD", "nats", "server", "check"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Core Services
+  auth-service:
+    build: ./services/auth-service
+    container_name: fleet-auth-service
+    ports:
+      - "8081:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - JWT_SECRET=your-jwt-secret-key-here
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  vehicle-service:
+    build: ./services/vehicle-service
+    container_name: fleet-vehicle-service
+    ports:
+      - "8082:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  driver-service:
+    build: ./services/driver-service
+    container_name: fleet-driver-service
+    ports:
+      - "8083:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  trip-service:
+    build: ./services/trip-service
+    container_name: fleet-trip-service
+    ports:
+      - "8084:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  tracking-service:
+    build: ./services/tracking-service
+    container_name: fleet-tracking-service
+    ports:
+      - "8085:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  route-optimization-service:
+    build: ./services/route-optimization-service
+    container_name: fleet-route-service
+    ports:
+      - "8086:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  maintenance-service:
+    build: ./services/maintenance-service
+    container_name: fleet-maintenance-service
+    ports:
+      - "8087:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  geofencing-service:
+    build: ./services/geofencing-service
+    container_name: fleet-geofencing-service
+    ports:
+      - "8088:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  alert-service:
+    build: ./services/alert-service
+    container_name: fleet-alert-service
+    ports:
+      - "8089:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  video-service:
+    build: ./services/video-service
+    container_name: fleet-video-service
+    ports:
+      - "8090:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  india-integration-service:
+    build: ./services/india-integration-service
+    container_name: fleet-india-service
+    ports:
+      - "8091:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  analytics-service:
+    build: ./services/analytics-service
+    container_name: fleet-analytics-service
+    ports:
+      - "8092:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

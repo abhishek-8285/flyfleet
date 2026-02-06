@@ -1,0 +1,249 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: 
+      context: ../../gateway/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ENV=development
+      - JWT_SECRET=super-secret-key
+    depends_on:
+      - auth-service
+      - vehicle-service
+      - driver-service
+      - trip-service
+      - maintenance-service
+      - tracking-service
+      - alert-service
+      - geofencing-service
+    networks:
+      - flyfleet-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ../../services/auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/auth
+      - JWT_SECRET=super-secret-key
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    networks:
+      - flyfleet-network
+
+  # Vehicle Service
+  vehicle-service:
+    build:
+      context: ../../services/vehicle-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/vehicle
+      - NATS_URL=nats://nats:4222
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - flyfleet-network
+
+  # Driver Service
+  driver-service:
+    build:
+      context: ../../services/driver-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/driver
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    networks:
+      - flyfleet-network
+
+  # Trip Service
+  trip-service:
+    build:
+      context: ../../services/trip-service
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/trip
+      - NATS_URL=nats://nats:4222
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - flyfleet-network
+
+  # Maintenance Service
+  maintenance-service:
+    build:
+      context: ../../services/maintenance-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/maintenance
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    networks:
+      - flyfleet-network
+
+  # Tracking Service
+  tracking-service:
+    build:
+      context: ../../services/tracking-service
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/tracking
+      - TIMESCALEDB_URL=postgresql://postgres:password@timescaledb:5432/tracking
+      - NATS_URL=nats://nats:4222
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - timescaledb
+      - nats
+    networks:
+      - flyfleet-network
+
+  # Alert Service
+  alert-service:
+    build:
+      context: ../../services/alert-service
+      dockerfile: Dockerfile
+    ports:
+      - "8087:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/alert
+      - NATS_URL=nats://nats:4222
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - flyfleet-network
+
+  # Geofencing Service
+  geofencing-service:
+    build:
+      context: ../../services/geofencing-service
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8080"
+    environment:
+      - SERVER_PORT=8080
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/geofencing
+      - NATS_URL=nats://nats:4222
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - nats
+    networks:
+      - flyfleet-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=flyfleet
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - flyfleet-network
+
+  # TimescaleDB for time-series data
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=tracking
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    networks:
+      - flyfleet-network
+
+  # NATS Message Broker
+  nats:
+    image: nats:latest-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: "--http_port 8222"
+    networks:
+      - flyfleet-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - flyfleet-network
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../../infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - flyfleet-network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../../infrastructure/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/flyfleet.json
+    networks:
+      - flyfleet-network
+
+networks:
+  flyfleet-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  timescaledb_data:
+  prometheus_data:
+  grafana_data:

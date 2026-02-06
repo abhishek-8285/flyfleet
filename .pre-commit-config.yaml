@@ -1,0 +1,150 @@
+# Pre-commit hooks for fleet management platform
+# Ensures code quality and prevents common errors before commits
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+        description: Removes unnecessary trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of files
+        description: Ensures files end with a newline
+      - id: check-yaml
+        name: Check YAML files
+        description: Validates YAML syntax
+      - id: check-json
+        name: Check JSON files
+        description: Validates JSON syntax
+      - id: check-xml
+        name: Check XML files
+        description: Validates XML syntax
+      - id: detect-private-key
+        name: Detect private keys
+        description: Prevents committing private keys
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Prevents committing files with merge conflict markers
+
+  # Go specific hooks
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        name: Format Go code
+        description: Formats Go code using gofumpt
+      - id: go-vet
+        name: Vet Go code
+        description: Examines Go source code for suspicious constructs
+      - id: go-mod-tidy
+        name: Tidy Go modules
+        description: Ensures go.mod and go.sum are up to date
+      - id: go-unit-tests
+        name: Run Go unit tests
+        description: Runs Go unit tests
+        args: [-short]
+      - id: golangci-lint
+        name: Run golangci-lint
+        description: Runs golangci-lint for Go code analysis
+        args: [--fast]
+
+  # TypeScript/JavaScript hooks
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
+    hooks:
+      - id: eslint
+        name: ESLint
+        description: Lints JavaScript and TypeScript files
+        types_or: [javascript, jsx, ts, tsx]
+        args: [--fix]
+
+  # SQL hooks
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 2.3.5
+    hooks:
+      - id: sqlfluff-lint
+        name: SQLFluff lint
+        description: Lints SQL files
+        files: \.(sql)$
+        args: [--dialect=postgres]
+
+  # Docker hooks
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Hadolint Docker
+        description: Lints Dockerfiles
+        types: [dockerfile]
+
+  # Security hooks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+        name: Gitleaks
+        description: Detects hardcoded secrets
+        args: [--verbose]
+
+  # Local hooks for project-specific checks
+  - repo: local
+    hooks:
+      # Go build check
+      - id: go-build
+        name: Go build check
+        entry: go build ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+        description: Ensures Go code compiles without errors
+
+      # TypeScript type check
+      - id: ts-type-check
+        name: TypeScript type check
+        entry: npm run type-check
+        language: system
+        types: [ts, tsx]
+        pass_filenames: false
+        description: Validates TypeScript types
+
+      # Test coverage check
+      - id: test-coverage
+        name: Test coverage check
+        entry: bash -c 'if [ -f "coverage.out" ]; then go tool cover -func=coverage.out | grep total | awk "{print $3}" | sed "s/%//" | awk "{if ($1 < 80) {print \"Coverage below 80%: \" $1 \"%\"; exit 1}}"; fi'
+        language: system
+        description: Ensures minimum 80% test coverage
+
+      # SQL migration validation
+      - id: sql-migration-check
+        name: SQL migration check
+        entry: bash -c 'for file in $(find migrations -name "*.sql" -type f); do if ! grep -q "IF NOT EXISTS" "$file" && ! grep -q "DROP" "$file"; then echo "Migration $file should use IF NOT EXISTS"; exit 1; fi; done'
+        language: system
+        description: Validates SQL migrations use proper patterns
+
+      # Security scan
+      - id: security-scan
+        name: Security vulnerability scan
+        entry: trivy fs --exit-code 1 --severity HIGH,CRITICAL .
+        language: system
+        pass_filenames: false
+        description: Scans for security vulnerabilities
+
+# Configuration for specific file types
+default_stages: [commit]
+default_language_version:
+  python: python3.9
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+    vendor/.*
+    |node_modules/.*
+    |dist/.*
+    |build/.*
+    |\.git/.*
+    |\.idea/.*
+    |\.vscode/.*
+    |coverage.*
+    |\.next/.*
+  )$

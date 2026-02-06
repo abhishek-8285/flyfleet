@@ -1,0 +1,2438 @@
+# FlyFleet API Documentation
+
+**Version:** 1.0.0  
+**Base URL:** `https://api.flyfleet.in`  
+**Protocol:** HTTPS only  
+**Authentication:** JWT Bearer tokens, API Keys (for devices)  
+**Date Format:** ISO 8601 (RFC3339)  
+**Timezone:** UTC (all timestamps)  
+**Rate Limiting:** 1000 req/hour (standard), 100 req/min (burst)
+
+---
+
+## 📚 Table of Contents
+
+1. [API Overview](#-api-overview)
+2. [Authentication](#-authentication)
+3. [API Endpoints](#api-endpoints)
+   - [1️⃣ Authentication APIs](#1️⃣-authentication-apis) (10 endpoints)
+   - [2️⃣ User Management APIs](#2️⃣-user-management-apis) (8 endpoints)
+   - [3️⃣ Organization APIs](#3️⃣-organization-apis) (5 endpoints)
+   - [4️⃣ Vehicle APIs](#4️⃣-vehicle-apis) (13 endpoints)
+   - [5️⃣ Driver APIs](#5️⃣-driver-apis) (10 endpoints)
+   - [6️⃣ Device APIs](#6️⃣-device-apis) (12 endpoints)
+   - [7️⃣ Telemetry APIs](#7-telemetry-apis) (6 endpoints)
+   - [8️⃣ Trip APIs](#8-trip-apis) (11 endpoints)
+   - [9️⃣ Geofence APIs](#9-geofence-apis) (8 endpoints)
+   - [1️⃣🔟 Alert & Event APIs](#10-alert--event-apis) (7 endpoints)
+   - [1️⃣🔟 Maintenance APIs](#11-maintenance-apis) (8 endpoints)
+   - [1️⃣🔟 Fuel APIs](#12-fuel-apis) (6 endpoints)
+   - [1️⃣🔟 Reports APIs](#13-reports-apis) (9 endpoints)
+   - [1️⃣🔟 Billing APIs](#14-billing-apis) (9 endpoints)
+   - [1️⃣🔟 Integrations APIs](#15-integrations-apis-india-specific) (9 endpoints)
+   - [1️⃣🔟 Real-time APIs](#16-real-time-apis-websocket--sse) (6 endpoints)
+   - [1️⃣🔟 Webhook Management APIs](#17-webhook-management-apis) (8 endpoints)
+   - [1️⃣🔟 Route Optimization APIs](#18-route-optimization-apis) (6 endpoints)
+   - [1️⃣🔟 Driver Safety APIs](#19-driver-behavior--coaching-apis) (6 endpoints)
+   - [2️⃣🔟 Compliance APIs](#20-compliance--regulatory-apis) (6 endpoints)
+   - [2️⃣🔟 Predictive Maintenance APIs](#21-predictive-maintenance-apis-ai-powered) (4 endpoints)
+   - [2️⃣🔟 Notification APIs](#22-customer-notification-apis) (6 endpoints)
+   - [2️⃣🔟 Inventory APIs](#23-inventory--parts-management-apis) (6 endpoints)
+   - [2️⃣🔟 Expense APIs](#24-expense-management-apis) (5 endpoints)
+   - [2️⃣🔟 AI/ML Analytics APIs](#25-aiml-analytics-apis) (3 endpoints)
+4. [API Standards & Conventions](#-api-standards--conventions)
+5. [Security](#-security)
+6. [Webhooks](#-webhooks)
+7. [Real-time APIs](#-real-time-apis)
+8. [India-Specific Integrations](#-india-specific-integrations)
+9. [Additional Resources](#-additional-resources)
+10. [Changelog](#-changelog)
+
+---
+
+## 📋 API Overview
+
+| Category | Endpoints | Description |
+|----------|-----------|-------------|
+| Authentication | 10 | User auth, JWT tokens, MFA, password management |
+| User Management | 8 | CRUD operations, permissions, profile |
+| Organization | 5 | Multi-tenant organization management |
+| Vehicles | 13 | Fleet vehicle operations, remote control |
+| Drivers | 10 | Driver management, performance tracking |
+| Devices | 12 | IoT device enrollment & management |
+| Telemetry | 6 | GPS, OBD, sensor data ingestion |
+| Trips | 11 | Journey lifecycle management |
+| Geofences | 8 | Location-based rules and alerts |
+| Alerts & Events | 7 | Notifications & monitoring |
+| Maintenance | 8 | Service scheduling & tracking |
+| Fuel | 6 | Fuel tracking & theft detection |
+| Reports | 9 | Analytics & exports |
+| Billing | 9 | Subscriptions & invoicing |
+| Integrations | 9 | India-specific (FASTag, E-way, Vahan) |
+| Real-time | 6 | WebSocket, SSE streaming |
+| Webhooks | 8 | Event-driven integrations |
+| Routing | 6 | Route optimization |
+| Safety | 6 | Driver behavior & coaching |
+| Compliance | 6 | HOS, GST, regulatory |
+| Predictive | 4 | AI-powered maintenance |
+| Notifications | 6 | SMS, Email, WhatsApp, Push |
+| Inventory | 6 | Spare parts management |
+| Expenses | 5 | Cost tracking, reimbursement |
+| AI/ML | 3 | Anomaly detection, insights |
+| **TOTAL** | **187** | **Complete Enterprise Platform** |
+
+---
+
+## 🔐 Authentication
+
+All API requests require authentication using JWT Bearer tokens (for web/mobile users) or API Keys (for IoT devices).
+
+### Web/Mobile Authentication
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Device Authentication
+```http
+X-API-Key: device-api-key-here
+```
+
+---
+## 1️⃣ AUTHENTICATION APIs
+
+**Base Path:** `/api/v1/auth`
+
+| # | Method | Endpoint | Description | Auth Required |
+|---|--------|----------|-------------|---------------|
+| 1 | POST | `/register` | Register new organization + admin | Public |
+| 2 | POST | `/login` | User login with email/password | Public |
+| 3 | POST | `/logout` | Invalidate tokens | JWT |
+| 4 | POST | `/refresh` | Refresh access token | Refresh Token |
+| 5 | POST | `/forgot-password` | Request password reset | Public |
+| 6 | POST | `/reset-password` | Reset password with token | Public |
+| 7 | POST | `/change-password` | Change password (logged in) | JWT |
+| 8 | POST | `/mfa/enable` | Enable MFA | JWT |
+| 9 | POST | `/mfa/verify` | Verify MFA code | JWT |
+| 10 | POST | `/mfa/disable` | Disable MFA | JWT |
+
+---
+
+### Detailed API Specifications
+#### 1. POST `/api/v1/auth/register`
+
+**Description:** Register a new organization with admin user  
+**Authentication:** Public (no auth required)  
+**Rate Limit:** 10 requests/hour per IP
+// Request
+{
+  "email": "admin@company.com",
+  "password": "SecurePass123!",
+  "name": "John Doe",
+  "phone": "+919876543210",
+  "org_name": "ABC Logistics",
+  "org_type": "fleet_owner",
+  "gst_number": "27AABCU9603R1ZX"
+}
+
+// Response 201
+{
+  "user_id": "uuid",
+  "org_id": "uuid",
+  "email": "admin@company.com",
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "expires_in": 900
+}
+---
+
+#### 2. POST `/api/v1/auth/login`
+
+**Description:** Authenticate user and receive JWT tokens  
+**Authentication:** Public  
+**Rate Limit:** 20 requests/hour per IP
+// Request
+{
+  "email": "admin@company.com",
+  "password": "SecurePass123!",
+  "device_id": "optional-device-identifier"
+}
+
+// Response 200
+{
+  "access_token": "eyJhbG...",
+  "refresh_token": "eyJhbG...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "user": {
+    "id": "uuid",
+    "email": "admin@company.com",
+    "role": "admin",
+    "permissions": ["vehicles:*", "drivers:*"],
+    "org_id": "uuid"
+  }
+}
+---
+
+#### 4. POST `/api/v1/auth/refresh`
+
+**Description:** Refresh expired access token using refresh token  
+**Authentication:** Refresh Token  
+**Rate Limit:** 100 requests/hour
+// Request
+{
+  "refresh_token": "eyJhbG..."
+}
+
+// Response 200
+{
+  "access_token": "eyJhbG...",
+  "refresh_token": "eyJhbG...",
+  "expires_in": 900
+}
+---
+
+## 2️⃣ USER MANAGEMENT APIs
+
+**Base Path:** `/api/v1/users`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 11 | GET | `/users` | List all users in org | `users:read` |
+| 12 | POST | `/users` | Create new user | `users:write` |
+| 13 | GET | `/users/:id` | Get user details | `users:read` |
+| 14 | PUT | `/users/:id` | Update user | `users:write` |
+| 15 | DELETE | `/users/:id` | Delete user (soft delete) | `users:delete` |
+| 16 | PUT | `/users/:id/permissions` | Update user permissions | `users:admin` |
+| 17 | GET | `/users/me` | Get current user profile | JWT |
+| 18 | PUT | `/users/me/profile` | Update own profile | JWT |
+
+---
+#### 11. GET `/api/v1/users`
+
+**Description:** List all users in organization with filtering  
+**Authentication:** JWT  
+**Permission:** `users:read`
+// Query params: ?role=driver&status=active&search=john&limit=20&offset=0
+
+// Response 200
+{
+  "users": [
+    {
+      "id": "uuid",
+      "email": "driver@company.com",
+      "name": "John Driver",
+      "role": "driver",
+      "status": "active",
+      "phone": "+919876543210",
+      "last_login_at": "2024-01-15T10:30:00Z",
+      "created_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 45,
+  "limit": 20,
+  "offset": 0
+}
+---
+
+#### 12. POST `/api/v1/users`
+
+**Description:** Create a new user in the organization  
+**Authentication:** JWT  
+**Permission:** `users:write`
+// Request
+{
+  "email": "newdriver@company.com",
+  "password": "TempPass123!",
+  "name": "New Driver",
+  "phone": "+919876543211",
+  "role": "driver",
+  "permissions": ["trips:read", "trips:write:own"],
+  "profile": {
+    "license_number": "MH0120230001234",
+    "license_expiry": "2029-01-01",
+    "emergency_contact": "+919876543212"
+  }
+}
+
+// Response 201
+{
+  "id": "uuid",
+  "email": "newdriver@company.com",
+  "status": "active",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+---
+
+## 3️⃣ ORGANIZATION APIs
+
+**Base Path:** `/api/v1/orgs`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 19 | GET | `/orgs/:id` | Get organization details | `org:read` |
+| 20 | PUT | `/orgs/:id` | Update organization | `org:admin` |
+| 21 | GET | `/orgs/:id/settings` | Get organization settings | `org:read` |
+| 22 | PUT | `/orgs/:id/settings` | Update settings | `org:admin` |
+| 23 | GET | `/orgs/:id/usage` | Get resource usage metrics | `org:read` |
+
+---
+#### 19. GET `/api/v1/orgs/:id`
+
+**Description:** Get organization details including settings and usage  
+**Authentication:** JWT  
+**Permission:** `org:read`
+// Response 200
+{
+  "id": "uuid",
+  "name": "ABC Logistics",
+  "slug": "abc-logistics",
+  "type": "fleet_owner",
+  "gst_number": "27AABCU9603R1ZX",
+  "settings": {
+    "timezone": "Asia/Kolkata",
+    "currency": "INR",
+    "distance_unit": "km",
+    "fuel_unit": "liters",
+    "speed_limit": 80,
+    "working_hours": {
+      "start": "09:00",
+      "end": "18:00"
+    }
+  },
+  "limits": {
+    "max_vehicles": 100,
+    "max_drivers": 200,
+    "max_users": 50
+  },
+  "usage": {
+    "vehicles": 45,
+    "drivers": 78,
+    "users": 12
+  },
+  "created_at": "2024-01-01T00:00:00Z"
+}
+---
+
+## 4️⃣ VEHICLE APIs
+
+**Base Path:** `/api/v1/vehicles`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 24 | GET | `/vehicles` | List vehicles with filtering | `vehicles:read` |
+| 25 | POST | `/vehicles` | Create new vehicle | `vehicles:write` |
+| 26 | GET | `/vehicles/:id` | Get vehicle details | `vehicles:read` |
+| 27 | PUT | `/vehicles/:id` | Update vehicle | `vehicles:write` |
+| 28 | DELETE | `/vehicles/:id` | Delete vehicle | `vehicles:delete` |
+| 29 | POST | `/vehicles/:id/assign-driver` | Assign driver to vehicle | `vehicles:write` |
+| 30 | POST | `/vehicles/:id/unassign-driver` | Remove driver from vehicle | `vehicles:write` |
+| 31 | POST | `/vehicles/:id/immobilize` | Remote vehicle immobilization | `vehicles:control` |
+| 32 | GET | `/vehicles/:id/locations` | Get location history (TimescaleDB) | `vehicles:read` |
+| 33 | GET | `/vehicles/:id/trips` | Get vehicle trip history | `vehicles:read` |
+| 34 | GET | `/vehicles/:id/diagnostics` | Get OBD diagnostics | `vehicles:read` |
+| 35 | POST | `/vehicles/:id/documents` | Upload vehicle document | `vehicles:write` |
+| 36 | GET | `/vehicles/nearby` | Find vehicles near point (PostGIS) | `vehicles:read` |
+
+---
+#### 24. GET `/api/v1/vehicles`
+
+**Description:** List all vehicles with advanced filtering and pagination  
+**Authentication:** JWT  
+**Permission:** `vehicles:read`
+
+**Query Parameters:**
+// Query: ?status=active&type=truck&search=KA01&driver_id=uuid&limit=20&offset=0
+
+// Response 200
+{
+  "vehicles": [
+    {
+      "id": "uuid",
+      "registration_number": "KA01AB1234",
+      "type": "truck",
+      "make": "Tata",
+      "model": "Ace",
+      "year": 2023,
+      "fuel_type": "diesel",
+      "status": "active",
+      "current_location": {
+        "lat": 12.9716,
+        "lng": 77.5946,
+        "accuracy": 5,
+        "speed": 45.5,
+        "heading": 180,
+        "timestamp": "2024-01-15T10:30:00Z"
+      },
+      "current_driver": {
+        "id": "uuid",
+        "name": "John Driver",
+        "phone": "+919876543210"
+      },
+      "last_seen_at": "2024-01-15T10:30:00Z",
+      "odometer_km": 45678.5,
+      "documents": [
+        {
+          "type": "rc",
+          "number": "KA01AB1234",
+          "expiry_at": "2029-01-01"
+        }
+      ]
+    }
+  ],
+  "total": 45,
+  "online": 38,
+  "offline": 7
+}
+---
+
+#### 25. POST `/api/v1/vehicles`
+
+**Description:** Register a new vehicle in the fleet  
+**Authentication:** JWT  
+**Permission:** `vehicles:write`
+
+**Validation:**
+- Registration number must match Indian format: `^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$`
+- Chassis number must be 17 alphanumeric characters
+- Year must be between 1900 and current year + 1
+// Request
+{
+  "registration_number": "KA01AB1234",
+  "chassis_number": "MAT12345678901234",
+  "engine_number": "ENG123456789",
+  "type": "truck",
+  "make": "Tata",
+  "model": "Ace",
+  "year": 2023,
+  "fuel_type": "diesel",
+  "fuel_capacity_liters": 60,
+  "documents": [
+    {
+      "type": "rc",
+      "number": "KA01AB1234",
+      "expiry_at": "2029-01-01",
+      "file_url": "https://..."
+    },
+    {
+      "type": "insurance",
+      "number": "INS123456",
+      "expiry_at": "2025-01-01",
+      "file_url": "https://..."
+    }
+  ],
+  "metadata": {
+    "color": "white",
+    "engine_cc": 1500,
+    "payload_capacity_kg": 1000
+  }
+}
+
+// Response 201
+{
+  "id": "uuid",
+  "registration_number": "KA01AB1234",
+  "status": "active",
+  "qr_code": "data:image/png;base64,...", // For device pairing
+  "created_at": "2024-01-15T10:30:00Z"
+}
+---
+
+#### 31. POST `/api/v1/vehicles/:id/immobilize`
+
+**Description:** Send remote immobilization command to vehicle  
+**Authentication:** JWT  
+**Permission:** `vehicles:control`  
+**⚠️ Security:** Audit log entry created for all immobilization commands
+// Request
+{
+  "reason": "Theft suspected",
+  "emergency": true,
+  "notify_driver": true
+}
+
+// Response 202
+{
+  "command_id": "cmd-uuid",
+  "status": "queued",
+  "estimated_delivery": "2024-01-15T10:30:05Z",
+  "message": "Immobilize command queued for delivery"
+}
+---
+
+#### 32. GET `/api/v1/vehicles/:id/locations`
+
+**Description:** Retrieve GPS location history from TimescaleDB with analytics  
+**Authentication:** JWT  
+**Permission:** `vehicles:read`  
+**Performance:** Optimized for large time ranges with downsampling
+// Query: ?from=2024-01-01T00:00:00Z&to=2024-01-15T23:59:59Z&interval=5m
+
+// Response 200
+{
+  "vehicle_id": "uuid",
+  "from": "2024-01-01T00:00:00Z",
+  "to": "2024-01-15T23:59:59Z",
+  "interval": "5m",
+  "total_points": 4320,
+  "locations": [
+    {
+      "time": "2024-01-15T10:30:00Z",
+      "lat": 12.9716,
+      "lng": 77.5946,
+      "speed": 45.5,
+      "heading": 180,
+      "ignition": true,
+      "odometer_km": 45678.5
+    }
+  ],
+  "summary": {
+    "distance_km": 245.6,
+    "max_speed": 78.5,
+    "avg_speed": 45.2,
+    "moving_time_minutes": 325,
+    "idle_time_minutes": 45,
+    "stops": [
+      {
+        "start_time": "2024-01-15T12:30:00Z",
+        "end_time": "2024-01-15T12:45:00Z",
+        "duration_minutes": 15,
+        "location": {"lat": 12.9716, "lng": 77.5946}
+      }
+    ]
+  }
+}
+---
+
+## 5️⃣ DRIVER APIs
+
+**Base Path:** `/api/v1/drivers`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 37 | GET | `/drivers` | List all drivers | `drivers:read` |
+| 38 | POST | `/drivers` | Create new driver | `drivers:write` |
+| 39 | GET | `/drivers/:id` | Get driver details | `drivers:read` |
+| 40 | PUT | `/drivers/:id` | Update driver | `drivers:write` |
+| 41 | DELETE | `/drivers/:id` | Delete driver (soft) | `drivers:delete` |
+| 42 | GET | `/drivers/:id/trips` | Get driver trip history | `drivers:read` |
+| 43 | GET | `/drivers/:id/performance` | Get performance metrics | `drivers:read` |
+| 44 | POST | `/drivers/:id/assign-vehicle` | Assign vehicle to driver | `drivers:write` |
+| 45 | POST | `/drivers/:id/documents` | Upload driver document | `drivers:write` |
+| 46 | GET | `/drivers/leaderboard` | Driver rankings by score | `drivers:read` |
+
+---
+#### 37. GET `/api/v1/drivers`
+
+**Description:** List all drivers with status and performance metrics  
+**Authentication:** JWT  
+**Permission:** `drivers:read`
+// Response 200
+{
+  "drivers": [
+    {
+      "id": "uuid",
+      "name": "John Driver",
+      "email": "driver@company.com",
+      "phone": "+919876543210",
+      "license_number": "MH0120230001234",
+      "license_expiry": "2029-01-01",
+      "status": "active",
+      "rating": 4.8,
+      "behavior_score": 95,
+      "total_trips": 156,
+      "total_distance_km": 45678,
+      "current_vehicle": {
+        "id": "uuid",
+        "registration_number": "KA01AB1234"
+      },
+      "documents": [
+        {"type": "license", "status": "valid", "expiry": "2029-01-01"},
+        {"type": "medical", "status": "valid", "expiry": "2024-12-01"}
+      ]
+    }
+  ],
+  "total": 78,
+  "active": 65,
+  "on_leave": 8,
+  "suspended": 5
+}
+---
+
+#### 43. GET `/api/v1/drivers/:id/performance`
+
+**Description:** Get comprehensive driver performance metrics including safety scores  
+**Authentication:** JWT  
+**Permission:** `drivers:read`  
+**Data Source:** Aggregated from GPS telemetry, OBD data, and trip history
+// Query: ?from=2024-01-01&to=2024-01-31
+
+// Response 200
+{
+  "driver_id": "uuid",
+  "period": {
+    "from": "2024-01-01",
+    "to": "2024-01-31"
+  },
+  "summary": {
+    "total_trips": 45,
+    "completed_trips": 43,
+    "cancelled_trips": 2,
+    "total_distance_km": 3456.7,
+    "total_duration_hours": 156.5,
+    "fuel_consumed_liters": 234.5,
+    "fuel_efficiency_kmpl": 14.7
+  },
+  "safety_score": {
+    "overall": 94,
+    "harsh_acceleration": 2,
+    "harsh_braking": 1,
+    "harsh_cornering": 0,
+    "overspeeding": 3,
+    "seatbelt_violations": 0
+  },
+  "behavior_metrics": {
+    "on_time_percentage": 96.5,
+    "customer_rating": 4.8,
+    "idle_time_percentage": 8.5
+  },
+  "daily_breakdown": [
+    {
+      "date": "2024-01-15",
+      "trips": 3,
+      "distance_km": 145.6,
+      "safety_score": 98
+    }
+  ]
+}
+---
+
+## 6️⃣ DEVICE APIs
+
+**Base Path:** `/api/v1/devices` (Admin) + `/device` (Device-to-Server)
+
+| # | Method | Endpoint | Description | Auth Type |
+|---|--------|----------|-------------|----------|
+| 47 | GET | `/devices` | List all enrolled devices | JWT |
+| 48 | POST | `/devices/enroll` | Enroll new IoT device | JWT |
+| 49 | GET | `/devices/:id` | Get device details & health | JWT |
+| 50 | PUT | `/devices/:id` | Update device configuration | JWT |
+| 51 | DELETE | `/devices/:id` | Decommission device | JWT |
+| 52 | POST | `/devices/:id/rotate-key` | Rotate device API key | JWT |
+| 53 | POST | `/devices/:id/assign` | Assign device to vehicle | JWT |
+| 54 | GET | `/devices/:id/health` | Get device health status | JWT |
+| 55 | POST | `/device/telemetry/gps` | Submit GPS telemetry data | API Key |
+| 56 | POST | `/device/telemetry/obd` | Submit OBD-II data | API Key |
+| 57 | GET | `/device/config` | Get device configuration | API Key |
+| 58 | POST | `/device/status` | Submit status heartbeat | API Key |
+
+---
+#### 48. POST `/api/v1/devices/enroll`
+
+**Description:** Enroll a new IoT device (Android phone, OBD dongle, GPS tracker)  
+**Authentication:** JWT  
+**Permission:** `devices:write`  
+**⚠️ Security:** API key is shown only once and must be stored securely by client
+// Request
+{
+  "device_type": "android_phone",
+  "imei": "123456789012345",
+  "serial_number": "SN123456789",
+  "model": "Samsung Galaxy A54",
+  "vehicle_id": "optional-vehicle-uuid",
+  "metadata": {
+    "os_version": "Android 14",
+    "app_version": "1.2.3"
+  }
+}
+
+// Response 201
+{
+  "device_id": "uuid",
+  "api_key": "actual-api-key-show-only-once", // ⚠️ Store securely!
+  "api_key_expires_at": "2025-01-15T00:00:00Z",
+  "vehicle_id": "assigned-vehicle-uuid",
+  "config": {
+    "gps_interval_ms": 5000,
+    "obd_interval_ms": 30000,
+    "batch_size": 100,
+    "upload_interval_ms": 60000,
+    "offline_retention_hours": 168
+  }
+}
+---
+
+#### 55. POST `/device/telemetry/gps`
+
+**Description:** High-throughput GPS telemetry ingestion endpoint  
+**Authentication:** API Key (`X-API-Key` header)  
+**Rate Limit:** 10,000 requests/hour per device  
+**Performance:** Async processing with 202 Accepted response  
+**Storage:** Data written to TimescaleDB `gps_locations` hypertable
+// Headers: X-API-Key: device-api-key
+
+// Request
+{
+  "vehicle_id": "uuid",
+  "latitude": 12.9716,
+  "longitude": 77.5946,
+  "altitude": 920.5,
+  "speed": 45.5,
+  "heading": 180,
+  "accuracy": 5.0,
+  "timestamp": 1705315800,
+  "ignition": true,
+  "odometer_km": 45678.5,
+  "battery_level": 85,
+  "satellites": 12
+}
+
+// Response 202 Accepted
+{
+  "status": "accepted",
+  "queued_at": "2024-01-15T10:30:00Z"
+}
+---
+
+#### 57. GET `/device/config`
+
+**Description:** Retrieve device configuration and assigned geofences  
+**Authentication:** API Key (`X-API-Key` header)  
+**Use Case:** Called by mobile app on startup or config change notification
+// Headers: X-API-Key: device-api-key
+
+// Response 200
+{
+  "device_id": "uuid",
+  "vehicle_id": "uuid",
+  "gps": {
+    "interval_ms": 5000,
+    "min_distance_m": 10,
+    "priority": "high_accuracy"
+  },
+  "obd": {
+    "enabled": true,
+    "interval_ms": 30000,
+    "parameters": ["rpm", "speed", "coolant_temp", "fuel_level", "dtcs"]
+  },
+  "upload": {
+    "batch_size": 100,
+    "interval_ms": 60000,
+    "retry_count": 3
+  },
+  "geofences": [
+    {
+      "id": "uuid",
+      "name": "Warehouse Zone",
+      "type": "circle",
+      "center": {"lat": 12.9716, "lng": 77.5946},
+      "radius_m": 500,
+      "entry_alert": true,
+      "exit_alert": true
+    }
+  ],
+  "commands": {
+    "immobilize": false,
+    "remote_lock": false
+  }
+}
+7. TELEMETRY APIs
+Base Path: /api/v1/telemetry
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+59	GET	/telemetry/vehicles/:id/latest	Latest telemetry	telemetry:read
+60	GET	/telemetry/vehicles/:id/history	Historical data	telemetry:read
+61	GET	/telemetry/fleet/summary	Fleet-wide summary	telemetry:read
+62	GET	/telemetry/fleet/heatmap	Location heatmap data	telemetry:read
+63	GET	/telemetry/anomalies	Detected anomalies	telemetry:read
+60. GET /api/v1/telemetry/vehicles/:id/history
+JSON
+Copy
+// Query: ?metrics=gps,obd,fuel&from=&to=&downsample=1m
+
+// Response 200
+{
+  "vehicle_id": "uuid",
+  "time_range": {
+    "from": "2024-01-15T00:00:00Z",
+    "to": "2024-01-15T23:59:59Z"
+  },
+  "gps_data": [
+    {
+      "time": "2024-01-15T10:30:00Z",
+      "lat": 12.9716,
+      "lng": 77.5946,
+      "speed": 45.5
+    }
+  ],
+  "obd_data": [
+    {
+      "time": "2024-01-15T10:30:00Z",
+      "rpm": 2500,
+      "coolant_temp": 90,
+      "fuel_level": 75.5,
+      "dtcs": []
+    }
+  ],
+  "fuel_data": [
+    {
+      "time": "2024-01-15T10:30:00Z",
+      "level_percent": 75.5,
+      "level_liters": 45.3,
+      "refuel_event": false
+    }
+  ]
+}
+8. TRIP APIs
+Base Path: /api/v1/trips
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+64	GET	/trips	List trips	trips:read
+65	POST	/trips	Create trip	trips:write
+66	GET	/trips/:id	Get trip details	trips:read
+67	PUT	/trips/:id	Update trip	trips:write
+68	DELETE	/trips/:id	Cancel trip	trips:delete
+69	POST	/trips/:id/start	Start trip	trips:execute
+70	POST	/trips/:id/pause	Pause trip	trips:execute
+71	POST	/trips/:id/resume	Resume trip	trips:execute
+72	POST	/trips/:id/complete	Complete trip	trips:execute
+73	POST	/trips/:id/events	Add trip event	trips:execute
+74	POST	/trips/:id/pod	Upload POD	trips:execute
+65. POST /api/v1/trips
+JSON
+Copy
+// Request
+{
+  "vehicle_id": "uuid",
+  "driver_id": "uuid",
+  "type": "delivery",
+  "waypoints": [
+    {
+      "sequence": 1,
+      "type": "pickup",
+      "lat": 12.9716,
+      "lng": 77.5946,
+      "address": "Warehouse, Bangalore",
+      "scheduled_time": "2024-01-15T09:00:00Z",
+      "contact_name": "Warehouse Manager",
+      "contact_phone": "+919876543210"
+    },
+    {
+      "sequence": 2,
+      "type": "delivery",
+      "lat": 13.0827,
+      "lng": 80.2707,
+      "address": "Customer Location, Chennai",
+      "scheduled_time": "2024-01-15T14:00:00Z",
+      "contact_name": "John Customer",
+      "contact_phone": "+919876543211"
+    }
+  ],
+  "cargo": {
+    "description": "Electronics",
+    "weight_kg": 500,
+    "value_inr": 500000,
+    "temperature_controlled": false
+  },
+  "estimated_distance_km": 350,
+  "customer_name": "ABC Corp",
+  "customer_phone": "+919876543211",
+  "notes": "Handle with care"
+}
+
+// Response 201
+{
+  "id": "uuid",
+  "status": "planned",
+  "optimized_route": {
+    "distance_km": 348.5,
+    "duration_minutes": 420,
+    "polyline": "encoded_polyline_string",
+    "tolls": [
+      {
+        "name": "Krishnagiri Toll Plaza",
+        "cost_inr": 245,
+        "location": {"lat": 12.5, "lng": 78.2}
+      }
+    ],
+    "fuel_cost_estimate_inr": 2800
+  },
+  "geofences_created": [
+    {"id": "uuid", "waypoint": 1, "type": "entry"},
+    {"id": "uuid", "waypoint": 2, "type": "entry"}
+  ],
+  "created_at": "2024-01-15T08:00:00Z"
+}
+72. POST /api/v1/trips/:id/complete
+JSON
+Copy
+// Request
+{
+  "actual_distance_km": 352.3,
+  "fuel_consumed_liters": 28.5,
+  "fuel_cost_inr": 2850,
+  "idle_time_minutes": 45,
+  "pod": {
+    "recipient_name": "John Customer",
+    "recipient_phone": "+919876543211",
+    "signature_image": "base64_encoded_image",
+    "otp_verified": true,
+    "photos": ["url1", "url2"]
+  },
+  "notes": "Delivered successfully"
+}
+
+// Response 200
+{
+  "id": "uuid",
+  "status": "completed",
+  "summary": {
+    "planned_vs_actual_distance": "+3.8 km",
+    "fuel_efficiency_kmpl": 12.36,
+    "on_time_performance": true,
+    "profitability_inr": 4500
+  },
+  "alerts_generated": 0,
+  "driver_rating": 5
+}
+9. GEOFENCE APIs
+Base Path: /api/v1/geofences
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+75	GET	/geofences	List geofences	geofences:read
+76	POST	/geofences	Create geofence	geofences:write
+77	GET	/geofences/:id	Get geofence details	geofences:read
+78	PUT	/geofences/:id	Update geofence	geofences:write
+79	DELETE	/geofences/:id	Delete geofence	geofences:delete
+80	GET	/geofences/:id/events	Geofence entry/exit events	geofences:read
+81	POST	/geofences/:id/test	Test point against geofence	geofences:read
+82	POST	/geofences/batch	Create multiple geofences	geofences:write
+76. POST /api/v1/geofences
+JSON
+Copy
+// Request - Circle
+{
+  "name": "Warehouse Zone",
+  "type": "circle",
+  "center": {
+    "lat": 12.9716,
+    "lng": 77.5946
+  },
+  "radius_meters": 500,
+  "entry_alert": true,
+  "exit_alert": true,
+  "speed_limit": 20,
+  "vehicles": ["uuid1", "uuid2"], // Empty = all vehicles
+  "active_hours": {
+    "start": "06:00",
+    "end": "22:00",
+    "days": [1, 2, 3, 4, 5, 6] // 0=Sunday
+  }
+}
+
+// Request - Polygon
+{
+  "name": "City Center",
+  "type": "polygon",
+  "coordinates": [
+    {"lat": 12.9716, "lng": 77.5946},
+    {"lat": 12.9816, "lng": 77.6046},
+    {"lat": 12.9616, "lng": 77.6046},
+    {"lat": 12.9716, "lng": 77.5946} // Close polygon
+  ],
+  "entry_alert": true,
+  "exit_alert": false
+}
+
+// Request - Corridor (Route-based)
+{
+  "name": "Highway Route",
+  "type": "corridor",
+  "route_polyline": "encoded_polyline",
+  "buffer_meters": 200,
+  "entry_alert": false,
+  "exit_alert": true
+}
+
+// Response 201
+{
+  "id": "uuid",
+  "name": "Warehouse Zone",
+  "type": "circle",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [77.5946, 12.9716]
+  },
+  "radius_meters": 500,
+  "area_sqkm": 0.785,
+  "vehicles_assigned": 15,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+10. ALERT & EVENT APIs
+Base Path: /api/v1/alerts
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+83	GET	/alerts	List alerts	alerts:read
+84	POST	/alerts/rules	Create alert rule	alerts:admin
+85	GET	/alerts/rules	List alert rules	alerts:read
+86	PUT	/alerts/rules/:id	Update rule	alerts:admin
+87	DELETE	/alerts/rules/:id	Delete rule	alerts:admin
+88	POST	/alerts/:id/acknowledge	Acknowledge alert	alerts:write
+89	POST	/alerts/:id/resolve	Resolve alert	alerts:write
+84. POST /api/v1/alerts/rules
+JSON
+Copy
+// Request
+{
+  "name": "Overspeed Alert",
+  "type": "overspeed",
+  "description": "Alert when vehicle exceeds speed limit",
+  "conditions": {
+    "speed_limit": 80,
+    "duration_seconds": 30,
+    "consecutive_violations": 3
+  },
+  "severity": "warning",
+  "actions": [
+    {
+      "type": "notification",
+      "target": "fleet_manager",
+      "template": "overspeed_alert"
+    },
+    {
+      "type": "sms",
+      "target": "driver",
+      "message": "You are overspeeding. Please slow down."
+    },
+    {
+      "type": "webhook",
+      "url": "https://hooks.company.com/alerts",
+      "headers": {"Authorization": "Bearer token"}
+    }
+  ],
+  "vehicles": ["uuid1", "uuid2"], // Empty = all
+  "schedule": {
+    "active": true,
+    "start_time": "00:00",
+    "end_time": "23:59",
+    "days": [0, 1, 2, 3, 4, 5, 6]
+  }
+}
+
+// Alert Types:
+// - overspeed, harsh_acceleration, harsh_braking, harsh_cornering
+// - idle_time, geofence_entry, geofence_exit
+// - fuel_theft, low_battery, maintenance_due
+// - accident_detected, sos_pressed, device_offline
+// - temperature_excursion, route_deviation
+83. GET /api/v1/alerts
+JSON
+Copy
+// Query: ?severity=critical,warning&status=new&vehicle_id=uuid&from=&to=
+
+// Response 200
+{
+  "alerts": [
+    {
+      "id": "uuid",
+      "type": "overspeed",
+      "severity": "warning",
+      "status": "new",
+      "title": "Vehicle KA01AB1234 overspeeding",
+      "description": "Vehicle exceeded 80 km/h limit for 45 seconds",
+      "vehicle": {
+        "id": "uuid",
+        "registration_number": "KA01AB1234"
+      },
+      "driver": {
+        "id": "uuid",
+        "name": "John Driver"
+      },
+      "location": {
+        "lat": 12.9716,
+        "lng": 77.5946,
+        "address": "NH44, Bangalore"
+      },
+      "timestamp": "2024-01-15T10:30:00Z",
+      "rule_id": "uuid",
+      "metadata": {
+        "speed": 95.5,
+        "speed_limit": 80,
+        "duration_seconds": 45
+      },
+      "acknowledged_by": null,
+      "acknowledged_at": null,
+      "resolved_at": null
+    }
+  ],
+  "summary": {
+    "total": 45,
+    "new": 12,
+    "acknowledged": 20,
+    "resolved": 13,
+    "critical": 3,
+    "warning": 15,
+    "info": 27
+  }
+}
+11. MAINTENANCE APIs
+Base Path: /api/v1/maintenance
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+90	GET	/maintenance/vehicles/:id/schedule	Get maintenance schedule	maintenance:read
+91	POST	/maintenance/vehicles/:id/schedule	Schedule maintenance	maintenance:write
+92	GET	/maintenance/upcoming	List upcoming maintenance	maintenance:read
+93	GET	/maintenance/overdue	List overdue maintenance	maintenance:read
+94	POST	/maintenance/:id/complete	Mark as completed	maintenance:write
+95	GET	/maintenance/vehicles/:id/history	Maintenance history	maintenance:read
+96	POST	/maintenance/reminders	Configure reminders	maintenance:admin
+97	GET	/maintenance/predictive	AI predictive maintenance	maintenance:read
+12. FUEL APIs
+Base Path: /api/v1/fuel
+Table
+Copy
+#	Method	Endpoint	Description	Permission
+98	GET	/fuel/vehicles/:id/summary	Fuel summary	fuel:read
+99	GET	/fuel/vehicles/:id/refills	Refill history	fuel:read
+100	POST	/fuel/vehicles/:id/refill	Record refill	fuel:write
+101	GET	/fuel/vehicles/:id/theft-alerts	Fuel theft alerts	fuel:read
+102	GET	/fuel/fleet/efficiency	Fleet fuel efficiency	fuel:read
+103	GET	/fuel/fleet/costs	Fuel cost
+
+
+
+
+
+ I'll search for additional fleet management API specifications to complete your documentation. 
+ Based on the search results and industry standards for fleet management systems, here are the **remaining API specifications** to complete your platform documentation:
+
+---
+
+## 13. REPORTS APIs
+Base Path: `/api/v1/reports`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 104 | GET | `/reports` | List available report templates | reports:read |
+| 105 | POST | `/reports/generate` | Generate custom report | reports:write |
+| 106 | GET | `/reports/:id` | Get report status/result | reports:read |
+| 107 | GET | `/reports/:id/download` | Download report file | reports:read |
+| 108 | GET | `/reports/scheduled` | List scheduled reports | reports:admin |
+| 109 | POST | `/reports/scheduled` | Schedule recurring report | reports:admin |
+| 110 | PUT | `/reports/scheduled/:id` | Update scheduled report | reports:admin |
+| 111 | DELETE | `/reports/scheduled/:id` | Delete scheduled report | reports:admin |
+| 112 | GET | `/reports/dashboard` | Get dashboard metrics | reports:read |
+
+**105. POST /api/v1/reports/generate**
+```json
+// Request
+{
+  "template": "fleet_utilization",
+  "format": "pdf",
+  "date_range": {
+    "from": "2024-01-01",
+    "to": "2024-01-31"
+  },
+  "filters": {
+    "vehicle_types": ["truck", "van"],
+    "status": "active",
+    "regions": ["south", "west"]
+  },
+  "include_charts": true,
+  "email_to": ["manager@company.com"]
+}
+
+// Response 202
+{
+  "report_id": "uuid",
+  "status": "processing",
+  "estimated_completion": "2024-01-15T10:35:00Z",
+  "download_url": "/api/v1/reports/uuid/download"
+}
+```
+
+**112. GET /api/v1/reports/dashboard**
+```json
+// Response 200
+{
+  "fleet_summary": {
+    "total_vehicles": 45,
+    "online": 38,
+    "offline": 7,
+    "in_trip": 23,
+    "idle": 15
+  },
+  "today_stats": {
+    "distance_km": 2345.6,
+    "fuel_consumed_liters": 156.7,
+    "trips_completed": 89,
+    "alerts_triggered": 12
+  },
+  "safety_score": {
+    "fleet_average": 87.5,
+    "trend": "+2.3",
+    "critical_events": 3
+  },
+  "maintenance": {
+    "due_soon": 5,
+    "overdue": 2,
+    "cost_this_month": 45000
+  },
+  "cost_analysis": {
+    "fuel_cost_inr": 156000,
+    "maintenance_cost_inr": 45000,
+    "operational_cost_per_km": 18.5
+  }
+}
+```
+
+---
+
+## 14. BILLING APIs
+Base Path: `/api/v1/billing`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 113 | GET | `/billing/subscription` | Get current subscription | billing:read |
+| 114 | PUT | `/billing/subscription` | Update subscription | billing:admin |
+| 115 | GET | `/billing/invoices` | List invoices | billing:read |
+| 116 | GET | `/billing/invoices/:id` | Get invoice details | billing:read |
+| 117 | GET | `/billing/invoices/:id/download` | Download invoice PDF | billing:read |
+| 118 | GET | `/billing/usage` | Get detailed usage metrics | billing:read |
+| 119 | POST | `/billing/payment-methods` | Add payment method | billing:admin |
+| 120 | GET | `/billing/payment-methods` | List payment methods | billing:read |
+| 121 | DELETE | `/billing/payment-methods/:id` | Remove payment method | billing:admin |
+
+**113. GET /api/v1/billing/subscription**
+```json
+// Response 200
+{
+  "plan": "enterprise",
+  "status": "active",
+  "billing_cycle": "monthly",
+  "current_period": {
+    "start": "2024-01-01",
+    "end": "2024-01-31"
+  },
+  "limits": {
+    "vehicles": 100,
+    "users": 50,
+    "api_calls": 100000,
+    "storage_gb": 500
+  },
+  "usage": {
+    "vehicles": 45,
+    "users": 12,
+    "api_calls": 45600,
+    "storage_gb": 123.5
+  },
+  "cost": {
+    "base": 25000,
+    "overage": 0,
+    "tax": 4500,
+    "total": 29500,
+    "currency": "INR"
+  },
+  "next_billing_date": "2024-02-01",
+  "payment_method": {
+    "type": "credit_card",
+    "last4": "4242",
+    "expiry": "12/25"
+  }
+}
+```
+
+**118. GET /api/v1/billing/usage**
+```json
+// Query: ?from=2024-01-01&to=2024-01-31&group_by=day
+
+// Response 200
+{
+  "period": {
+    "from": "2024-01-01",
+    "to": "2024-01-31"
+  },
+  "summary": {
+    "total_api_calls": 45600,
+    "total_data_points": 12500000,
+    "total_storage_gb": 123.5,
+    "sms_sent": 450,
+    "emails_sent": 1200
+  },
+  "daily_breakdown": [
+    {
+      "date": "2024-01-15",
+      "api_calls": 1560,
+      "data_points": 450000,
+      "storage_gb": 4.2
+    }
+  ],
+  "cost_breakdown": {
+    "base_subscription": 25000,
+    "api_overages": 0,
+    "storage_overages": 0,
+    "sms_charges": 450,
+    "support_plan": 5000
+  }
+}
+```
+
+---
+
+## 15. INTEGRATIONS APIs (India-Specific)
+Base Path: `/api/v1/integrations`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 122 | GET | `/integrations` | List available integrations | integrations:read |
+| 123 | POST | `/integrations/fastag` | Link Fastag account | integrations:write |
+| 124 | GET | `/integrations/fastag/transactions` | Get Fastag transactions | integrations:read |
+| 125 | POST | `/integrations/eway` | Create E-way bill | integrations:write |
+| 126 | GET | `/integrations/eway/:id` | Get E-way bill status | integrations:read |
+| 127 | POST | `/integrations/vahan` | Verify vehicle RC | integrations:write |
+| 128 | POST | `/integrations/sarathi` | Verify driver license | integrations:write |
+| 129 | GET | `/integrations/gst` | Get GST compliance data | integrations:read |
+| 130 | POST | `/integrations/webhooks` | Configure webhooks | integrations:admin |
+
+**123. POST /api/v1/integrations/fastag**
+```json
+// Request
+{
+  "vehicle_id": "uuid",
+  "fastag_id": "34161FA1234567",
+  "bank": "HDFC",
+  "wallet_id": "WALT123456"
+}
+
+// Response 201
+{
+  "integration_id": "uuid",
+  "status": "active",
+  "vehicle_id": "uuid",
+  "fastag_details": {
+    "tag_id": "34161FA1234567",
+    "vehicle_class": "VC4",
+    "status": "active"
+  },
+  "auto_recharge": {
+    "enabled": true,
+    "threshold": 100,
+    "amount": 500
+  }
+}
+```
+
+**124. GET /api/v1/integrations/fastag/transactions**
+```json
+// Query: ?vehicle_id=uuid&from=&to=&limit=50
+
+// Response 200
+{
+  "transactions": [
+    {
+      "id": "txn-uuid",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "plaza_name": "Krishnagiri Toll Plaza",
+      "plaza_location": {"lat": 12.5, "lng": 78.2},
+      "amount_inr": 245,
+      "balance_inr": 1255,
+      "status": "success"
+    }
+  ],
+  "total_spent": 4520,
+  "total_transactions": 23
+}
+```
+
+**125. POST /api/v1/integrations/eway**
+```json
+// Request
+{
+  "trip_id": "uuid",
+  "vehicle_id": "uuid",
+  "consignor": {
+    "name": "ABC Logistics",
+    "gstin": "27AABCU9603R1ZX",
+    "address": "Bangalore"
+  },
+  "consignee": {
+    "name": "XYZ Corp",
+    "gstin": "33AABCU9603R1ZX",
+    "address": "Chennai"
+  },
+  "goods": [
+    {
+      "description": "Electronics",
+      "hsn_code": "8517",
+      "quantity": 50,
+      "value_inr": 500000
+    }
+  ],
+  "transporter": {
+    "name": "ABC Logistics",
+    "vehicle_number": "KA01AB1234"
+  },
+  "distance_km": 350
+}
+
+// Response 201
+{
+  "eway_bill_id": "uuid",
+  "eway_bill_number": "123456789012",
+  "valid_until": "2024-01-16T10:30:00Z",
+  "status": "active",
+  "qr_code": "base64...",
+  "pdf_url": "https://..."
+}
+```
+
+---
+
+## 16. REAL-TIME APIs (WebSocket & SSE)
+Base Path: `/api/v1/realtime`
+
+| # | Method | Endpoint | Description | Auth |
+|---|--------|----------|-------------|------|
+| 131 | WS | `/realtime/ws/fleet` | WebSocket: Fleet updates | JWT |
+| 132 | WS | `/realtime/ws/vehicle/:id` | WebSocket: Single vehicle | JWT |
+| 133 | GET | `/realtime/sse/alerts` | SSE: Alert stream | JWT |
+| 134 | GET | `/realtime/sse/telemetry` | SSE: Telemetry stream | JWT |
+| 135 | POST | `/realtime/subscribe` | Subscribe to channels | JWT |
+| 136 | POST | `/realtime/unsubscribe` | Unsubscribe from channels | JWT |
+
+**131. WebSocket `/api/v1/realtime/ws/fleet`**
+```json
+// Connection: wss://api.example.com/api/v1/realtime/ws/fleet?token=eyJhbG...
+
+// Client → Server (Subscribe)
+{
+  "action": "subscribe",
+  "channels": ["vehicle.locations", "trip.updates", "alerts.critical"]
+}
+
+// Server → Client (Vehicle Location Update)
+{
+  "channel": "vehicle.locations",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "vehicle_id": "uuid",
+    "registration_number": "KA01AB1234",
+    "location": {
+      "lat": 12.9716,
+      "lng": 77.5946,
+      "speed": 45.5,
+      "heading": 180
+    },
+    "ignition": true,
+    "driver_id": "uuid"
+  }
+}
+
+// Server → Client (Trip Update)
+{
+  "channel": "trip.updates",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "trip_id": "uuid",
+    "status": "in_progress",
+    "progress": {
+      "current_waypoint": 2,
+      "completed_distance_km": 156.7,
+      "remaining_distance_km": 193.3,
+      "eta": "2024-01-15T14:30:00Z"
+    }
+  }
+}
+
+// Server → Client (Critical Alert)
+{
+  "channel": "alerts.critical",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "alert_id": "uuid",
+    "type": "accident_detected",
+    "severity": "critical",
+    "vehicle_id": "uuid",
+    "location": {"lat": 12.9716, "lng": 77.5946},
+    "message": "Possible accident detected - High impact force"
+  }
+}
+```
+
+**133. SSE `/api/v1/realtime/sse/alerts`**
+```http
+GET /api/v1/realtime/sse/alerts
+Authorization: Bearer eyJhbG...
+Accept: text/event-stream
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+
+id: 1
+event: alert
+data: {"alert_id":"uuid","type":"overspeed","vehicle_id":"uuid","timestamp":"2024-01-15T10:30:00Z"}
+
+id: 2
+event: alert
+data: {"alert_id":"uuid","type":"geofence_exit","vehicle_id":"uuid","timestamp":"2024-01-15T10:35:00Z"}
+```
+
+---
+
+## 17. COMPLETE API SUMMARY
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| Authentication | 10 | User auth, tokens, MFA, password management |
+| User Management | 8 | CRUD, permissions, profile |
+| Organization | 5 | Multi-tenant management |
+| Vehicles | 13 | Fleet vehicle operations |
+| Drivers | 10 | Driver management |
+| Devices | 12 | IoT device enrollment & management |
+| Telemetry | 6 | GPS, OBD, sensor data |
+| Trips | 11 | Journey lifecycle |
+| Geofences | 8 | Location-based rules |
+| Alerts & Events | 7 | Notifications & monitoring |
+| Maintenance | 8 | Service scheduling |
+| Fuel | 6 | Fuel tracking & theft detection |
+| Reports | 9 | Analytics & exports |
+| Billing | 9 | Subscriptions & invoicing |
+| Integrations | 9 | India-specific (Fastag, E-way, etc.) |
+| Real-time | 6 | WebSocket, SSE |
+| **TOTAL** | **137** | **Complete platform** |
+
+---
+
+---
+
+## 📊 API STANDARDS & CONVENTIONS
+
+### Standard Response Formats
+
+#### Success Response
+```json
+{
+  "data": {...},
+  "meta": {
+    "request_id": "req-uuid",
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### Error Response (4xx/5xx)
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request parameters",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format",
+        "constraint": "email"
+      }
+    ],
+    "request_id": "req-uuid",
+    "timestamp": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### Pagination Response
+```json
+{
+  "data": [...],
+  "pagination": {
+    "total": 150,
+    "limit": 20,
+    "offset": 0,
+    "has_more": true,
+    "next_offset": 20,
+    "prev_offset": null
+  }
+}
+```
+
+---
+
+### HTTP Status Codes
+
+| Code | Status | Description |
+|------|--------|-------------|
+| `200` | OK | Request successful |
+| `201` | Created | Resource created successfully |
+| `202` | Accepted | Request accepted for async processing |
+| `204` | No Content | Request successful, no content to return |
+| `400` | Bad Request | Invalid request parameters |
+| `401` | Unauthorized | Missing or invalid authentication |
+| `403` | Forbidden | Insufficient permissions |
+| `404` | Not Found | Resource not found |
+| `409` | Conflict | Resource conflict (duplicate, etc.) |
+| `422` | Unprocessable Entity | Validation failed |
+| `429` | Too Many Requests | Rate limit exceeded |
+| `500` | Internal Server Error | Server error |
+| `503` | Service Unavailable | Service temporarily unavailable |
+
+---
+
+### Rate Limiting
+
+**Standard API Endpoints:**
+- Limit: 1000 requests/hour
+- Burst: 100 requests/minute
+
+**Device Telemetry Endpoints:**
+- Limit: 10,000 requests/hour per device
+- Burst: 500 requests/minute
+
+**Real-time WebSocket:**
+- Max concurrent connections: 100 per user
+
+**Rate Limit Headers:**
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 998
+X-RateLimit-Reset: 1705315800
+Retry-After: 3600
+```
+
+---
+
+### Date & Time Format
+
+**Standard:** ISO 8601 (RFC3339)  
+**Timezone:** UTC (all timestamps)  
+**Format:** `YYYY-MM-DDTHH:mm:ss.sssZ`  
+**Example:** `2024-01-15T10:30:00.000Z`
+
+---
+
+### Pagination
+
+**Query Parameters:**
+- `limit` - Number of items per page (default: 20, max: 100)
+- `offset` - Number of items to skip (default: 0)
+
+**Example:**
+```http
+GET /api/v1/vehicles?limit=50&offset=100
+```
+
+---
+
+### Filtering
+
+**Query Parameters:**
+- Single value: `?status=active`
+- Multiple values: `?status=active,idle`
+- Search: `?search=KA01`
+- Date range: `?from=2024-01-01&to=2024-01-31`
+
+---
+
+### Sorting
+
+**Query Parameter:** `sort`  
+**Format:** `field:order`  
+**Orders:** `asc`, `desc`
+
+**Example:**
+```http
+GET /api/v1/vehicles?sort=created_at:desc
+GET /api/v1/drivers?sort=rating:desc,name:asc
+```
+
+---
+
+## 🔒 SECURITY
+
+### Authentication Methods
+
+#### 1. JWT Bearer Token (Web/Mobile Users)
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Token Expiry:**
+- Access Token: 15 minutes
+- Refresh Token: 7 days
+
+#### 2. API Key (IoT Devices)
+```http
+X-API-Key: device-api-key-here
+```
+
+**Key Rotation:** Recommended every 90 days
+
+---
+
+### CORS Policy
+
+**Allowed Origins:** Configured per environment  
+**Allowed Methods:** `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`  
+**Allowed Headers:** `Content-Type`, `Authorization`, `X-API-Key`  
+**Exposed Headers:** `X-RateLimit-*`, `X-Request-ID`
+
+---
+
+### HTTPS Only
+
+**All API requests must use HTTPS.**  
+HTTP requests will be redirected to HTTPS automatically.
+
+---
+
+## 🔔 WEBHOOKS
+
+Webhooks allow your application to receive real-time event notifications.
+
+### Webhook Events
+
+- `vehicle.created`
+- `vehicle.updated`
+- `vehicle.deleted`
+- `vehicle.location_updated`
+- `vehicle.overspeed`
+- `vehicle.accident_detected`
+- `trip.started`
+- `trip.completed`
+- `trip.delayed`
+- `geofence.entry`
+- `geofence.exit`
+- `alert.created`
+- `alert.critical`
+- `driver.sos_pressed`
+- `device.offline`
+- `device.online`
+
+### Webhook Payload
+
+```json
+{
+  "event": "vehicle.overspeed",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "vehicle_id": "uuid",
+    "speed": 95.5,
+    "speed_limit": 80,
+    "location": {"lat": 12.9716, "lng": 77.5946}
+  },
+  "webhook_id": "uuid",
+  "delivery_attempt": 1
+}
+```
+
+### Webhook Signature
+
+**Header:** `X-Webhook-Signature`  
+**Algorithm:** HMAC-SHA256  
+**Secret:** Provided during webhook creation
+
+**Verification:**
+```javascript
+const crypto = require('crypto');
+const signature = crypto
+  .createHmac('sha256', webhookSecret)
+  .update(JSON.stringify(payload))
+  .digest('hex');
+```
+
+---
+
+## 📡 REAL-TIME APIs
+
+### WebSocket Connection
+
+**Endpoint:** `wss://api.flyfleet.in/api/v1/realtime/ws/fleet`  
+**Authentication:** JWT token as query parameter
+
+**Connect:**
+```javascript
+const ws = new WebSocket(
+  'wss://api.flyfleet.in/api/v1/realtime/ws/fleet?token=eyJhbG...'
+);
+```
+
+**Subscribe to channels:**
+```json
+{
+  "action": "subscribe",
+  "channels": [
+    "vehicle.locations",
+    "trip.updates",
+    "alerts.critical"
+  ],
+  "filters": {
+    "vehicle_ids": ["uuid1", "uuid2"]
+  }
+}
+```
+
+**Receive updates:**
+```json
+{
+  "channel": "vehicle.locations",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "vehicle_id": "uuid",
+    "location": {"lat": 12.9716, "lng": 77.5946},
+    "speed": 45.5,
+    "heading": 180
+  }
+}
+```
+
+---
+
+## 🇮🇳 INDIA-SPECIFIC INTEGRATIONS
+
+### FASTag Integration
+
+**Supported Banks:** HDFC, ICICI, SBI, Paytm, Axis  
+**Data Sync:** Real-time toll transaction capture  
+**Auto-reconciliation:** Daily at 00:00 IST
+
+### E-way Bill Generation
+
+**Portal:** GST Government Portal  
+**Auto-generation:** On trip creation (if cargo value > ₹50,000)  
+**Validity:** 200km per day + proportional extension
+
+### Vahan/Sarathi Integration
+
+**Vahan API:** Vehicle RC verification  
+**Sarathi API:** Driver license verification  
+**Rate Limit:** 100 requests/day per org
+
+---
+
+## 📚 ADDITIONAL RESOURCES
+
+### Postman Collection
+
+[Download Postman Collection](https://api.flyfleet.in/docs/postman-collection.json)
+
+### OpenAPI Specification
+
+[View OpenAPI 3.0 Spec](https://api.flyfleet.in/docs/openapi.yaml)
+
+### SDKs
+
+- **JavaScript/TypeScript:** `npm install @flyfleet/sdk`
+- **Python:** `pip install flyfleet-sdk`
+- **Go:** `go get github.com/flyfleet/go-sdk`
+- **Java:** Available on Maven Central
+
+### Support
+
+- **Documentation:** https://docs.flyfleet.in
+- **API Status:** https://status.flyfleet.in
+- **Support Email:** api-support@flyfleet.in
+- **Developer Forum:** https://forum.flyfleet.in
+
+---
+
+## ℹ️ CHANGELOG
+
+### v1.0.0 (2024-01-15)
+- Initial API release
+- 187 endpoints across 25 categories
+- India-specific integrations (FASTag, E-way bill, Vahan)
+- Real-time WebSocket support
+- TimescaleDB for high-frequency telemetry
+- PostGIS for geospatial queries
+
+---
+
+**© 2024 FlyFleet. All rights reserved.**
+
+
+
+
+ I'll search for additional fleet management API use cases and advanced features to complete your documentation.  
+  Based on my research, here are **additional advanced APIs** with detailed **use cases** and **business value** for your fleet management platform:
+
+---
+
+## 17. WEBHOOK MANAGEMENT APIs
+Base Path: `/api/v1/webhooks`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 137 | GET | `/webhooks` | List configured webhooks | webhooks:read |
+| 138 | POST | `/webhooks` | Create new webhook | webhooks:admin |
+| 139 | GET | `/webhooks/:id` | Get webhook details | webhooks:read |
+| 140 | PUT | `/webhooks/:id` | Update webhook | webhooks:admin |
+| 141 | DELETE | `/webhooks/:id` | Delete webhook | webhooks:admin |
+| 142 | POST | `/webhooks/:id/test` | Test webhook endpoint | webhooks:admin |
+| 143 | GET | `/webhooks/:id/deliveries` | Get delivery history | webhooks:read |
+| 144 | POST | `/webhooks/:id/rotate-secret` | Rotate webhook secret | webhooks:admin |
+
+**138. POST /api/v1/webhooks**
+```json
+// Request
+{
+  "name": "Critical Alert Handler",
+  "url": "https://your-system.com/webhooks/fleet-alerts",
+  "events": [
+    "vehicle.accident_detected",
+    "vehicle.overspeed",
+    "driver.sos_pressed",
+    "geofence.breach",
+    "device.offline"
+  ],
+  "secret": "whsec_...", // Auto-generated if not provided
+  "active": true,
+  "retry_policy": {
+    "max_retries": 5,
+    "backoff_seconds": 30
+  },
+  "filter": {
+    "severity": ["critical", "warning"],
+    "vehicle_types": ["truck", "bus"]
+  }
+}
+
+// Response 201
+{
+  "id": "uuid",
+  "secret": "whsec_actual_secret_show_once",
+  "status": "active",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+### **USE CASE: Real-Time Alert Integration**
+**Scenario:** Logistics company needs instant notifications for critical safety events  
+**Implementation:** 
+- Configure webhook for `vehicle.accident_detected` and `driver.sos_pressed`
+- Your system receives instant POST request with event data
+- Trigger emergency response workflow (call ambulance, notify manager, immobilize vehicle)
+- **Value:** Reduces emergency response time from 15 minutes to 30 seconds
+
+---
+
+## 18. ROUTE OPTIMIZATION APIs
+Base Path: `/api/v1/routing`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 145 | POST | `/routing/optimize` | Optimize multi-stop routes | routing:write |
+| 146 | GET | `/routing/:id` | Get optimization result | routing:read |
+| 147 | POST | `/routing/:id/dispatch` | Dispatch optimized route | routing:execute |
+| 148 | POST | `/routing/:id/reoptimize` | Re-optimize mid-route | routing:execute |
+| 149 | GET | `/routing/vehicles/:id/routes` | Get vehicle route history | routing:read |
+| 150 | POST | `/routing/batch` | Batch optimize routes | routing:write |
+
+**145. POST /api/v1/routing/optimize**
+```json
+// Request
+{
+  "vehicles": [
+    {
+      "id": "vehicle-uuid-1",
+      "start_location": {"lat": 12.9716, "lng": 77.5946},
+      "capacity_kg": 1000,
+      "fuel_type": "diesel",
+      "max_travel_time_hours": 8,
+      "skills": ["refrigerated", "hazmat"]
+    }
+  ],
+  "stops": [
+    {
+      "id": "stop-1",
+      "type": "pickup",
+      "location": {"lat": 12.9352, "lng": 77.6245},
+      "demand_kg": 200,
+      "time_window": {
+        "start": "2024-01-15T09:00:00Z",
+        "end": "2024-01-15T11:00:00Z"
+      },
+      "service_duration_minutes": 30,
+      "priority": "high"
+    },
+    {
+      "id": "stop-2",
+      "type": "delivery",
+      "location": {"lat": 13.0827, "lng": 80.2707},
+      "demand_kg": 200,
+      "time_window": {
+        "start": "2024-01-15T14:00:00Z",
+        "end": "2024-01-15T16:00:00Z"
+      },
+      "required_skills": ["refrigerated"]
+    }
+  ],
+  "constraints": {
+    "traffic_aware": true,
+    "avoid_tolls": false,
+    "balance_workload": true,
+    "minimize_fuel": true
+  }
+}
+
+// Response 200
+{
+  "optimization_id": "uuid",
+  "status": "completed",
+  "routes": [
+    {
+      "vehicle_id": "vehicle-uuid-1",
+      "total_distance_km": 348.5,
+      "total_duration_hours": 7.2,
+      "fuel_cost_estimate_inr": 2800,
+      "toll_cost_inr": 245,
+      "stops": [
+        {
+          "stop_id": "stop-1",
+          "sequence": 1,
+          "estimated_arrival": "2024-01-15T09:45:00Z",
+          "estimated_departure": "2024-01-15T10:15:00Z"
+        },
+        {
+          "stop_id": "stop-2",
+          "sequence": 2,
+          "estimated_arrival": "2024-01-15T14:30:00Z"
+        }
+      ],
+      "polyline": "encoded_polyline_string",
+      "efficiency_score": 94.5
+    }
+  ],
+  "unassigned_stops": [],
+  "savings": {
+    "distance_saved_km": 45.2,
+    "fuel_saved_liters": 12.5,
+    "cost_saved_inr": 1250,
+    "co2_saved_kg": 32.8
+  }
+}
+```
+
+### **USE CASE: E-commerce Last-Mile Delivery**
+**Scenario:** 50 delivery vehicles, 800 daily orders across Bangalore  
+**Implementation:**
+- Upload daily orders with time windows (customer preferred slots)
+- API considers traffic patterns, vehicle capacity, fuel costs
+- Automatically assigns stops to minimize total distance
+- **Value:** 
+  - 25% reduction in fuel costs (₹1.25L saved/month)
+  - 15% increase in deliveries per vehicle
+  - 98.5% on-time delivery rate (up from 93%)
+
+---
+
+## 19. DRIVER BEHAVIOR & COACHING APIs
+Base Path: `/api/v1/safety`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 151 | GET | `/safety/drivers/:id/score` | Get driver safety score | safety:read |
+| 152 | GET | `/safety/drivers/:id/incidents` | List safety incidents | safety:read |
+| 153 | POST | `/safety/coaching` | Create coaching session | safety:write |
+| 154 | GET | `/safety/coaching/:id` | Get coaching details | safety:read |
+| 155 | GET | `/safety/fleet/benchmarks` | Fleet safety benchmarks | safety:read |
+| 156 | POST | `/safety/gamification/rewards` | Configure reward rules | safety:admin |
+
+**151. GET /api/v1/safety/drivers/:id/score**
+```json
+// Query: ?period=30d
+
+// Response 200
+{
+  "driver_id": "uuid",
+  "period": "30d",
+  "overall_score": 87.5,
+  "grade": "B+",
+  "trend": "improving",
+  "breakdown": {
+    "speeding": {
+      "score": 92,
+      "violations": 3,
+      "total_overspeed_duration_minutes": 12
+    },
+    "harsh_events": {
+      "score": 78,
+      "harsh_acceleration": 5,
+      "harsh_braking": 8,
+      "harsh_cornering": 2
+    },
+    "distraction": {
+      "score": 95,
+      "phone_usage_events": 1,
+      "drowsiness_alerts": 0
+    },
+    "seatbelt": {
+      "score": 100,
+      "violations": 0
+    },
+    "idling": {
+      "score": 82,
+      "excessive_idling_minutes": 45
+    }
+  },
+  "peer_comparison": {
+    "fleet_average": 82.3,
+    "percentile": 75
+  },
+  "risk_factors": [
+    {
+      "type": "harsh_braking",
+      "severity": "medium",
+      "recommendation": "Increase following distance on highways"
+    }
+  ],
+  "improvement_areas": ["harsh_braking", "excessive_idling"]
+}
+```
+
+### **USE CASE: Insurance Premium Reduction**
+**Scenario:** Fleet of 100 trucks, high insurance costs due to accidents  
+**Implementation:**
+- Monitor driver behavior via telematics and AI dashcams
+- Generate safety scores for each driver
+- Share anonymized scores with insurance provider
+- **Value:**
+  - 30% reduction in insurance premiums
+  - 40% fewer accidents within 6 months
+  - Automated driver coaching reduces manager workload by 60%
+
+---
+
+## 20. COMPLIANCE & REGULATORY APIs
+Base Path: `/api/v1/compliance`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 157 | GET | `/compliance/drivers/:id/hos` | Hours of Service logs | compliance:read |
+| 158 | POST | `/compliance/drivers/:id/hos` | Submit HOS logs | compliance:write |
+| 159 | GET | `/compliance/vehicles/:id/documents` | Compliance documents | compliance:read |
+| 160 | GET | `/compliance/alerts` | Compliance violation alerts | compliance:read |
+| 161 | POST | `/compliance/audit` | Generate audit report | compliance:admin |
+| 162 | GET | `/compliance/gst/returns` | GST filing data | compliance:read |
+
+**157. GET /api/v1/compliance/drivers/:id/hos**
+```json
+// Query: ?date=2024-01-15
+
+// Response 200
+{
+  "driver_id": "uuid",
+  "date": "2024-01-15",
+  "duty_status": [
+    {
+      "status": "driving",
+      "start": "2024-01-15T06:00:00Z",
+      "end": "2024-01-15T10:30:00Z",
+      "duration_minutes": 270,
+      "location_start": {"lat": 12.9716, "lng": 77.5946},
+      "location_end": {"lat": 13.0827, "lng": 80.2707}
+    },
+    {
+      "status": "on_duty_not_driving",
+      "start": "2024-01-15T10:30:00Z",
+      "end": "2024-01-15T11:00:00Z",
+      "duration_minutes": 30,
+      "reason": "loading"
+    },
+    {
+      "status": "off_duty",
+      "start": "2024-01-15T11:00:00Z",
+      "end": "2024-01-15T12:00:00Z",
+      "duration_minutes": 60
+    }
+  ],
+  "summary": {
+    "total_driving_hours": 4.5,
+    "total_on_duty_hours": 5.0,
+    "total_off_duty_hours": 1.0,
+    "remaining_driving_hours": 5.5,
+    "violations": []
+  },
+  "eld_malfunction": false
+}
+```
+
+### **USE CASE: Regulatory Compliance (India)**
+**Scenario:** Transport company must comply with CMVR 2017 and ELD mandates  
+**Implementation:**
+- Automatically track driver Hours of Service via GPS and ignition data
+- Alert dispatcher when driver approaches 8-hour driving limit
+- Generate compliant logs for RTO inspections
+- **Value:**
+  - Zero compliance fines (₹10,000 per violation avoided)
+  - Automated audit reports save 40 hours/month of manual work
+  - Real-time alerts prevent driver fatigue accidents
+
+---
+
+## 21. PREDICTIVE MAINTENANCE APIs (AI-Powered)
+Base Path: `/api/v1/predictive`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 163 | GET | `/predictive/vehicles/:id/health` | Vehicle health score | predictive:read |
+| 164 | GET | `/predictive/vehicles/:id/failures` | Predicted failures | predictive:read |
+| 165 | POST | `/predictive/maintenance/schedule` | AI-optimized schedule | predictive:write |
+| 166 | GET | `/predictive/costs` | Predicted maintenance costs | predictive:read |
+
+**163. GET /api/v1/predictive/vehicles/:id/health**
+```json
+// Response 200
+{
+  "vehicle_id": "uuid",
+  "health_score": 78,
+  "status": "fair",
+  "last_updated": "2024-01-15T10:30:00Z",
+  "component_health": [
+    {
+      "component": "engine",
+      "health": 85,
+      "status": "good",
+      "last_service": "2024-01-01",
+      "next_service_due": "2024-02-15"
+    },
+    {
+      "component": "brakes",
+      "health": 65,
+      "status": "attention_needed",
+      "predicted_failure_date": "2024-02-01",
+      "confidence": 0.82,
+      "recommendation": "Inspect brake pads within 7 days"
+    },
+    {
+      "component": "transmission",
+      "health": 90,
+      "status": "excellent"
+    }
+  ],
+  "driving_impact": {
+    "harsh_braking_correlation": 0.7,
+    "overspeed_correlation": 0.3
+  },
+  "cost_projection": {
+    "next_30_days_inr": 15000,
+    "next_90_days_inr": 45000,
+    "potential_savings_with_early_action": 25000
+  }
+}
+```
+
+### **USE CASE: Preventive Maintenance Cost Reduction**
+**Scenario:** Fleet of 200 vehicles, frequent breakdowns causing delivery delays  
+**Implementation:**
+- AI analyzes OBD data, driving behavior, and historical failures
+- Predicts component failures 2-4 weeks in advance
+- Schedule maintenance during off-peak hours
+- **Value:**
+  - 35% reduction in unplanned downtime
+  - 20% lower maintenance costs
+  - 99.5% vehicle availability (up from 94%)
+
+---
+
+## 22. CUSTOMER NOTIFICATION APIs
+Base Path: `/api/v1/notifications`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 167 | POST | `/notifications/sms` | Send SMS notification | notifications:write |
+| 168 | POST | `/notifications/email` | Send email notification | notifications:write |
+| 169 | POST | `/notifications/push` | Send push notification | notifications:write |
+| 170 | POST | `/notifications/whatsapp` | Send WhatsApp message | notifications:write |
+| 171 | GET | `/notifications/templates` | List message templates | notifications:read |
+| 172 | POST | `/notifications/templates` | Create template | notifications:admin |
+
+**170. POST /api/v1/notifications/whatsapp**
+```json
+// Request
+{
+  "template_name": "delivery_eta_update",
+  "recipients": ["+919876543210"],
+  "variables": {
+    "customer_name": "Rajesh",
+    "order_id": "ORD123456",
+    "eta": "2:30 PM",
+    "driver_name": "Suresh",
+    "tracking_link": "https://track.example.com/abc123"
+  },
+  "language": "hi" // Hindi
+}
+
+// Response 202
+{
+  "message_id": "msg-uuid",
+  "status": "queued",
+  "provider": "whatsapp_business_api",
+  "estimated_delivery": "2024-01-15T10:30:05Z"
+}
+```
+
+### **USE CASE: Customer Experience Enhancement**
+**Scenario:** E-commerce delivery, customers constantly calling for ETA updates  
+**Implementation:**
+- Auto-trigger WhatsApp notifications at key events (dispatched, nearby, delivered)
+- Send live tracking links with driver details
+- Two-way communication for delivery instructions
+- **Value:**
+  - 80% reduction in customer service calls
+  - 25% increase in customer satisfaction (NPS)
+  - 15% reduction in failed deliveries (customer not available)
+
+---
+
+## 23. INVENTORY & PARTS MANAGEMENT APIs
+Base Path: `/api/v1/inventory`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 173 | GET | `/inventory/parts` | List spare parts | inventory:read |
+| 174 | POST | `/inventory/parts` | Add new part | inventory:write |
+| 175 | GET | `/inventory/parts/:id` | Get part details | inventory:read |
+| 176 | PUT | `/inventory/parts/:id` | Update stock | inventory:write |
+| 177 | GET | `/inventory/low-stock` | Low stock alerts | inventory:read |
+| 178 | POST | `/inventory/orders` | Create purchase order | inventory:write |
+
+### **USE CASE: Maintenance Inventory Optimization**
+**Scenario:** Workshop maintains stock of spare parts for 500 vehicles  
+**Implementation:**
+- Track parts usage against maintenance schedules
+- Auto-generate purchase orders when stock below threshold
+- Link to predictive maintenance for proactive procurement
+- **Value:**
+  - 40% reduction in parts stockout situations
+  - 25% lower inventory holding costs
+  - 50% faster repair turnaround time
+
+---
+
+## 24. EXPENSE MANAGEMENT APIs
+Base Path: `/api/v1/expenses`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 179 | GET | `/expenses/vehicles/:id` | Vehicle expenses | expenses:read |
+| 180 | POST | `/expenses` | Record expense | expenses:write |
+| 181 | GET | `/expenses/categories` | Expense categories | expenses:read |
+| 182 | GET | `/expenses/reimbursements` | Driver reimbursements | expenses:read |
+| 183 | POST | `/expenses/reimbursements` | Submit reimbursement | expenses:write |
+
+### **USE CASE: Driver Expense Reimbursement**
+**Scenario:** Drivers pay for tolls, parking, minor repairs out-of-pocket  
+**Implementation:**
+- Drivers upload receipts via mobile app
+- OCR extracts amount, date, merchant
+- Auto-approve standard expenses, flag anomalies
+- Integrate with payroll for monthly reimbursement
+- **Value:**
+  - 90% faster reimbursement processing
+  - 30% reduction in fraudulent claims
+  - Improved driver satisfaction and retention
+
+---
+
+## 25. AI/ML ANALYTICS APIs
+Base Path: `/api/v1/ai`
+
+| # | Method | Endpoint | Description | Permission |
+|---|--------|----------|-------------|------------|
+| 184 | POST | `/ai/anomalies/detect` | Detect anomalies in data | ai:read |
+| 185 | GET | `/ai/insights/fleet` | Get AI-generated insights | ai:read |
+| 186 | POST | `/ai/chatbot/query` | Natural language fleet queries | ai:read |
+
+**185. GET /api/v1/ai/insights/fleet**
+```json
+// Response 200
+{
+  "generated_at": "2024-01-15T10:30:00Z",
+  "insights": [
+    {
+      "type": "cost_optimization",
+      "severity": "high",
+      "title": "Fuel Theft Detected in Vehicle KA01AB1234",
+      "description": "Unusual fuel drop of 20 liters detected while vehicle was stationary at location X",
+      "potential_savings_inr": 50000,
+      "recommended_action": "Investigate driver and check for fuel cap tampering"
+    },
+    {
+      "type": "maintenance",
+      "severity": "medium",
+      "title": "Tire Replacement Needed Soon",
+      "description": "Based on mileage and driving patterns, tires on 5 vehicles will need replacement in next 30 days",
+      "potential_savings_inr": 25000,
+      "recommended_action": "Bulk order tires now to get 15% discount"
+    },
+    {
+      "type": "utilization",
+      "severity": "low",
+      "title": "Underutilized Vehicles Identified",
+      "description": "12 vehicles have utilization below 40%. Consider reallocating or disposing.",
+      "potential_savings_inr": 120000,
+      "recommended_action": "Review route assignments or sell excess vehicles"
+    }
+  ],
+  "confidence_score": 0.92
+}
+```
+
+---
+
+## COMPLETE UPDATED API SUMMARY
+
+| Category | Count | Key Use Cases |
+|----------|-------|---------------|
+| Authentication | 10 | Secure access, MFA |
+| User Management | 8 | Role-based access control |
+| Organization | 5 | Multi-tenant management |
+| Vehicles | 13 | Real-time tracking, remote control |
+| Drivers | 10 | Performance management, safety |
+| Devices | 12 | IoT enrollment, telemetry |
+| Telemetry | 6 | GPS, OBD, sensor data |
+| Trips | 11 | End-to-end journey management |
+| Geofences | 8 | Location-based automation |
+| Alerts & Events | 7 | Real-time monitoring |
+| Maintenance | 8 | Service scheduling |
+| Fuel | 6 | Theft detection, efficiency |
+| Reports | 9 | Analytics, compliance |
+| Billing | 9 | Subscription management |
+| Integrations | 9 | Fastag, E-way, Vahan |
+| Real-time | 6 | WebSocket, SSE streaming |
+| Webhooks | 8 | Third-party integrations |
+| Routing | 6 | Route optimization, dispatch |
+| Safety | 6 | Driver behavior, coaching |
+| Compliance | 6 | HOS, GST, regulatory |
+| Predictive | 4 | AI maintenance, failure prediction |
+| Notifications | 6 | Customer communications |
+| Inventory | 6 | Spare parts management |
+| Expenses | 5 | Cost tracking, reimbursement |
+| AI/ML | 3 | Anomaly detection, insights |
+| **TOTAL** | **187** | **Complete Enterprise Platform** |
+
+---
+
+## BUSINESS VALUE SUMMARY BY MODULE
+
+| Module | Primary Value | ROI Metric |
+|--------|--------------|------------|
+| **Route Optimization** | Fuel savings, efficiency | 20-30% cost reduction |
+| **Driver Safety** | Accident prevention, insurance | 30-40% premium reduction |
+| **Predictive Maintenance** | Uptime, repair costs | 35% less downtime |
+| **Real-time Tracking** | Customer satisfaction | 98.5% on-time delivery |
+| **Compliance** | Avoid fines, legal safety | Zero violations |
+| **Fuel Management** | Theft detection, efficiency | 15% fuel cost savings |
+| **AI Analytics** | Operational insights | 25% productivity gain |
+
+This comprehensive API suite enables a **full-stack fleet management platform** covering everything from basic tracking to advanced AI-powered optimization and regulatory compliance.
+
+
+
+
