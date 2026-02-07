@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: "Outfit", var(--font-geist-sans);
+
+  --color-primary: #137fec;
+  --color-background-light: #ffffff;
+  --color-background-dark: #111a22;
+  --color-surface-dark: #1b2631;
+  --color-border-dark: rgba(255, 255, 255, 0.1);
+  --color-text-secondary: #94a3b8;
+}
+
+@layer base {
+  body {
+    @apply bg-background-light text-slate-900 transition-colors duration-300;
+  }
+
+  .dark body {
+    background-color: var(--color-background-dark);
+    color: white;
+  }
+}
+
+@layer utilities {
+  .glow-effect {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(19, 127, 236, 0.15) 0%, rgba(19, 127, 236, 0) 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .mobile-frame {
+    @apply border-8 border-[#233648] rounded-[32px] bg-[#192633] overflow-hidden relative shadow-2xl shadow-black/50;
+  }
+
+  .mobile-frame::before {
+    content: '';
+    @apply absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-6 bg-[#233648] rounded-b-xl z-20;
+  }
+}
