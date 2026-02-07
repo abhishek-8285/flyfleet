@@ -1,0 +1,457 @@
+{
+    "version": "1.3.0",
+    "base_url": "http://localhost:8080/api/v1",
+    "description": "Truly exhaustive API specification for all 14 FlyFleet backend services, including detailed request and response schemas.",
+    "common_models": {
+        "uuid": "string (UUID v4)",
+        "timestamp": "string (RFC3339)",
+        "location": {
+            "lat": "float64",
+            "lng": "float64",
+            "address": "string (optional)"
+        }
+    },
+    "services": {
+        "auth-service": {
+            "port": 8081,
+            "endpoints": [
+                {
+                    "path": "/api/v1/auth/login",
+                    "method": "POST",
+                    "description": "Authenticate user and return JWT",
+                    "request_schema": {
+                        "username": "string (required)",
+                        "password": "string (required)",
+                        "mfa_token": "string (optional)"
+                    },
+                    "response_schema": {
+                        "token": "string",
+                        "refresh_token": "string",
+                        "user": "User",
+                        "organization": "Organization"
+                    }
+                },
+                {
+                    "path": "/api/v1/auth/refresh-token",
+                    "method": "POST",
+                    "description": "Refresh JWT using refresh token",
+                    "request_schema": {
+                        "refresh_token": "string (required)"
+                    },
+                    "response_schema": {
+                        "token": "string",
+                        "refresh_token": "string"
+                    }
+                },
+                {
+                    "path": "/api/v1/auth/mfa/enable",
+                    "method": "POST",
+                    "description": "Enable Multi-Factor Authentication",
+                    "request_schema": {
+                        "type": "string (totp, sms)"
+                    },
+                    "response_schema": {
+                        "secret": "string",
+                        "qr_code": "string (base64)"
+                    }
+                },
+                {
+                    "path": "/api/v1/admin/organizations",
+                    "method": "GET",
+                    "description": "List all organizations (SuperAdmin only)",
+                    "response_schema": "[]Organization"
+                },
+                {
+                    "path": "/api/v1/security/mfa/dashboard",
+                    "method": "GET",
+                    "description": "Get MFA dashboard summary statistics",
+                    "response_schema": "MFADashboardSummary"
+                },
+                {
+                    "path": "/api/v1/security/mfa/adoption-trend",
+                    "method": "GET",
+                    "description": "Get MFA adoption trend data (last 30 days)",
+                    "request_schema": {
+                        "days": "int (optional, default 30)"
+                    },
+                    "response_schema": "[]MFAAdoptionData"
+                },
+                {
+                    "path": "/api/v1/security/mfa/method-distribution",
+                    "method": "GET",
+                    "description": "Get distribution of MFA methods used",
+                    "response_schema": "map[string]int"
+                },
+                {
+                    "path": "/api/v1/security/mfa/events",
+                    "method": "GET",
+                    "description": "Fetch real-time feed of MFA events",
+                    "request_schema": {
+                        "page": "int",
+                        "page_size": "int"
+                    },
+                    "response_schema": {
+                        "events": "[]MFAEvent",
+                        "total": "int"
+                    }
+                },
+                {
+                    "path": "/api/v1/security/mfa/failures/locations",
+                    "method": "GET",
+                    "description": "Get top geographic locations for MFA failures",
+                    "response_schema": "[]MFAFailureLocation"
+                },
+                {
+                    "path": "/api/v1/security/mfa/failures/users",
+                    "method": "GET",
+                    "description": "Get top users experiencing MFA failures",
+                    "response_schema": "[]MFAFailureUser"
+                },
+                {
+                    "path": "/api/v1/security/mfa/locked-users",
+                    "method": "GET",
+                    "description": "List all currently locked accounts due to MFA",
+                    "response_schema": "[]User"
+                },
+                {
+                    "path": "/api/v1/security/mfa/unlock",
+                    "method": "POST",
+                    "description": "Manually unlock a user account",
+                    "request_schema": {
+                        "userId": "uuid"
+                    },
+                    "response_schema": {
+                        "status": "string"
+                    }
+                },
+                {
+                    "path": "/api/v1/security/mfa/reset",
+                    "method": "POST",
+                    "description": "Reset a user's MFA settings",
+                    "request_schema": {
+                        "userId": "uuid"
+                    },
+                    "response_schema": {
+                        "status": "string"
+                    }
+                },
+                {
+                    "path": "/api/v1/security/mfa/policy",
+                    "method": "GET",
+                    "description": "Get organizational MFA policy",
+                    "response_schema": "MFAPolicy"
+                },
+                {
+                    "path": "/api/v1/security/mfa/policy",
+                    "method": "PUT",
+                    "description": "Update organizational MFA policy",
+                    "request_schema": "MFAPolicy",
+                    "response_schema": "MFAPolicy"
+                },
+                {
+                    "path": "/api/v1/security/mfa/exceptions",
+                    "method": "GET",
+                    "description": "List all MFA policy exceptions",
+                    "response_schema": "[]MFAException"
+                },
+                {
+                    "path": "/api/v1/security/mfa/exceptions",
+                    "method": "POST",
+                    "description": "Add a new MFA policy exception",
+                    "request_schema": {
+                        "userId": "uuid",
+                        "reason": "string",
+                        "days": "int"
+                    },
+                    "response_schema": {
+                        "status": "string"
+                    }
+                },
+                {
+                    "path": "/api/v1/security/mfa/exceptions/{id}",
+                    "method": "DELETE",
+                    "description": "Remove an MFA policy exception",
+                    "response_schema": {
+                        "status": "string"
+                    }
+                },
+                {
+                    "path": "/api/v1/security/mfa/stream",
+                    "method": "WS",
+                    "description": "Real-time WebSocket stream for MFA events",
+                    "response_schema": "[]MFAEvent"
+                }
+            ],
+            "models": {
+                "User": {
+                    "id": "uuid",
+                    "username": "string",
+                    "email": "string",
+                    "role": "string (admin, fleet_manager, driver, customer)",
+                    "organization_id": "uuid",
+                    "preferences": "UserPreferences"
+                },
+                "UserPreferences": {
+                    "theme": "string (light, dark, system)",
+                    "language": "string",
+                    "notifications_enabled": "bool"
+                },
+                "Organization": {
+                    "id": "uuid",
+                    "name": "string",
+                    "plan": "string",
+                    "status": "string"
+                },
+                "MFADashboardSummary": {
+                    "total_users": "int",
+                    "mfa_enabled": "int",
+                    "mfa_pending": "int",
+                    "mfa_disabled": "int",
+                    "failed_attempts_24h": "int",
+                    "locked_accounts": "int"
+                },
+                "MFAPolicy": {
+                    "id": "uuid",
+                    "org_id": "uuid",
+                    "require_mfa": "bool",
+                    "allowed_methods": "[]string",
+                    "max_attempts": "int",
+                    "lockout_minutes": "int"
+                },
+                "MFAEvent": {
+                    "id": "uuid",
+                    "user_id": "uuid",
+                    "org_id": "uuid",
+                    "event_type": "string",
+                    "status": "string",
+                    "method": "string",
+                    "ip_address": "string",
+                    "user_agent": "string",
+                    "location": "string",
+                    "details": "object",
+                    "created_at": "timestamp"
+                },
+                "MFAFailure": {
+                    "id": "uuid",
+                    "user_id": "uuid",
+                    "org_id": "uuid",
+                    "method": "string",
+                    "failure_reason": "string",
+                    "ip_address": "string",
+                    "location": "string",
+                    "created_at": "timestamp"
+                },
+                "MFAException": {
+                    "id": "uuid",
+                    "user_id": "uuid",
+                    "org_id": "uuid",
+                    "reason": "string",
+                    "granted_by": "uuid",
+                    "expires_at": "timestamp",
+                    "created_at": "timestamp"
+                },
+                "MFALockout": {
+                    "id": "uuid",
+                    "user_id": "uuid",
+                    "org_id": "uuid",
+                    "reason": "string",
+                    "locked_at": "timestamp",
+                    "expires_at": "timestamp",
+                    "unlocked_at": "timestamp",
+                    "unlocked_by": "uuid"
+                }
+            }
+        },
+        "vehicle-service": {
+            "port": 8084,
+            "endpoints": [
+                {
+                    "path": "/api/v1/vehicles",
+                    "method": "POST",
+                    "request_schema": "CreateVehicleRequest",
+                    "response_schema": "Vehicle"
+                }
+            ],
+            "models": {
+                "Vehicle": {
+                    "id": "uuid",
+                    "registration_number": "string",
+                    "status": "string",
+                    "last_location": "location"
+                }
+            }
+        },
+        "trip-service": {
+            "port": 8082,
+            "endpoints": [
+                {
+                    "path": "/api/v1/trips",
+                    "method": "POST",
+                    "request_schema": "CreateTripRequest",
+                    "response_schema": "Trip"
+                }
+            ],
+            "models": {
+                "Trip": {
+                    "id": "uuid",
+                    "status": "string",
+                    "progress": "float64"
+                }
+            }
+        },
+        "driver-service": {
+            "port": 8083,
+            "endpoints": [
+                {
+                    "path": "/api/v1/drivers",
+                    "method": "POST",
+                    "request_schema": "CreateDriverRequest",
+                    "response_schema": "Driver"
+                }
+            ],
+            "models": {
+                "Driver": {
+                    "id": "uuid",
+                    "first_name": "string",
+                    "status": "string"
+                }
+            }
+        },
+        "alert-service": {
+            "port": 8085,
+            "endpoints": [
+                {
+                    "path": "/api/v1/alerts",
+                    "method": "GET",
+                    "response_schema": "[]Alert"
+                }
+            ],
+            "models": {
+                "Alert": {
+                    "id": "uuid",
+                    "message": "string",
+                    "severity": "string"
+                }
+            }
+        },
+        "maintenance-service": {
+            "port": 8086,
+            "endpoints": [
+                {
+                    "path": "/api/v1/maintenance/schedules",
+                    "method": "POST",
+                    "request_schema": "CreateScheduleRequest",
+                    "response_schema": "MaintenanceSchedule"
+                }
+            ]
+        },
+        "geofencing-service": {
+            "port": 8086,
+            "endpoints": [
+                {
+                    "path": "/api/v1/geofences",
+                    "method": "POST",
+                    "request_schema": "CreateGeofenceRequest",
+                    "response_schema": "Geofence"
+                }
+            ]
+        },
+        "tracking-service": {
+            "port": 8082,
+            "endpoints": [
+                {
+                    "path": "/api/v1/device/telemetry/gps",
+                    "method": "POST",
+                    "request_schema": "GPSPayload",
+                    "response_schema": {
+                        "status": "accepted"
+                    }
+                }
+            ],
+            "models": {
+                "GPSPayload": {
+                    "device_id": "string",
+                    "latitude": "float64",
+                    "longitude": "float64"
+                }
+            }
+        },
+        "india-integration-service": {
+            "port": 8080,
+            "endpoints": [
+                {
+                    "path": "/api/fastag/transactions",
+                    "method": "POST",
+                    "request_schema": "FASTagTransaction",
+                    "response_schema": "FASTagTransaction"
+                },
+                {
+                    "path": "/api/ewaybill/bills",
+                    "method": "POST",
+                    "request_schema": "EWayBill",
+                    "response_schema": "EWayBill"
+                }
+            ],
+            "models": {
+                "FASTagTransaction": {
+                    "tag_number": "string",
+                    "amount": "float64"
+                },
+                "EWayBill": {
+                    "eway_bill_number": "string",
+                    "goods_value": "float64"
+                }
+            }
+        },
+        "video-service": {
+            "port": 8084,
+            "endpoints": [
+                {
+                    "path": "/api/v1/video/streams",
+                    "method": "POST",
+                    "request_schema": "VideoStream",
+                    "response_schema": "VideoStream"
+                }
+            ],
+            "models": {
+                "VideoStream": {
+                    "vehicle_id": "uuid",
+                    "url": "string"
+                }
+            }
+        },
+        "route-optimization-service": {
+            "port": 8083,
+            "endpoints": [
+                {
+                    "path": "/api/v1/route-optimization/requests",
+                    "method": "POST",
+                    "request_schema": "RouteOptimizationRequest",
+                    "response_schema": "RouteOptimizationRequest"
+                }
+            ],
+            "models": {
+                "RouteOptimizationRequest": {
+                    "stops": "[]Stop",
+                    "vehicles": "[]VehicleProfile"
+                }
+            }
+        },
+        "analytics-service": {
+            "port": 8080,
+            "endpoints": [
+                {
+                    "path": "/api/v1/analytics/fleet/summary",
+                    "method": "GET",
+                    "response_schema": "FleetAnalytics"
+                }
+            ],
+            "models": {
+                "FleetAnalytics": {
+                    "total_vehicles": "int",
+                    "safety_score": "float64"
+                }
+            }
+        }
+    }
+}
