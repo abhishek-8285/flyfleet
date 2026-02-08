@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     model VARCHAR(50),
     year INTEGER,
     status VARCHAR(20) DEFAULT 'active', -- active, maintenance, inactive
+    current_driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
     is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS drivers (
 CREATE TABLE IF NOT EXISTS devices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    vehicle_id UUID REFERENCES vehicles(id) ON DELETE SET NULL,
     serial_number VARCHAR(100) UNIQUE NOT NULL,
     type VARCHAR(50) DEFAULT 'gps', -- gps, obd, dashcam
     status VARCHAR(20) DEFAULT 'active',

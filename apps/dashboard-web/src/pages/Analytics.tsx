@@ -25,10 +25,13 @@ const Analytics = () => {
           api.getTripStats(),
           api.getDriverStats(),
         ]);
-        setTripStats(trips);
-        setDriverStats(drivers);
+        setTripStats(trips || []);
+        setDriverStats(drivers || []);
       } catch (error) {
         console.error('Failed to fetch analytics data', error);
+        // Fallback to empty to prevent UI crash
+        setTripStats([]);
+        setDriverStats([]);
       } finally {
         setLoading(false);
       }

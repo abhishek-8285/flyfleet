@@ -166,17 +166,87 @@ func (h *SecurityHandlers) GetMFAPolicy(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *SecurityHandlers) UpdateMFAPolicy(w http.ResponseWriter, r *http.Request) {
-	var policy models.MFAPolicy
-	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+	var req struct {
+		Policy models.MFAPolicy `json:"policy"`
+		Reason string           `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.UpdateMFAPolicy(r.Context(), &policy); err != nil {
+
+	// In a real app, updaterID would come from context/session
+	updaterID, _ := uuid.Parse(r.Header.Get("X-Admin-ID"))
+	if updaterID == uuid.Nil {
+		// Fallback for demo/testing
+		updaterID = req.Policy.OrgID 
+	}
+
+	if err := h.service.UpdateMFAPolicy(r.Context(), &req.Policy, updaterID, req.Reason); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(policy)
+	json.NewEncoder(w).Encode(req.Policy)
+}
+
+func (h *SecurityHandlers) GetMFAPolicyHistory(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(r.URL.Query().Get("org_id"))
+	history, err := h.service.GetMFAPolicyHistory(r.Context(), orgID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(history)
+}
+
+func (h *SecurityHandlers) RollbackMFAPolicy(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		HistoryID string `json:"historyId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	hID, _ := uuid.Parse(req.HistoryID)
+	updaterID, _ := uuid.Parse(r.Header.Get("X-Admin-ID"))
+
+	if err := h.service.RollbackMFAPolicy(r.Context(), hID, updaterID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *SecurityHandlers) GetMFAOrgOverride(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := uuid.Parse(r.URL.Query().Get("org_id"))
+	override, err := h.service.GetMFAOrgOverride(r.Context(), orgID)
+	if err != nil {
+		// Return empty override instead of error to facilitate UI
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(models.MFAOrgOverride{OrgID: orgID, Enabled: false})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(override)
+}
+
+func (h *SecurityHandlers) UpdateMFAOrgOverride(w http.ResponseWriter, r *http.Request) {
+	var override models.MFAOrgOverride
+	if err := json.NewDecoder(r.Body).Decode(&override); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	updaterID, _ := uuid.Parse(r.Header.Get("X-Admin-ID"))
+	if err := h.service.UpdateMFAOrgOverride(r.Context(), &override, updaterID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(override)
 }
 
 func (h *SecurityHandlers) GetMFAExceptions(w http.ResponseWriter, r *http.Request) {

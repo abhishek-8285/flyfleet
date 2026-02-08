@@ -57,6 +57,22 @@ func (s *AuthService) LogoutAll(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.DeleteTokensByUserID(ctx, userID)
 }
 
+func (s *AuthService) ListAuditLogs(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.AuditLog, int, error) {
+	return s.repo.ListAuditLogs(ctx, orgID, page, size, filters)
+}
+
+func (s *AuthService) GetAuditLogByID(ctx context.Context, id uuid.UUID) (*models.AuditLog, error) {
+	return s.repo.GetAuditLogByID(ctx, id)
+}
+
+func (s *AuthService) GetAuditSettings(ctx context.Context, orgID uuid.UUID) (*models.AuditSettings, error) {
+	return s.repo.GetAuditSettings(ctx, orgID)
+}
+
+func (s *AuthService) UpdateAuditSettings(ctx context.Context, settings *models.AuditSettings) error {
+	return s.repo.UpdateAuditSettings(ctx, settings)
+}
+
 func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string) (*models.AuthResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -324,11 +340,13 @@ func (s *AuthService) UpdateTheme(ctx context.Context, userID uuid.UUID, theme, 
 	}
 
 	// 3. Audit Log
-	// We'll use a fire-and-forget approach or log error but don't fail request
 	auditLog := &models.AuditLog{
+		OrgID:     userID, // Placeholder if orgID not known, but usually theme is user-specific
 		UserID:    userID,
 		Action:    "USER_THEME_UPDATE",
 		Resource:  "user_profile",
+		Severity:  "info",
+		Status:    "success",
 		Details:   fmt.Sprintf(`{"new_theme": "%s"}`, theme),
 		IPAddress: ip,
 		UserAgent: ua,
@@ -342,6 +360,68 @@ func (s *AuthService) UpdateTheme(ctx context.Context, userID uuid.UUID, theme, 
 
 
 // Admin Operations
+func (s *AuthService) CreateOrganization(ctx context.Context, name, domain, theme string, creatorID uuid.UUID) (*models.Organization, error) {
+	org := &models.Organization{
+		ID:           uuid.New(),
+		Name:         name,
+		Domain:       domain,
+		DefaultTheme: theme,
+		Status:       "active",
+	}
+
+	if err := s.repo.CreateOrganization(ctx, org); err != nil {
+		return nil, err
+	}
+
+	// Audit Log
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:    org.ID,
+		UserID:   creatorID,
+		Action:   "ORG_CREATE",
+		Resource: "organization",
+		Severity: "info",
+		Status:   "success",
+		Details:  fmt.Sprintf(`{"name": "%s", "domain": "%s"}`, name, domain),
+	})
+
+	return org, nil
+}
+
+func (s *AuthService) UpdateOrganization(ctx context.Context, orgID uuid.UUID, name, domain, theme, status string, updaterID uuid.UUID) (*models.Organization, error) {
+	org, err := s.repo.GetOrganizationByID(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	org.Name = name
+	org.Domain = domain
+	org.DefaultTheme = theme
+	if status != "" {
+		org.Status = status
+	}
+
+	if err := s.repo.UpdateOrganization(ctx, org); err != nil {
+		return nil, err
+	}
+
+	// Audit Log
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:    org.ID,
+		UserID:   updaterID,
+		Action:   "ORG_UPDATE",
+		Resource: "organization",
+		Severity: "info",
+		Status:   "success",
+		Details:  fmt.Sprintf(`{"name": "%s", "status": "%s"}`, name, status),
+	})
+
+	return org, nil
+}
+
+func (s *AuthService) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+	return s.repo.GetOrganizationByID(ctx, id)
+}
+
 func (s *AuthService) ListOrganizations(ctx context.Context, page, size int) ([]models.Organization, int, error) {
 	return s.repo.ListOrganizations(ctx, page, size)
 }
@@ -361,50 +441,42 @@ func (s *AuthService) SoftDeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 // Vehicles (Gateway)
+// Vehicles (Direct DB)
 func (s *AuthService) ListVehicles(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Vehicle, int, error) {
-	url := fmt.Sprintf("%s/vehicles?page=%d&page_size=%d&org_id=%s", s.vehicleServiceURL, page, size, orgID)
-	resp, err := s.httpClient.Get(url)
-	if err != nil { return nil, 0, err } // Fallback logic could go here
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK { return nil, 0, fmt.Errorf("service returned %d", resp.StatusCode) }
-
-	var result struct {
-		Vehicles []models.Vehicle `json:"vehicles"`
-		Total    int              `json:"total"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil { return nil, 0, err }
-	return result.Vehicles, result.Total, nil
+	return s.repo.ListVehicles(ctx, orgID, page, size)
 }
 
-func (s *AuthService) CreateVehicle(ctx context.Context, name, licensePlate string, orgID uuid.UUID) (*models.Vehicle, error) {
-	reqBody := map[string]interface{}{
-		"name": name, "license_plate": licensePlate, "org_id": orgID,
-		"model": "Generic", "make": "Generic", "year": 2024, "fuel_type": "petrol", // Defaults required by microservice validation
-	}
-	body, _ := json.Marshal(reqBody)
+func (s *AuthService) CreateVehicle(ctx context.Context, v *models.Vehicle) (*models.Vehicle, error) {
+	v.ID = uuid.New()
+	v.Status = "active"
+	v.CreatedAt = time.Now()
+	v.UpdatedAt = time.Now()
 	
-	resp, err := s.httpClient.Post(s.vehicleServiceURL+"/vehicles", "application/json", bytes.NewBuffer(body))
-	if err != nil { return nil, err }
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
-		// Log response body for debug?
-		return nil, fmt.Errorf("service returned %d", resp.StatusCode) 
+	if err := s.repo.CreateVehicle(ctx, v); err != nil {
+		return nil, err
 	}
+	// Audit
+	// _ = s.repo.CreateAuditLog(...)
+	return v, nil
+}
 
-	var v models.Vehicle
-	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil { return nil, err }
-	return &v, nil
+func (s *AuthService) GetVehicleByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
+	return s.repo.GetVehicleByID(ctx, id)
+}
+
+func (s *AuthService) UpdateVehicle(ctx context.Context, v *models.Vehicle) (*models.Vehicle, error) {
+	if err := s.repo.UpdateVehicle(ctx, v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (s *AuthService) UpdateVehicleStatus(ctx context.Context, id uuid.UUID, status string) error {
+	return s.repo.UpdateVehicleStatus(ctx, id, status)
 }
 
 func (s *AuthService) SoftDeleteVehicle(ctx context.Context, id uuid.UUID) error {
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/vehicles/%s", s.vehicleServiceURL, id), nil)
-	resp, err := s.httpClient.Do(req)
-	if err != nil { return err }
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 { return fmt.Errorf("failed to delete") }
-	return nil
+	return s.repo.DeleteVehicle(ctx, id)
 }
 
 // Drivers (Gateway)
@@ -461,11 +533,12 @@ func (s *AuthService) ListDevices(ctx context.Context, orgID uuid.UUID, page, si
 	return s.repo.ListDevices(ctx, orgID, page, size)
 }
 
-func (s *AuthService) CreateDevice(ctx context.Context, serial, devType string, orgID uuid.UUID) (*models.Device, error) {
+func (s *AuthService) CreateDevice(ctx context.Context, serial, devType string, orgID uuid.UUID, vehicleID *uuid.UUID) (*models.Device, error) {
 	// Fallback to DB
 	d := &models.Device{
 		ID:           uuid.New(),
 		OrgID:        orgID,
+		VehicleID:    vehicleID,
 		SerialNumber: serial,
 		Type:         devType,
 		Status:       "active",
@@ -476,8 +549,59 @@ func (s *AuthService) CreateDevice(ctx context.Context, serial, devType string, 
 	return d, nil
 }
 
+func (s *AuthService) GetDeviceByID(ctx context.Context, id uuid.UUID) (*models.Device, error) {
+	return s.repo.GetDeviceByID(ctx, id)
+}
+
+func (s *AuthService) AssignDeviceToVehicle(ctx context.Context, deviceID, vehicleID uuid.UUID) error {
+	return s.repo.AssignDeviceToVehicle(ctx, deviceID, vehicleID)
+}
+
+func (s *AuthService) UnassignDevice(ctx context.Context, deviceID uuid.UUID) error {
+	return s.repo.UnassignDevice(ctx, deviceID)
+}
+
+func (s *AuthService) AssignDriverToVehicle(ctx context.Context, driverID, vehicleID uuid.UUID) error {
+	return s.repo.AssignDriverToVehicle(ctx, driverID, vehicleID)
+}
+
 func (s *AuthService) SoftDeleteDevice(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteDevice(ctx, id)
+}
+
+// Documents
+func (s *AuthService) CreateDocument(ctx context.Context, d *models.Document) (*models.Document, error) {
+	d.ID = uuid.New()
+	if d.Status == "" {
+		d.Status = "pending"
+	}
+	d.CreatedAt = time.Now()
+	d.UpdatedAt = time.Now()
+	
+	if err := s.repo.CreateDocument(ctx, d); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+func (s *AuthService) GetDocumentByID(ctx context.Context, id uuid.UUID) (*models.Document, error) {
+	return s.repo.GetDocumentByID(ctx, id)
+}
+
+func (s *AuthService) ListDocumentsByVehicleID(ctx context.Context, vehicleID uuid.UUID) ([]models.Document, error) {
+	return s.repo.ListDocumentsByVehicleID(ctx, vehicleID)
+}
+
+func (s *AuthService) UpdateDocument(ctx context.Context, d *models.Document) (*models.Document, error) {
+	d.UpdatedAt = time.Now()
+	if err := s.repo.UpdateDocument(ctx, d); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+func (s *AuthService) DeleteDocument(ctx context.Context, id uuid.UUID) error {
+	return s.repo.DeleteDocument(ctx, id)
 }
 
 func (s *AuthService) issueTokens(ctx context.Context, user *models.User) (*models.AuthResponse, error) {
@@ -499,9 +623,16 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User) (*mode
 }
 
 func (s *AuthService) issueTokensWithOrg(ctx context.Context, user *models.User, orgID uuid.UUID) (*models.AuthResponse, error) {
+	// Fetch user role in this organization
+	role, err := s.repo.GetUserRoleInOrg(ctx, user.ID, orgID)
+	if err != nil {
+		role = "member" // Fallback
+	}
+
 	claims := jwt.MapClaims{
 		"user_id": user.ID.String(),
 		"org_id":  orgID.String(),
+		"role":    role,
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
 	}
 	accessToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.jwtSecret))
@@ -655,19 +786,105 @@ func (s *AuthService) ResetMFA(ctx context.Context, userID uuid.UUID) error {
 func (s *AuthService) GetMFAPolicy(ctx context.Context, orgID uuid.UUID) (*models.MFAPolicy, error) {
 	policy, err := s.repo.GetMFAPolicy(ctx, orgID)
 	if err != nil {
+		// Return default policy if not found
 		return &models.MFAPolicy{
-			OrgID:          orgID,
-			RequireMFA:     false,
-			AllowedMethods: []string{"totp", "sms"},
-			MaxAttempts:    5,
-			LockoutMinutes: 30,
+			OrgID:                orgID,
+			RequireMFA:           false,
+			AllowedMethods:       []string{"totp", "sms"},
+			MaxAttempts:          5,
+			LockoutMinutes:       30,
+			GracePeriodDays:      7,
+			RememberDeviceDays:   30,
+			EnforceAtLogin:       true,
+			AdminOnlyMode:        false,
+			RememberDeviceAllowed: true,
+			MFAChallengeTimeout:  60,
+			Version:              0,
 		}, nil
 	}
 	return policy, nil
 }
 
-func (s *AuthService) UpdateMFAPolicy(ctx context.Context, p *models.MFAPolicy) error {
-	return s.repo.UpdateMFAPolicy(ctx, p)
+func (s *AuthService) UpdateMFAPolicy(ctx context.Context, p *models.MFAPolicy, updaterID uuid.UUID, reason string) error {
+	s.logger.Info("Updating MFA policy", 
+		zap.String("orgID", p.OrgID.String()), 
+		zap.String("updaterID", updaterID.String()),
+	)
+	
+	err := s.repo.UpdateMFAPolicy(ctx, p, updaterID, reason)
+	if err != nil { return err }
+
+	// Log Audit
+	details, _ := json.Marshal(p)
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:     p.OrgID,
+		UserID:    updaterID,
+		Action:    "MFA_POLICY_UPDATE",
+		Resource:  "mfa_policy",
+		Severity:  "warning",
+		Status:    "success",
+		Details:   string(details),
+		CreatedAt: time.Now(),
+	})
+
+	return nil
+}
+
+func (s *AuthService) GetMFAPolicyHistory(ctx context.Context, orgID uuid.UUID) ([]models.MFAPolicyHistory, error) {
+	return s.repo.GetMFAPolicyHistory(ctx, orgID)
+}
+
+func (s *AuthService) RollbackMFAPolicy(ctx context.Context, historyID uuid.UUID, updaterID uuid.UUID) error {
+	s.logger.Info("Rolling back MFA policy", 
+		zap.String("historyID", historyID.String()),
+		zap.String("updaterID", updaterID.String()),
+	)
+	
+	err := s.repo.RollbackMFAPolicy(ctx, historyID)
+	if err != nil { return err }
+
+	// Log Audit
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:     uuid.Nil, // Should fetch from historyID if needed, but for now Nil or from history
+		UserID:    updaterID,
+		Action:    "MFA_POLICY_ROLLBACK",
+		Resource:  "mfa_policy",
+		Severity:  "critical",
+		Status:    "success",
+		Details:   fmt.Sprintf(`{"history_id": "%s"}`, historyID.String()),
+		CreatedAt: time.Now(),
+	})
+
+	return nil
+}
+
+func (s *AuthService) GetMFAOrgOverride(ctx context.Context, orgID uuid.UUID) (*models.MFAOrgOverride, error) {
+	return s.repo.GetMFAOrgOverride(ctx, orgID)
+}
+
+func (s *AuthService) UpdateMFAOrgOverride(ctx context.Context, o *models.MFAOrgOverride, updaterID uuid.UUID) error {
+	s.logger.Info("Updating MFA Org Override", 
+		zap.String("orgID", o.OrgID.String()),
+		zap.String("updaterID", updaterID.String()),
+	)
+	
+	err := s.repo.UpdateMFAOrgOverride(ctx, o)
+	if err != nil { return err }
+
+	// Log Audit
+	details, _ := json.Marshal(o)
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:     o.OrgID,
+		UserID:    updaterID,
+		Action:    "MFA_ORG_OVERRIDE_UPDATE",
+		Resource:  "mfa_org_override",
+		Severity:  "warning",
+		Status:    "success",
+		Details:   string(details),
+		CreatedAt: time.Now(),
+	})
+
+	return nil
 }
 
 func (s *AuthService) AddMFAException(ctx context.Context, userID, orgID, grantedBy uuid.UUID, reason string, days int) error {
@@ -679,7 +896,24 @@ func (s *AuthService) AddMFAException(ctx context.Context, userID, orgID, grante
 		GrantedBy: grantedBy,
 		ExpiresAt: &expiresAt,
 	}
-	return s.repo.AddMFAException(ctx, exc)
+	
+	err := s.repo.AddMFAException(ctx, exc)
+	if err != nil { return err }
+
+	// Log Audit
+	details, _ := json.Marshal(exc)
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:     orgID,
+		UserID:    grantedBy,
+		Action:    "MFA_EXCEPTION_ADD",
+		Resource:  "mfa_exception",
+		Severity:  "warning",
+		Status:    "success",
+		Details:   string(details),
+		CreatedAt: time.Now(),
+	})
+
+	return nil
 }
 
 func (s *AuthService) GetMFAExceptions(ctx context.Context, orgID uuid.UUID) ([]models.MFAException, error) {

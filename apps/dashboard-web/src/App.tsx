@@ -5,13 +5,26 @@ import Layout from './components/common/Layout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { AuthProvider } from './context/AuthProvider';
 import { RBACProvider } from './context/RBACProvider';
+import { AddOrganization } from './pages/admin/AddOrganization';
+import JobDetail from './pages/admin/BulkUploads/JobDetail';
+import JobsList from './pages/admin/BulkUploads/JobsList';
+import NewUpload from './pages/admin/BulkUploads/NewUpload';
 import { Devices } from './pages/admin/Devices';
 import { Drivers as AdminDrivers } from './pages/admin/Drivers';
+import { EditOrganization } from './pages/admin/EditOrganization';
+import { AddVehicle as FleetAddVehicle } from './pages/admin/FleetCommand/AddVehicle';
+import { EditVehicle as FleetEditVehicle } from './pages/admin/FleetCommand/EditVehicle';
+import { VehicleDetail as FleetVehicleDetail } from './pages/admin/FleetCommand/VehicleDetail';
+import { VehicleList as FleetVehicleList } from './pages/admin/FleetCommand/VehicleList';
+import { OrganizationDetail } from './pages/admin/OrganizationDetail';
 import { Organizations } from './pages/admin/Organizations';
+import { OrganizationSettings } from './pages/admin/OrganizationSettings';
+import { AddTrip, EditTrip, TripDetail, TripSettings, TripsList, TripTelemetry } from './pages/admin/Trips';
 import { Users } from './pages/admin/Users';
-import { Vehicles } from './pages/admin/Vehicles';
 import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
+import AuditLogs from './pages/AuditLogs';
+import AuditSettings from './pages/AuditSettings';
 import Dashboard from './pages/Dashboard';
 import Drivers from './pages/Drivers';
 import ErrorScreen from './pages/ErrorScreen';
@@ -23,6 +36,9 @@ import LiveMap from './pages/LiveMap';
 import Login from './pages/Login';
 import Maintenance from './pages/Maintenance';
 import MFACenter from './pages/MFACenter';
+import MFAExceptions from './pages/MFAExceptions';
+import MFAOverrides from './pages/MFAOverrides';
+import MFAPolicyEditor from './pages/MFAPolicyEditor';
 import MFAVerify from './pages/MFAVerify';
 import OrgSelection from './pages/OrgSelection';
 import Reports from './pages/Reports';
@@ -34,13 +50,10 @@ import TrustedDevices from './pages/TrustedDevices';
 import VehicleDetails from './pages/VehicleDetails';
 import VerifyEmail from './pages/VerifyEmail';
 import { store } from './store';
-
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
-
-// ... existing imports ...
 
 function App() {
   return (
@@ -73,7 +86,7 @@ function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="map" element={<LiveMap />} />
-                <Route path="vehicles" element={<Vehicles />} />
+                <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
                 <Route path="trips" element={<Trips />} />
                 <Route path="geofences" element={<Geofences />} />
@@ -86,6 +99,14 @@ function App() {
                 <Route path="security/mfa" element={<MFACenter />} />
               </Route>
 
+              {/* Security Module */}
+              <Route path="/security" element={<PrivateRoute><MFACenter /></PrivateRoute>} />
+              <Route path="/security/policy" element={<PrivateRoute><MFAPolicyEditor /></PrivateRoute>} />
+              <Route path="/security/exceptions" element={<PrivateRoute><MFAExceptions /></PrivateRoute>} />
+              <Route path="/security/overrides" element={<PrivateRoute><MFAOverrides /></PrivateRoute>} />
+              <Route path="/security/audit" element={<PrivateRoute><AuditLogs /></PrivateRoute>} />
+              <Route path="/security/audit/settings" element={<PrivateRoute><AuditSettings /></PrivateRoute>} />
+
               {/* Admin Portal */}
               <Route
                 path="/admin"
@@ -97,10 +118,26 @@ function App() {
               >
                 <Route index element={<Navigate to="organizations" replace />} />
                 <Route path="organizations" element={<Organizations />} />
+                <Route path="organizations/new" element={<AddOrganization />} />
+                <Route path="organizations/:id" element={<OrganizationDetail />} />
+                <Route path="organizations/:id/edit" element={<EditOrganization />} />
+                <Route path="organizations/:id/settings" element={<OrganizationSettings />} />
                 <Route path="users" element={<Users />} />
-                <Route path="vehicles" element={<Vehicles />} />
+                <Route path="vehicles" element={<FleetVehicleList />} />
+                <Route path="vehicles/new" element={<FleetAddVehicle />} />
+                <Route path="vehicles/:id" element={<FleetVehicleDetail />} />
+                <Route path="vehicles/:id/edit" element={<FleetEditVehicle />} />
                 <Route path="drivers" element={<AdminDrivers />} />
                 <Route path="devices" element={<Devices />} />
+                <Route path="bulk-uploads" element={<JobsList />} />
+                <Route path="bulk-uploads/new" element={<NewUpload />} />
+                <Route path="bulk-uploads/:id" element={<JobDetail />} />
+                <Route path="trips" element={<TripsList />} />
+                <Route path="trips/add" element={<AddTrip />} />
+                <Route path="trips/settings" element={<TripSettings />} />
+                <Route path="trips/:id" element={<TripDetail />} />
+                <Route path="trips/:id/edit" element={<EditTrip />} />
+                <Route path="trips/:id/telemetry" element={<TripTelemetry />} />
                 {/* Future: Roles, etc */}
               </Route>
             </Routes>

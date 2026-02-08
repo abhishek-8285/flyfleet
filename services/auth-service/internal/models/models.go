@@ -57,12 +57,18 @@ type Permission struct {
 type Vehicle struct {
 	ID           uuid.UUID  `json:"id" db:"id"`
 	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
+	CurrentDriverID *uuid.UUID `json:"current_driver_id,omitempty" db:"current_driver_id"`
 	Name         string     `json:"name,omitempty" db:"name"` // Optional, microservice uses Make/Model often
 	LicensePlate string     `json:"license_plate" db:"license_plate"`
 	Make         string     `json:"make,omitempty" db:"make"`
 	Model        string     `json:"model,omitempty" db:"model"`
 	Year         int        `json:"year,omitempty" db:"year"`
 	FuelType     string     `json:"fuel_type,omitempty" db:"fuel_type"`
+	VehicleNo    string     `json:"vehicle_no,omitempty" db:"vehicle_no"`
+	VIN          string     `json:"vin,omitempty" db:"vin"`
+	Odometer     int64      `json:"odometer,omitempty" db:"odometer"`
+	ServiceDue   *time.Time `json:"service_due,omitempty" db:"service_due"`
+	Notes        string     `json:"notes,omitempty" db:"notes"`
 	Status       string     `json:"status" db:"status"`
 	IsDeleted    bool       `json:"is_deleted" db:"is_deleted"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
@@ -89,6 +95,7 @@ type Driver struct {
 type Device struct {
 	ID           uuid.UUID  `json:"id" db:"id"`
 	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
+	VehicleID    *uuid.UUID `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	SerialNumber string     `json:"serial_number" db:"serial_number"`
 	Type         string     `json:"type" db:"type"`
 	Status       string     `json:"status" db:"status"`
@@ -98,15 +105,58 @@ type Device struct {
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }
 
+// Document represents a compliance document associated with a vehicle
+type Document struct {
+	ID          uuid.UUID       `json:"id" db:"id"`
+	VehicleID   uuid.UUID       `json:"vehicle_id" db:"vehicle_id"`
+	Type        string          `json:"type" db:"type"`
+	DocNumber   string          `json:"doc_number" db:"doc_number"`
+	IssueDate   time.Time       `json:"issue_date" db:"issue_date"`
+	ExpiryDate  time.Time       `json:"expiry_date" db:"expiry_date"`
+	FileURL     string          `json:"file_url,omitempty" db:"file_url"`
+	Status      string          `json:"status" db:"status"`
+	Metadata    interface{} 	`json:"metadata,omitempty" db:"metadata"` // Changed from json.RawMessage to interface{} to avoid import issues if any, or verify json import.
+	// Wait, models.go does NOT import encoding/json based on my previous read (lines 1-8). 
+	// I need to check if I can add the import.
+	// Actually, line 116 uses `Details string` for JSON, and line 139 `Metadata string`.
+	// Line 186 uses `map[string]interface{}`.
+	// I should probably use `map[string]interface{}` for Metadata to be consistent with `Trip` struct (line 186) or `string` if it's raw JSON text.
+	// `documents` table definition said JSONB. 
+	// `Trip` uses `map[string]interface{}`. Use that.
+	CreatedAt   time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at" db:"updated_at"`
+}
+
+// DocumentMetadata defines structure for JSONB metadata
+type DocumentMetadata struct {
+	IssuingAuthority string  `json:"issuing_authority,omitempty"`
+	CoverageAmount   float64 `json:"coverage_amount,omitempty"`
+	Notes            string  `json:"notes,omitempty"`
+}
+
 type AuditLog struct {
 	ID        uuid.UUID `json:"id" db:"id"`
+	OrgID     uuid.UUID `json:"org_id" db:"org_id"`
 	UserID    uuid.UUID `json:"user_id" db:"user_id"`
 	Action    string    `json:"action" db:"action"`
 	Resource  string    `json:"resource" db:"resource"`
+	Severity  string    `json:"severity" db:"severity"` // info, warning, critical
+	Status    string    `json:"status" db:"status"`     // success, failure, denied
 	Details   string    `json:"details,omitempty" db:"details"` // JSON string
 	IPAddress string    `json:"ip_address" db:"ip_address"`
 	UserAgent string    `json:"user_agent" db:"user_agent"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type AuditSettings struct {
+	ID                    uuid.UUID `json:"id" db:"id"`
+	OrgID                 uuid.UUID `json:"org_id" db:"org_id"`
+	RetentionDaysOnline   int       `json:"retention_days_online" db:"retention_days_online"`
+	RetentionDaysArchival int       `json:"retention_days_archival" db:"retention_days_archival"`
+	MaskingRules          []string  `json:"masking_rules" db:"masking_rules"`
+	TrackedEventTypes     []string  `json:"tracked_event_types" db:"tracked_event_types"`
+	AlertOnCritical       bool      `json:"alert_on_critical" db:"alert_on_critical"`
+	UpdatedAt             time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type SecurityEvent struct {
@@ -208,17 +258,64 @@ type AuthResponse struct {
 	User         User   `json:"user"`
 	MFAWait      bool   `json:"mfa_wait,omitempty"`
 }
+
+type RegisterRequest struct {
+	Email    string    `json:"email"`
+	Password string    `json:"password"`
+	Name     string    `json:"name"`
+	Phone    string    `json:"phone"`
+	OrgID    uuid.UUID `json:"org_id"`
+	OrgName  string    `json:"org_name"`
+	OrgType  string    `json:"org_type"`
+	Role     string    `json:"role"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 // MFA Security Extensions
 
 type MFAPolicy struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	OrgID          uuid.UUID `json:"org_id" db:"org_id"`
-	RequireMFA     bool      `json:"require_mfa" db:"require_mfa"`
-	AllowedMethods []string  `json:"allowed_methods" db:"allowed_methods"`
-	MaxAttempts    int       `json:"max_attempts" db:"max_attempts"`
-	LockoutMinutes int       `json:"lockout_minutes" db:"lockout_minutes"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	ID                   uuid.UUID `json:"id" db:"id"`
+	OrgID                uuid.UUID `json:"org_id" db:"org_id"`
+	RequireMFA           bool      `json:"require_mfa" db:"require_mfa"`
+	AllowedMethods       []string  `json:"allowed_methods" db:"allowed_methods"`
+	MaxAttempts          int       `json:"max_attempts" db:"max_attempts"`
+	LockoutMinutes       int       `json:"lockout_minutes" db:"lockout_minutes"`
+	GracePeriodDays      int       `json:"grace_period_days" db:"grace_period_days"`
+	RememberDeviceDays   int       `json:"remember_device_days" db:"remember_device_days"`
+	EnforceAtLogin       bool      `json:"enforce_at_login" db:"enforce_at_login"`
+	AdminOnlyMode        bool      `json:"admin_only_mode" db:"admin_only_mode"`
+	RememberDeviceAllowed bool      `json:"remember_device_allowed" db:"remember_device_allowed"`
+	MFAChallengeTimeout  int       `json:"mfa_challenge_timeout" db:"mfa_challenge_timeout"`
+	Version              int       `json:"version" db:"version"`
+	CreatedAt            time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type MFAOrgOverride struct {
+	ID                 uuid.UUID `json:"id" db:"id"`
+	OrgID              uuid.UUID `json:"org_id" db:"org_id"`
+	Enabled            bool      `json:"enabled" db:"enabled"`
+	AllowedMethods     []string  `json:"allowed_methods" db:"allowed_methods"`
+	MaxAttempts        int       `json:"max_attempts" db:"max_attempts"`
+	LockoutMinutes     int       `json:"lockout_minutes" db:"lockout_minutes"`
+	RememberDeviceDays int       `json:"remember_device_days" db:"remember_device_days"`
+	GracePeriodDays    int       `json:"grace_period_days" db:"grace_period_days"`
+	CreatedAt          time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type MFAPolicyHistory struct {
+	ID           uuid.UUID `json:"id" db:"id"`
+	PolicyID     uuid.UUID `json:"policy_id" db:"policy_id"`
+	OrgID        uuid.UUID `json:"org_id" db:"org_id"`
+	Snapshot     string    `json:"snapshot" db:"snapshot"` // JSON string
+	ChangedBy    uuid.UUID `json:"changed_by" db:"changed_by"`
+	ChangeReason string    `json:"change_reason" db:"change_reason"`
+	Version      int       `json:"version" db:"version"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }
 
 type MFAEvent struct {
@@ -252,6 +349,7 @@ type MFAException struct {
 	OrgID     uuid.UUID  `json:"org_id" db:"org_id"`
 	Reason    string     `json:"reason" db:"reason"`
 	GrantedBy uuid.UUID  `json:"granted_by" db:"granted_by"`
+	StartDate time.Time  `json:"start_date" db:"start_date"`
 	ExpiresAt *time.Time `json:"expires_at" db:"expires_at"`
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 }

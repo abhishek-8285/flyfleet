@@ -13,5 +13,6 @@ use (
 	./services/trip-service
 	./services/vehicle-service
 	./services/video-service
+	./services/web-bff
 	./packages/common/go
 )

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/flyfleet/vehicle-service/internal/handlers"
+	"github.com/flyfleet/vehicle-service/internal/processor"
 	"github.com/flyfleet/vehicle-service/internal/repository"
 	"github.com/flyfleet/vehicle-service/internal/service"
 	"github.com/gin-gonic/gin"
@@ -42,12 +43,23 @@ func main() {
 
 	// Initialize repository
 	vehicleRepo := repository.NewVehicleRepository(db, logger)
+	bulkRepo := repository.NewBulkRepository(db)
+
+	// Initialize processor
+	bulkProcessor := processor.NewBulkProcessor(bulkRepo, vehicleRepo, logger)
 
 	// Initialize service
 	vehicleService := service.NewVehicleService(vehicleRepo, logger)
+	bulkService := service.NewBulkService(bulkRepo, bulkProcessor, logger)
+	
+	// Trip management
+	tripRepo := repository.NewTripRepository(db)
+	tripService := service.NewTripService(tripRepo, logger)
+	tripHandlers := handlers.NewTripHandlers(tripService, logger)
 
 	// Initialize handlers
 	vehicleHandlers := handlers.NewVehicleHandlers(vehicleService, logger)
+	bulkHandlers := handlers.NewBulkHandlers(bulkService, logger)
 
 	// Setup Gin router
 	r := gin.New()
@@ -76,6 +88,28 @@ func main() {
 			vehicle.DELETE("", func(c *gin.Context) { vehicleHandlers.DeleteVehicle(c.Writer, c.Request) })
 			vehicle.POST("/assign-driver", func(c *gin.Context) { vehicleHandlers.AssignDriver(c.Writer, c.Request) })
 		}
+	}
+
+	// Bulk Job routes
+	bulkJobs := r.Group("/api/v1/bulk-jobs")
+	{
+		bulkJobs.POST("", func(c *gin.Context) { bulkHandlers.CreateBulkJob(c.Writer, c.Request) })
+		bulkJobs.GET("", func(c *gin.Context) { bulkHandlers.ListBulkJobs(c.Writer, c.Request) })
+		bulkJobs.GET("/:id", func(c *gin.Context) { bulkHandlers.GetBulkJob(c.Writer, c.Request) })
+		bulkJobs.GET("/:id/records", func(c *gin.Context) { bulkHandlers.GetJobRecords(c.Writer, c.Request) })
+		bulkJobs.POST("/:id/retry", func(c *gin.Context) { bulkHandlers.RetryBulkJob(c.Writer, c.Request) })
+	}
+
+	// Trip routes
+	trips := r.Group("/api/v1/trips")
+	{
+		trips.GET("", func(c *gin.Context) { tripHandlers.ListTrips(c.Writer, c.Request) })
+		trips.POST("", func(c *gin.Context) { tripHandlers.CreateTrip(c.Writer, c.Request) })
+		trips.GET("/settings", func(c *gin.Context) { tripHandlers.GetSettings(c.Writer, c.Request) })
+		trips.PUT("/settings", func(c *gin.Context) { tripHandlers.UpdateSettings(c.Writer, c.Request) })
+		trips.GET("/:id", func(c *gin.Context) { tripHandlers.GetTrip(c.Writer, c.Request) })
+		trips.PUT("/:id", func(c *gin.Context) { tripHandlers.UpdateTrip(c.Writer, c.Request) })
+		trips.GET("/:id/telemetry", func(c *gin.Context) { tripHandlers.GetTelemetry(c.Writer, c.Request) })
 	}
 
 	// Start server

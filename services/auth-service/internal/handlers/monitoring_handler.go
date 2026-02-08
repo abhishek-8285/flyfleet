@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/security"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -237,9 +238,10 @@ func (h *MonitoringHandler) HealthCheck(w http.ResponseWriter, r *http.Request) 
 	}
 
 	response := map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now(),
-		"service":   "auth-service",
+		"status":                 "healthy",
+		"timestamp":              time.Now(),
+		"service":                "auth-service",
+		"security_policy_hash":   security.GetPolicyVersion(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

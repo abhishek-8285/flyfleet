@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # API Gateway
   api-gateway:
-    build: 
+    build:
       context: ../../gateway/api-gateway
       dockerfile: Dockerfile
     ports:
@@ -235,6 +235,19 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ../../infrastructure/monitoring/grafana-dashboard.json:/var/lib/grafana/dashboards/flyfleet.json
+    networks:
+      - flyfleet-network
+  # RBAC Policy Verifier (Deployment Gate)
+  rbac-verifier:
+    build:
+      context: ../..
+      dockerfile: infrastructure/ci-cd/Dockerfile.verify
+    environment:
+      - BFF_URL=http://api-gateway:8080/health/security
+      - AUTH_URL=http://auth-service:8080/health/security
+    depends_on:
+      - api-gateway
+      - auth-service
     networks:
       - flyfleet-network
 

@@ -1,5 +1,6 @@
 import {
     ArrowLeftOnRectangleIcon,
+    ArrowUpTrayIcon,
     BuildingOffice2Icon,
     MapIcon,
     ShieldCheckIcon,
@@ -26,6 +27,8 @@ const MENU_ITEMS: MenuItem[] = [
   { name: 'Users', path: '/admin/users', icon: UsersIcon, resource: 'user', action: 'read' },
   { name: 'Roles & Permissions', path: '/admin/roles', icon: ShieldCheckIcon, resource: 'role', action: 'read' },
   { name: 'Vehicles', path: '/admin/vehicles', icon: TruckIcon, resource: 'vehicle', action: 'read' },
+  { name: 'Bulk Uploads', path: '/admin/bulk-uploads', icon: ArrowUpTrayIcon, resource: 'vehicle', action: 'create' },
+  { name: 'Trips', path: '/admin/trips', icon: MapIcon, resource: 'trip', action: 'read' },
   { name: 'Drivers', path: '/admin/drivers', icon: UsersIcon, resource: 'driver', action: 'read' },
   { name: 'Devices', path: '/admin/devices', icon: Squares2X2Icon, resource: 'device', action: 'read' },
   { name: 'Live Map', path: '/admin/map', icon: MapIcon, resource: 'trip', action: 'read' },

@@ -1,0 +1,9 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+RUN pip install requests
+
+COPY verify_rbac.py .
+
+CMD ["python", "verify_rbac.py"]

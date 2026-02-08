@@ -9,6 +9,7 @@ volumes:
   redis-data:
   nats-data:
 
+
 services:
   # Database Services
   postgres:
@@ -25,7 +26,7 @@ services:
     networks:
       - fleet-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fleet_user -d fleet_db"]
+      test: [ "CMD-SHELL", "pg_isready -U fleet_user -d fleet_db" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +41,7 @@ services:
     networks:
       - fleet-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,9 +56,9 @@ services:
       - nats-data:/data
     networks:
       - fleet-network
-    command: ["--jetstream", "--store_dir", "/data"]
+    command: [ "--jetstream", "--store_dir", "/data" ]
     healthcheck:
-      test: ["CMD", "nats", "server", "check"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/varz" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,18 +68,22 @@ services:
     build: ./services/auth-service
     container_name: fleet-auth-service
     ports:
-      - "8081:8080"
+      - "8080:8080"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
       - JWT_SECRET=your-jwt-secret-key-here
       - PORT=8080
+      - DRIVER_SERVICE_URL=http://driver-service:8080/api/v1
+      - VEHICLE_SERVICE_URL=http://vehicle-service:8080/api/v1
+      - TRIP_SERVICE_URL=http://trip-service:8080/api/v1
+      - ALERT_SERVICE_URL=http://alert-service:8080/api/v1
     networks:
       - fleet-network
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -97,7 +102,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -116,7 +121,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -135,7 +140,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -157,7 +162,7 @@ services:
       nats:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -176,7 +181,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -195,7 +200,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -214,7 +219,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -236,7 +241,7 @@ services:
       nats:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -255,7 +260,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -274,7 +279,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -293,7 +298,21 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  web-bff:
+    build: ./services/web-bff
+    container_name: fleet-web-bff
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - LOG_LEVEL=info
+    networks:
+      - fleet-network
+    depends_on:
+      - auth-service

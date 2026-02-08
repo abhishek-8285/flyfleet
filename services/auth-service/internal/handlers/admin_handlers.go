@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/flyfleet/auth-service/internal/middleware"
+	"github.com/flyfleet/auth-service/internal/models"
 	"github.com/flyfleet/auth-service/internal/service"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -27,8 +28,6 @@ func (h *AdminHandlers) ListOrganizations(w http.ResponseWriter, r *http.Request
 	pageCtx := r.Context().Value("pagination").(map[string]int)
 	page, size := pageCtx["page"], pageCtx["size"]
 
-	// In a real scenario, check if the requester is a Super Admin here
-
 	orgs, total, err := h.service.ListOrganizations(r.Context(), page, size)
 	if err != nil {
 		h.logger.Error("Failed to list organizations", zap.Error(err))
@@ -37,6 +36,84 @@ func (h *AdminHandlers) ListOrganizations(w http.ResponseWriter, r *http.Request
 	}
 
 	middleware.WriteSuccess(w, orgs, page, size, total)
+}
+
+// POST /api/v1/admin/organizations
+func (h *AdminHandlers) CreateOrganization(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name   string `json:"name"`
+		Domain string `json:"domain"`
+		Theme  string `json:"default_theme"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("user_id").(uuid.UUID)
+	org, err := h.service.CreateOrganization(r.Context(), req.Name, req.Domain, req.Theme, userID)
+	if err != nil {
+		h.logger.Error("Failed to create organization", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	middleware.WriteSuccess(w, org, 1, 1, 1)
+}
+
+// GET /api/v1/admin/organizations/{id}
+func (h *AdminHandlers) GetOrganization(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	org, err := h.service.GetOrganizationByID(r.Context(), id)
+	if err != nil {
+		h.logger.Error("Failed to get organization", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	if org == nil {
+		http.Error(w, `{"error": "Organization not found"}`, http.StatusNotFound)
+		return
+	}
+
+	middleware.WriteSuccess(w, org, 1, 1, 1)
+}
+
+// PUT /api/v1/admin/organizations/{id}
+func (h *AdminHandlers) UpdateOrganization(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Name   string `json:"name"`
+		Domain string `json:"domain"`
+		Theme  string `json:"default_theme"`
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	userID := r.Context().Value("user_id").(uuid.UUID)
+	org, err := h.service.UpdateOrganization(r.Context(), id, req.Name, req.Domain, req.Theme, req.Status, userID)
+	if err != nil {
+		h.logger.Error("Failed to update organization", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	middleware.WriteSuccess(w, org, 1, 1, 1)
 }
 
 // DELETE /api/v1/admin/organizations/{id}
@@ -121,20 +198,41 @@ func (h *AdminHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	middleware.WriteSuccess(w, vehicles, page, size, total)
 }
 
+// GET /api/v1/admin/vehicles/{id}
+func (h *AdminHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	vehicle, err := h.service.GetVehicleByID(r.Context(), id)
+	if err != nil {
+		h.logger.Error("Failed to get vehicle", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+	if vehicle == nil {
+		http.Error(w, `{"error": "Vehicle not found"}`, http.StatusNotFound)
+		return
+	}
+
+	middleware.WriteSuccess(w, vehicle, 1, 1, 1)
+}
+
 // POST /api/v1/admin/vehicles
 func (h *AdminHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) {
 	orgID := r.Context().Value("org_id").(uuid.UUID)
 	
-	var req struct {
-		Name         string `json:"name"`
-		LicensePlate string `json:"license_plate"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var v models.Vehicle
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		http.Error(w, `{"error": "Invalid Body"}`, http.StatusBadRequest)
 		return
 	}
+	v.OrgID = orgID
 
-	vehicle, err := h.service.CreateVehicle(r.Context(), req.Name, req.LicensePlate, orgID)
+	vehicle, err := h.service.CreateVehicle(r.Context(), &v)
 	if err != nil {
 		h.logger.Error("Failed to create vehicle", zap.Error(err))
 		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
@@ -142,6 +240,60 @@ func (h *AdminHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	middleware.WriteSuccess(w, vehicle, 1, 1, 1)
+}
+
+// PUT /api/v1/admin/vehicles/{id}
+func (h *AdminHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	var v models.Vehicle
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		http.Error(w, `{"error": "Invalid Body"}`, http.StatusBadRequest)
+		return
+	}
+	v.ID = id
+
+	// Optional: Check if ID matches context Org
+	
+	updated, err := h.service.UpdateVehicle(r.Context(), &v)
+	if err != nil {
+		h.logger.Error("Failed to update vehicle", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	middleware.WriteSuccess(w, updated, 1, 1, 1)
+}
+
+// PUT /api/v1/admin/vehicles/{id}/status
+func (h *AdminHandlers) UpdateVehicleStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error": "Invalid Body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.UpdateVehicleStatus(r.Context(), id, req.Status); err != nil {
+		h.logger.Error("Failed to update vehicle status", zap.Error(err))
+		http.Error(w, `{"error": "Internal Server Error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	middleware.WriteSuccess(w, nil, 0, 0, 0)
 }
 
 // DELETE /api/v1/admin/vehicles
@@ -218,18 +370,70 @@ func (h *AdminHandlers) ListDevices(w http.ResponseWriter, r *http.Request) {
 
 func (h *AdminHandlers) CreateDevice(w http.ResponseWriter, r *http.Request) {
 	orgID := r.Context().Value("org_id").(uuid.UUID)
-	var req struct { Serial string `json:"serial_number"`; Type string `json:"type"` }
+	var req struct { 
+		Serial    string     `json:"serial_number"`
+		Type      string     `json:"type"`
+		VehicleID *uuid.UUID `json:"vehicle_id,omitempty"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { 
 		http.Error(w, `{"error":"Invalid Body"}`, 400)
 		return 
 	}
-	device, err := h.service.CreateDevice(r.Context(), req.Serial, req.Type, orgID)
+	device, err := h.service.CreateDevice(r.Context(), req.Serial, req.Type, orgID, req.VehicleID)
 	if err != nil { 
 		h.logger.Error("Failed to create device", zap.Error(err))
 		http.Error(w, `{"error":"Internal Error"}`, 500)
 		return 
 	}
 	middleware.WriteSuccess(w, device, 1, 1, 1)
+}
+
+func (h *AdminHandlers) AssignDevice(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.URL.Query().Get("id"))
+	if err != nil { http.Error(w, `{"error":"Invalid Device ID"}`, 400); return }
+
+	var req struct { VehicleID uuid.UUID `json:"vehicle_id"` }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { 
+		http.Error(w, `{"error":"Invalid Body"}`, 400)
+		return 
+	}
+
+	if err := h.service.AssignDeviceToVehicle(r.Context(), id, req.VehicleID); err != nil {
+		h.logger.Error("Failed to assign device", zap.Error(err))
+		http.Error(w, `{"error":"Internal Error"}`, 500)
+		return
+	}
+	middleware.WriteSuccess(w, nil, 0, 0, 0)
+}
+
+func (h *AdminHandlers) UnassignDevice(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.URL.Query().Get("id"))
+	if err != nil { http.Error(w, `{"error":"Invalid Device ID"}`, 400); return }
+
+	if err := h.service.UnassignDevice(r.Context(), id); err != nil {
+		h.logger.Error("Failed to unassign device", zap.Error(err))
+		http.Error(w, `{"error":"Internal Error"}`, 500)
+		return
+	}
+	middleware.WriteSuccess(w, nil, 0, 0, 0)
+}
+
+func (h *AdminHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.URL.Query().Get("id"))
+	if err != nil { http.Error(w, `{"error":"Invalid Vehicle ID"}`, 400); return }
+
+	var req struct { DriverID uuid.UUID `json:"driver_id"` }
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { 
+		http.Error(w, `{"error":"Invalid Body"}`, 400)
+		return 
+	}
+
+	if err := h.service.AssignDriverToVehicle(r.Context(), req.DriverID, id); err != nil {
+		h.logger.Error("Failed to assign driver", zap.Error(err))
+		http.Error(w, `{"error":"Internal Error"}`, 500)
+		return
+	}
+	middleware.WriteSuccess(w, nil, 0, 0, 0)
 }
 
 func (h *AdminHandlers) DeleteDevice(w http.ResponseWriter, r *http.Request) {
