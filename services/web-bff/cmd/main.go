@@ -62,6 +62,34 @@ func main() {
 	mux.Handle("/api/v1/admin/documents/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyDocument)))
 	mux.Handle("/api/v1/admin/bulk-jobs/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyBulkJobs))) // Bulk Jobs share vehicle resource
 	mux.Handle("/api/v1/admin/trips/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
+
+	// Maintenance Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/work-orders/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))
+	mux.Handle("/api/v1/admin/inventory/", middleware.RBACMiddleware(sp, security.ResourceInventory)(http.HandlerFunc(assetHandlers.ProxyInventory)))
+	mux.Handle("/api/v1/admin/maintenance-settings/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyMaintenanceSettings)))
+
+	// Fuel Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/fuel/", middleware.RBACMiddleware(sp, security.ResourceFuel)(http.HandlerFunc(assetHandlers.ProxyFuelSettings)))
+	
+	// Governance Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/governance/requests/", middleware.RBACMiddleware(sp, security.ResourceGovernance)(http.HandlerFunc(assetHandlers.ProxyGovernanceRequests)))
+	mux.Handle("/api/v1/admin/governance/settings", middleware.RBACMiddleware(sp, security.ResourceGovernance)(http.HandlerFunc(assetHandlers.ProxyGovernanceSettings)))
+	
+	// Billing Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/billing/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBilling)))
+	mux.Handle("/api/v1/admin/billing-settings/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBillingSettings)))
+	mux.Handle("/api/v1/admin/billing-metrics/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBillingMetrics)))
+	
+	// Notification Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/notifications/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(assetHandlers.ProxyNotification)))
+	mux.Handle("/api/v1/admin/preferences/", middleware.RBACMiddleware(sp, security.ResourceNotificationsPreferences)(http.HandlerFunc(assetHandlers.ProxyNotificationPreferences)))
+	mux.Handle("/api/v1/admin/preferences/global", middleware.RBACMiddleware(sp, security.ResourceNotificationsPreferences)(http.HandlerFunc(assetHandlers.ProxyNotificationGlobalDefaults)))
+
+	// Reports Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/reports/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyReports)))
+	
+	// Disaster Recovery Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/dr/", middleware.RBACMiddleware(sp, security.ResourceDisasterRecovery)(http.HandlerFunc(assetHandlers.ProxyDR)))
 	
 	// Server configuration
 	srv := &http.Server{

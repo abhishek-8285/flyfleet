@@ -1,0 +1,188 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/flyfleet/notification-service/internal/dto"
+	"github.com/flyfleet/notification-service/internal/models"
+	"github.com/flyfleet/notification-service/internal/repository"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+type NotificationService struct {
+	repo   repository.Repository
+	logger *zap.Logger
+}
+
+func NewNotificationService(repo repository.Repository, logger *zap.Logger) *NotificationService {
+	return &NotificationService{
+		repo:   repo,
+		logger: logger,
+	}
+}
+
+func (s *NotificationService) ListLogs(ctx context.Context, page, limit int, status, channel, search string) ([]models.NotificationLog, int, error) {
+	return s.repo.ListLogs(ctx, page, limit, status, channel, search)
+}
+
+func (s *NotificationService) GetLogDetail(ctx context.Context, id uuid.UUID) (*models.NotificationLog, error) {
+	return s.repo.GetLog(ctx, id)
+}
+
+func (s *NotificationService) ResendNotification(ctx context.Context, id uuid.UUID, reason string, highPriority bool) (uuid.UUID, error) {
+	// 1. Fetch original log
+	original, err := s.repo.GetLog(ctx, id)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if original == nil {
+		return uuid.Nil, fmt.Errorf("notification not found")
+	}
+
+	// 2. Prepare new log entry based on original
+	newLog := *original
+	newLog.ID = uuid.Nil // Will be set by repository
+	newLog.Status = models.StatusQueued
+	newLog.RetryCount = 0
+	corrID := fmt.Sprintf("resend-%s", original.ID.String())
+	newLog.CorrelationID = &corrID
+	if newLog.Metadata == nil {
+		newLog.Metadata = make(map[string]any)
+	}
+	newLog.Metadata["resend_reason"] = reason
+	newLog.Metadata["original_id"] = original.ID.String()
+	if highPriority {
+		newLog.Metadata["priority"] = "HIGH"
+	}
+
+	// 3. Save new log
+	err = s.repo.CreateLog(ctx, &newLog)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	// 4. Add "Resend Initiated" event
+	err = s.repo.AddEvent(ctx, &models.NotificationEvent{
+		NotificationID: newLog.ID,
+		EventType:      "QUEUED",
+		Message:        fmt.Sprintf("Resend initiated by admin. Reason: %s", reason),
+	})
+	if err != nil {
+		s.logger.Error("Failed to add resend event", zap.Error(err), zap.String("new_id", newLog.ID.String()))
+	}
+
+	// 5. In a real system, we would trigger the actual delivery (Email/SMS/Push) here.
+	// For this prototype, we'll just log the initiation.
+	s.logger.Info("Notification resend initiated", zap.String("original_id", id.String()), zap.String("new_id", newLog.ID.String()))
+
+	return newLog.ID, nil
+}
+
+func (s *NotificationService) GetSettings(ctx context.Context) ([]models.NotificationSettings, error) {
+	return s.repo.GetSettings(ctx)
+}
+
+func (s *NotificationService) UpdateSettings(ctx context.Context, settings []models.NotificationSettings) error {
+	for i := range settings {
+		if err := s.repo.UpdateSettings(ctx, &settings[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *NotificationService) ListPreferences(ctx context.Context, page, limit int, search string) ([]dto.UserPreferenceResponse, int, error) {
+	prefs, total, err := s.repo.ListPreferences(ctx, page, limit, search)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res := make([]dto.UserPreferenceResponse, len(prefs))
+	for i, p := range prefs {
+		res[i] = dto.UserPreferenceResponse{
+			UserID:         p.UserID,
+			UserName:       p.UserName,
+			UserEmail:      p.UserEmail,
+			EmailEnabled:   p.EmailEnabled,
+			SmsEnabled:     p.SmsEnabled,
+			PushEnabled:    p.PushEnabled,
+			InAppEnabled:   p.InAppEnabled,
+			LastModifiedAt: p.LastModifiedAt.Format(time.RFC3339),
+		}
+	}
+	return res, total, nil
+}
+
+func (s *NotificationService) GetUserPreference(ctx context.Context, userId uuid.UUID) (*dto.UserPreferenceResponse, error) {
+	p, err := s.repo.GetUserPreference(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, nil
+	}
+
+	return &dto.UserPreferenceResponse{
+		UserID:         p.UserID,
+		UserName:       p.UserName,
+		UserEmail:      p.UserEmail,
+		EmailEnabled:   p.EmailEnabled,
+		SmsEnabled:     p.SmsEnabled,
+		PushEnabled:    p.PushEnabled,
+		InAppEnabled:   p.InAppEnabled,
+		LastModifiedAt: p.LastModifiedAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (s *NotificationService) UpdateUserPreference(ctx context.Context, userId uuid.UUID, req dto.PreferenceUpdateRequest, changedBy uuid.UUID) error {
+	old, err := s.repo.GetUserPreference(ctx, userId)
+	if err != nil {
+		return err
+	}
+
+	newPref := &models.UserNotificationPreference{
+		UserID:         userId,
+		EmailEnabled:   req.EmailEnabled,
+		SmsEnabled:     req.SmsEnabled,
+		PushEnabled:    req.PushEnabled,
+		InAppEnabled:   req.InAppEnabled,
+		LastModifiedBy: changedBy,
+	}
+
+	err = s.repo.UpdateUserPreference(ctx, newPref)
+	if err != nil {
+		return err
+	}
+
+	// Audit
+	audit := &models.PreferenceAudit{
+		UserID:       userId,
+		ChangedBy:    changedBy,
+		OldValues:    old,
+		NewValues:    newPref,
+		ChangeReason: req.Reason,
+	}
+	return s.repo.AddPreferenceAudit(ctx, audit)
+}
+
+func (s *NotificationService) GetGlobalDefaults(ctx context.Context) (*models.GlobalNotificationDefault, error) {
+	return s.repo.GetGlobalDefaults(ctx)
+}
+
+func (s *NotificationService) UpdateGlobalDefaults(ctx context.Context, req dto.GlobalDefaultUpdateRequest, updatedBy uuid.UUID) error {
+	d := &models.GlobalNotificationDefault{
+		EmailEnabled: req.EmailEnabled,
+		SmsEnabled:   req.SmsEnabled,
+		PushEnabled:  req.PushEnabled,
+		InAppEnabled: req.InAppEnabled,
+		UpdatedBy:    updatedBy,
+	}
+	return s.repo.UpdateGlobalDefaults(ctx, d)
+}
+
+func (s *NotificationService) GetPreferenceAudit(ctx context.Context, userId uuid.UUID) ([]models.PreferenceAudit, error) {
+	return s.repo.GetPreferenceAudit(ctx, userId)
+}

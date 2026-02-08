@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/flyfleet/vehicle-service/internal/middleware"
 	"github.com/flyfleet/vehicle-service/internal/models"
 	"github.com/flyfleet/vehicle-service/internal/service"
 	"github.com/google/uuid"
@@ -14,12 +15,17 @@ import (
 )
 
 type TripHandlers struct {
-	service *service.TripService
-	logger  *zap.Logger
+	service   *service.TripService
+	logger    *zap.Logger
+	validator *middleware.Validator
 }
 
 func NewTripHandlers(service *service.TripService, logger *zap.Logger) *TripHandlers {
-	return &TripHandlers{service: service, logger: logger}
+	return &TripHandlers{
+		service:   service,
+		logger:    logger,
+		validator: middleware.NewValidator(),
+	}
 }
 
 // ListTrips handles GET /api/v1/trips
@@ -31,20 +37,27 @@ func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
 
 	orgID := h.getOrgID(r)
 	
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page <= 0 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit <= 0 {
+		limit = 20
+	}
+	status := r.URL.Query().Get("status")
+
+	// Validate query parameters
+	if validationErrors := h.validator.ValidateListParams(page, limit, status); len(validationErrors) > 0 {
+		middleware.WriteValidationError(w, validationErrors)
+		return
+	}
+
 	params := models.TripListParams{
 		OrganizationID: orgID,
-		Status:         r.URL.Query().Get("status"),
-	}
-	
-	if page, _ := strconv.Atoi(r.URL.Query().Get("page")); page > 0 {
-		params.Page = page
-	} else {
-		params.Page = 1
-	}
-	if limit, _ := strconv.Atoi(r.URL.Query().Get("limit")); limit > 0 {
-		params.Limit = limit
-	} else {
-		params.Limit = 20
+		Status:         status,
+		Page:           page,
+		Limit:          limit,
 	}
 	
 	if vid := r.URL.Query().Get("vehicle_id"); vid != "" {
@@ -80,11 +93,23 @@ func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.CreateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body", err)
+	// Decode to map for validation
+	var rawData map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&rawData); err != nil {
+		h.writeError(w, http.StatusBadRequest, "Invalid JSON body", err)
 		return
 	}
+
+	// Validate request
+	if validationErrors := h.validator.ValidateCreateTripRequest(rawData); len(validationErrors) > 0 {
+		middleware.WriteValidationError(w, validationErrors)
+		return
+	}
+
+	// Parse validated data into struct
+	var req models.CreateTripRequest
+	reqBytes, _ := json.Marshal(rawData)
+	json.Unmarshal(reqBytes, &req)
 
 	orgID := h.getOrgID(r)
 	ctx := context.Background()
@@ -144,11 +169,23 @@ func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.UpdateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "Invalid request body", err)
+	// Decode to map for validation
+	var rawData map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&rawData); err != nil {
+		h.writeError(w, http.StatusBadRequest, "Invalid JSON body", err)
 		return
 	}
+
+	// Validate request
+	if validationErrors := h.validator.ValidateUpdateTripRequest(rawData); len(validationErrors) > 0 {
+		middleware.WriteValidationError(w, validationErrors)
+		return
+	}
+
+	// Parse validated data into struct
+	var req models.UpdateTripRequest
+	reqBytes, _ := json.Marshal(rawData)
+	json.Unmarshal(reqBytes, &req)
 
 	ctx := context.Background()
 	trip, err := h.service.UpdateTrip(ctx, id, &req)
@@ -177,6 +214,12 @@ func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit <= 0 {
 		limit = 50
+	}
+
+	// Validate telemetry params
+	if validationErrors := h.validator.ValidateTelemetryParams(limit); len(validationErrors) > 0 {
+		middleware.WriteValidationError(w, validationErrors)
+		return
 	}
 
 	ctx := context.Background()

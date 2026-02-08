@@ -1,0 +1,411 @@
+openapi: 3.0.3
+info:
+  title: Notification Service API
+  description: Management and auditing API for systemic communications (Email, SMS, Push, In-App).
+  version: 1.0.0
+servers:
+  - url: /api/v1/admin/notifications
+    description: Proxied through Web BFF
+
+paths:
+  /:
+    get:
+      summary: List notification logs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [QUEUED, SENT, FAILED, BOUNCED, READ]
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [EMAIL, SMS, PUSH, IN_APP]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of notification logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificationLog'
+                  total:
+                    type: integer
+
+  /{id}:
+    get:
+      summary: Get notification log details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detailed notification log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationLog'
+
+  /{id}/resend:
+    post:
+      summary: Trigger a notification resend
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                force:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Resend initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+
+  /settings:
+    get:
+      summary: Get system-wide channel configurations
+      responses:
+        '200':
+          description: List of channel settings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationSettings'
+    put:
+      summary: Update system-wide channel configurations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationSettings'
+      responses:
+        '200':
+          description: Settings updated successfully
+
+  /preferences:
+    get:
+      summary: List all user notification preferences
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of user preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferenceList'
+
+  /preferences/{userId}:
+    get:
+      summary: Get notification preferences for a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User preference details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreference'
+    put:
+      summary: Update notification preferences for a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferenceUpdate'
+      responses:
+        '200':
+          description: Preferences updated successfully
+
+  /preferences/{userId}/audit:
+    get:
+      summary: Get audit history for user preferences
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of preference changes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreferenceAudit'
+
+  /preferences/global:
+    get:
+      summary: Get global notification defaults
+      responses:
+        '200':
+          description: Global default settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalDefaults'
+    put:
+      summary: Update global notification defaults
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GlobalDefaultsUpdate'
+      responses:
+        '200':
+          description: Global defaults updated successfully
+
+components:
+  schemas:
+    NotificationLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        correlation_id:
+          type: string
+          nullable: true
+        user_email:
+          type: string
+          format: email
+        channel:
+          type: string
+          enum: [EMAIL, SMS, PUSH, IN_APP]
+        type:
+          type: string
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [QUEUED, SENT, FAILED, BOUNCED, READ]
+        created_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationEvent'
+
+    NotificationEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_type:
+          type: string
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationSettings:
+      type: object
+      required:
+        - channel
+        - enabled
+      properties:
+        channel:
+          type: string
+          enum: [EMAIL, SMS, PUSH, IN_APP]
+        enabled:
+          type: boolean
+        max_retries:
+          type: integer
+          minimum: 0
+        priority:
+          type: string
+          enum: [HIGH, STANDARD, LOW]
+        retention_months:
+          type: integer
+          minimum: 1
+
+    PreferenceList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserPreference'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    UserPreference:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        user_name:
+          type: string
+        user_email:
+          type: string
+          format: email
+        email_enabled:
+          type: boolean
+        sms_enabled:
+          type: boolean
+        push_enabled:
+          type: boolean
+        in_app_enabled:
+          type: boolean
+        last_modified_at:
+          type: string
+          format: date-time
+
+    PreferenceUpdate:
+      type: object
+      required:
+        - reason
+      properties:
+        email_enabled:
+          type: boolean
+        sms_enabled:
+          type: boolean
+        push_enabled:
+          type: boolean
+        in_app_enabled:
+          type: boolean
+        reason:
+          type: string
+          minLength: 5
+
+    PreferenceAudit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        changed_by:
+          type: string
+          format: uuid
+        old_values:
+          type: object
+        new_values:
+          type: object
+        change_reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    GlobalDefaults:
+      type: object
+      properties:
+        email_enabled:
+          type: boolean
+        sms_enabled:
+          type: boolean
+        push_enabled:
+          type: boolean
+        in_app_enabled:
+          type: boolean
+        updated_by:
+          type: string
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+
+    GlobalDefaultsUpdate:
+      type: object
+      properties:
+        email_enabled:
+          type: boolean
+        sms_enabled:
+          type: boolean
+        push_enabled:
+          type: boolean
+        in_app_enabled:
+          type: boolean

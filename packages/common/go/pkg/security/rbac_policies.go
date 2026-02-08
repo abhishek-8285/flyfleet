@@ -27,6 +27,13 @@ const (
 	ResourceAlerts        = "alerts"
 	ResourceAnalytics     = "analytics"
 	ResourceDocuments     = "documents"
+	ResourceMaintenance   = "maintenance"
+	ResourceInventory     = "inventory"
+	ResourceFuel          = "fuel"
+	ResourceGovernance    = "governance"
+	ResourceBilling       = "billing"
+	ResourceNotificationsPreferences = "notifications_preferences"
+	ResourceDisasterRecovery = "disaster_recovery"
 )
 
 // PolicyManifest defines the required roles for each resource
@@ -41,6 +48,13 @@ var PolicyManifest = map[string][]string{
 	ResourceAlerts:        {RoleSuperAdmin, RoleOrgAdmin, RoleFleetManager},
 	ResourceAnalytics:     {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceDocuments:     {RoleSuperAdmin, RoleOrgAdmin, RoleFleetManager},
+	ResourceMaintenance:   {RoleSuperAdmin, RoleOrgAdmin, RoleFleetManager},
+	ResourceInventory:     {RoleSuperAdmin, RoleOrgAdmin, RoleFleetManager},
+	ResourceFuel:          {RoleSuperAdmin, RoleOrgAdmin, RoleFleetManager},
+	ResourceGovernance:    {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceBilling:       {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceNotificationsPreferences: {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceDisasterRecovery:         {RoleSuperAdmin},
 }
 
 // SecretProvider defines an interface for fetching security secrets

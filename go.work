@@ -4,9 +4,11 @@ use (
 	./services/alert-service
 	./services/analytics-service
 	./services/auth-service
+	./services/reports-service
 	./services/driver-service
 	./services/geofencing-service
 	./services/india-integration-service
+	./services/fuel-service
 	./services/maintenance-service
 	./services/route-optimization-service
 	./services/tracking-service
@@ -14,5 +16,9 @@ use (
 	./services/vehicle-service
 	./services/video-service
 	./services/web-bff
+	./services/governance-service
+	./services/billing-service
+	./services/notification-service
+	./services/dr-service
 	./packages/common/go
 )

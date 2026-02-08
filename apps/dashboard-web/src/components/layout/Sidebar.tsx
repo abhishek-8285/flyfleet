@@ -1,5 +1,7 @@
 import {
+    ArchiveBoxIcon,
     ArrowLeftOnRectangleIcon,
+    ArrowPathIcon,
     ArrowUpTrayIcon,
     BuildingOffice2Icon,
     MapIcon,
@@ -32,6 +34,10 @@ const MENU_ITEMS: MenuItem[] = [
   { name: 'Drivers', path: '/admin/drivers', icon: UsersIcon, resource: 'driver', action: 'read' },
   { name: 'Devices', path: '/admin/devices', icon: Squares2X2Icon, resource: 'device', action: 'read' },
   { name: 'Live Map', path: '/admin/map', icon: MapIcon, resource: 'trip', action: 'read' },
+  { name: 'Fuel Management', path: '/admin/fuel', icon: TruckIcon, resource: 'fuel', action: 'read' },
+  { name: 'Governance', path: '/admin/governance', icon: ShieldCheckIcon, resource: 'governance', action: 'read' },
+  { name: 'Disaster Recovery', path: '/admin/dr', icon: ArchiveBoxIcon, resource: 'disaster_recovery', action: 'read' },
+  { name: 'Restore Operations', path: '/admin/dr/restores', icon: ArrowPathIcon, resource: 'disaster_recovery', action: 'read' },
 ];
 
 export const Sidebar: React.FC = () => {

@@ -1,0 +1,130 @@
+name: API Contract Validation
+
+on:
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'services/vehicle-service/**'
+      - '.github/workflows/contract-tests.yml'
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'services/vehicle-service/**'
+      - '.github/workflows/contract-tests.yml'
+
+jobs:
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: services/vehicle-service/go.sum
+
+      - name: Download dependencies
+        working-directory: services/vehicle-service
+        run: go mod download
+
+      - name: Verify OpenAPI spec is valid
+        working-directory: services/vehicle-service
+        run: |
+          echo "🔍 Validating OpenAPI specification..."
+          go run -mod=readonly github.com/getkin/kin-openapi/cmd/validate-spec@latest api/openapi/trips.yaml || {
+            echo "❌ OpenAPI spec validation failed!"
+            echo "The OpenAPI specification has syntax errors or is invalid."
+            exit 1
+          }
+          echo "✅ OpenAPI spec is valid"
+
+      - name: Run contract tests
+        working-directory: services/vehicle-service
+        run: |
+          echo "🧪 Running contract tests..."
+          go test -v ./tests/... -count=1 2>&1 | tee contract-test-results.txt
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo ""
+            echo "❌ CONTRACT DRIFT DETECTED!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "The API implementation has diverged from the OpenAPI spec."
+            echo ""
+            echo "This build is BLOCKED until the contract is restored."
+            echo ""
+            echo "To fix this:"
+            echo "  1. Check which tests failed above"
+            echo "  2. Either update the OpenAPI spec (api/openapi/trips.yaml)"
+            echo "  3. Or fix the handler implementation to match the spec"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 1
+          fi
+          echo "✅ All contract tests passed - API matches OpenAPI spec"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-test-results
+          path: services/vehicle-service/contract-test-results.txt
+          retention-days: 30
+
+  build-check:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: contract-tests  # GATE: Build only runs if contract tests pass
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: services/vehicle-service/go.sum
+
+      - name: Build vehicle-service
+        working-directory: services/vehicle-service
+        run: |
+          echo "🔨 Building vehicle-service..."
+          go build -o /tmp/vehicle-service ./cmd/main.go
+          echo "✅ Build successful"
+
+  notify-drift:
+    name: Notify on Contract Drift
+    runs-on: ubuntu-latest
+    needs: contract-tests
+    if: failure()
+    
+    steps:
+      - name: Create issue comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## ⚠️ API Contract Drift Detected
+              
+              The contract tests have failed, indicating that the API implementation has diverged from the OpenAPI specification.
+              
+              **This PR is blocked until the contract is restored.**
+              
+              ### Next Steps:
+              1. Review the failing contract tests in the [Actions tab](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              2. Either:
+                 - Update \`api/openapi/trips.yaml\` to match the new implementation, OR
+                 - Fix the handlers to match the existing spec
+              3. Push the fix and re-run the checks
+              
+              ---
+              *This check ensures API consumers are not broken by unannounced changes.*`
+            });
