@@ -62,8 +62,7 @@ import { AddTrip, EditTrip, TripDetail, TripSettings, TripsList, TripTelemetry }
 import { Users } from './pages/admin/Users';
 import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
-import AuditLogs from './pages/AuditLogs';
-import AuditSettings from './pages/AuditSettings';
+import AuditCenter from './pages/audit/AuditCenter';
 import Dashboard from './pages/Dashboard';
 import Drivers from './pages/Drivers';
 import ErrorScreen from './pages/ErrorScreen';
@@ -75,6 +74,7 @@ import NewRequest from './pages/governance/NewRequest';
 import RequestDetail from './pages/governance/RequestDetail';
 import RequestList from './pages/governance/RequestList';
 import History from './pages/History';
+import IntegrationsCenter from './pages/integrations/IntegrationsCenter';
 import Landing from './pages/Landing';
 import LiveMap from './pages/LiveMap';
 import Login from './pages/Login';
@@ -160,8 +160,7 @@ function App() {
               <Route path="/security/policy" element={<PrivateRoute><MFAPolicyEditor /></PrivateRoute>} />
               <Route path="/security/exceptions" element={<PrivateRoute><MFAExceptions /></PrivateRoute>} />
               <Route path="/security/overrides" element={<PrivateRoute><MFAOverrides /></PrivateRoute>} />
-              <Route path="/security/audit" element={<PrivateRoute><AuditLogs /></PrivateRoute>} />
-              <Route path="/security/audit/settings" element={<PrivateRoute><AuditSettings /></PrivateRoute>} />
+              <Route path="/security/audit" element={<PrivateRoute><AuditCenter /></PrivateRoute>} />
 
               {/* Admin Portal */}
               <Route
@@ -259,6 +258,9 @@ function App() {
                 <Route path="settings/templates" element={<Templates />} />
                 <Route path="settings/channels" element={<NotificationChannels />} />
                 <Route path="settings/policies" element={<PoliciesLimits />} />
+                
+                {/* Integrations Module */}
+                <Route path="integrations" element={<IntegrationsCenter />} />
                 
                 {/* Future: etc */}
               </Route>

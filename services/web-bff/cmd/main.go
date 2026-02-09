@@ -31,6 +31,7 @@ func main() {
 	mfaHandlers := handlers.NewMFAHandlers(cfg, logger)
 	assetHandlers := handlers.NewAssetHandlers(cfg, logger)
 	settingsHandlers := handlers.NewSettingsHandlers(cfg, logger)
+	integrationsHandlers := handlers.NewIntegrationsHandlers(cfg, logger)
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 	
 	// Setup routes
@@ -53,7 +54,14 @@ func main() {
 	
 	// Security endpoints (RBAC Enforcement - Centralized)
 	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
+	
+	// Audit Compliance Extensions (Granular RBAC)
+	mux.Handle("/api/audit/entity-history", middleware.RBACMiddleware(sp, security.ResourceEntityHistory)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
+	mux.Handle("/api/audit/evidence-exports", middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
+	mux.Handle("/api/audit/evidence-exports/", middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
+	mux.Handle("/api/audit/policy", middleware.RBACMiddleware(sp, security.ResourceAuditPolicy)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
 	mux.Handle("/api/audit/", middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
+	
 	mux.Handle("/api/organizations/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyOrganization)))
 	mux.Handle("/api/rbac/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyRBAC)))
 
@@ -117,6 +125,11 @@ func main() {
 	mux.Handle("/api/security/mfa", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
 	mux.Handle("/api/security/mfa/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
 	
+	// Integrations Management Module
+	mux.Handle("/api/integrations/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(integrationsHandlers.ProxyIntegrations)))
+	mux.Handle("/api/api-clients/", middleware.RBACMiddleware(sp, security.ResourceApiClients)(http.HandlerFunc(integrationsHandlers.ProxyApiClients)))
+	mux.Handle("/api/webhooks/", middleware.RBACMiddleware(sp, security.ResourceWebhooks)(http.HandlerFunc(integrationsHandlers.ProxyWebhooks)))
+
 	// Server configuration
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.Port),

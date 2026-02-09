@@ -328,10 +328,12 @@ func (s *AuthService) UpdateTheme(ctx context.Context, userID uuid.UUID, theme, 
 
 	// 3. Audit Log
 	auditLog := &models.AuditLog{
-		OrgID:     userID, // Placeholder if orgID not known, but usually theme is user-specific
+		OrgID:     userID, // Placeholder
 		UserID:    userID,
+		Module:    "PROFILE",
 		Action:    "USER_THEME_UPDATE",
 		Resource:  "user_profile",
+		EntityID:  userID.String(),
 		Severity:  "info",
 		Status:    "success",
 		Details:   fmt.Sprintf(`{"new_theme": "%s"}`, theme),
@@ -1135,6 +1137,7 @@ func (s *AuthService) logRBACAudit(ctx context.Context, actorID uuid.UUID, actio
 	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
 		OrgID:     orgID,
 		UserID:    actorID,
+		Module:    "RBAC",
 		Action:    action,
 		Resource:  resource,
 		Severity:  "info",
@@ -1142,6 +1145,43 @@ func (s *AuthService) logRBACAudit(ctx context.Context, actorID uuid.UUID, actio
 		Details:   details,
 		CreatedAt: time.Now(),
 	})
+}
+
+func (s *AuthService) ListEntityAuditHistory(ctx context.Context, entityType, entityID string) ([]models.EntityAuditHistory, error) {
+	return s.repo.ListEntityAuditHistory(ctx, entityType, entityID)
+}
+
+func (s *AuthService) CreateEvidenceExport(ctx context.Context, orgID uuid.UUID, module string, start, end time.Time, format string, requestedBy uuid.UUID) (*models.EvidenceExport, error) {
+	export := &models.EvidenceExport{
+		OrgID:          orgID,
+		Module:         module,
+		DateRangeStart: start,
+		DateRangeEnd:   end,
+		Format:         format,
+		Status:         "processing",
+		RequestedBy:    requestedBy,
+	}
+	if err := s.repo.CreateEvidenceExport(ctx, export); err != nil {
+		return nil, err
+	}
+	// In production, trigger a background worker here
+	return export, nil
+}
+
+func (s *AuthService) ListEvidenceExports(ctx context.Context, orgID uuid.UUID) ([]models.EvidenceExport, error) {
+	return s.repo.ListEvidenceExports(ctx, orgID)
+}
+
+func (s *AuthService) GetEvidenceExportByID(ctx context.Context, id uuid.UUID) (*models.EvidenceExport, error) {
+	return s.repo.GetEvidenceExportByID(ctx, id)
+}
+
+func (s *AuthService) GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error) {
+	return s.repo.GetAuditPolicy(ctx, orgID)
+}
+
+func (s *AuthService) UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error {
+	return s.repo.UpdateAuditPolicy(ctx, policy)
 }
 
 func (s *AuthService) GetEffectivePermissions(ctx context.Context, userID uuid.UUID) ([]models.PermissionDefinition, error) {

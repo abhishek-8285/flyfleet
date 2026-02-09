@@ -163,6 +163,15 @@ type AuthRepository interface {
 	ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.MFAUser, int, error)
 	GetMFAUser(ctx context.Context, userID uuid.UUID) (*models.MFAUser, error)
 	UpdateMFAUserStatus(ctx context.Context, userID uuid.UUID, status string) error
+
+	// Audit & Compliance Expansion
+	ListEntityAuditHistory(ctx context.Context, entityType, entityID string) ([]models.EntityAuditHistory, error)
+	CreateEvidenceExport(ctx context.Context, export *models.EvidenceExport) error
+	ListEvidenceExports(ctx context.Context, orgID uuid.UUID) ([]models.EvidenceExport, error)
+	GetEvidenceExportByID(ctx context.Context, id uuid.UUID) (*models.EvidenceExport, error)
+	UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error
+	GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error)
+	UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error
 }
 
 type postgresRepository struct {

@@ -67,8 +67,12 @@ func (r *postgresRepository) SaveMFACode(ctx context.Context, mfa *models.MFACod
 // Security & Audit operations
 
 func (r *postgresRepository) CreateAuditLog(ctx context.Context, log *models.AuditLog) error {
-	query := `INSERT INTO audit_logs (org_id, user_id, action, resource, severity, status, details, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Exec(ctx, query, log.OrgID, log.UserID, log.Action, log.Resource, log.Severity, log.Status, log.Details, log.IPAddress, log.UserAgent)
+	query := `INSERT INTO audit_logs (org_id, user_id, module, action, resource, entity_id, severity, status, details, before_state, after_state, metadata, ip_address, user_agent) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+	_, err := r.db.Exec(ctx, query,
+		log.OrgID, log.UserID, log.Module, log.Action, log.Resource, log.EntityID,
+		log.Severity, log.Status, log.Details, log.BeforeState, log.AfterState,
+		log.Metadata, log.IPAddress, log.UserAgent)
 	return err
 }
 
@@ -86,61 +90,72 @@ func (r *postgresRepository) GetAuditLogByID(ctx context.Context, id uuid.UUID) 
 
 func (r *postgresRepository) ListAuditLogs(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.AuditLog, int, error) {
 	offset := (page - 1) * size
-	
+
 	// Base query
-	query := `SELECT id, org_id, user_id, action, resource, severity, status, details, ip_address, user_agent, created_at 
+	query := `SELECT id, org_id, user_id, module, action, resource, entity_id, severity, status, details, before_state, after_state, metadata, ip_address, user_agent, created_at 
 			  FROM audit_logs WHERE org_id = $1`
 	countQuery := `SELECT COUNT(*) FROM audit_logs WHERE org_id = $1`
-	
+
 	args := []any{orgID}
 	placeholder := 2
-	
+
+	if module, ok := filters["module"].(string); ok && module != "" {
+		query += fmt.Sprintf(" AND module = $%d", placeholder)
+		countQuery += fmt.Sprintf(" AND module = $%d", placeholder)
+		args = append(args, module)
+		placeholder++
+	}
+
 	if action, ok := filters["action"].(string); ok && action != "" {
 		query += fmt.Sprintf(" AND action = $%d", placeholder)
 		countQuery += fmt.Sprintf(" AND action = $%d", placeholder)
 		args = append(args, action)
 		placeholder++
 	}
-	
+
 	if severity, ok := filters["severity"].(string); ok && severity != "" {
 		query += fmt.Sprintf(" AND severity = $%d", placeholder)
 		countQuery += fmt.Sprintf(" AND severity = $%d", placeholder)
 		args = append(args, severity)
 		placeholder++
 	}
-	
+
 	if userID, ok := filters["user_id"].(uuid.UUID); ok && userID != uuid.Nil {
 		query += fmt.Sprintf(" AND user_id = $%d", placeholder)
 		countQuery += fmt.Sprintf(" AND user_id = $%d", placeholder)
 		args = append(args, userID)
 		placeholder++
 	}
-	
+
 	// Add ordering and pagination
 	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", placeholder, placeholder+1)
-	
+
 	var total int
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	
+
 	args = append(args, size, offset)
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	var logs []models.AuditLog
 	for rows.Next() {
 		var l models.AuditLog
-		err := rows.Scan(&l.ID, &l.OrgID, &l.UserID, &l.Action, &l.Resource, &l.Severity, &l.Status, &l.Details, &l.IPAddress, &l.UserAgent, &l.CreatedAt)
+		err := rows.Scan(
+			&l.ID, &l.OrgID, &l.UserID, &l.Module, &l.Action, &l.Resource, &l.EntityID,
+			&l.Severity, &l.Status, &l.Details, &l.BeforeState, &l.AfterState,
+			&l.Metadata, &l.IPAddress, &l.UserAgent, &l.CreatedAt,
+		)
 		if err != nil {
 			return nil, 0, err
 		}
 		logs = append(logs, l)
 	}
-	
+
 	return logs, total, nil
 }
 
@@ -1108,4 +1123,94 @@ func (r *postgresRepository) GetUserRoles(ctx context.Context, userID uuid.UUID)
 		roles = append(roles, role)
 	}
 	return roles, nil
+}
+func (r *postgresRepository) ListEntityAuditHistory(ctx context.Context, entityType, entityID string) ([]models.EntityAuditHistory, error) {
+	query := `SELECT id, entity_type, entity_id, change_data, actor, timestamp FROM entity_audit_history 
+			  WHERE entity_type = $1 AND entity_id = $2 ORDER BY timestamp DESC`
+	rows, err := r.db.Query(ctx, query, entityType, entityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var history []models.EntityAuditHistory
+	for rows.Next() {
+		var h models.EntityAuditHistory
+		if err := rows.Scan(&h.ID, &h.EntityType, &h.EntityID, &h.ChangeData, &h.Actor, &h.Timestamp); err != nil {
+			return nil, err
+		}
+		history = append(history, h)
+	}
+	return history, nil
+}
+
+func (r *postgresRepository) CreateEvidenceExport(ctx context.Context, export *models.EvidenceExport) error {
+	query := `INSERT INTO evidence_exports (org_id, module, date_range_start, date_range_end, format, status, requested_by) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	return r.db.QueryRow(ctx, query, 
+		export.OrgID, export.Module, export.DateRangeStart, export.DateRangeEnd, 
+		export.Format, export.Status, export.RequestedBy).Scan(&export.ID)
+}
+
+func (r *postgresRepository) ListEvidenceExports(ctx context.Context, orgID uuid.UUID) ([]models.EvidenceExport, error) {
+	query := `SELECT id, org_id, module, date_range_start, date_range_end, format, status, requested_by, COALESCE(file_url, ''), COALESCE(error_message, ''), created_at 
+			  FROM evidence_exports WHERE org_id = $1 ORDER BY created_at DESC`
+	rows, err := r.db.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var exports []models.EvidenceExport
+	for rows.Next() {
+		var e models.EvidenceExport
+		if err := rows.Scan(&e.ID, &e.OrgID, &e.Module, &e.DateRangeStart, &e.DateRangeEnd, &e.Format, &e.Status, &e.RequestedBy, &e.FileURL, &e.ErrorMessage, &e.CreatedAt); err != nil {
+			return nil, err
+		}
+		exports = append(exports, e)
+	}
+	return exports, nil
+}
+
+func (r *postgresRepository) GetEvidenceExportByID(ctx context.Context, id uuid.UUID) (*models.EvidenceExport, error) {
+	query := `SELECT id, org_id, module, date_range_start, date_range_end, format, status, requested_by, COALESCE(file_url, ''), COALESCE(error_message, ''), created_at 
+			  FROM evidence_exports WHERE id = $1`
+	var e models.EvidenceExport
+	err := r.db.QueryRow(ctx, query, id).Scan(&e.ID, &e.OrgID, &e.Module, &e.DateRangeStart, &e.DateRangeEnd, &e.Format, &e.Status, &e.RequestedBy, &e.FileURL, &e.ErrorMessage, &e.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+func (r *postgresRepository) UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error {
+	query := `UPDATE evidence_exports SET status = $1, file_url = $2, error_message = $3 WHERE id = $4`
+	_, err := r.db.Exec(ctx, query, status, fileURL, errorMsg, id)
+	return err
+}
+
+func (r *postgresRepository) GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error) {
+	query := `SELECT id, org_id, retention_years, archive_policy, masking_rules, updated_by, updated_at 
+			  FROM audit_policies WHERE org_id = $1`
+	var p models.AuditPolicy
+	err := r.db.QueryRow(ctx, query, orgID).Scan(&p.ID, &p.OrgID, &p.RetentionYears, &p.ArchivePolicy, &p.MaskingRules, &p.UpdatedBy, &p.UpdatedAt)
+	if err != nil {
+		// Return defaults if not found
+		return &models.AuditPolicy{
+			OrgID: orgID,
+			RetentionYears: 7,
+			ArchivePolicy: "MOVE_TO_COLD_STORAGE_1Y",
+			MaskingRules: []string{"credit_card", "ssn", "phone", "email"},
+		}, nil
+	}
+	return &p, nil
+}
+
+func (r *postgresRepository) UpdateAuditPolicy(ctx context.Context, p *models.AuditPolicy) error {
+	query := `INSERT INTO audit_policies (org_id, retention_years, archive_policy, masking_rules, updated_by, updated_at) 
+			  VALUES ($1, $2, $3, $4, $5, NOW()) 
+			  ON CONFLICT (org_id) DO UPDATE SET 
+			  retention_years = $2, archive_policy = $3, masking_rules = $4, updated_by = $5, updated_at = NOW()`
+	_, err := r.db.Exec(ctx, query, p.OrgID, p.RetentionYears, p.ArchivePolicy, p.MaskingRules, p.UpdatedBy)
+	return err
 }

@@ -186,6 +186,14 @@ func (m *MockRepository) ListMFAUsers(ctx context.Context, orgID uuid.UUID, page
 func (m *MockRepository) GetMFAUser(ctx context.Context, userID uuid.UUID) (*models.MFAUser, error) { return nil, nil }
 func (m *MockRepository) UpdateMFAUserStatus(ctx context.Context, userID uuid.UUID, status string) error { return nil }
 
+func (m *MockRepository) ListEntityAuditHistory(ctx context.Context, entityType, entityID string) ([]models.EntityAuditHistory, error) { return nil, nil }
+func (m *MockRepository) CreateEvidenceExport(ctx context.Context, export *models.EvidenceExport) error { return nil }
+func (m *MockRepository) ListEvidenceExports(ctx context.Context, orgID uuid.UUID) ([]models.EvidenceExport, error) { return nil, nil }
+func (m *MockRepository) GetEvidenceExportByID(ctx context.Context, id uuid.UUID) (*models.EvidenceExport, error) { return nil, nil }
+func (m *MockRepository) UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error { return nil }
+func (m *MockRepository) GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error) { return nil, nil }
+func (m *MockRepository) UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error { return nil }
+
 
 func TestRBAC_UniqueRoleName(t *testing.T) {
 	repo := &MockRepository{

@@ -147,18 +147,57 @@ type DocumentMetadata struct {
 }
 
 type AuditLog struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	OrgID     uuid.UUID `json:"org_id" db:"org_id"`
-	UserID    uuid.UUID `json:"user_id" db:"user_id"`
-	Action    string    `json:"action" db:"action"`
-	Resource  string    `json:"resource" db:"resource"`
-	Severity  string    `json:"severity" db:"severity"` // info, warning, critical
-	Status    string    `json:"status" db:"status"`     // success, failure, denied
-	Details   string    `json:"details,omitempty" db:"details"` // JSON string
-	IPAddress string    `json:"ip_address" db:"ip_address"`
-	UserAgent string    `json:"user_agent" db:"user_agent"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	OrgID       uuid.UUID `json:"org_id" db:"org_id"`
+	UserID      uuid.UUID `json:"user_id" db:"user_id"`
+	Module      string    `json:"module" db:"module"`
+	Action      string    `json:"action" db:"action"`
+	Resource    string    `json:"resource" db:"resource"`
+	EntityID    string    `json:"entity_id,omitempty" db:"entity_id"`
+	Severity    string    `json:"severity" db:"severity"`
+	Status      string    `json:"status" db:"status"`
+	Details     string    `json:"details,omitempty" db:"details"`
+	BeforeState string    `json:"before_state,omitempty" db:"before_state"`
+	AfterState  string    `json:"after_state,omitempty" db:"after_state"`
+	Metadata    string    `json:"metadata,omitempty" db:"metadata"`
+	IPAddress   string    `json:"ip_address" db:"ip_address"`
+	UserAgent   string    `json:"user_agent" db:"user_agent"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
+
+type EntityAuditHistory struct {
+	ID         uuid.UUID `json:"id" db:"id"`
+	EntityType string    `json:"entity_type" db:"entity_type"`
+	EntityID   string    `json:"entity_id" db:"entity_id"`
+	ChangeData string    `json:"change_data" db:"change_data"` // JSON string
+	Actor      uuid.UUID `json:"actor" db:"actor"`
+	Timestamp  time.Time `json:"timestamp" db:"timestamp"`
+}
+
+type EvidenceExport struct {
+	ID              uuid.UUID  `json:"id" db:"id"`
+	OrgID           uuid.UUID  `json:"org_id" db:"org_id"`
+	Module          string     `json:"module" db:"module"`
+	DateRangeStart  time.Time  `json:"date_range_start" db:"date_range_start"`
+	DateRangeEnd    time.Time  `json:"date_range_end" db:"date_range_end"`
+	Format          string     `json:"format" db:"format"`
+	Status          string     `json:"status" db:"status"`
+	RequestedBy     uuid.UUID  `json:"requested_by" db:"requested_by"`
+	FileURL         string     `json:"file_url,omitempty" db:"file_url"`
+	ErrorMessage    string     `json:"error_message,omitempty" db:"error_message"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+}
+
+type AuditPolicy struct {
+	ID              uuid.UUID `json:"id" db:"id"`
+	OrgID           uuid.UUID `json:"org_id" db:"org_id"`
+	RetentionYears  int       `json:"retention_years" db:"retention_years"`
+	ArchivePolicy   string    `json:"archive_policy" db:"archive_policy"`
+	MaskingRules    []string  `json:"masking_rules" db:"masking_rules"`
+	UpdatedBy       uuid.UUID `json:"updated_by" db:"updated_by"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}
+
 
 type AuditSettings struct {
 	ID                    uuid.UUID `json:"id" db:"id"`

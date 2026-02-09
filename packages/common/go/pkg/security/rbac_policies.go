@@ -34,6 +34,12 @@ const (
 	ResourceBilling       = "billing"
 	ResourceNotificationsPreferences = "notifications_preferences"
 	ResourceDisasterRecovery = "disaster_recovery"
+	ResourceEntityHistory    = "entity_history"
+	ResourceEvidenceExports  = "evidence_exports"
+	ResourceAuditPolicy      = "audit_policy"
+	ResourceIntegrations     = "integrations"
+	ResourceApiClients       = "api_clients"
+	ResourceWebhooks         = "webhooks"
 )
 
 // PolicyManifest defines the required roles for each resource
@@ -55,6 +61,12 @@ var PolicyManifest = map[string][]string{
 	ResourceBilling:       {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceNotificationsPreferences: {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceDisasterRecovery:         {RoleSuperAdmin},
+	ResourceEntityHistory:            {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceEvidenceExports:          {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceAuditPolicy:              {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceIntegrations:             {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceApiClients:               {RoleSuperAdmin, RoleOrgAdmin},
+	ResourceWebhooks:                 {RoleSuperAdmin, RoleOrgAdmin},
 }
 
 // SecretProvider defines an interface for fetching security secrets

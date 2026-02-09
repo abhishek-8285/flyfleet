@@ -398,6 +398,42 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 		}
 	})))))
 
+	router.Handle("/api/v1/admin/audit/entity-history", adminChain(middleware.RBACMiddleware(sp, security.ResourceEntityHistory)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			audit.ListEntityHistory(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))))
+
+	router.Handle("/api/v1/admin/audit/evidence-exports", adminChain(middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			audit.ListEvidenceExports(w, r)
+		} else if r.Method == http.MethodPost {
+			audit.CreateEvidenceExport(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))))
+
+	router.Handle("/api/v1/admin/audit/evidence-exports/", adminChain(middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			audit.GetEvidenceExport(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))))
+
+	router.Handle("/api/v1/admin/audit/policy", adminChain(middleware.RBACMiddleware(sp, security.ResourceAuditPolicy)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			audit.GetAuditPolicy(w, r)
+		} else if r.Method == http.MethodPut {
+			audit.UpdateAuditPolicy(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))))
+
 	// RBAC Suite
 	router.Handle("/api/v1/admin/rbac/roles", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {

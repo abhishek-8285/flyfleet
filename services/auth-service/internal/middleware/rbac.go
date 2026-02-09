@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/fleet-platform/shared/pkg/security"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // RBACMiddleware checks if the user has a role permitted for the specified resource
@@ -58,6 +60,14 @@ func RBACMiddleware(sp security.SecretProvider, resource string) func(http.Handl
 			if !security.IsAuthorized(role, resource) {
 				writeError(w, http.StatusForbidden, "ACCESS_DENIED", "You do not have permission to access this resource", "")
 				return
+			}
+
+			// 4. Inject user_id into context
+			if userIDStr, ok := claims["user_id"].(string); ok {
+				if uid, err := uuid.Parse(userIDStr); err == nil {
+					ctx := context.WithValue(r.Context(), "user_id", uid)
+					r = r.WithContext(ctx)
+				}
 			}
 
 			next.ServeHTTP(w, r)

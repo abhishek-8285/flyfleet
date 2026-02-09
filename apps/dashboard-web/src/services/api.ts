@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
-const BFF_URL = process.env.REACT_APP_BFF_URL || 'http://localhost:8081/api/mfa';
+const BFF_URL = process.env.REACT_APP_BFF_URL || 'http://localhost:8081';
 
 class ApiService {
   private client: AxiosInstance;
@@ -248,72 +248,72 @@ class ApiService {
 
   // MFA Security (Routed through BFF)
   async getMFADashboard(orgId: string) {
-    const response = await this.bffClient.get('/dashboard', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/dashboard', { params: { org_id: orgId } });
     return response.data;
   }
 
   async getMFAAdoptionTrend(orgId: string, days: number = 30) {
-    const response = await this.bffClient.get('/adoption-trend', { params: { org_id: orgId, days } });
+    const response = await this.bffClient.get('/api/mfa/adoption-trend', { params: { org_id: orgId, days } });
     return response.data;
   }
 
   async getMFAMethodDistribution(orgId: string) {
-    const response = await this.bffClient.get('/method-distribution', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/method-distribution', { params: { org_id: orgId } });
     return response.data;
   }
 
   async getMFAEvents(orgId: string, page: number = 1, pageSize: number = 20) {
-    const response = await this.bffClient.get('/events', { params: { org_id: orgId, page, page_size: pageSize } });
+    const response = await this.bffClient.get('/api/mfa/events', { params: { org_id: orgId, page, page_size: pageSize } });
     return response.data;
   }
 
   async getMFAFailureLocations(orgId: string) {
-    const response = await this.bffClient.get('/failures/locations', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/failures/locations', { params: { org_id: orgId } });
     return response.data;
   }
 
   async getMFAFailureUsers(orgId: string) {
-    const response = await this.bffClient.get('/failures/users', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/failures/users', { params: { org_id: orgId } });
     return response.data;
   }
 
   async getLockedUsers(orgId: string) {
-    const response = await this.bffClient.get('/locked-users', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/locked-users', { params: { org_id: orgId } });
     return response.data;
   }
 
   async unlockUser(userId: string) {
-    const response = await this.bffClient.post('/unlock', { userId });
+    const response = await this.bffClient.post('/api/mfa/unlock', { userId });
     return response.data;
   }
 
   async resetMFA(userId: string) {
-    const response = await this.bffClient.post('/reset', { userId });
+    const response = await this.bffClient.post('/api/mfa/reset', { userId });
     return response.data;
   }
 
   async getMFAPolicy(orgId: string) {
-    const response = await this.bffClient.get('/policy', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/policy', { params: { org_id: orgId } });
     return response.data;
   }
 
   async updateMFAPolicy(data: { policy: any, reason: string }) {
-    const response = await this.bffClient.put('/policy', data);
+    const response = await this.bffClient.put('/api/mfa/policy', data);
     return response.data;
   }
 
   async getMFAPolicyHistory(orgId: string) {
-    const response = await this.bffClient.get('/policy/history', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/policy/history', { params: { org_id: orgId } });
     return response.data;
   }
 
   async rollbackMFAPolicy(historyId: string) {
-    const response = await this.bffClient.post('/policy/rollback', { historyId });
+    const response = await this.bffClient.post('/api/mfa/policy/rollback', { historyId });
     return response.data;
   }
 
   async getMFAOrgOverride(orgId: string) {
-    const response = await this.bffClient.get('/overrides', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/overrides', { params: { org_id: orgId } });
     return response.data;
   }
 
@@ -344,17 +344,17 @@ class ApiService {
   }
 
   async getMFAExceptions(orgId: string) {
-    const response = await this.bffClient.get('/exceptions', { params: { org_id: orgId } });
+    const response = await this.bffClient.get('/api/mfa/exceptions', { params: { org_id: orgId } });
     return response.data;
   }
 
   async addMFAException(data: { userId: string, orgId: string, reason: string, days: number }) {
-    const response = await this.bffClient.post('/exceptions', data);
+    const response = await this.bffClient.post('/api/mfa/exceptions', data);
     return response.data;
   }
 
   async deleteMFAException(id: string) {
-    await this.bffClient.delete(`/exceptions/${id}`);
+    await this.bffClient.delete(`/api/mfa/exceptions/${id}`);
   }
 
   // Security Operations Expansion
@@ -390,6 +390,78 @@ class ApiService {
 
   async createIPRule(data: any) {
     const response = await this.bffClient.post('/api/security/ip-rules', data);
+    return response.data;
+  }
+
+  // Audit & Compliance Extensions
+  async getEntityHistory(type: string, id: string) {
+    const response = await this.bffClient.get('/api/audit/entity-history', { params: { type, id } });
+    return response.data;
+  }
+
+  async createEvidenceExport(data: { org_id: string; module: string; date_range_start: string; date_range_end: string; format: string }) {
+    const response = await this.bffClient.post('/api/audit/evidence-exports', data);
+    return response.data;
+  }
+
+  async getEvidenceExports(orgId: string) {
+    const response = await this.bffClient.get('/api/audit/evidence-exports', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async getEvidenceExportDetails(id: string) {
+    const response = await this.bffClient.get(`/api/audit/evidence-exports/${id}`);
+    return response.data;
+  }
+
+  async getAuditPolicy(orgId: string) {
+    const response = await this.bffClient.get('/api/audit/policy', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async updateAuditPolicy(data: any) {
+    const response = await this.bffClient.put('/api/audit/policy', data);
+    return response.data;
+  }
+
+  // Integrations Module
+  async getIntegrations(orgId: string) {
+    const response = await this.bffClient.get('/api/integrations/', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async createIntegration(data: any) {
+    const response = await this.bffClient.post('/api/integrations/', data);
+    return response.data;
+  }
+
+  async updateIntegration(id: string, data: any) {
+    const response = await this.bffClient.put(`/api/integrations/${id}`, data);
+    return response.data;
+  }
+
+  async testIntegration(id: string) {
+    const response = await this.bffClient.post(`/api/integrations/${id}/test`);
+    return response.data;
+  }
+
+  async getApiClients(orgId: string) {
+    const response = await this.bffClient.get('/api/api-clients/', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async createApiClient(data: any) {
+    const response = await this.bffClient.post('/api/api-clients/', data);
+    return response.data;
+  }
+
+  async getWebhooks(orgId: string) {
+    const response = await this.bffClient.get('/api/webhooks/', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async getIntegrationLogs(params: { org_id: string; integration_id?: string; limit?: number; offset?: number }) {
+    const response = await this.bffClient.get('/api/integrations/logs', { params });
     return response.data;
   }
 }

@@ -16,6 +16,7 @@ type Config struct {
 	ReportsServiceURL      string
 	DRServiceURL           string
 	SettingsServiceURL     string
+	IntegrationsServiceURL string
 	JWTSecret             string
 	LogLevel              string
 }
@@ -33,6 +34,7 @@ func Load() *Config {
 		ReportsServiceURL:      getEnv("REPORTS_SERVICE_URL", "http://reports-service:8083"),
 		DRServiceURL:           getEnv("DR_SERVICE_URL", "http://dr-service:8084"),
 		SettingsServiceURL:     getEnv("SETTINGS_SERVICE_URL", "http://settings-service:8085"),
+		IntegrationsServiceURL: getEnv("INTEGRATIONS_SERVICE_URL", "http://integrations-service:8087"),
 		JWTSecret:             getEnv("JWT_SECRET", "super-secret-key"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
 	}
