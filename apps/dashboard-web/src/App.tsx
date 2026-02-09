@@ -39,6 +39,10 @@ import UserPreferencesList from './pages/admin/notifications/UserPreferencesList
 import { OrganizationDetail } from './pages/admin/OrganizationDetail';
 import { Organizations } from './pages/admin/Organizations';
 import { OrganizationSettings } from './pages/admin/OrganizationSettings';
+import { RoleMatrix } from './pages/admin/rbac/RoleMatrix';
+import { Roles } from './pages/admin/rbac/Roles';
+import { SecurityLogs } from './pages/admin/rbac/SecurityLogs';
+import { UserAssignments } from './pages/admin/rbac/UserAssignments';
 import CreateReport from './pages/admin/reports/CreateReport';
 import ExecutionHistory from './pages/admin/reports/ExecutionHistory';
 import ScheduledReportsList from './pages/admin/reports/ScheduledReportsList';
@@ -224,7 +228,13 @@ function App() {
                 <Route path="dr/tests/settings" element={<DRTestSettingsView />} />
                 <Route path="dr/tests/:id" element={<DRTestDetailView />} />
                 
-                {/* Future: Roles, etc */}
+                {/* RBAC Module */}
+                <Route path="rbac/roles" element={<Roles />} />
+                <Route path="rbac/roles/:id/permissions" element={<RoleMatrix />} />
+                <Route path="rbac/assignments" element={<UserAssignments />} />
+                <Route path="rbac/logs" element={<SecurityLogs />} />
+                
+                {/* Future: etc */}
               </Route>
             </Routes>
           </BrowserRouter>
