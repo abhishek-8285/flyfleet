@@ -2,7 +2,7 @@
   "name": "@flyfleet/dashboard-web",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:8080",
+  "proxy": "http://localhost:8081",
   "dependencies": {
     "@flyfleet/config": "^1.0.0",
     "@heroicons/react": "^2.2.0",

@@ -62,7 +62,7 @@ const DRTestDetailView: React.FC = () => {
     }, [id]);
 
     const handleAbort = async () => {
-        if (!confirm('Are you sure you want to abort this test?')) return;
+        if (!window.confirm('Are you sure you want to abort this test?')) return;
         try {
             await fetch(`/api/v1/admin/dr/tests/${id}/abort`, { method: 'POST' });
             fetchData();

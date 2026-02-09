@@ -56,7 +56,7 @@ services:
       - nats-data:/data
     networks:
       - fleet-network
-    command: [ "--jetstream", "--store_dir", "/data" ]
+    command: [ "--jetstream", "--store_dir", "/data", "-m", "8222" ]
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/varz" ]
       interval: 10s
@@ -65,7 +65,11 @@ services:
 
   # Core Services
   auth-service:
-    build: ./services/auth-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: auth-service
     container_name: fleet-auth-service
     ports:
       - "8080:8080"
@@ -82,14 +86,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   vehicle-service:
-    build: ./services/vehicle-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: vehicle-service
     container_name: fleet-vehicle-service
     ports:
       - "8082:8080"
@@ -101,14 +104,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      nats:
+        condition: service_healthy
 
   driver-service:
-    build: ./services/driver-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: driver-service
     container_name: fleet-driver-service
     ports:
       - "8083:8080"
@@ -120,33 +124,34 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   trip-service:
-    build: ./services/trip-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: trip-service
     container_name: fleet-trip-service
     ports:
       - "8084:8080"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
       - PORT=8080
+      - NATS_URL=nats://nats:4222
     networks:
       - fleet-network
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      nats:
+        condition: service_healthy
 
   tracking-service:
-    build: ./services/tracking-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: tracking-service
     container_name: fleet-tracking-service
     ports:
       - "8085:8080"
@@ -161,14 +166,13 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   route-optimization-service:
-    build: ./services/route-optimization-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: route-optimization-service
     container_name: fleet-route-service
     ports:
       - "8086:8080"
@@ -180,14 +184,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   maintenance-service:
-    build: ./services/maintenance-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: maintenance-service
     container_name: fleet-maintenance-service
     ports:
       - "8087:8080"
@@ -199,14 +202,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   geofencing-service:
-    build: ./services/geofencing-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: geofencing-service
     container_name: fleet-geofencing-service
     ports:
       - "8088:8080"
@@ -218,14 +220,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   alert-service:
-    build: ./services/alert-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: alert-service
     container_name: fleet-alert-service
     ports:
       - "8089:8080"
@@ -240,14 +241,13 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   video-service:
-    build: ./services/video-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: video-service
     container_name: fleet-video-service
     ports:
       - "8090:8080"
@@ -259,14 +259,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   india-integration-service:
-    build: ./services/india-integration-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: india-integration-service
     container_name: fleet-india-service
     ports:
       - "8091:8080"
@@ -278,14 +277,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   analytics-service:
-    build: ./services/analytics-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: analytics-service
     container_name: fleet-analytics-service
     ports:
       - "8092:8080"
@@ -297,14 +295,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   billing-service:
-    build: ./services/billing-service
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: billing-service
     container_name: fleet-billing-service
     ports:
       - "8093:8080"
@@ -317,14 +314,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   web-bff:
-    build: ./services/web-bff
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: web-bff
     container_name: fleet-web-bff
     ports:
       - "8081:8081"
@@ -332,9 +328,93 @@ services:
       - PORT=8081
       - AUTH_SERVICE_URL=http://auth-service:8080
       - BILLING_SERVICE_URL=http://billing-service:8080
+      - REPORTS_SERVICE_URL=http://reports-service:8080
+      - DR_SERVICE_URL=http://dr-service:8080
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8080
+      - GOVERNANCE_SERVICE_URL=http://governance-service:8080
       - LOG_LEVEL=info
     networks:
       - fleet-network
     depends_on:
       - auth-service
       - billing-service
+      - reports-service
+      - dr-service
+
+  dr-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: dr-service
+    container_name: fleet-dr-service
+    ports:
+      - "8097:8084"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - REDIS_URL=redis:6379
+      - PORT=8084
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  reports-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: reports-service
+    container_name: fleet-reports-service
+    ports:
+      - "8094:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: notification-service
+    container_name: fleet-notification-service
+    ports:
+      - "8095:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+      - NATS_URL=nats://nats:4222
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  governance-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: governance-service
+    container_name: fleet-governance-service
+    ports:
+      - "8096:8080"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - PORT=8080
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy

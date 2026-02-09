@@ -7,9 +7,8 @@
 - Network:       http://10.66.10.136:3001
 
 ✓ Starting...
-✓ Ready in 981ms
- HEAD / 200 in 576ms (compile: 393ms, render: 183ms)
- GET / 200 in 179ms (compile: 5ms, render: 174ms)
- GET / 200 in 107ms (compile: 4ms, render: 103ms)
- GET /icons/icon-192x192.png 404 in 169ms (compile: 57ms, render: 111ms)
- GET /icons/icon-192x192.png 404 in 47ms (compile: 4ms, render: 43ms)
+✓ Ready in 1056ms
+ GET / 200 in 933ms (compile: 451ms, render: 482ms)
+ GET / 200 in 152ms (compile: 7ms, render: 145ms)
+ GET /icons/icon-192x192.png 404 in 157ms (compile: 80ms, render: 78ms)
+ GET /icons/icon-192x192.png 404 in 51ms (compile: 5ms, render: 45ms)
