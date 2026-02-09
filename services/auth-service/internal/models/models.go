@@ -38,20 +38,32 @@ type User struct {
 }
 
 type Role struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Description string    `json:"description,omitempty" db:"description"`
-	IsSystem    bool      `json:"is_system" db:"is_system"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	Name           string    `json:"name" db:"name"`
+	Description    string    `json:"description,omitempty" db:"description"`
+	OrganizationID *uuid.UUID `json:"organization_id,omitempty" db:"organization_id"`
+	IsSystem       bool      `json:"is_system" db:"is_system"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
-type Permission struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	RoleID    uuid.UUID `json:"role_id" db:"role_id"`
-	Resource  string    `json:"resource" db:"resource"`
-	Action    string    `json:"action" db:"action"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+type PermissionDefinition struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	Module      string    `json:"module" db:"module"`
+	Action      string    `json:"action" db:"action"`
+	Description string    `json:"description,omitempty" db:"description"`
+}
+
+type RolePermissionMapping struct {
+	RoleID       uuid.UUID `json:"role_id" db:"role_id"`
+	PermissionID uuid.UUID `json:"permission_id" db:"permission_id"`
+}
+
+type UserRoleAssignment struct {
+	UserID     uuid.UUID `json:"user_id" db:"user_id"`
+	RoleID     uuid.UUID `json:"role_id" db:"role_id"`
+	AssignedBy uuid.UUID `json:"assigned_by" db:"assigned_by"`
+	AssignedAt time.Time `json:"assigned_at" db:"assigned_at"`
 }
 
 type Vehicle struct {

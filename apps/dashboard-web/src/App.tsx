@@ -46,6 +46,12 @@ import { UserAssignments } from './pages/admin/rbac/UserAssignments';
 import CreateReport from './pages/admin/reports/CreateReport';
 import ExecutionHistory from './pages/admin/reports/ExecutionHistory';
 import ScheduledReportsList from './pages/admin/reports/ScheduledReportsList';
+import FeatureFlags from './pages/admin/settings/FeatureFlags';
+import Localization from './pages/admin/settings/Localization';
+import NotificationChannels from './pages/admin/settings/NotificationChannels';
+import PlatformConfig from './pages/admin/settings/PlatformConfig';
+import PoliciesLimits from './pages/admin/settings/PoliciesLimits';
+import Templates from './pages/admin/settings/Templates';
 import { AddTrip, EditTrip, TripDetail, TripSettings, TripsList, TripTelemetry } from './pages/admin/Trips';
 import { Users } from './pages/admin/Users';
 import Alerts from './pages/Alerts';
@@ -82,6 +88,7 @@ import MFAVerify from './pages/MFAVerify';
 import OrgSelection from './pages/OrgSelection';
 import Reports from './pages/Reports';
 import ResetPassword from './pages/ResetPassword';
+import { AccessReview, IPAccess, Sessions, ThreatAlerts } from './pages/security';
 import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
 import Trips from './pages/Trips';
@@ -145,6 +152,10 @@ function App() {
               <Route path="/security/overrides" element={<PrivateRoute><MFAOverrides /></PrivateRoute>} />
               <Route path="/security/audit" element={<PrivateRoute><AuditLogs /></PrivateRoute>} />
               <Route path="/security/audit/settings" element={<PrivateRoute><AuditSettings /></PrivateRoute>} />
+              <Route path="/security/sessions" element={<PrivateRoute><Sessions /></PrivateRoute>} />
+              <Route path="/security/ip-access" element={<PrivateRoute><IPAccess /></PrivateRoute>} />
+              <Route path="/security/access-review" element={<PrivateRoute><AccessReview /></PrivateRoute>} />
+              <Route path="/security/threats" element={<PrivateRoute><ThreatAlerts /></PrivateRoute>} />
 
               {/* Admin Portal */}
               <Route
@@ -232,7 +243,16 @@ function App() {
                 <Route path="rbac/roles" element={<Roles />} />
                 <Route path="rbac/roles/:id/permissions" element={<RoleMatrix />} />
                 <Route path="rbac/assignments" element={<UserAssignments />} />
+                <Route path="rbac/assignments" element={<UserAssignments />} />
                 <Route path="rbac/logs" element={<SecurityLogs />} />
+
+                {/* Global Settings Module */}
+                <Route path="settings/platform" element={<PlatformConfig />} />
+                <Route path="settings/flags" element={<FeatureFlags />} />
+                <Route path="settings/localization" element={<Localization />} />
+                <Route path="settings/templates" element={<Templates />} />
+                <Route path="settings/channels" element={<NotificationChannels />} />
+                <Route path="settings/policies" element={<PoliciesLimits />} />
                 
                 {/* Future: etc */}
               </Route>

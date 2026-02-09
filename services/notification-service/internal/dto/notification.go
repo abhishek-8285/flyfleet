@@ -56,3 +56,11 @@ type GlobalDefaultUpdateRequest struct {
 	PushEnabled  bool `json:"push_enabled"`
 	InAppEnabled bool `json:"in_app_enabled"`
 }
+type SendNotificationRequest struct {
+	Recipient string                 `json:"recipient" binding:"required,email"`
+	Channel   string                 `json:"channel" binding:"required,oneof=EMAIL SMS PUSH IN_APP"`
+	Subject   string                 `json:"subject"`
+	Message   string                 `json:"message" binding:"required"`
+	Metadata  map[string]interface{} `json:"metadata"`
+	Priority  string                 `json:"priority" binding:"omitempty,oneof=HIGH STANDARD LOW"`
+}

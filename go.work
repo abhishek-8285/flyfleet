@@ -20,5 +20,6 @@ use (
 	./services/billing-service
 	./services/notification-service
 	./services/dr-service
+	./services/settings-service
 	./packages/common/go
 )

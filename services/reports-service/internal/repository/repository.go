@@ -19,6 +19,7 @@ type Repository interface {
 	ResumeReport(ctx context.Context, id uuid.UUID) error
 	
 	CreateExecution(ctx context.Context, exec *models.ReportExecution) error
+	UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string) error
 	ListExecutions(ctx context.Context, reportID uuid.UUID, page, limit int) ([]models.ReportExecution, int, error)
 	
 	GetSettings(ctx context.Context) (*models.GlobalSettings, error)
@@ -162,6 +163,14 @@ func (r *PostgresRepository) ResumeReport(ctx context.Context, id uuid.UUID) err
 func (r *PostgresRepository) CreateExecution(ctx context.Context, exec *models.ReportExecution) error {
 	query := `INSERT INTO report_executions (id, report_id, started_at, status) VALUES ($1, $2, $3, $4)`
 	_, err := r.pool.Exec(ctx, query, exec.ID, exec.ReportID, exec.StartedAt, exec.Status)
+	return err
+}
+
+func (r *PostgresRepository) UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string) error {
+	query := `UPDATE report_executions 
+	          SET status = $1, error_message = $2, file_url = $3, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END
+	          WHERE id = $4`
+	_, err := r.pool.Exec(ctx, query, status, errorMessage, fileURL, id)
 	return err
 }
 

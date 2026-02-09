@@ -4,6 +4,7 @@ import {
     ArrowPathIcon,
     ArrowUpTrayIcon,
     BuildingOffice2Icon,
+    Cog6ToothIcon,
     MapIcon,
     ShieldCheckIcon,
     Squares2X2Icon,
@@ -40,6 +41,7 @@ const MENU_ITEMS: MenuItem[] = [
   { name: 'Governance', path: '/admin/governance', icon: ShieldCheckIcon, resource: 'governance', action: 'read' },
   { name: 'Disaster Recovery', path: '/admin/dr', icon: ArchiveBoxIcon, resource: 'disaster_recovery', action: 'read' },
   { name: 'Restore Operations', path: '/admin/dr/restores', icon: ArrowPathIcon, resource: 'disaster_recovery', action: 'read' },
+  { name: 'Global Settings', path: '/admin/settings/platform', icon: Cog6ToothIcon, resource: 'org', action: 'update' },
 ];
 
 export const Sidebar: React.FC = () => {

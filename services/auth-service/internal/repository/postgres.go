@@ -951,3 +951,161 @@ func (r *postgresRepository) CreateMFALockout(ctx context.Context, l *models.MFA
 	_, err := r.db.Exec(ctx, query, l.UserID, l.OrgID, l.Reason, l.ExpiresAt)
 	return err
 }
+
+// RBAC Operations
+
+func (r *postgresRepository) GetRoleByID(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+	query := `SELECT id, name, description, organization_id, is_system, created_at, updated_at FROM roles WHERE id = $1`
+	var role models.Role
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&role.ID, &role.Name, &role.Description, &role.OrganizationID, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &role, nil
+}
+
+func (r *postgresRepository) CreateRole(ctx context.Context, role *models.Role) error {
+	query := `INSERT INTO roles (id, name, description, organization_id, is_system, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.db.Exec(ctx, query, role.ID, role.Name, role.Description, role.OrganizationID, role.IsSystem, time.Now(), time.Now())
+	return err
+}
+
+func (r *postgresRepository) UpdateRole(ctx context.Context, role *models.Role) error {
+	query := `UPDATE roles SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 AND is_system = FALSE`
+	_, err := r.db.Exec(ctx, query, role.Name, role.Description, role.ID)
+	return err
+}
+
+func (r *postgresRepository) DeleteRole(ctx context.Context, id uuid.UUID) error {
+	query := `DELETE FROM roles WHERE id = $1 AND is_system = FALSE`
+	_, err := r.db.Exec(ctx, query, id)
+	return err
+}
+
+func (r *postgresRepository) ListRolesByOrg(ctx context.Context, orgID uuid.UUID) ([]models.Role, error) {
+	query := `SELECT id, name, description, organization_id, is_system, created_at, updated_at FROM roles WHERE organization_id = $1 OR is_system = TRUE ORDER BY created_at ASC`
+	rows, err := r.db.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.OrganizationID, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
+}
+
+func (r *postgresRepository) ListPermissions(ctx context.Context) ([]models.PermissionDefinition, error) {
+	query := `SELECT id, module, action, description FROM permissions ORDER BY module, action ASC`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var perms []models.PermissionDefinition
+	for rows.Next() {
+		var perm models.PermissionDefinition
+		err := rows.Scan(&perm.ID, &perm.Module, &perm.Action, &perm.Description)
+		if err != nil {
+			return nil, err
+		}
+		perms = append(perms, perm)
+	}
+	return perms, nil
+}
+
+func (r *postgresRepository) GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]models.PermissionDefinition, error) {
+	query := `
+		SELECT p.id, p.module, p.action, p.description
+		FROM permissions p
+		JOIN role_permissions rp ON p.id = rp.permission_id
+		WHERE rp.role_id = $1
+		ORDER BY p.module, p.action ASC
+	`
+	rows, err := r.db.Query(ctx, query, roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var perms []models.PermissionDefinition
+	for rows.Next() {
+		var perm models.PermissionDefinition
+		err := rows.Scan(&perm.ID, &perm.Module, &perm.Action, &perm.Description)
+		if err != nil {
+			return nil, err
+		}
+		perms = append(perms, perm)
+	}
+	return perms, nil
+}
+
+func (r *postgresRepository) UpdateRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Clear existing permissions
+	if _, err := tx.Exec(ctx, `DELETE FROM role_permissions WHERE role_id = $1`, roleID); err != nil {
+		return err
+	}
+
+	// Insert new permissions
+	for _, permID := range permissionIDs {
+		if _, err := tx.Exec(ctx, `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2)`, roleID, permID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (r *postgresRepository) AssignRoleToUser(ctx context.Context, userID, roleID, assignedBy uuid.UUID) error {
+	query := `INSERT INTO user_roles (user_id, role_id, assigned_by, assigned_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, role_id) DO NOTHING`
+	_, err := r.db.Exec(ctx, query, userID, roleID, assignedBy)
+	return err
+}
+
+func (r *postgresRepository) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	query := `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`
+	_, err := r.db.Exec(ctx, query, userID, roleID)
+	return err
+}
+
+func (r *postgresRepository) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]models.Role, error) {
+	query := `
+		SELECT r.id, r.name, r.description, r.organization_id, r.is_system, r.created_at, r.updated_at
+		FROM roles r
+		JOIN user_roles ur ON r.id = ur.role_id
+		WHERE ur.user_id = $1
+		ORDER BY r.name ASC
+	`
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.OrganizationID, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, nil
+}

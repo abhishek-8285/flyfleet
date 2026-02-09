@@ -66,6 +66,12 @@ func main() {
 	// API Routes
 	api := r.Group("/api/v1")
 	{
+		// Internal/System Routes (should be protected by private network or internal auth)
+		internal := api.Group("/internal/notifications")
+		{
+			internal.POST("", notifHandlers.SendNotification)
+		}
+
 		admin := api.Group("/admin/notifications")
 		{
 			admin.GET("", notifHandlers.ListLogs)

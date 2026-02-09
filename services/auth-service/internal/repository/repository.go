@@ -107,6 +107,48 @@ type AuthRepository interface {
 	LogMFAEvent(ctx context.Context, event *models.MFAEvent) error
 	LogMFAFailure(ctx context.Context, failure *models.MFAFailure) error
 	CreateMFALockout(ctx context.Context, lockout *models.MFALockout) error
+
+	// IP Rules
+	ListIPRules(ctx context.Context, orgID uuid.UUID) ([]models.IPRule, error)
+	GetIPRuleByID(ctx context.Context, id uuid.UUID) (*models.IPRule, error)
+	CreateIPRule(ctx context.Context, rule *models.IPRule) error
+	DeleteIPRule(ctx context.Context, id uuid.UUID) error
+
+	// Access Reviews
+	ListAccessReviews(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.AccessReview, int, error)
+	GetAccessReviewByID(ctx context.Context, id uuid.UUID) (*models.AccessReview, error)
+	CreateAccessReview(ctx context.Context, review *models.AccessReview) error
+	UpdateAccessReviewStatus(ctx context.Context, id uuid.UUID, status string) error
+	ListReviewItems(ctx context.Context, reviewID uuid.UUID) ([]models.ReviewItem, error)
+	UpdateReviewItem(ctx context.Context, itemID uuid.UUID, status string, reviewerID uuid.UUID, notes string) error
+
+	// Sessions - Extended for Admin management
+	ListAllSessions(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.AuthToken, int, error)
+	RevokeSession(ctx context.Context, sessionID uuid.UUID) error
+	RevokeAllSessionsForOrg(ctx context.Context, orgID uuid.UUID) error
+
+	// RBAC operations
+	GetRoleByID(ctx context.Context, id uuid.UUID) (*models.Role, error)
+	CreateRole(ctx context.Context, role *models.Role) error
+	UpdateRole(ctx context.Context, role *models.Role) error
+	DeleteRole(ctx context.Context, id uuid.UUID) error
+	ListRolesByOrg(ctx context.Context, orgID uuid.UUID) ([]models.Role, error)
+	
+	ListPermissions(ctx context.Context) ([]models.PermissionDefinition, error)
+	GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]models.PermissionDefinition, error)
+	UpdateRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID) error
+	
+	AssignRoleToUser(ctx context.Context, userID, roleID, assignedBy uuid.UUID) error
+	RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error
+	GetUserRoles(ctx context.Context, userID uuid.UUID) ([]models.Role, error)
+	
+	// Production Readiness - RBAC Extensions
+	CloneRole(ctx context.Context, sourceRoleID uuid.UUID, newRoleName, newRoleDescription string) (*models.Role, error)
+	GetEffectivePermissions(ctx context.Context, userID uuid.UUID) ([]models.PermissionDefinition, error)
+	CountUsersWithRole(ctx context.Context, roleName string, orgID *uuid.UUID) (int, error)
+	GetRoleByName(ctx context.Context, orgID uuid.UUID, name string) (*models.Role, error)
+	CreatePermission(ctx context.Context, perm *models.PermissionDefinition) error
+	GetPermission(ctx context.Context, module, action string) (*models.PermissionDefinition, error)
 }
 
 type postgresRepository struct {

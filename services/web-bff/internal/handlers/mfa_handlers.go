@@ -31,6 +31,10 @@ func (h *MFAHandlers) ProxyOrganization(w http.ResponseWriter, r *http.Request) 
 	h.proxyToAuth(w, r, "/api/organizations/", "/api/v1/admin/organizations/")
 }
 
+func (h *MFAHandlers) ProxyRBAC(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/rbac/", "/api/v1/admin/rbac/")
+}
+
 func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
 	if !strings.HasPrefix(path, sourcePrefix) {

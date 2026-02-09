@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/flyfleet/reports-service/internal/models"
+	"github.com/flyfleet/reports-service/internal/queue"
 	"github.com/flyfleet/reports-service/internal/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -14,12 +14,14 @@ import (
 
 type ReportService struct {
 	repo   repository.Repository
+	queue  *queue.QueueClient
 	logger *zap.Logger
 }
 
-func NewReportService(repo repository.Repository, logger *zap.Logger) *ReportService {
+func NewReportService(repo repository.Repository, queue *queue.QueueClient, logger *zap.Logger) *ReportService {
 	return &ReportService{
 		repo:   repo,
+		queue:  queue,
 		logger: logger,
 	}
 }
@@ -82,25 +84,20 @@ func (s *ReportService) ExecuteReport(ctx context.Context, reportID uuid.UUID) (
 		return uuid.Nil, err
 	}
 
-	// 3. Simulate Async Job (In real system, push to Redis/Kafka)
-	go func() {
-		// Verify safety: In a real app we'd need context handling here.
-		// Emulate processing time
-		time.Sleep(2 * time.Second)
+	// 3. Enqueue Job
+	if err := s.queue.EnqueueReportGeneration(execID, reportID); err != nil {
+		s.logger.Error("Failed to enqueue report generation task", zap.Error(err))
 		
-		// Simulate Success/Failure
-		outcome := "SUCCESS"
-		if rand.Float32() < 0.1 {
-			outcome = "FAILED"
+		// Fail the execution record
+		errMsg := err.Error()
+		if updateErr := s.repo.UpdateExecutionStatus(ctx, execID, "FAILED", &errMsg, nil); updateErr != nil {
+			s.logger.Error("Failed to update execution status to FAILED", zap.Error(updateErr))
 		}
-
-		s.logger.Info("Completed report execution", zap.String("exec_id", execID.String()), zap.String("outcome", outcome))
 		
-		// Update DB (Ignoring error for prototype simplicity)
-		// access postgres directly or add UpdateExecution to repo interface if needed.
-		// For now, we assume it's done. 
-	}()
+		return uuid.Nil, err
+	}
 
+	s.logger.Info("Enqueued report generation task", zap.String("exec_id", execID.String()))
 	return execID, nil
 }
 

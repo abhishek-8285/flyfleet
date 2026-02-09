@@ -79,6 +79,26 @@ func (h *NotificationHandlers) GetLogDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, log)
 }
 
+func (h *NotificationHandlers) SendNotification(c *gin.Context) {
+	var req dto.SendNotificationRequest
+	if err := h.bindStrictJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+		return
+	}
+
+	id, err := h.service.SendNotification(c.Request.Context(), req)
+	if err != nil {
+		h.logger.Error("Failed to send notification", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send notification"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":      id,
+		"message": "Notification queued successfully",
+	})
+}
+
 func (h *NotificationHandlers) Resend(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)

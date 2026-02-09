@@ -30,6 +30,7 @@ func main() {
 	// Initialize handlers
 	mfaHandlers := handlers.NewMFAHandlers(cfg, logger)
 	assetHandlers := handlers.NewAssetHandlers(cfg, logger)
+	settingsHandlers := handlers.NewSettingsHandlers(cfg, logger)
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 	
 	// Setup routes
@@ -54,6 +55,7 @@ func main() {
 	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
 	mux.Handle("/api/audit/", middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
 	mux.Handle("/api/organizations/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyOrganization)))
+	mux.Handle("/api/rbac/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyRBAC)))
 
 	// Asset Management (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVehicle)))
@@ -90,6 +92,19 @@ func main() {
 	
 	// Disaster Recovery Module (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/dr/", middleware.RBACMiddleware(sp, security.ResourceDisasterRecovery)(http.HandlerFunc(assetHandlers.ProxyDR)))
+
+	// Global Settings Module (RBAC Enforcement)
+	mux.Handle("/api/settings/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(settingsHandlers.ProxySettings)))
+	
+	// Security Operations Module (RBAC Enforcement)
+	securityHandlers := handlers.NewSecurityHandlers(cfg, logger)
+	mux.Handle("/api/security/ip-rules", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules)))
+	mux.Handle("/api/security/ip-rules/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules)))
+	mux.Handle("/api/security/access-reviews", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews)))
+	mux.Handle("/api/security/access-reviews/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews)))
+	mux.Handle("/api/security/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions)))
+	mux.Handle("/api/security/sessions/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions)))
+	mux.Handle("/api/security/review-items/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyReviewItems)))
 	
 	// Server configuration
 	srv := &http.Server{

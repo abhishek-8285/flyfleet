@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -42,15 +43,22 @@ func main() {
 	// Initialize service
 	authService := service.NewAuthService(repo, cfg.JWTSecret, cfg.DriverServiceURL, cfg.VehicleServiceURL, cfg.TripServiceURL, cfg.AlertServiceURL, logger)
 	
+	// Seed RBAC Data
+	if err := authService.EnsureSeedData(context.Background()); err != nil {
+		logger.Error("Failed to seed RBAC data", zap.Error(err))
+		// continue anyway, don't crash info
+	}
+	
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, logger)
 	adminHandlers := handlers.NewAdminHandlers(authService, logger)
 	monitoringHandler := handlers.NewMonitoringHandler(db, logger)
 	securityHandlers := handlers.NewSecurityHandlers(authService, logger)
 	auditHandlers := handlers.NewAuditHandlers(authService)
+	rbacHandlers := handlers.NewRBACOperationsHandlers(authService, logger)
 	
 	// Setup routes
-	router := setupRoutes(authHandlers, adminHandlers, securityHandlers, auditHandlers, monitoringHandler, cfg, logger)
+	router := setupRoutes(authHandlers, adminHandlers, securityHandlers, rbacHandlers, auditHandlers, monitoringHandler, cfg, logger)
 	
 	// ... (rest of main unchanged) ...
 	srv := &http.Server{
@@ -84,7 +92,7 @@ func main() {
 	logger.Info("Auth service exited")
 }
 
-func setupRoutes(auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, securityHandlers *handlers.SecurityHandlers, audit *handlers.AuditHandlers, monitor *handlers.MonitoringHandler, cfg *config.Config, logger *zap.Logger) *http.ServeMux {
+func setupRoutes(auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, securityHandlers *handlers.SecurityHandlers, rbac *handlers.RBACOperationsHandlers, audit *handlers.AuditHandlers, monitor *handlers.MonitoringHandler, cfg *config.Config, logger *zap.Logger) *http.ServeMux {
 	router := http.NewServeMux()
 	
 	// Middleware Chains
@@ -350,6 +358,85 @@ func setupRoutes(auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, sec
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})))))
+
+	// RBAC Suite
+	router.Handle("/api/v1/admin/rbac/roles", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			rbac.ListRoles(w, r)
+		} else if r.Method == http.MethodPost {
+			rbac.CreateRole(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})))))
+
+	router.Handle("/api/v1/admin/rbac/roles/", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/permissions") {
+			if r.Method == http.MethodGet {
+				rbac.GetRolePermissions(w, r)
+			} else if r.Method == http.MethodPut {
+				rbac.UpdateRolePermissions(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else if strings.HasSuffix(r.URL.Path, "/clone") {
+			if r.Method == http.MethodPost {
+				rbac.CloneRole(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else {
+			if r.Method == http.MethodPut {
+				rbac.UpdateRole(w, r)
+			} else if r.Method == http.MethodDelete {
+				rbac.DeleteRole(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		}
+	})))))
+
+	router.Handle("/api/v1/admin/rbac/permissions", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			rbac.ListPermissions(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))))
+
+	router.Handle("/api/v1/admin/rbac/users/assign", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			rbac.AssignRole(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))))
+
+	router.Handle("/api/v1/admin/rbac/users/unassign", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			rbac.UnassignRole(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))))
+
+	router.Handle("/api/v1/admin/rbac/users/", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/roles") {
+			if r.Method == http.MethodGet {
+				rbac.GetUserRoles(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else if strings.HasSuffix(r.URL.Path, "/permissions") {
+			if r.Method == http.MethodGet {
+				rbac.GetUserEffectivePermissions(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		} else {
+			http.Error(w, "Not found", http.StatusNotFound)
+		}
+	}))))
 	
 	return router
 }

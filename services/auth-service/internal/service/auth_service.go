@@ -923,3 +923,228 @@ func (s *AuthService) GetMFAExceptions(ctx context.Context, orgID uuid.UUID) ([]
 func (s *AuthService) DeleteMFAException(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteMFAException(ctx, id)
 }
+
+// RBAC Operations
+
+func (s *AuthService) CreateRole(ctx context.Context, name, description string, orgID uuid.UUID, isSystem bool, actorID uuid.UUID) (*models.Role, error) {
+	// Unique Name Check
+	existing, err := s.repo.GetRoleByName(ctx, orgID, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, errors.New("role with this name already exists")
+	}
+
+	role := &models.Role{
+		ID:             uuid.New(),
+		Name:           name,
+		Description:    description,
+		OrganizationID: &orgID,
+		IsSystem:       isSystem,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	if err := s.repo.CreateRole(ctx, role); err != nil {
+		return nil, err
+	}
+
+	// Audit Log
+	s.logRBACAudit(ctx, actorID, "ROLE_CREATE", "role", fmt.Sprintf(`{"role_id": "%s", "name": "%s", "org_id": "%s"}`, role.ID, name, orgID), orgID)
+
+	return role, nil
+}
+
+func (s *AuthService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+	return s.repo.GetRoleByID(ctx, id)
+}
+
+func (s *AuthService) UpdateRole(ctx context.Context, id uuid.UUID, name, description string, actorID uuid.UUID) (*models.Role, error) {
+	role, err := s.repo.GetRoleByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if role.IsSystem {
+		return nil, errors.New("cannot update system roles")
+	}
+
+	// Unique Name Check
+	if role.OrganizationID != nil {
+		existing, err := s.repo.GetRoleByName(ctx, *role.OrganizationID, name)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil && existing.ID != id {
+			return nil, errors.New("role with this name already exists")
+		}
+	}
+
+	oldName := role.Name
+	role.Name = name
+	role.Description = description
+	role.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateRole(ctx, role); err != nil {
+		return nil, err
+	}
+
+	// Audit Log
+	orgID := uuid.Nil
+	if role.OrganizationID != nil { orgID = *role.OrganizationID }
+	s.logRBACAudit(ctx, actorID, "ROLE_UPDATE", "role", fmt.Sprintf(`{"role_id": "%s", "old_name": "%s", "new_name": "%s"}`, id, oldName, name), orgID)
+
+	return role, nil
+}
+
+func (s *AuthService) DeleteRole(ctx context.Context, id uuid.UUID, actorID uuid.UUID) error {
+	role, err := s.repo.GetRoleByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if role.IsSystem {
+		return errors.New("cannot delete system roles")
+	}
+
+	if err := s.repo.DeleteRole(ctx, id); err != nil {
+		return err
+	}
+
+	// Audit Log
+	orgID := uuid.Nil
+	if role.OrganizationID != nil { orgID = *role.OrganizationID }
+	s.logRBACAudit(ctx, actorID, "ROLE_DELETE", "role", fmt.Sprintf(`{"role_id": "%s", "name": "%s"}`, id, role.Name), orgID)
+	
+	return nil
+}
+
+func (s *AuthService) ListRolesByOrg(ctx context.Context, orgID uuid.UUID) ([]models.Role, error) {
+	return s.repo.ListRolesByOrg(ctx, orgID)
+}
+
+func (s *AuthService) ListPermissions(ctx context.Context) ([]models.PermissionDefinition, error) {
+	return s.repo.ListPermissions(ctx)
+}
+
+func (s *AuthService) GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]models.PermissionDefinition, error) {
+	return s.repo.GetRolePermissions(ctx, roleID)
+}
+
+func (s *AuthService) UpdateRolePermissions(ctx context.Context, roleID uuid.UUID, permissionIDs []uuid.UUID, actorID uuid.UUID) error {
+	role, err := s.repo.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return err
+	}
+	if role.IsSystem {
+		return errors.New("cannot modify permissions of system roles")
+	}
+	
+	if err := s.repo.UpdateRolePermissions(ctx, roleID, permissionIDs); err != nil {
+		return err
+	}
+
+	// Audit Log
+	orgID := uuid.Nil
+	if role.OrganizationID != nil { orgID = *role.OrganizationID }
+	s.logRBACAudit(ctx, actorID, "ROLE_PERMISSIONS_UPDATE", "role_permissions", fmt.Sprintf(`{"role_id": "%s", "permissions_count": %d}`, roleID, len(permissionIDs)), orgID)
+
+	return nil
+}
+
+func (s *AuthService) AssignRoleToUser(ctx context.Context, userID, roleID, assignedBy uuid.UUID) error {
+	if err := s.repo.AssignRoleToUser(ctx, userID, roleID, assignedBy); err != nil {
+		return err
+	}
+	
+	// Audit Log
+	// Fetch role to get details for log? Or just log IDs
+	s.logRBACAudit(ctx, assignedBy, "USER_ROLE_ASSIGN", "user_role", fmt.Sprintf(`{"user_id": "%s", "role_id": "%s"}`, userID, roleID), uuid.Nil)
+	return nil
+}
+
+func (s *AuthService) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID, actorID uuid.UUID) error { // Added actorID
+	// 1. Fetch role to check if it's a critical role
+	role, err := s.repo.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return err
+	}
+
+	// 2. Safeguard: Prevent removing last SuperAdmin or OrgAdmin
+	// In a real system, we'd have a more robust policy engine, but hardcoding critical roles is safe for now
+	criticalRoles := map[string]bool{"super_admin": true, "org_admin": true}
+	if criticalRoles[role.Name] {
+		count, err := s.repo.CountUsersWithRole(ctx, role.Name, role.OrganizationID)
+		if err != nil {
+			return err
+		}
+		if count <= 1 {
+			return errors.New("cannot remove the last administrator")
+		}
+	}
+
+	if err := s.repo.RemoveRoleFromUser(ctx, userID, roleID); err != nil {
+		return err
+	}
+
+	// Audit Log
+	orgID := uuid.Nil
+	if role.OrganizationID != nil { orgID = *role.OrganizationID }
+	s.logRBACAudit(ctx, actorID, "USER_ROLE_REMOVE", "user_role", fmt.Sprintf(`{"user_id": "%s", "role_id": "%s"}`, userID, roleID), orgID)
+
+	return nil
+}
+
+func (s *AuthService) CloneRole(ctx context.Context, sourceRoleID uuid.UUID, newRoleName, newRoleDescription string, actorID uuid.UUID) (*models.Role, error) {
+	// 1. Validate new name uniqueness (optimization: check before DB call)
+	// Need to fetch OrgID from source role first or let CloneRole handle it?
+	// The repo method CloneRole does fetch the source role.
+	// But to check uniqueness here, I need OrgID.
+	// Let's fetch source role first.
+	source, err := s.repo.GetRoleByID(ctx, sourceRoleID)
+	if err != nil {
+		return nil, err
+	}
+	if source.OrganizationID != nil {
+		existing, err := s.repo.GetRoleByName(ctx, *source.OrganizationID, newRoleName)
+		if err != nil {
+			return nil, err
+		}
+		if existing != nil {
+			return nil, errors.New("role with this name already exists")
+		}
+	}
+
+	newRole, err := s.repo.CloneRole(ctx, sourceRoleID, newRoleName, newRoleDescription)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Audit Log
+	orgID := uuid.Nil
+	if source.OrganizationID != nil { orgID = *source.OrganizationID }
+	s.logRBACAudit(ctx, actorID, "ROLE_CLONE", "role", fmt.Sprintf(`{"source_role_id": "%s", "new_role_id": "%s"}`, sourceRoleID, newRole.ID), orgID)
+	
+	return newRole, nil
+}
+
+// Helper for RBAC Audit
+func (s *AuthService) logRBACAudit(ctx context.Context, actorID uuid.UUID, action, resource, details string, orgID uuid.UUID) {
+	_ = s.repo.CreateAuditLog(ctx, &models.AuditLog{
+		OrgID:     orgID,
+		UserID:    actorID,
+		Action:    action,
+		Resource:  resource,
+		Severity:  "info",
+		Status:    "success",
+		Details:   details,
+		CreatedAt: time.Now(),
+	})
+}
+
+func (s *AuthService) GetEffectivePermissions(ctx context.Context, userID uuid.UUID) ([]models.PermissionDefinition, error) {
+	return s.repo.GetEffectivePermissions(ctx, userID)
+}
+
+func (s *AuthService) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]models.Role, error) {
+	return s.repo.GetUserRoles(ctx, userID)
+}

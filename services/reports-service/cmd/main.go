@@ -4,7 +4,9 @@ import (
 	"context"
 	"os"
 
+	"github.com/flyfleet/reports-service/internal/client"
 	"github.com/flyfleet/reports-service/internal/handlers"
+	"github.com/flyfleet/reports-service/internal/queue"
 	"github.com/flyfleet/reports-service/internal/repository"
 	"github.com/flyfleet/reports-service/internal/service"
 	"github.com/gin-gonic/gin"
@@ -34,9 +36,36 @@ func main() {
 	}
 	defer pool.Close()
 
-	// 3. DI
+	// 3. Repository
 	repo := repository.NewPostgresRepository(pool)
-	svc := service.NewReportService(repo, logger)
+
+	// 4. Queue & Worker
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379" // Default for local dev
+	}
+	
+	notifServiceURL := os.Getenv("NOTIFICATION_SERVICE_URL")
+	if notifServiceURL == "" {
+		notifServiceURL = "http://localhost:8080" // Default for local dev (adjust if needed)
+	}
+	notifClient := client.NewNotificationClient(notifServiceURL, logger)
+
+	queueClient := queue.NewQueueClient(redisAddr)
+	defer queueClient.Close()
+
+	workerServer := queue.NewWorkerServer(redisAddr, repo, notifClient, logger)
+	
+	// Start Worker in background
+	go func() {
+		logger.Info("Starting Worker Server")
+		if err := workerServer.Run(); err != nil {
+			logger.Fatal("Worker Server failed", zap.Error(err))
+		}
+	}()
+
+	// 5. Service & Handlers
+	svc := service.NewReportService(repo, queueClient, logger)
 	h := handlers.NewReportHandler(svc, logger)
 
 	// 4. Router

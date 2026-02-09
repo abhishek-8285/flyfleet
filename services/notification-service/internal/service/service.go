@@ -32,6 +32,48 @@ func (s *NotificationService) GetLogDetail(ctx context.Context, id uuid.UUID) (*
 	return s.repo.GetLog(ctx, id)
 }
 
+func (s *NotificationService) SendNotification(ctx context.Context, req dto.SendNotificationRequest) (uuid.UUID, error) {
+	newLog := models.NotificationLog{
+		ID:         uuid.Nil, // Set by repo
+		UserEmail:  req.Recipient,
+		Channel:    models.NotificationChannel(req.Channel),
+		Type:       "TRANSACTIONAL", // Default
+		Subject:    req.Subject,
+		Status:     models.StatusQueued,
+		RetryCount: 0,
+		Metadata:   req.Metadata,
+		CreatedAt:  time.Now(),
+	}
+
+	if req.Priority == "HIGH" {
+		if newLog.Metadata == nil {
+			newLog.Metadata = make(map[string]any)
+		}
+		newLog.Metadata["priority"] = "HIGH"
+	}
+
+	// Save log
+	err := s.repo.CreateLog(ctx, &newLog)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	// Add event
+	err = s.repo.AddEvent(ctx, &models.NotificationEvent{
+		NotificationID: newLog.ID,
+		EventType:      "QUEUED",
+		Message:        fmt.Sprintf("Notification queued via API. Subject: %s", req.Subject),
+	})
+	if err != nil {
+		s.logger.Error("Failed to add queue event", zap.Error(err))
+	}
+
+	// Mock Delivery Trigger
+	s.logger.Info("Notification queued", zap.String("id", newLog.ID.String()), zap.String("recipient", req.Recipient))
+
+	return newLog.ID, nil
+}
+
 func (s *NotificationService) ResendNotification(ctx context.Context, id uuid.UUID, reason string, highPriority bool) (uuid.UUID, error) {
 	// 1. Fetch original log
 	original, err := s.repo.GetLog(ctx, id)
