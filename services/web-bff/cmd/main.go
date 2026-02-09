@@ -130,6 +130,14 @@ func main() {
 	mux.Handle("/api/api-clients/", middleware.RBACMiddleware(sp, security.ResourceApiClients)(http.HandlerFunc(integrationsHandlers.ProxyApiClients)))
 	mux.Handle("/api/webhooks/", middleware.RBACMiddleware(sp, security.ResourceWebhooks)(http.HandlerFunc(integrationsHandlers.ProxyWebhooks)))
 
+	// Device Diagnostics Module
+	deviceDiagnosticsHandlers := handlers.NewDeviceDiagnosticsHandler(cfg)
+	mux.Handle("/api/devices/summary", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
+	mux.Handle("/api/devices/status", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
+	mux.Handle("/api/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
+	mux.Handle("/api/firmware", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
+	mux.Handle("/api/firmware/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
+
 	// Server configuration
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.Port),

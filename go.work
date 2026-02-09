@@ -6,6 +6,7 @@ use (
 	./services/analytics-service
 	./services/auth-service
 	./services/billing-service
+	./services/device-diagnostics-service
 	./services/dr-service
 	./services/driver-service
 	./services/fuel-service

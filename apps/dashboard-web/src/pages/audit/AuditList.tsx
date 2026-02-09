@@ -4,6 +4,7 @@ import {
     ChevronDownIcon,
     ChevronRightIcon,
     EyeIcon,
+    InformationCircleIcon,
     MagnifyingGlassIcon,
     UserCircleIcon
 } from '@heroicons/react/24/outline';
@@ -32,7 +33,6 @@ const AuditList: React.FC = () => {
                 org_id: user.org_id,
                 page,
                 severity: filters.severity,
-                module: filters.module,
                 action: filters.action
             });
             setLogs(data.logs || []);
