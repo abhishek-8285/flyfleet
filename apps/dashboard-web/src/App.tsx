@@ -110,6 +110,7 @@ import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
 import IncidentManagement from './pages/support/IncidentManagement';
 import OrgConsole from './pages/support/OrgConsole';
+import SLAReports from './pages/support/SLAReports';
 import SupportDashboard from './pages/support/SupportDashboard';
 import TroubleshootingLogs from './pages/support/TroubleshootingLogs';
 import UserConsole from './pages/support/UserConsole';
@@ -370,6 +371,16 @@ function App() {
                   <PrivateRoute>
                     <SupportLayout>
                       <OrgConsole />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/reports"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <SLAReports />
                     </SupportLayout>
                   </PrivateRoute>
                 }

@@ -29,3 +29,18 @@ warning: both GOPATH and GOROOT are the same directory (/home/abhishek/go); see 
 {"level":"info","ts":1770664966.611116,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
 {"level":"info","ts":1770664966.6111588,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
 {"level":"info","ts":1770664966.61491,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770665154.2503211,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770665154.2519984,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770665161.8884332,"caller":"handlers/support_handlers.go:171","msg":"Support system logs request"}
+{"level":"info","ts":1770665161.889797,"caller":"handlers/support_handlers.go:171","msg":"Support system logs request"}
+{"level":"info","ts":1770665170.6232767,"caller":"handlers/support_handlers.go:90","msg":"Support user profile request"}
+{"level":"info","ts":1770665170.6238344,"caller":"handlers/support_handlers.go:107","msg":"Support user sessions request"}
+{"level":"info","ts":1770665170.625931,"caller":"handlers/support_handlers.go:90","msg":"Support user profile request"}
+{"level":"info","ts":1770665170.6281874,"caller":"handlers/support_handlers.go:107","msg":"Support user sessions request"}
+{"level":"info","ts":1770665175.8374364,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770665175.8392396,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770665184.5500536,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770665184.5515363,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770665187.53292,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770665187.5348504,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"error","ts":1770665215.0956445,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
