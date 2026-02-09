@@ -46,6 +46,12 @@ import { UserAssignments } from './pages/admin/rbac/UserAssignments';
 import CreateReport from './pages/admin/reports/CreateReport';
 import ExecutionHistory from './pages/admin/reports/ExecutionHistory';
 import ScheduledReportsList from './pages/admin/reports/ScheduledReportsList';
+import AccessReview from './pages/admin/security/AccessReview';
+import ActiveSessions from './pages/admin/security/ActiveSessions';
+import IPControls from './pages/admin/security/IPControls';
+import LoginActivityLogs from './pages/admin/security/LoginActivityLogs';
+import MFACenter from './pages/admin/security/MFACenter';
+import ThreatAlerts from './pages/admin/security/ThreatAlerts';
 import FeatureFlags from './pages/admin/settings/FeatureFlags';
 import Localization from './pages/admin/settings/Localization';
 import NotificationChannels from './pages/admin/settings/NotificationChannels';
@@ -80,7 +86,6 @@ import {
     WorkOrderDetail,
     WorkOrderList,
 } from './pages/maintenance';
-import MFACenter from './pages/MFACenter';
 import MFAExceptions from './pages/MFAExceptions';
 import MFAOverrides from './pages/MFAOverrides';
 import MFAPolicyEditor from './pages/MFAPolicyEditor';
@@ -88,7 +93,6 @@ import MFAVerify from './pages/MFAVerify';
 import OrgSelection from './pages/OrgSelection';
 import Reports from './pages/Reports';
 import ResetPassword from './pages/ResetPassword';
-import { AccessReview, IPAccess, Sessions, ThreatAlerts } from './pages/security';
 import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
 import Trips from './pages/Trips';
@@ -145,17 +149,19 @@ function App() {
                 <Route path="security/mfa" element={<MFACenter />} />
               </Route>
 
-              {/* Security Module */}
+              {/* Security Module (Expansion) */}
               <Route path="/security" element={<PrivateRoute><MFACenter /></PrivateRoute>} />
+              <Route path="/security/logins" element={<PrivateRoute><LoginActivityLogs /></PrivateRoute>} />
+              <Route path="/security/threats" element={<PrivateRoute><ThreatAlerts /></PrivateRoute>} />
+              <Route path="/security/sessions" element={<PrivateRoute><ActiveSessions /></PrivateRoute>} />
+              <Route path="/security/ip-access" element={<PrivateRoute><IPControls /></PrivateRoute>} />
+              <Route path="/security/access-review" element={<PrivateRoute><AccessReview /></PrivateRoute>} />
+              
               <Route path="/security/policy" element={<PrivateRoute><MFAPolicyEditor /></PrivateRoute>} />
               <Route path="/security/exceptions" element={<PrivateRoute><MFAExceptions /></PrivateRoute>} />
               <Route path="/security/overrides" element={<PrivateRoute><MFAOverrides /></PrivateRoute>} />
               <Route path="/security/audit" element={<PrivateRoute><AuditLogs /></PrivateRoute>} />
               <Route path="/security/audit/settings" element={<PrivateRoute><AuditSettings /></PrivateRoute>} />
-              <Route path="/security/sessions" element={<PrivateRoute><Sessions /></PrivateRoute>} />
-              <Route path="/security/ip-access" element={<PrivateRoute><IPAccess /></PrivateRoute>} />
-              <Route path="/security/access-review" element={<PrivateRoute><AccessReview /></PrivateRoute>} />
-              <Route path="/security/threats" element={<PrivateRoute><ThreatAlerts /></PrivateRoute>} />
 
               {/* Admin Portal */}
               <Route

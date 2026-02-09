@@ -95,6 +95,10 @@ func (s *AuthService) CreateIPRule(ctx context.Context, rule *models.IPRule, adm
 	return nil
 }
 
+func (s *AuthService) CreateIPRuleNoAudit(ctx context.Context, rule *models.IPRule) error {
+    return s.repo.CreateIPRule(ctx, rule)
+}
+
 func (s *AuthService) DeleteIPRule(ctx context.Context, id uuid.UUID, adminID uuid.UUID, clientIP string) error {
 	if id == uuid.Nil {
 		return ErrInvalidReviewID
@@ -282,6 +286,10 @@ func (s *AuthService) RevokeSession(ctx context.Context, sessionID uuid.UUID, ad
 	return nil
 }
 
+func (s *AuthService) RevokeSessionNoAudit(ctx context.Context, sessionID uuid.UUID) error {
+	return s.repo.RevokeSession(ctx, sessionID)
+}
+
 func (s *AuthService) RevokeAllSessionsForOrg(ctx context.Context, orgID uuid.UUID, adminID uuid.UUID, clientIP string) error {
 	if orgID == uuid.Nil {
 		return ErrInvalidOrgID
@@ -296,6 +304,42 @@ func (s *AuthService) RevokeAllSessionsForOrg(ctx context.Context, orgID uuid.UU
 		"Revoked all sessions for organization", clientIP)
 
 	return nil
+}
+
+func (s *AuthService) ListLoginEvents(ctx context.Context, orgID uuid.UUID, page, size int, status string) ([]models.LoginEvent, int, error) {
+	if orgID == uuid.Nil {
+		return nil, 0, ErrInvalidOrgID
+	}
+	filter := make(map[string]any)
+	if status != "" {
+		filter["status"] = status
+	}
+	return s.repo.ListLoginEvents(ctx, orgID, page, size, filter)
+}
+
+func (s *AuthService) ListThreatAlerts(ctx context.Context, orgID uuid.UUID, page, size int, status string) ([]models.ThreatAlert, int, error) {
+	if orgID == uuid.Nil {
+		return nil, 0, ErrInvalidOrgID
+	}
+	filter := make(map[string]any)
+	if status != "" {
+		filter["status"] = status
+	}
+	return s.repo.ListThreatAlerts(ctx, orgID, page, size, filter)
+}
+
+func (s *AuthService) UpdateThreatAlertStatus(ctx context.Context, alertID uuid.UUID, status string) error {
+	if alertID == uuid.Nil {
+		return errors.New("alert ID is required")
+	}
+	return s.repo.UpdateThreatAlertStatus(ctx, alertID, status)
+}
+
+func (s *AuthService) ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.MFAUser, int, error) {
+	if orgID == uuid.Nil {
+		return nil, 0, ErrInvalidOrgID
+	}
+    return s.repo.ListMFAUsers(ctx, orgID, page, size)
 }
 
 // logSecurityAudit creates an audit log entry for security actions

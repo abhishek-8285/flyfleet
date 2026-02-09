@@ -149,6 +149,20 @@ type AuthRepository interface {
 	GetRoleByName(ctx context.Context, orgID uuid.UUID, name string) (*models.Role, error)
 	CreatePermission(ctx context.Context, perm *models.PermissionDefinition) error
 	GetPermission(ctx context.Context, module, action string) (*models.PermissionDefinition, error)
+
+	// Security Production Expansion
+	LogLoginEvent(ctx context.Context, event *models.LoginEvent) error
+	ListLoginEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.LoginEvent, int, error)
+	GetLoginEventByID(ctx context.Context, id uuid.UUID) (*models.LoginEvent, error)
+	
+	CreateThreatAlert(ctx context.Context, alert *models.ThreatAlert) error
+	ListThreatAlerts(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.ThreatAlert, int, error)
+	GetThreatAlertByID(ctx context.Context, id uuid.UUID) (*models.ThreatAlert, error)
+	UpdateThreatAlertStatus(ctx context.Context, id uuid.UUID, status string) error
+	
+	ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.MFAUser, int, error)
+	GetMFAUser(ctx context.Context, userID uuid.UUID) (*models.MFAUser, error)
+	UpdateMFAUserStatus(ctx context.Context, userID uuid.UUID, status string) error
 }
 
 type postgresRepository struct {

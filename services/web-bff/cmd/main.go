@@ -96,15 +96,26 @@ func main() {
 	// Global Settings Module (RBAC Enforcement)
 	mux.Handle("/api/settings/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(settingsHandlers.ProxySettings)))
 	
-	// Security Operations Module (RBAC Enforcement)
+	// Security Operations Module (RBAC Enforcement + IP Firewall)
 	securityHandlers := handlers.NewSecurityHandlers(cfg, logger)
-	mux.Handle("/api/security/ip-rules", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules)))
-	mux.Handle("/api/security/ip-rules/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules)))
-	mux.Handle("/api/security/access-reviews", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews)))
-	mux.Handle("/api/security/access-reviews/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews)))
-	mux.Handle("/api/security/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions)))
-	mux.Handle("/api/security/sessions/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions)))
-	mux.Handle("/api/security/review-items/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyReviewItems)))
+	fm := middleware.NewFirewallManager(cfg, logger)
+	fw := middleware.IPFirewallMiddleware(fm)
+
+	mux.Handle("/api/security/ip-rules", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules))))
+	mux.Handle("/api/security/ip-rules/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules))))
+	mux.Handle("/api/security/access-reviews", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews))))
+	mux.Handle("/api/security/access-reviews/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews))))
+	mux.Handle("/api/security/sessions", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions))))
+	mux.Handle("/api/security/sessions/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions))))
+	mux.Handle("/api/security/review-items/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyReviewItems))))
+	
+	// New Expansion Routes
+	mux.Handle("/api/security/logins", fw(middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(securityHandlers.ProxyLoginActivityLogs))))
+	mux.Handle("/api/security/logins/", fw(middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(securityHandlers.ProxyLoginActivityLogs))))
+	mux.Handle("/api/security/alerts", fw(middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(securityHandlers.ProxyThreatAlerts))))
+	mux.Handle("/api/security/alerts/", fw(middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(securityHandlers.ProxyThreatAlerts))))
+	mux.Handle("/api/security/mfa", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
+	mux.Handle("/api/security/mfa/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
 	
 	// Server configuration
 	srv := &http.Server{

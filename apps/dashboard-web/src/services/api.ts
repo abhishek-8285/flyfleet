@@ -356,6 +356,42 @@ class ApiService {
   async deleteMFAException(id: string) {
     await this.bffClient.delete(`/exceptions/${id}`);
   }
+
+  // Security Operations Expansion
+  async getLoginActivityLogs(params: { page?: number; size?: number; status?: string }) {
+    const response = await this.bffClient.get('/api/security/logins', { params });
+    return response.data;
+  }
+
+  async getThreatAlerts(params: { page?: number; size?: number; severity?: string; status?: string }) {
+    const response = await this.bffClient.get('/api/security/alerts', { params });
+    return response.data;
+  }
+
+  async updateThreatAlertStatus(id: string, status: string) {
+    const response = await this.bffClient.patch(`/api/security/alerts/${id}/status`, { status });
+    return response.data;
+  }
+
+  async getSecuritySessions(orgId: string) {
+    const response = await this.bffClient.get('/api/security/sessions', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async revokeSecuritySession(sessionId: string) {
+    const response = await this.bffClient.delete(`/api/security/sessions/${sessionId}`);
+    return response.data;
+  }
+
+  async getIPRules(orgId: string) {
+    const response = await this.bffClient.get('/api/security/ip-rules', { params: { org_id: orgId } });
+    return response.data;
+  }
+
+  async createIPRule(data: any) {
+    const response = await this.bffClient.post('/api/security/ip-rules', data);
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

@@ -43,6 +43,21 @@ func (h *SecurityHandlers) ProxyReviewItems(w http.ResponseWriter, r *http.Reque
 	h.proxyToAuth(w, r, "/api/security/review-items", "/api/v1/security/review-items")
 }
 
+// ProxyLoginActivityLogs proxies /api/security/logins/* to auth-service
+func (h *SecurityHandlers) ProxyLoginActivityLogs(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/security/logins", "/api/v1/security/logins")
+}
+
+// ProxyThreatAlerts proxies /api/security/alerts/* to auth-service
+func (h *SecurityHandlers) ProxyThreatAlerts(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/security/alerts", "/api/v1/security/alerts")
+}
+
+// ProxyMFACenter proxies /api/security/mfa/* to auth-service
+func (h *SecurityHandlers) ProxyMFACenter(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/security/mfa", "/api/v1/security/mfa")
+}
+
 func (h *SecurityHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
 	

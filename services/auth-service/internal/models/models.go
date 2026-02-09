@@ -196,6 +196,10 @@ type AuthToken struct {
 	AccessToken  string    `json:"access_token" db:"access_token"`
 	RefreshToken string    `json:"refresh_token" db:"refresh_token"`
 	DeviceID     string    `json:"device_id,omitempty" db:"device_id"`
+	IPAddress    string    `json:"ip_address,omitempty" db:"ip_address"`
+	UserAgent    string    `json:"user_agent,omitempty" db:"user_agent"`
+	LastActive   time.Time `json:"last_active" db:"last_active"`
+	IsActive     bool      `json:"is_active" db:"is_active"`
 	ExpiresAt    time.Time `json:"expires_at" db:"expires_at"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }

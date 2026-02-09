@@ -1,87 +1,95 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthProvider';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 
 const SecuritySidebar: React.FC = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const { user } = useAuth();
+  const groups = [
+    {
+      title: 'Monitoring',
+      items: [
+        { name: 'Identity Feed', path: '/security', icon: 'dashboard' },
+        { name: 'Login Logs', path: '/security/logins', icon: 'history' },
+        { name: 'Active Threats', path: '/security/threats', icon: 'warning', badge: 'Active' },
+        { name: 'Live Sessions', path: '/security/sessions', icon: 'devices' },
+      ]
+    },
+    {
+      title: 'Governance',
+      items: [
+        { name: 'MFA Center', path: '/security/mfa', icon: 'fingerprint' },
+        { name: 'IP Access', path: '/security/ip-access', icon: 'public' },
+        { name: 'Access Review', path: '/security/access-review', icon: 'fact_check' },
+      ]
+    },
+    {
+      title: 'Configuration',
+      items: [
+        { name: 'MFA Policy', path: '/security/policy', icon: 'policy' },
+        { name: 'Allowances', path: '/security/exceptions', icon: 'verified_user' },
+        { name: 'Force Overrides', path: '/security/overrides', icon: 'security_update_warning' },
+      ]
+    }
+  ];
 
-    // Helper to determine active state
-    const isActive = (path: string) => location.pathname === path ? "bg-primary/10 text-primary active" : "text-text-muted hover:bg-border-color hover:text-white";
+  return (
+    <aside className="w-64 h-full bg-slate-900/60 backdrop-blur-xl border-r border-white/5 flex flex-col z-20">
+      <div className="p-6">
+        <div className="flex items-center gap-3 px-2 mb-8">
+           <div className="w-8 h-8 rounded-lg bg-vibrant-blue flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <span className="material-symbols-outlined text-white text-xl">shield</span>
+           </div>
+           <h1 className="text-xl font-black text-white tracking-tighter uppercase">FleetSecurity</h1>
+        </div>
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/login');
-    };
-
-    return (
-        <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
-            <div className="p-6 flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
-                    <span className="material-symbols-outlined">shield_lock</span>
+        <nav className="space-y-8">
+           {groups.map((group) => (
+             <div key={group.title}>
+                <h3 className="px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-4">{group.title}</h3>
+                <div className="space-y-1">
+                   {group.items.map((item) => (
+                     <NavLink
+                       key={item.path}
+                       to={item.path}
+                       className={({ isActive }) => `
+                         flex items-center justify-between px-4 py-2.5 rounded-xl transition-all group
+                         ${isActive 
+                           ? 'bg-primary/10 text-white shadow-inner border border-white/5' 
+                           : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                       `}
+                     >
+                        <div className="flex items-center gap-3">
+                           <span className={`material-symbols-outlined text-[20px] transition-colors
+                             ${item.badge === 'Active' ? 'text-vibrant-red' : 'group-hover:text-primary'}
+                           `}>
+                              {item.icon}
+                           </span>
+                           <span className="text-sm font-semibold">{item.name}</span>
+                        </div>
+                        {item.badge && (
+                           <span className="bg-red-500/10 text-vibrant-red text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-red-500/20">
+                              {item.badge}
+                           </span>
+                        )}
+                     </NavLink>
+                   ))}
                 </div>
-                <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+             </div>
+           ))}
+        </nav>
+      </div>
+
+      <div className="mt-auto p-6 border-t border-white/5 bg-slate-900/40">
+         <div className="glass-card p-4 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
-            <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-                <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
-                
-                <Link to="/security" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security')}`}>
-                    <span className="material-symbols-outlined">dashboard</span>
-                    <span className="text-sm font-medium">Overview</span>
-                </Link>
-                
-                <Link to="/security/policy" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security/policy')}`}>
-                    <span className="material-symbols-outlined">tune</span>
-                    <span className="text-sm font-medium">MFA Configuration</span>
-                </Link>
-
-                <Link to="/security/overrides" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security/overrides')}`}>
-                    <span className="material-symbols-outlined">domain</span>
-                    <span className="text-sm font-medium">Org Overrides</span>
-                </Link>
-                    <Link to="/security/exceptions" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security/exceptions')}`}>
-                    <span className="material-symbols-outlined">rule_folder</span>
-                    <span className="text-sm font-medium">Exceptions</span>
-                </Link>
-
-                <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
-                {(user?.role_id === 'super_admin' || user?.role_id === 'org_admin') && (
-                    <>
-                        <Link to="/security/audit" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security/audit')}`}>
-                            <span className="material-symbols-outlined">troubleshoot</span>
-                            <span className="text-sm font-medium">Audit Logs</span>
-                        </Link>
-                        <Link to="/security/audit/settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/security/audit/settings')}`}>
-                            <span className="material-symbols-outlined">settings_suggest</span>
-                            <span className="text-sm font-medium">Governance</span>
-                        </Link>
-                    </>
-                )}
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined">warning</span>
-                    <span className="text-sm font-medium">Threat Alerts</span>
-                </a>
-
-                <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
-                <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer">
-                    <span className="material-symbols-outlined">group</span>
-                    <span className="text-sm font-medium">Directory</span>
-                </a>
-            </nav>
-            <div className="p-4 border-t border-border-color">
-                <div className="flex items-center gap-3">
-                    <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
-                    <div className="flex flex-col overflow-hidden">
-                        <span className="text-sm font-medium text-white truncate">Abhishek</span>
-                        <span className="text-xs text-text-muted truncate">Super Admin</span>
-                    </div>
-                    <button onClick={handleLogout} className="ml-auto text-text-muted hover:text-white">
-                        <span className="material-symbols-outlined text-[20px]">logout</span>
-                    </button>
-                </div>
+            <div>
+               <p className="text-[10px] font-bold text-white uppercase leading-none">Firewall Online</p>
+               <p className="text-[9px] text-slate-500 mt-1">Nodes stable: 12/12</p>
             </div>
-        </aside>
-    );
+         </div>
+      </div>
+    </aside>
+  );
 };
 
 export default SecuritySidebar;

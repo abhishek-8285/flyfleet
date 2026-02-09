@@ -163,7 +163,9 @@ func (r *postgresRepository) ListAllSessions(ctx context.Context, orgID uuid.UUI
 		return nil, 0, err
 	}
 
-	query := `SELECT t.id, t.user_id, t.access_token, t.refresh_token, t.device_id, t.expires_at, t.created_at
+	query := `SELECT t.id, t.user_id, t.access_token, t.refresh_token, t.device_id, 
+					 t.ip_address, t.user_agent, t.last_active, t.is_active,
+					 t.expires_at, t.created_at
 			  FROM auth_tokens t
 			  JOIN users u ON t.user_id = u.id
 			  JOIN user_organizations uo ON u.id = uo.user_id
@@ -179,7 +181,9 @@ func (r *postgresRepository) ListAllSessions(ctx context.Context, orgID uuid.UUI
 	var tokens []models.AuthToken
 	for rows.Next() {
 		var t models.AuthToken
-		if err := rows.Scan(&t.ID, &t.UserID, &t.AccessToken, &t.RefreshToken, &t.DeviceID, &t.ExpiresAt, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.AccessToken, &t.RefreshToken, &t.DeviceID, 
+							&t.IPAddress, &t.UserAgent, &t.LastActive, &t.IsActive,
+							&t.ExpiresAt, &t.CreatedAt); err != nil {
 			return nil, 0, err
 		}
 		tokens = append(tokens, t)
@@ -199,5 +203,152 @@ func (r *postgresRepository) RevokeAllSessionsForOrg(ctx context.Context, orgID 
 				WHERE uo.org_id = $1
 			  )`
 	_, err := r.db.Exec(ctx, query, orgID)
+	return err
+}
+
+// Security Production Expansion Implementation
+
+func (r *postgresRepository) LogLoginEvent(ctx context.Context, event *models.LoginEvent) error {
+	event.ID = uuid.New()
+	event.CreatedAt = time.Now()
+	query := `INSERT INTO login_events (id, org_id, user_id, email, ip_address, device, browser, location, status, risk_level, created_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	_, err := r.db.Exec(ctx, query, event.ID, event.OrgID, event.UserID, event.Email, event.IPAddress, event.Device, event.Browser, event.Location, event.Status, event.RiskLevel, event.CreatedAt)
+	return err
+}
+
+func (r *postgresRepository) ListLoginEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.LoginEvent, int, error) {
+	offset := (page - 1) * size
+	var total int
+	
+	countQuery := `SELECT COUNT(*) FROM login_events WHERE org_id = $1`
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT id, org_id, user_id, email, ip_address, device, browser, location, status, risk_level, created_at
+			  FROM login_events WHERE org_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var events []models.LoginEvent
+	for rows.Next() {
+		var e models.LoginEvent
+		if err := rows.Scan(&e.ID, &e.OrgID, &e.UserID, &e.Email, &e.IPAddress, &e.Device, &e.Browser, &e.Location, &e.Status, &e.RiskLevel, &e.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		events = append(events, e)
+	}
+	return events, total, nil
+}
+
+func (r *postgresRepository) GetLoginEventByID(ctx context.Context, id uuid.UUID) (*models.LoginEvent, error) {
+	var e models.LoginEvent
+	query := `SELECT id, org_id, user_id, email, ip_address, device, browser, location, status, risk_level, created_at
+			  FROM login_events WHERE id = $1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&e.ID, &e.OrgID, &e.UserID, &e.Email, &e.IPAddress, &e.Device, &e.Browser, &e.Location, &e.Status, &e.RiskLevel, &e.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+func (r *postgresRepository) CreateThreatAlert(ctx context.Context, alert *models.ThreatAlert) error {
+	alert.ID = uuid.New()
+	alert.CreatedAt = time.Now()
+	query := `INSERT INTO threat_alerts (id, org_id, type, severity, ip, user_id, description, status, created_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, err := r.db.Exec(ctx, query, alert.ID, alert.OrgID, alert.Type, alert.Severity, alert.IP, alert.UserID, alert.Description, alert.Status, alert.CreatedAt)
+	return err
+}
+
+func (r *postgresRepository) ListThreatAlerts(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.ThreatAlert, int, error) {
+	offset := (page - 1) * size
+	var total int
+	
+	countQuery := `SELECT COUNT(*) FROM threat_alerts WHERE org_id = $1`
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT id, org_id, type, severity, ip, user_id, description, status, created_at
+			  FROM threat_alerts WHERE org_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var alerts []models.ThreatAlert
+	for rows.Next() {
+		var a models.ThreatAlert
+		if err := rows.Scan(&a.ID, &a.OrgID, &a.Type, &a.Severity, &a.IP, &a.UserID, &a.Description, &a.Status, &a.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		alerts = append(alerts, a)
+	}
+	return alerts, total, nil
+}
+
+func (r *postgresRepository) GetThreatAlertByID(ctx context.Context, id uuid.UUID) (*models.ThreatAlert, error) {
+	var a models.ThreatAlert
+	query := `SELECT id, org_id, type, severity, ip, user_id, description, status, created_at
+			  FROM threat_alerts WHERE id = $1`
+	err := r.db.QueryRow(ctx, query, id).Scan(&a.ID, &a.OrgID, &a.Type, &a.Severity, &a.IP, &a.UserID, &a.Description, &a.Status, &a.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (r *postgresRepository) UpdateThreatAlertStatus(ctx context.Context, id uuid.UUID, status string) error {
+	_, err := r.db.Exec(ctx, `UPDATE threat_alerts SET status = $1 WHERE id = $2`, status, id)
+	return err
+}
+
+func (r *postgresRepository) ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.MFAUser, int, error) {
+	offset := (page - 1) * size
+	var total int
+	
+	countQuery := `SELECT COUNT(*) FROM mfa_users WHERE org_id = $1`
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT user_id, org_id, status, method, trusted_devices_count, last_reset, updated_at
+			  FROM mfa_users WHERE org_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var users []models.MFAUser
+	for rows.Next() {
+		var u models.MFAUser
+		if err := rows.Scan(&u.UserID, &u.OrgID, &u.Status, &u.Method, &u.TrustedDevicesCount, &u.LastReset, &u.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, u)
+	}
+	return users, total, nil
+}
+
+func (r *postgresRepository) GetMFAUser(ctx context.Context, userID uuid.UUID) (*models.MFAUser, error) {
+	var u models.MFAUser
+	query := `SELECT user_id, org_id, status, method, trusted_devices_count, last_reset, updated_at
+			  FROM mfa_users WHERE user_id = $1`
+	err := r.db.QueryRow(ctx, query, userID).Scan(&u.UserID, &u.OrgID, &u.Status, &u.Method, &u.TrustedDevicesCount, &u.LastReset, &u.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *postgresRepository) UpdateMFAUserStatus(ctx context.Context, userID uuid.UUID, status string) error {
+	_, err := r.db.Exec(ctx, `UPDATE mfa_users SET status = $1, updated_at = NOW() WHERE user_id = $2`, status, userID)
 	return err
 }

@@ -76,50 +76,42 @@ func (s *AuthService) UpdateAuditSettings(ctx context.Context, settings *models.
 func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string) (*models.AuthResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
+		s.logLoginActivity(ctx, nil, "FAILED", "low", ip, ua)
 		return nil, err
 	}
 	if user == nil {
+		s.logLoginActivity(ctx, nil, "FAILED", "low", ip, ua)
 		return nil, errors.New("invalid credentials")
 	}
 
 	// Check if account is locked
 	if user.LockedUntil != nil && user.LockedUntil.After(time.Now()) {
-		s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-			UserID:    user.ID,
-			EventType: "ACCOUNT_LOCKED_ATTEMPT",
-			IPAddress: ip,
-			UserAgent: ua,
-		})
+		s.logLoginActivity(ctx, user, "FAILED", "high", ip, ua)
 		return nil, errors.New("account is temporarily locked due to multiple failed attempts")
 	}
 
-	// CAPTCHA trigger logic (mock)
-	// In a real app, you'd check failed attempts for this IP in Redis
-	// and return a specific "CAPTCHA_REQUIRED" error
-	// return a specific "CAPTCHA_REQUIRED" error
 	if user.FailedLogins >= 3 {
+		s.logLoginActivity(ctx, user, "CHALLENGED", "medium", ip, ua)
 		return nil, errors.New("CAPTCHA_REQUIRED")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		// Increment failed logins and log event
 		count, _ := s.repo.IncrementFailedLogins(ctx, user.ID)
-		s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-			UserID:    user.ID,
-			EventType: "LOGIN_FAILED",
-			IPAddress: ip,
-			UserAgent: ua,
-			Metadata:  `{"attempt_count": ` + fmt.Sprintf("%d", count) + `}`,
-		})
+		s.logLoginActivity(ctx, user, "FAILED", "low", ip, ua)
 
 		// Lock account if threshold reached (e.g., 5 attempts)
 		if count >= 5 {
 			s.repo.LockAccount(ctx, user.ID, 15*time.Minute)
-			s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-				UserID:    user.ID,
-				EventType: "ACCOUNT_LOCKED",
-				IPAddress: ip,
-				UserAgent: ua,
+			// Create Threat Alert
+			s.repo.CreateThreatAlert(ctx, &models.ThreatAlert{
+				OrgID:       uuid.Nil, // Will be enriched if possible
+				Type:        "BRUTE_FORCE",
+				Severity:    "critical",
+				IP:          ip,
+				UserID:      &user.ID,
+				Description: fmt.Sprintf("Multiple failed login attempts for user %s", user.Email),
+				Status:      "open",
 			})
 		}
 
@@ -128,12 +120,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string)
 
 	// Reset failed logins on success
 	s.repo.ResetFailedLogins(ctx, user.ID)
-	s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-		UserID:    user.ID,
-		EventType: "LOGIN_SUCCESS",
-		IPAddress: ip,
-		UserAgent: ua,
-	})
+	s.logLoginActivity(ctx, user, "SUCCESS", "low", ip, ua)
 
 	if user.MFAEnabled {
 		return &models.AuthResponse{
@@ -145,10 +132,10 @@ func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string)
 	// Fetch user organizations to set default context
 	orgs, err := s.repo.GetOrganizationsByUserID(ctx, user.ID)
 	if err == nil && len(orgs) > 0 {
-		return s.issueTokensWithOrg(ctx, user, orgs[0].ID)
+		return s.issueTokensWithOrg(ctx, user, orgs[0].ID, ip, ua)
 	}
 
-	return s.issueTokens(ctx, user)
+	return s.issueTokens(ctx, user, ip, ua)
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, name, ip, ua string) (*models.User, error) {
@@ -257,7 +244,7 @@ func (s *AuthService) SendMFA(ctx context.Context, userID uuid.UUID, method stri
 	return s.repo.SaveMFACode(ctx, mfa)
 }
 
-func (s *AuthService) VerifyMFA(ctx context.Context, userID uuid.UUID, code string) (*models.AuthResponse, error) {
+func (s *AuthService) VerifyMFA(ctx context.Context, userID uuid.UUID, code, ip, ua string) (*models.AuthResponse, error) {
 	mfa, err := s.repo.GetMFACode(ctx, userID, code)
 	if err != nil {
 		return nil, err
@@ -271,14 +258,14 @@ func (s *AuthService) VerifyMFA(ctx context.Context, userID uuid.UUID, code stri
 		return nil, err
 	}
 
-	return s.issueTokens(ctx, user)
+	return s.issueTokens(ctx, user, ip, ua)
 }
 
 func (s *AuthService) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.Organization, error) {
 	return s.repo.GetOrganizationsByUserID(ctx, userID)
 }
 
-func (s *AuthService) SelectOrganization(ctx context.Context, userID, orgID uuid.UUID) (*models.AuthResponse, error) {
+func (s *AuthService) SelectOrganization(ctx context.Context, userID, orgID uuid.UUID, ip, ua string) (*models.AuthResponse, error) {
 	orgs, err := s.repo.GetOrganizationsByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -300,10 +287,10 @@ func (s *AuthService) SelectOrganization(ctx context.Context, userID, orgID uuid
 		return nil, err
 	}
 
-	return s.issueTokensWithOrg(ctx, user, orgID)
+	return s.issueTokensWithOrg(ctx, user, orgID, ip, ua)
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*models.AuthResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string, ip, ua string) (*models.AuthResponse, error) {
 	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.jwtSecret), nil
 	})
@@ -324,7 +311,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, err
 	}
 
-	return s.issueTokens(ctx, user)
+	return s.issueTokens(ctx, user, ip, ua)
 }
 
 func (s *AuthService) UpdateTheme(ctx context.Context, userID uuid.UUID, theme, ip, ua string) error {
@@ -604,7 +591,7 @@ func (s *AuthService) DeleteDocument(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteDocument(ctx, id)
 }
 
-func (s *AuthService) issueTokens(ctx context.Context, user *models.User) (*models.AuthResponse, error) {
+func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ip, ua string) (*models.AuthResponse, error) {
 	accessToken, _ := s.generateJWT(user.ID, 15*time.Minute)
 	refreshToken, _ := s.generateJWT(user.ID, 7*24*time.Hour)
 
@@ -612,6 +599,10 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User) (*mode
 		UserID:       user.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		IPAddress:    ip,
+		UserAgent:    ua,
+		LastActive:   time.Now(),
+		IsActive:     true,
 		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
 	})
 
@@ -622,7 +613,7 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User) (*mode
 	}, nil
 }
 
-func (s *AuthService) issueTokensWithOrg(ctx context.Context, user *models.User, orgID uuid.UUID) (*models.AuthResponse, error) {
+func (s *AuthService) issueTokensWithOrg(ctx context.Context, user *models.User, orgID uuid.UUID, ip, ua string) (*models.AuthResponse, error) {
 	// Fetch user role in this organization
 	role, err := s.repo.GetUserRoleInOrg(ctx, user.ID, orgID)
 	if err != nil {
@@ -637,6 +628,18 @@ func (s *AuthService) issueTokensWithOrg(ctx context.Context, user *models.User,
 	}
 	accessToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.jwtSecret))
 	refreshToken, _ := s.generateJWT(user.ID, 7*24*time.Hour)
+
+	// Save token with enrichment
+	s.repo.SaveToken(ctx, &models.AuthToken{
+		UserID:       user.ID,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		IPAddress:    ip,
+		UserAgent:    ua,
+		LastActive:   time.Now(),
+		IsActive:     true,
+		ExpiresAt:    time.Now().Add(7 * 24 * time.Hour),
+	})
 
 	return &models.AuthResponse{
 		AccessToken:  accessToken,
@@ -1147,4 +1150,41 @@ func (s *AuthService) GetEffectivePermissions(ctx context.Context, userID uuid.U
 
 func (s *AuthService) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]models.Role, error) {
 	return s.repo.GetUserRoles(ctx, userID)
+}
+
+func (s *AuthService) logLoginActivity(ctx context.Context, user *models.User, status, risk, ip, ua string) {
+	orgID := uuid.Nil
+	userID := uuid.Nil
+	email := ""
+	if user != nil {
+		userID = user.ID
+		email = user.Email
+		// Fetch orgID if possible
+		orgs, _ := s.repo.GetOrganizationsByUserID(ctx, user.ID)
+		if len(orgs) > 0 {
+			orgID = orgs[0].ID
+		}
+	}
+
+	event := &models.LoginEvent{
+		OrgID:     orgID,
+		UserID:    &userID,
+		Email:     email,
+		IPAddress: ip,
+		Device:    "Unknown", // In production, use a UA parser
+		Browser:   ua,
+		Status:    status,
+		RiskLevel: risk,
+		CreatedAt: time.Now(),
+	}
+	_ = s.repo.LogLoginEvent(ctx, event)
+
+	// Also log to security_events for compatibility
+	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+		UserID:    userID,
+		EventType: "LOGIN_" + status,
+		IPAddress: ip,
+		UserAgent: ua,
+		CreatedAt: time.Now(),
+	})
 }

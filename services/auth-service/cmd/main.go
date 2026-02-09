@@ -58,7 +58,7 @@ func main() {
 	rbacHandlers := handlers.NewRBACOperationsHandlers(authService, logger)
 	
 	// Setup routes
-	router := setupRoutes(authHandlers, adminHandlers, securityHandlers, rbacHandlers, auditHandlers, monitoringHandler, cfg, logger)
+	router := setupRoutes(authService, authHandlers, adminHandlers, securityHandlers, rbacHandlers, auditHandlers, monitoringHandler, cfg, logger)
 	
 	// ... (rest of main unchanged) ...
 	srv := &http.Server{
@@ -92,7 +92,7 @@ func main() {
 	logger.Info("Auth service exited")
 }
 
-func setupRoutes(auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, securityHandlers *handlers.SecurityHandlers, rbac *handlers.RBACOperationsHandlers, audit *handlers.AuditHandlers, monitor *handlers.MonitoringHandler, cfg *config.Config, logger *zap.Logger) *http.ServeMux {
+func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, securityHandlers *handlers.SecurityHandlers, rbac *handlers.RBACOperationsHandlers, audit *handlers.AuditHandlers, monitor *handlers.MonitoringHandler, cfg *config.Config, logger *zap.Logger) *http.ServeMux {
 	router := http.NewServeMux()
 	
 	// Middleware Chains
@@ -160,6 +160,45 @@ func setupRoutes(auth *handlers.AuthHandlers, admin *handlers.AdminHandlers, sec
 	
 	router.HandleFunc("/api/v1/security/mfa/exceptions/", securityHandlers.DeleteMFAException) // Supports DELETE /api/v1/security/mfa/exceptions/{id}
 	router.HandleFunc("/api/v1/security/mfa/stream", securityHandlers.StreamMFAEvents)
+
+	// Security Expansion Endpoints
+	extHandlers := handlers.NewSecurityExtHandlers(authService, logger)
+	router.HandleFunc("/api/v1/security/ip-rules/all", extHandlers.ListIPRules) // For BFF Firewall Manager
+	router.HandleFunc("/api/v1/security/ip-rules", extHandlers.ListIPRules)
+	router.HandleFunc("/api/v1/security/ip-rules/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost { 
+			extHandlers.CreateIPRule(w, r) 
+		} else if r.Method == http.MethodDelete {
+			extHandlers.DeleteIPRule(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	router.HandleFunc("/api/v1/security/logins", extHandlers.ListLoginEvents)
+	router.HandleFunc("/api/v1/security/alerts", extHandlers.ListThreatAlerts)
+	router.HandleFunc("/api/v1/security/alerts/", extHandlers.UpdateThreatAlertStatus) // /alerts/{id}/status handled inside
+	router.HandleFunc("/api/v1/security/mfa/users", extHandlers.ListMFAUsers)
+
+	// Access Reviews
+	router.HandleFunc("/api/v1/security/access-reviews", extHandlers.ListAccessReviews)
+	router.HandleFunc("/api/v1/security/access-reviews/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			extHandlers.GetAccessReview(w, r)
+		} else if r.Method == http.MethodPost {
+			extHandlers.CreateAccessReview(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+	router.HandleFunc("/api/v1/security/access-reviews/status", extHandlers.UpdateAccessReviewStatus)
+	router.HandleFunc("/api/v1/security/review-items", extHandlers.UpdateReviewItem)
+
+	// Sessions
+	router.HandleFunc("/api/v1/security/sessions", extHandlers.ListSessions)
+	router.HandleFunc("/api/v1/security/sessions/revoke", extHandlers.RevokeSession)
+	router.HandleFunc("/api/v1/security/sessions/revoke-all", extHandlers.RevokeAllSessions)
+
 
 	// Admin Portal Endpoints (Standardized and Centralized)
 	// Organizations

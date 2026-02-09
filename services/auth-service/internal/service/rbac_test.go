@@ -172,6 +172,20 @@ func (m *MockRepository) ListAllSessions(ctx context.Context, orgID uuid.UUID, p
 func (m *MockRepository) RevokeSession(ctx context.Context, sessionID uuid.UUID) error { return nil }
 func (m *MockRepository) RevokeAllSessionsForOrg(ctx context.Context, orgID uuid.UUID) error { return nil }
 
+// Security Production Expansion
+func (m *MockRepository) LogLoginEvent(ctx context.Context, event *models.LoginEvent) error { return nil }
+func (m *MockRepository) ListLoginEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.LoginEvent, int, error) { return nil, 0, nil }
+func (m *MockRepository) GetLoginEventByID(ctx context.Context, id uuid.UUID) (*models.LoginEvent, error) { return nil, nil }
+
+func (m *MockRepository) CreateThreatAlert(ctx context.Context, alert *models.ThreatAlert) error { return nil }
+func (m *MockRepository) ListThreatAlerts(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.ThreatAlert, int, error) { return nil, 0, nil }
+func (m *MockRepository) GetThreatAlertByID(ctx context.Context, id uuid.UUID) (*models.ThreatAlert, error) { return nil, nil }
+func (m *MockRepository) UpdateThreatAlertStatus(ctx context.Context, id uuid.UUID, status string) error { return nil }
+
+func (m *MockRepository) ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.MFAUser, int, error) { return nil, 0, nil }
+func (m *MockRepository) GetMFAUser(ctx context.Context, userID uuid.UUID) (*models.MFAUser, error) { return nil, nil }
+func (m *MockRepository) UpdateMFAUserStatus(ctx context.Context, userID uuid.UUID, status string) error { return nil }
+
 
 func TestRBAC_UniqueRoleName(t *testing.T) {
 	repo := &MockRepository{

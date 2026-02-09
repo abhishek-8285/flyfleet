@@ -47,3 +47,41 @@ type ReviewItem struct {
 	User           *User     `json:"user,omitempty" db:"-"`
 	Role           *Role     `json:"role,omitempty" db:"-"`
 }
+
+// Security Events & Monitoring
+
+type LoginEvent struct {
+	ID        uuid.UUID  `json:"id" db:"id"`
+	OrgID     uuid.UUID  `json:"org_id" db:"org_id"`
+	UserID    *uuid.UUID `json:"user_id,omitempty" db:"user_id"`
+	Email     string     `json:"email" db:"email"`
+	IPAddress string     `json:"ip_address" db:"ip_address"`
+	Device    string     `json:"device" db:"device"`
+	Browser   string     `json:"browser" db:"browser"`
+	Location  string     `json:"location" db:"location"`
+	Status    string     `json:"status" db:"status"` // SUCCESS, FAILED, CHALLENGED
+	RiskLevel string     `json:"risk_level" db:"risk_level"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+}
+
+type ThreatAlert struct {
+	ID          uuid.UUID  `json:"id" db:"id"`
+	OrgID       uuid.UUID  `json:"org_id" db:"org_id"`
+	Type        string     `json:"type" db:"type"`         // BRUTE_FORCE, GEO_ANOMALY, etc.
+	Severity    string     `json:"severity" db:"severity"` // critical, warning, info
+	IP          string     `json:"ip" db:"ip"`
+	UserID      *uuid.UUID `json:"user_id,omitempty" db:"user_id"`
+	Description string     `json:"description" db:"description"`
+	Status      string     `json:"status" db:"status"` // open, acknowledged, resolved, blocked
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+}
+
+type MFAUser struct {
+	UserID              uuid.UUID  `json:"user_id" db:"user_id"`
+	OrgID               uuid.UUID  `json:"org_id" db:"org_id"`
+	Status              string     `json:"status" db:"status"` // ENABLED, DISABLED, ENFORCED
+	Method              string     `json:"method" db:"method"`
+	TrustedDevicesCount int        `json:"trusted_devices_count" db:"trusted_devices_count"`
+	LastReset           *time.Time `json:"last_reset,omitempty" db:"last_reset"`
+	UpdatedAt           time.Time  `json:"updated_at" db:"updated_at"`
+}

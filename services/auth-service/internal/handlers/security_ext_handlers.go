@@ -391,3 +391,115 @@ func (h *SecurityExtHandlers) RevokeAllSessions(w http.ResponseWriter, r *http.R
 	)
 	writeJSON(w, map[string]string{"status": "all_revoked"}, http.StatusOK)
 }
+
+// Login Events
+
+func (h *SecurityExtHandlers) ListLoginEvents(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil || orgID == uuid.Nil {
+		writeError(w, service.ErrInvalidOrgID, http.StatusBadRequest)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	status := r.URL.Query().Get("status")
+
+	events, total, err := h.service.ListLoginEvents(r.Context(), orgID, page, size, status)
+	if err != nil {
+		h.logger.Error("Failed to list login events", zap.Error(err))
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"events": events,
+		"total":  total,
+		"page":   page,
+		"size":   size,
+	}, http.StatusOK)
+}
+
+// Threat Alerts
+
+func (h *SecurityExtHandlers) ListThreatAlerts(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil || orgID == uuid.Nil {
+		writeError(w, service.ErrInvalidOrgID, http.StatusBadRequest)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	status := r.URL.Query().Get("status")
+
+	alerts, total, err := h.service.ListThreatAlerts(r.Context(), orgID, page, size, status)
+	if err != nil {
+		h.logger.Error("Failed to list threat alerts", zap.Error(err))
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"alerts": alerts,
+		"total":  total,
+		"page":   page,
+		"size":   size,
+	}, http.StatusOK)
+}
+
+func (h *SecurityExtHandlers) UpdateThreatAlertStatus(w http.ResponseWriter, r *http.Request) {
+	pathParts := strings.Split(r.URL.Path, "/")
+	alertIDStr := pathParts[len(pathParts)-2] // /alerts/{id}/status
+	alertID, err := uuid.Parse(alertIDStr)
+	if err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.UpdateThreatAlertStatus(r.Context(), alertID, req.Status); err != nil {
+		writeError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "updated"}, http.StatusOK)
+}
+
+// MFA Users
+
+func (h *SecurityExtHandlers) ListMFAUsers(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil || orgID == uuid.Nil {
+		writeError(w, service.ErrInvalidOrgID, http.StatusBadRequest)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+
+	users, total, err := h.service.ListMFAUsers(r.Context(), orgID, page, size)
+	if err != nil {
+		h.logger.Error("Failed to list MFA users", zap.Error(err))
+		writeError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"users": users,
+		"total": total,
+		"page":  page,
+		"size":  size,
+	}, http.StatusOK)
+}
+

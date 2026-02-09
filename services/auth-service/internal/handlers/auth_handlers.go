@@ -103,8 +103,11 @@ func (h *AuthHandlers) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ip := r.RemoteAddr
+	ua := r.UserAgent()
+
 	userID, _ := uuid.Parse(req.UserID)
-	resp, err := h.service.VerifyMFA(r.Context(), userID, req.OTPCode)
+	resp, err := h.service.VerifyMFA(r.Context(), userID, req.OTPCode, ip, ua)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -138,10 +141,13 @@ func (h *AuthHandlers) SelectOrganization(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	ip := r.RemoteAddr
+	ua := r.UserAgent()
+
 	uID, _ := uuid.Parse(req.UserID)
 	oID, _ := uuid.Parse(req.OrgID)
 	
-	resp, err := h.service.SelectOrganization(r.Context(), uID, oID)
+	resp, err := h.service.SelectOrganization(r.Context(), uID, oID, ip, ua)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -160,7 +166,10 @@ func (h *AuthHandlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.service.RefreshToken(r.Context(), req.RefreshToken)
+	ip := r.RemoteAddr
+	ua := r.UserAgent()
+
+	resp, err := h.service.RefreshToken(r.Context(), req.RefreshToken, ip, ua)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

@@ -105,6 +105,50 @@
     background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   }
+
+  /* Glassmorphism */
+  .glass-card {
+    @apply bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+  }
+
+  .glass-card-hover {
+    @apply transition-all duration-300 hover:bg-white/90 dark:hover:bg-slate-900/60 hover:shadow-2xl hover:-translate-y-1;
+  }
+
+  /* Vibrant Accents */
+  .text-vibrant-blue {
+    @apply text-blue-600 dark:text-blue-400;
+  }
+  
+  .bg-vibrant-blue {
+    @apply bg-blue-600 dark:bg-blue-500;
+  }
+
+  .text-vibrant-red {
+    @apply text-red-600 dark:text-red-400;
+  }
+
+  .text-vibrant-green {
+    @apply text-emerald-600 dark:text-emerald-400;
+  }
+
+  /* Pulse for Live Indicators */
+  .pulse-live {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+  }
 }
 
 code {
