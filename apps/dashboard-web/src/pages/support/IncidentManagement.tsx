@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const IncidentManagement: React.FC = () => {
   const [incidents, setIncidents] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -39,22 +41,38 @@ const IncidentManagement: React.FC = () => {
                 <tr className="border-b border-[#233648] text-xs text-[#92adc9] uppercase tracking-wider bg-[#111a22]/50">
                   <th className="px-4 py-3 font-semibold">Incident ID</th>
                   <th className="px-4 py-3 font-semibold">Priority</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-4 py-3 font-semibold">Subject</th>
                   <th className="px-4 py-3 font-semibold">Organization</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {incidents.map((incident) => (
-                  <tr key={incident.id} className="border-b border-[#233648] hover:bg-[#111a22]/50 transition-colors cursor-pointer group">
-                    <td className="px-4 py-3 font-mono text-xs text-[#137fec] font-medium">{incident.id}</td>
+                  <tr 
+                    key={incident.id} 
+                    onClick={() => navigate(`/support/incidents/${incident.id}`)}
+                    className="border-b border-[#233648] hover:bg-[#111a22] transition-all cursor-pointer group hover:shadow-[inset_4px_0_0_0_#137fec]"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs text-[#137fec] font-medium group-hover:pl-6 transition-all">{incident.id}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
-                        incident.priority === 'CRITICAL' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                        incident.priority === 'CRITICAL' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.1)]' : 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_10px_rgba(245,158,11,0.1)]'
                       }`}>
                         {incident.priority}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-white font-medium">{incident.subject}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        incident.status === 'Open' || incident.status === 'OPEN' 
+                        ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                        : incident.status === 'RESOLVED' 
+                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                        : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                      }`}>
+                        {incident.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-white font-medium group-hover:text-[#137fec] transition-colors">{incident.subject}</td>
                     <td className="px-4 py-3 text-[#92adc9] text-xs">{incident.organization}</td>
                   </tr>
                 ))}

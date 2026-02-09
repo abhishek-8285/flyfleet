@@ -1,31 +1,36 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import NewTicketModal from '../../components/support/NewTicketModal';
 
 const SupportDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [trends, setTrends] = useState<number[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchData = async () => {
     const token = localStorage.getItem('token');
     const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
 
-    fetch('http://localhost:8081/api/support/dashboard/stats', { headers })
-      .then(res => res.ok ? res.json() : {})
-      .then(data => setStats(data))
-      .catch(() => setStats({}));
-    
-    fetch('http://localhost:8081/api/support/dashboard/trends', { headers })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => Array.isArray(data) ? setTrends(data) : setTrends([]))
-      .catch(() => setTrends([]));
+    try {
+      const statsRes = await fetch('http://localhost:8081/api/support/dashboard/stats', { headers });
+      if (statsRes.ok) setStats(await statsRes.json());
+      
+      const trendsRes = await fetch('http://localhost:8081/api/support/dashboard/trends', { headers });
+      if (trendsRes.ok) setTrends(await trendsRes.json());
 
-    fetch('http://localhost:8081/api/support/dashboard/recent-activity', { headers })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => Array.isArray(data) ? setActivity(data) : setActivity([]))
-      .catch(() => setActivity([]));
+      const activityRes = await fetch('http://localhost:8081/api/support/dashboard/recent-activity', { headers });
+      if (activityRes.ok) setActivity(await activityRes.json());
+    } catch (err) {
+      console.error('Failed to fetch dashboard data', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
 
   return (
@@ -52,45 +57,54 @@ const SupportDashboard: React.FC = () => {
               <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#137fec]"></div>
             </label>
           </div>
-          <button className="px-4 py-2 bg-[#137fec] hover:bg-[#0f6bd0] text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-[#137fec] hover:bg-[#0f6bd0] text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
+          >
             <span className="material-symbols-outlined text-[16px]">add</span>
             New Ticket
           </button>
         </div>
       </header>
+
+      <NewTicketModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onCreated={() => fetchData()} 
+      />
       
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group">
+          <Link to="/support/incidents" className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group hover:border-primary/50 transition-all cursor-pointer">
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-white">inbox</span>
             </div>
             <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">Open Tickets</div>
-            <div className="text-2xl font-bold text-white">{stats?.open_tickets?.count || '...'}</div>
+            <div className="text-2xl font-bold text-white group-hover:text-primary transition-colors">{stats?.open_tickets?.count || '...'}</div>
             <div className={`text-[10px] ${stats?.open_tickets?.trend < 0 ? 'text-emerald-500' : 'text-rose-500'} flex items-center gap-1 mt-1`}>
               <span className="material-symbols-outlined text-[12px]">{stats?.open_tickets?.trend < 0 ? 'trending_down' : 'trending_up'}</span>
               {stats?.open_tickets?.trend}% vs yesterday
             </div>
-          </div>
+          </Link>
           
-          <div className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group">
+          <Link to="/support/reports" className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group hover:border-rose-500/50 transition-all cursor-pointer">
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-rose-500">timer_off</span>
             </div>
             <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">SLA Breaches (24h)</div>
-            <div className="text-2xl font-bold text-rose-500">{stats?.sla_breaches?.count || '...'}</div>
+            <div className="text-2xl font-bold text-rose-500 group-hover:scale-105 transition-transform origin-left">{stats?.sla_breaches?.count || '...'}</div>
             <div className="text-[10px] text-rose-500 mt-1">{stats?.sla_breaches?.priority} Priority</div>
-          </div>
+          </Link>
 
-          <div className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group">
+          <Link to="/support/logs" className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group hover:border-amber-500/50 transition-all cursor-pointer">
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-amber-500">error</span>
             </div>
             <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">Active Device Errors</div>
-            <div className="text-2xl font-bold text-amber-500">{stats?.active_errors?.count || '...'}</div>
+            <div className="text-2xl font-bold text-amber-500 group-hover:scale-105 transition-transform origin-left">{stats?.active_errors?.count || '...'}</div>
             <div className="text-[10px] text-[#92adc9] mt-1">{stats?.active_errors?.scope}</div>
-          </div>
+          </Link>
 
           <div className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group">
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -186,15 +200,28 @@ const SupportDashboard: React.FC = () => {
               </thead>
               <tbody className="text-sm">
                 {activity.map((item) => (
-                  <tr key={item.id} className="border-b border-[#233648] hover:bg-[#111a22]/50 transition-colors">
-                    <td className="px-4 py-3 text-white font-mono text-xs">#{item.id}</td>
-                    <td className="px-4 py-3 text-white">{item.subject}</td>
+                  <tr 
+                    key={item.id} 
+                    className="border-b border-[#233648] hover:bg-[#111a22] transition-colors group cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-white font-mono text-xs">
+                      <Link to={`/support/incidents/${item.id}`} className="hover:text-primary transition-colors">
+                        #{item.id}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-white group-hover:text-primary transition-colors">
+                      <Link to={`/support/incidents/${item.id}`} className="block w-full">
+                        {item.subject}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
-                        item.status === 'IN PROGRESS' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                      }`}>
-                        {item.status}
-                      </span>
+                      <Link to={`/support/incidents/${item.id}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+                          item.status === 'IN PROGRESS' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </Link>
                     </td>
                   </tr>
                 ))}

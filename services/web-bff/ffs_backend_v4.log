@@ -1,0 +1,26 @@
+warning: both GOPATH and GOROOT are the same directory (/home/abhishek/go); see https://go.dev/wiki/InstallTroubleshooting
+{"level":"error","ts":1770666668.6541398,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:34\nmain.main\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/cmd/main.go:112\nruntime.main\n\t/home/abhishek/go/src/runtime/proc.go:285"}
+{"level":"info","ts":1770666668.6547084,"caller":"cmd/main.go:188","msg":"Starting Web BFF service","port":"8081"}
+{"level":"info","ts":1770666682.0530128,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666708.4497802,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666733.619892,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666733.6240714,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770666733.6245613,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770666733.627191,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666733.6273274,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770666733.630592,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770666736.8566093,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666736.8568738,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770666736.857143,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770666736.8590782,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770666736.8628924,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770666736.8629518,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770666742.1349812,"caller":"handlers/support_handlers.go:189","msg":"Support incident detail request"}
+{"level":"info","ts":1770666742.1370523,"caller":"handlers/support_handlers.go:189","msg":"Support incident detail request"}
+{"level":"info","ts":1770666748.2118735,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770666748.21333,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770666753.7526898,"caller":"handlers/support_handlers.go:189","msg":"Support incident detail request"}
+{"level":"info","ts":1770666753.7543068,"caller":"handlers/support_handlers.go:189","msg":"Support incident detail request"}
+{"level":"error","ts":1770666968.7533405,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770666969.0068717,"caller":"handlers/support_handlers.go:189","msg":"Support incident detail request"}
+signal: killed

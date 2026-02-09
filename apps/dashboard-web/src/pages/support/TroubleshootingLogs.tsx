@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const TroubleshootingLogs: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,19 +39,23 @@ const TroubleshootingLogs: React.FC = () => {
               </thead>
               <tbody className="text-[13px] font-mono divide-y divide-[#233648]/50">
                 {logs.map((log, idx) => (
-                  <tr key={idx} className={`hover:bg-[#16202a] cursor-pointer transition-colors border-l-2 ${
-                    log.severity === 'ERROR' ? 'border-l-rose-500 bg-rose-500/5' : log.severity === 'WARN' ? 'border-l-amber-500 bg-amber-500/5' : 'border-l-transparent'
-                  }`}>
+                  <tr 
+                    key={idx} 
+                    onClick={() => navigate(`/support/logs?t=${log.timestamp}`)}
+                    className={`hover:bg-[#16202a] cursor-pointer transition-all border-l-2 active:bg-[#1c2a38] ${
+                      log.severity === 'ERROR' ? 'border-l-rose-500 bg-rose-500/5' : log.severity === 'WARN' ? 'border-l-amber-500 bg-amber-500/5' : 'border-l-transparent hover:border-l-primary/30'
+                    }`}
+                  >
                     <td className="px-4 py-2 text-[#92adc9] whitespace-nowrap">{log.timestamp}</td>
                     <td className="px-4 py-2">
                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                         log.severity === 'ERROR' ? 'bg-rose-500/20 text-rose-500 border-rose-500/30' : 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+                         log.severity === 'ERROR' ? 'bg-rose-500/20 text-rose-500 border-rose-500/30 shadow-[0_0_10px_rgba(244,63,94,0.1)]' : 'bg-amber-500/20 text-amber-500 border-amber-500/20'
                        }`}>
                          {log.severity}
                        </span>
                     </td>
-                    <td className="px-4 py-2 text-white">{log.module}</td>
-                    <td className="px-4 py-2 text-[#92adc9] truncate">{log.message}</td>
+                    <td className="px-4 py-2 text-white font-medium">{log.module}</td>
+                    <td className="px-4 py-2 text-[#92adc9] group-hover:text-white transition-colors">{log.message}</td>
                   </tr>
                 ))}
               </tbody>

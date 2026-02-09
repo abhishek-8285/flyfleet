@@ -108,6 +108,7 @@ import ResetPassword from './pages/ResetPassword';
 import SearchPage from './pages/SearchPage';
 import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
+import IncidentDetail from './pages/support/IncidentDetail';
 import IncidentManagement from './pages/support/IncidentManagement';
 import OrgConsole from './pages/support/OrgConsole';
 import SLAReports from './pages/support/SLAReports';
@@ -341,6 +342,16 @@ function App() {
                   <PrivateRoute>
                     <SupportLayout>
                       <IncidentManagement />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/incidents/:id"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <IncidentDetail />
                     </SupportLayout>
                   </PrivateRoute>
                 }

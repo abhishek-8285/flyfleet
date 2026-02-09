@@ -174,6 +174,10 @@ func main() {
 	mux.Handle("/api/support/orgs/overview", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetOrgOverview)))
 
 	mux.Handle("/api/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetIncidents)))
+	mux.Handle("/api/support/incidents/create", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.CreateIncident)))
+	mux.Handle("/api/support/incidents/detail", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetIncidentDetail)))
+	mux.Handle("/api/support/incidents/comment", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.PostComment)))
+	mux.Handle("/api/support/incidents/update", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.UpdateIncident)))
 	mux.Handle("/api/support/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetSystemLogs)))
 
 	// Server configuration
