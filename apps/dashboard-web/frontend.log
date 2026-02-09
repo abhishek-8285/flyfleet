@@ -1,0 +1,370 @@
+
+> @flyfleet/dashboard-web@0.1.0 start
+> react-scripts start
+
+(node:13012) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:13012) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:13012) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Compiled with warnings.
+
+[eslint] 
+src/components/auth/EnterpriseAuthLayout.tsx
+  Line 45:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 47:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 49:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/common/DataGrid.tsx
+  Line 56:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/common/Layout.tsx
+  Line 153:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 157:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/dashboard/ActivityFeed.tsx
+  Line 71:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/dashboard/AddVehicleModal.tsx
+  Line 12:12:  'vinError' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/documents/AddDocumentModal.tsx
+  Line 22:12:  'file' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/documents/DocumentList.tsx
+  Line 16:8:  React Hook useEffect has a missing dependency: 'fetchDocuments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/layout/Sidebar.tsx
+  Line 51:21:  'setCollapsed' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/maintenance/ServiceLogTable.tsx
+  Line 59:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 98:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 207:33:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/vehicles/VehicleMapCard.tsx
+  Line 5:11:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/ForgotPassword.tsx
+  Line 21:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/Landing.tsx
+  Line 97:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 98:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 99:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 200:33:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 375:25:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/pages/MFAOverrides.tsx
+  Line 10:13:  'user' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/SearchPage.tsx
+  Line 67:9:  'getStatusColor' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/Signup.tsx
+  Line 197:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 199:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/pages/VerifyEmail.tsx
+  Line 9:10:  'success' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/BulkUploads/JobDetail.tsx
+  Line 35:8:  React Hook useEffect has a missing dependency: 'fetchJobDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/FleetCommand/VehicleDetail.tsx
+  Line 20:8:  React Hook useEffect has a missing dependency: 'fetchVehicle'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/EditTrip.tsx
+  Line 22:6:  React Hook useEffect has a missing dependency: 'loadTrip'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripDetail.tsx
+  Line 34:9:  'navigate' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+  Line 40:6:  React Hook useEffect has a missing dependency: 'loadTrip'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripTelemetry.tsx
+  Line 24:6:  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripsList.tsx
+  Line 32:9:  'navigate' is assigned a value but never used                                                                 @typescript-eslint/no-unused-vars
+  Line 41:6:  React Hook useEffect has a missing dependency: 'loadTrips'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/billing/InvoiceDetail.tsx
+  Line 26:6:  React Hook useEffect has a missing dependency: 'fetchInvoice'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/billing/InvoiceForm.tsx
+  Line 35:6:  React Hook useEffect has missing dependencies: 'fetchInvoice' and 'isEdit'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/dr/BackupDetailView.tsx
+  Line 20:11:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/dr/DRTestDetailView.tsx
+  Line 62:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/dr/DetailRestorePage.tsx
+  Line 52:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/NotificationLogs.tsx
+  Line 34:6:  React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/UserPreferenceDetail.tsx
+  Line 50:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/UserPreferencesList.tsx
+  Line 32:6:  React Hook useEffect has a missing dependency: 'fetchPrefs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/rbac/RoleMatrix.tsx
+  Line 46:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/rbac/SecurityLogs.tsx
+  Line 17:28:  'setRefreshTrigger' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/AccessReview.tsx
+  Line 16:10:  'loading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/ActiveSessions.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/IPControls.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/LoginActivityLogs.tsx
+  Line 27:6:  React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/security/MFACenter.tsx
+  Line 19:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 28:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/ThreatAlerts.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/audit/AuditList.tsx
+  Line 19:12:  'total' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+  Line 49:8:   React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/audit/AuditPolicy.tsx
+  Line 41:8:  React Hook useEffect has a missing dependency: 'fetchPolicy'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/audit/EvidenceExport.tsx
+  Line 42:8:  React Hook useEffect has a missing dependency: 'fetchExports'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceDashboard.tsx
+  Line 34:6:  React Hook useEffect has a missing dependency: 'fetchDashboardData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceDiagnostics.tsx
+  Line 44:6:  React Hook useEffect has a missing dependency: 'fetchDeviceData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceTelemetry.tsx
+  Line 35:6:  React Hook useEffect has a missing dependency: 'fetchTelemetry'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 43:6:  React Hook useEffect has a missing dependency: 'fetchTelemetry'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/FirmwareManager.tsx
+  Line 41:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/RemoteCommands.tsx
+  Line 47:6:  React Hook useEffect has a missing dependency: 'fetchCommandHistory'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/integrations/components/ApiClientHub.tsx
+  Line 12:10:  'showKeyModal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/integrations/components/IntegrationLogs.tsx
+  Line 10:10:  'selectedLog' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  Line 10:23:  'setSelectedLog' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/maintenance/Inventory.tsx
+  Line 16:9:   'navigate' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  Line 21:10:  'showAddModal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/monitoring/layout/MonitoringLayout.tsx
+  Line 57:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 61:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src/components/auth/EnterpriseAuthLayout.tsx
+  Line 45:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 47:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 49:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/common/DataGrid.tsx
+  Line 56:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/common/Layout.tsx
+  Line 153:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 157:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/dashboard/ActivityFeed.tsx
+  Line 71:17:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/dashboard/AddVehicleModal.tsx
+  Line 12:12:  'vinError' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/documents/AddDocumentModal.tsx
+  Line 22:12:  'file' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/documents/DocumentList.tsx
+  Line 16:8:  React Hook useEffect has a missing dependency: 'fetchDocuments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/components/layout/Sidebar.tsx
+  Line 51:21:  'setCollapsed' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/components/maintenance/ServiceLogTable.tsx
+  Line 59:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 98:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 207:33:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/components/vehicles/VehicleMapCard.tsx
+  Line 5:11:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/ForgotPassword.tsx
+  Line 21:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/Landing.tsx
+  Line 97:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 98:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 99:33:   The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 200:33:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 375:25:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/pages/MFAOverrides.tsx
+  Line 10:13:  'user' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/SearchPage.tsx
+  Line 67:9:  'getStatusColor' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/Signup.tsx
+  Line 197:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 199:15:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+src/pages/VerifyEmail.tsx
+  Line 9:10:  'success' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/BulkUploads/JobDetail.tsx
+  Line 35:8:  React Hook useEffect has a missing dependency: 'fetchJobDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/FleetCommand/VehicleDetail.tsx
+  Line 20:8:  React Hook useEffect has a missing dependency: 'fetchVehicle'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/EditTrip.tsx
+  Line 22:6:  React Hook useEffect has a missing dependency: 'loadTrip'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripDetail.tsx
+  Line 34:9:  'navigate' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+  Line 40:6:  React Hook useEffect has a missing dependency: 'loadTrip'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripTelemetry.tsx
+  Line 24:6:  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/Trips/TripsList.tsx
+  Line 32:9:  'navigate' is assigned a value but never used                                                                 @typescript-eslint/no-unused-vars
+  Line 41:6:  React Hook useEffect has a missing dependency: 'loadTrips'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/billing/InvoiceDetail.tsx
+  Line 26:6:  React Hook useEffect has a missing dependency: 'fetchInvoice'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/billing/InvoiceForm.tsx
+  Line 35:6:  React Hook useEffect has missing dependencies: 'fetchInvoice' and 'isEdit'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/dr/BackupDetailView.tsx
+  Line 20:11:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/dr/DRTestDetailView.tsx
+  Line 62:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/dr/DetailRestorePage.tsx
+  Line 52:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/NotificationLogs.tsx
+  Line 34:6:  React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/UserPreferenceDetail.tsx
+  Line 50:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/notifications/UserPreferencesList.tsx
+  Line 32:6:  React Hook useEffect has a missing dependency: 'fetchPrefs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/rbac/RoleMatrix.tsx
+  Line 46:8:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/rbac/SecurityLogs.tsx
+  Line 17:28:  'setRefreshTrigger' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/AccessReview.tsx
+  Line 16:10:  'loading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/ActiveSessions.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/IPControls.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/LoginActivityLogs.tsx
+  Line 27:6:  React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/admin/security/MFACenter.tsx
+  Line 19:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 28:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/admin/security/ThreatAlerts.tsx
+  Line 18:10:  'loading' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  Line 26:13:  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/audit/AuditList.tsx
+  Line 19:12:  'total' is assigned a value but never used                                                                    @typescript-eslint/no-unused-vars
+  Line 49:8:   React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/audit/AuditPolicy.tsx
+  Line 41:8:  React Hook useEffect has a missing dependency: 'fetchPolicy'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/audit/EvidenceExport.tsx
+  Line 42:8:  React Hook useEffect has a missing dependency: 'fetchExports'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceDashboard.tsx
+  Line 34:6:  React Hook useEffect has a missing dependency: 'fetchDashboardData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceDiagnostics.tsx
+  Line 44:6:  React Hook useEffect has a missing dependency: 'fetchDeviceData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/DeviceTelemetry.tsx
+  Line 35:6:  React Hook useEffect has a missing dependency: 'fetchTelemetry'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 43:6:  React Hook useEffect has a missing dependency: 'fetchTelemetry'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/FirmwareManager.tsx
+  Line 41:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/devices/RemoteCommands.tsx
+  Line 47:6:  React Hook useEffect has a missing dependency: 'fetchCommandHistory'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/integrations/components/ApiClientHub.tsx
+  Line 12:10:  'showKeyModal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/integrations/components/IntegrationLogs.tsx
+  Line 10:10:  'selectedLog' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  Line 10:23:  'setSelectedLog' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/maintenance/Inventory.tsx
+  Line 16:9:   'navigate' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  Line 21:10:  'showAddModal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/pages/monitoring/layout/MonitoringLayout.tsx
+  Line 57:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+  Line 61:21:  The href attribute requires a valid value to be accessible. Provide a valid, navigable address as the href value. If you cannot provide a valid href, but still need the element to resemble a link, use a button and change it with appropriate styles. Learn more: https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/HEAD/docs/rules/anchor-is-valid.md  jsx-a11y/anchor-is-valid
+
+webpack compiled with 1 warning
+No issues found.
+(node:13012) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+The build failed because the process exited too early. This probably means the system ran out of memory or someone called `kill -9` on the process.
+npm error Lifecycle script `start` failed with error:
+npm error code 1
+npm error path /home/abhishek/Desktop/flyfleet/apps/dashboard-web
+npm error workspace @flyfleet/dashboard-web@0.1.0
+npm error location /home/abhishek/Desktop/flyfleet/apps/dashboard-web
+npm error command failed
+npm error command sh -c react-scripts start

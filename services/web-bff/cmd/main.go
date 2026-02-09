@@ -32,6 +32,9 @@ func main() {
 	assetHandlers := handlers.NewAssetHandlers(cfg, logger)
 	settingsHandlers := handlers.NewSettingsHandlers(cfg, logger)
 	integrationsHandlers := handlers.NewIntegrationsHandlers(cfg, logger)
+	monitoringHandlers := handlers.NewMonitoringHandlers(cfg, logger)
+	searchHandlers := handlers.NewSearchHandlers(cfg, logger)
+	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger)
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 	
 	// Setup routes
@@ -137,6 +140,41 @@ func main() {
 	mux.Handle("/api/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
 	mux.Handle("/api/firmware", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
 	mux.Handle("/api/firmware/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
+
+	// Monitoring Module (Mock Data - Phase 1)
+	// Using ResourceSystem for now, or fallback to ResourceOrganizations if System not available in security package
+	// TODO: Create specific ResourceMonitoring constant
+	mux.Handle("/api/v1/admin/monitoring/health", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetSystemHealth)))
+	mux.Handle("/api/v1/admin/monitoring/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetMetrics)))
+	mux.Handle("/api/v1/admin/monitoring/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetLogs)))
+	mux.Handle("/api/v1/admin/monitoring/queues", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetQueues)))
+	mux.Handle("/api/v1/admin/monitoring/sla", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetSLA)))
+
+	// Global Search Module
+	mux.Handle("/api/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GlobalSearch)))
+	mux.Handle("/api/search/suggestions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSearchSuggestions)))
+	mux.Handle("/api/search/facets", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSearchFacets)))
+	mux.Handle("/api/search/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetRecentSearches)))
+	mux.Handle("/api/search/saved", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSavedSearches)))
+
+	// Activity Timeline Module
+	mux.Handle("/api/timeline", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimeline)))
+	mux.Handle("/api/timeline/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineStats)))
+	mux.Handle("/api/timeline/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineFilters)))
+
+	// FleetSupport Module (New)
+	supportHandlers := handlers.NewSupportHandlers(cfg, logger)
+	mux.Handle("/api/support/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardStats)))
+	mux.Handle("/api/support/dashboard/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardTrends)))
+	mux.Handle("/api/support/dashboard/recent-activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentActivity)))
+
+	mux.Handle("/api/support/users/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserProfile)))
+	mux.Handle("/api/support/users/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
+
+	mux.Handle("/api/support/orgs/overview", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetOrgOverview)))
+
+	mux.Handle("/api/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetIncidents)))
+	mux.Handle("/api/support/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetSystemLogs)))
 
 	// Server configuration
 	srv := &http.Server{

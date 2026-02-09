@@ -23,6 +23,8 @@ const Layout: React.FC = () => {
     { path: '/dashboard/vehicles', label: 'Fleet', icon: 'directions_car' },
     { path: '/dashboard/drivers', label: 'Drivers', icon: 'badge' }, 
     { path: '/dashboard/maintenance', label: 'Maintenance', icon: 'build' },
+    { path: '/dashboard/search', label: 'Global Search', icon: 'search' },
+    { path: '/dashboard/timeline', label: 'Timeline', icon: 'history' },
   ];
 
   const analyticsItems = [

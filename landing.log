@@ -12,3 +12,4 @@
  GET / 200 in 152ms (compile: 7ms, render: 145ms)
  GET /icons/icon-192x192.png 404 in 157ms (compile: 80ms, render: 78ms)
  GET /icons/icon-192x192.png 404 in 51ms (compile: 5ms, render: 45ms)
+[?25h

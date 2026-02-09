@@ -1,0 +1,31 @@
+warning: both GOPATH and GOROOT are the same directory (/home/abhishek/go); see https://go.dev/wiki/InstallTroubleshooting
+{"level":"error","ts":1770664915.0700886,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:34\nmain.main\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/cmd/main.go:112\nruntime.main\n\t/home/abhishek/go/src/runtime/proc.go:285"}
+{"level":"info","ts":1770664915.0706823,"caller":"cmd/main.go:187","msg":"Starting Web BFF service","port":"8081"}
+{"level":"info","ts":1770664922.428422,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664922.4321337,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664922.432592,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770664922.433105,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664922.43604,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770664922.4361272,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664926.72881,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664926.7290924,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664926.729174,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770664926.7332,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664926.7332406,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664926.7333152,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770664942.084468,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770664942.0872672,"caller":"handlers/support_handlers.go:144","msg":"Support incidents request"}
+{"level":"info","ts":1770664947.4949415,"caller":"handlers/support_handlers.go:171","msg":"Support system logs request"}
+{"level":"info","ts":1770664947.4969213,"caller":"handlers/support_handlers.go:171","msg":"Support system logs request"}
+{"level":"info","ts":1770664953.2106702,"caller":"handlers/support_handlers.go:90","msg":"Support user profile request"}
+{"level":"info","ts":1770664953.2156498,"caller":"handlers/support_handlers.go:107","msg":"Support user sessions request"}
+{"level":"info","ts":1770664953.218144,"caller":"handlers/support_handlers.go:90","msg":"Support user profile request"}
+{"level":"info","ts":1770664953.2220793,"caller":"handlers/support_handlers.go:107","msg":"Support user sessions request"}
+{"level":"info","ts":1770664959.8511834,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770664959.8529642,"caller":"handlers/support_handlers.go:126","msg":"Support org overview request"}
+{"level":"info","ts":1770664966.5986369,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664966.607071,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664966.60762,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770664966.611116,"caller":"handlers/support_handlers.go:26","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770664966.6111588,"caller":"handlers/support_handlers.go:53","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770664966.61491,"caller":"handlers/support_handlers.go:61","msg":"Support dashboard recent activity request"}

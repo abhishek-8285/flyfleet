@@ -19,10 +19,25 @@ module.exports = {
         "text-muted": "#92adc9",
         "border-dark": "#233648", // keeping as alias
         "text-secondary": "#92adc9", // keeping as alias
+        
+        // Monitoring Module Specific
+        "monitor-primary": "#ec5b13",
+        "monitor-primary-dark": "#d44908",
+        "monitor-bg-light": "#f6f7f8",
+        "monitor-bg-dark": "#0b1219",
+        "monitor-surface": "#16202a",
+        "monitor-surface-darker": "#111a22",
+        "monitor-border": "#233648",
+        "monitor-text-muted": "#92adc9",
+        "monitor-success": "#10b981",
+        "monitor-warning": "#f59e0b",
+        "monitor-danger": "#ef4444",
       },
       fontFamily: {
         "display": ["Inter", "sans-serif"],
-        "body": ["Inter", "sans-serif"]
+        "body": ["Inter", "sans-serif"],
+        "public-sans": ["Public Sans", "sans-serif"],
+        "mono": ["JetBrains Mono", "monospace"]
       },
       borderRadius: {
         "lg": "0.75rem",

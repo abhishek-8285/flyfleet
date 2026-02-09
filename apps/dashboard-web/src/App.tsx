@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/common/Layout';
 import { AdminLayout } from './components/layout/AdminLayout';
+import SupportLayout from './components/support/SupportLayout';
 import { AuthProvider } from './context/AuthProvider';
 import { RBACProvider } from './context/RBACProvider';
 import AddFuelLog from './pages/AddFuelLog';
@@ -95,11 +96,24 @@ import MFAExceptions from './pages/MFAExceptions';
 import MFAOverrides from './pages/MFAOverrides';
 import MFAPolicyEditor from './pages/MFAPolicyEditor';
 import MFAVerify from './pages/MFAVerify';
+import MonitoringLayout from './pages/monitoring/layout/MonitoringLayout';
+import LogViewer from './pages/monitoring/LogViewer';
+import MetricsHub from './pages/monitoring/MetricsHub';
+import QueueMonitor from './pages/monitoring/QueueMonitor';
+import SLAReport from './pages/monitoring/SLAReport';
+import SystemHealth from './pages/monitoring/SystemHealth';
 import OrgSelection from './pages/OrgSelection';
 import Reports from './pages/Reports';
 import ResetPassword from './pages/ResetPassword';
+import SearchPage from './pages/SearchPage';
 import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
+import IncidentManagement from './pages/support/IncidentManagement';
+import OrgConsole from './pages/support/OrgConsole';
+import SupportDashboard from './pages/support/SupportDashboard';
+import TroubleshootingLogs from './pages/support/TroubleshootingLogs';
+import UserConsole from './pages/support/UserConsole';
+import TimelinePage from './pages/TimelinePage';
 import Trips from './pages/Trips';
 import TrustedDevices from './pages/TrustedDevices';
 import VehicleDetails from './pages/VehicleDetails';
@@ -140,6 +154,8 @@ function App() {
                 }
               >
                 <Route index element={<Dashboard />} />
+                <Route path="search" element={<SearchPage />} />
+                <Route path="timeline" element={<TimelinePage />} />
                 <Route path="map" element={<LiveMap />} />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
@@ -276,7 +292,88 @@ function App() {
                 <Route path="devices/firmware" element={<FirmwareManager />} />
                 
                 {/* Future: etc */}
+              <Route path="devices/firmware" element={<FirmwareManager />} />
+                
+                {/* Future: etc */}
               </Route>
+
+              {/* Monitoring Module - Custom Layout */}
+              <Route
+                path="/admin/monitoring"
+                element={
+                  <PrivateRoute>
+                    <MonitoringLayout />
+                  </PrivateRoute>
+                }
+              >
+                <Route index element={<SystemHealth />} />
+                <Route path="metrics" element={<MetricsHub />} />
+                <Route path="logs" element={<LogViewer />} />
+                <Route path="jobs" element={<QueueMonitor />} />
+                <Route path="sla" element={<SLAReport />} />
+              </Route>
+
+              {/* FleetSupport Module */}
+              <Route
+                path="/support"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <SupportDashboard />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/dashboard"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <SupportDashboard />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/incidents"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <IncidentManagement />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/logs"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <TroubleshootingLogs />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/user-console"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <UserConsole />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/support/org-console"
+                element={
+                  <PrivateRoute>
+                    <SupportLayout>
+                      <OrgConsole />
+                    </SupportLayout>
+                  </PrivateRoute>
+                }
+              />
             </Routes>
           </BrowserRouter>
         </RBACProvider>
