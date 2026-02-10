@@ -4,6 +4,23 @@ import (
 	"time"
 )
 
+// Validation constants
+const (
+	MaxTitleLength          = 100
+	MaxDescriptionLength    = 500
+	MaxNotesLength          = 500
+	MinRouteWaypoints       = 2
+	MaxPhotoCount           = 10
+	MinFuelLevel            = 0.0
+	MaxFuelLevel            = 100.0
+	MinDistanceKm           = 0.0
+	MinDurationMinutes      = 0
+	MinOdometerReading      = 0.0
+	MinFuelConsumedLiters   = 0.0
+	MinIdlingTimeMinutes    = 0
+	MinPODDocuments         = 1
+)
+
 // Trip represents a vehicle journey
 type Trip struct {
 	ID                   string             `json:"id" db:"id"`
@@ -103,10 +120,10 @@ type Recipient struct {
 type CreateTripRequest struct {
 	VehicleID           string       `json:"vehicle_id" validate:"required,uuid4"`
 	DriverID            string       `json:"driver_id" validate:"required,uuid4"`
-	Title               string       `json:"title" validate:"required,max=100"`
-	Description         string       `json:"description" validate:"max=500"`
-	PlannedRoute        []Waypoint   `json:"planned_route" validate:"required,min=2"`
-	Waypoints           []Waypoint   `json:"waypoints" validate:"required,min=2"`
+	Title               string       `json:"title" validate:"required,max=100"` // TODO: Change to max=MaxTitleLength
+	Description         string       `json:"description" validate:"max=500"` // TODO: Change to max=MaxDescriptionLength
+	PlannedRoute        []Waypoint   `json:"planned_route" validate:"required,min=2"` // TODO: Change to min=MinRouteWaypoints
+	Waypoints           []Waypoint   `json:"waypoints" validate:"required,min=2"` // TODO: Change to min=MinRouteWaypoints
 	EstimatedDistanceKm float64      `json:"estimated_distance_km" validate:"required,gt=0"`
 	EstimatedDurationMin int        `json:"estimated_duration_min" validate:"required,gt=0"`
 	CargoDetails        CargoDetails `json:"cargo_details" validate:"required"`
@@ -134,19 +151,19 @@ type UpdateTripRequest struct {
 // StartTripRequest represents the request body for starting a trip
 type StartTripRequest struct {
 	OdometerReading float64 `json:"odometer_reading" validate:"required,gt=0"`
-	FuelLevel       float64 `json:"fuel_level" validate:"required,gte=0,lte=100"`
-	Notes           string  `json:"notes" validate:"max=500"`
+	FuelLevel       float64 `json:"fuel_level" validate:"required,gte=0,lte=100"` // TODO: Change to gte=MinFuelLevel,lte=MaxFuelLevel
+	Notes           string  `json:"notes" validate:"max=500"` // TODO: Change to max=MaxNotesLength
 }
 
 // CompleteTripRequest represents the request body for completing a trip
 type CompleteTripRequest struct {
 	OdometerReading    float64       `json:"odometer_reading" validate:"required,gt=0"`
-	FuelLevel          float64       `json:"fuel_level" validate:"required,gte=0,lte=100"`
+	FuelLevel          float64       `json:"fuel_level" validate:"required,gte=0,lte=100"` // TODO: Change to gte=MinFuelLevel,lte=MaxFuelLevel
 	ActualDistanceKm   float64       `json:"actual_distance_km" validate:"required,gt=0"`
 	FuelConsumedLiters float64       `json:"fuel_consumed_liters" validate:"required,gte=0"`
 	IdlingTimeMinutes  int           `json:"idling_time_minutes" validate:"gte=0"`
 	PODDocuments       []PODDocument `json:"pod_documents" validate:"required,min=1"`
-	Notes              string        `json:"notes" validate:"max=500"`
+	Notes              string        `json:"notes" validate:"max=500"` // TODO: Change to max=MaxNotesLength
 }
 
 // AddEventRequest represents the request body for adding trip events
@@ -154,7 +171,7 @@ type AddEventRequest struct {
 	Type        string   `json:"type" validate:"required,oneof=arrival departure delivery_attempt delivery_success delivery_failed delay breakdown accident"`
 	Location    Location `json:"location" validate:"required"`
 	Description string   `json:"description" validate:"required,max=500"`
-	Photos      []string `json:"photos" validate:"max=10"`
+	Photos      []string `json:"photos" validate:"max=10"` // TODO: Change to max=MaxPhotoCount
 }
 
 // SubmitPODRequest represents the request body for submitting proof of delivery

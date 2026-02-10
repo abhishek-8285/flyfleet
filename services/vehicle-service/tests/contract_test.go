@@ -1,3 +1,8 @@
+const (
+	TestLimitMax = 100
+	TestTelemetryLimitMax = 500
+)
+
 package contract_test
 
 import (
@@ -288,7 +293,7 @@ func TestSpec_ListTrips_Parameters(t *testing.T) {
 			if schema.Min == nil || *schema.Min != 1 {
 				t.Error("limit should have minimum: 1")
 			}
-			if schema.Max == nil || *schema.Max != 100 {
+			if schema.Max == nil || *schema.Max != TestLimitMax {
 				t.Error("limit should have maximum: 100")
 			}
 		}
@@ -310,7 +315,7 @@ func TestSpec_GetTelemetry_LimitParameter(t *testing.T) {
 	for _, param := range telemetryPath.Get.Parameters {
 		if param.Value.Name == "limit" {
 			schema := param.Value.Schema.Value
-			if schema.Max == nil || *schema.Max != 500 {
+			if schema.Max == nil || *schema.Max != TestTelemetryLimitMax {
 				t.Error("telemetry limit should have maximum: 500")
 			}
 		}

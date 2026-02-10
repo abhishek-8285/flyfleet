@@ -4,7 +4,7 @@ const OrgConsole: React.FC = () => {
   const [org, setOrg] = useState<any>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     fetch('/api/support/orgs/overview', {
       headers: { 'Authorization': `Bearer ${token}` }
     })

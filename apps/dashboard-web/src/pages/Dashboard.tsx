@@ -129,8 +129,8 @@ const Dashboard = () => {
                 </div>
                 
                 <footer className="mt-8 text-center text-xs text-[#64748b] pb-6 flex flex-col items-center gap-1">
-                    <span>© 2026 Enterprise Fleet Manager. All rights reserved.</span>
-                    <span className="text-[10px]">v2.4.1 | Server Time: <span className="font-mono">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC</span></span>
+                    <span>© 2026 FlyFleet Global Operations. All rights reserved.</span>
+                    <span className="text-[10px]">v2.5.0-PRO | Node: {window.location.hostname} | Server Time: <span className="font-mono">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC</span></span>
                 </footer>
             </div>
         </div>

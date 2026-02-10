@@ -1,3 +1,5 @@
+const TestUserEmail = "user@example.com"
+
 package integration_tests
 
 import (
@@ -16,7 +18,7 @@ import (
 func TestNotificationRepository_Integration(t *testing.T) {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+		dbURL = ""
 	}
 
 	ctx := context.Background()

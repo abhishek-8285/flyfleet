@@ -1135,7 +1135,8 @@ func parseBoolParam(param string) *bool {
 
 // parsePaginationParams parses limit and offset from query parameters
 func parsePaginationParams(values map[string][]string) (int, int) {
-	limit := 10 // default limit
+	DefaultQueryLimit := 10
+	limit := DefaultQueryLimit // default limit
 	if limitStrs, ok := values["limit"]; ok && len(limitStrs) > 0 {
 		limitStr := limitStrs[0]
 		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
@@ -1152,7 +1153,8 @@ func parsePaginationParams(values map[string][]string) (int, int) {
 	}
 
 	// Limit maximum limit to prevent abuse
-	if limit > 100 {
+	MaxQueryLimit := 100
+	if limit > MaxQueryLimit {
 		limit = 100
 	}
 

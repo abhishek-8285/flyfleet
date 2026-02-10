@@ -18,13 +18,13 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"),
-		JWTSecret:         getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
+		DatabaseURL: getEnv("DATABASE_URL", ""),
+		JWTSecret:         getEnv("JWT_SECRET", ""),
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
-		DriverServiceURL:  getEnv("DRIVER_SERVICE_URL", "http://localhost:8083/api/v1"),
-		VehicleServiceURL: getEnv("VEHICLE_SERVICE_URL", "http://localhost:8084/api/v1"),
-		TripServiceURL:    getEnv("TRIP_SERVICE_URL", "http://localhost:8082/api/v1"),
-		AlertServiceURL:   getEnv("ALERT_SERVICE_URL", "http://localhost:8085/api/v1"),
+		DriverServiceURL:  getEnv("DRIVER_SERVICE_URL", ""),
+		VehicleServiceURL: getEnv("VEHICLE_SERVICE_URL", ""),
+		TripServiceURL:    getEnv("TRIP_SERVICE_URL", ""),
+		AlertServiceURL:   getEnv("ALERT_SERVICE_URL", ""),
 	}
 }
 

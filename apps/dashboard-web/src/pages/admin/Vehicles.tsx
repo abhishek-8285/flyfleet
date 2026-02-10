@@ -1,4 +1,4 @@
-import { PlusIcon, SignalIcon, TruckIcon, UserIcon } from '@heroicons/react/24/outline';
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
@@ -34,51 +34,52 @@ export const Vehicles: React.FC = () => {
     }, []);
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Fleet Vehicles</h1>
-                    <p className="text-slate-500 mt-2">Manage your transport assets and assignments.</p>
-                </div>
+        <div className="w-full">
+            <div className="mb-6">
+                <h1 className="text-white text-2xl font-bold mb-1">Fleet Vehicles</h1>
+                <p className="text-text-muted text-sm">Manage your transport assets and assignments.</p>
+            </div>
+            
+            <div className="mb-6 flex justify-end">
                 <button 
                     onClick={() => navigate('/admin/vehicles/new')}
-                    className="flex items-center space-x-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-900/20"
+                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
                 >
-                    <PlusIcon className="h-5 w-5" />
-                    <span>Add Vehicle</span>
+                    <span className="material-symbols-outlined text-[16px]">add</span>
+                    Add Vehicle
                 </button>
             </div>
 
             {loading ? (
-                <div className="text-center py-20 text-slate-400">Loading fleet data...</div>
+                <div className="text-center py-20 text-text-muted">Loading fleet data...</div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {vehicles.map((vehicle) => (
                         <div 
                             key={vehicle.id}
                             onClick={() => navigate(`/admin/vehicles/${vehicle.id}`)}
-                            className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+                            className="bg-surface-dark p-6 rounded-xl border border-border-color hover:border-primary/30 transition-all cursor-pointer group"
                         >
                             <div className="flex justify-between items-start mb-4">
-                                <div className="p-3 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                    <TruckIcon className="h-6 w-6" />
+                                <div className="p-3 bg-primary/10 rounded-xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined text-[24px]">local_shipping</span>
                                 </div>
                                 <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
-                                    vehicle.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                                    vehicle.status === 'active' ? 'bg-success/20 text-success' : 'bg-text-muted/20 text-text-muted'
                                 }`}>
                                     {vehicle.status}
                                 </span>
                             </div>
                             
-                            <h3 className="text-lg font-bold text-slate-900">{vehicle.name || 'Unnamed Vehicle'}</h3>
-                            <p className="text-slate-500 text-sm font-mono mt-1">{vehicle.license_plate}</p>
+                            <h3 className="text-lg font-bold text-white">{vehicle.name || 'Unnamed Vehicle'}</h3>
+                            <p className="text-text-muted text-sm font-mono mt-1">{vehicle.license_plate}</p>
                             
-                            <div className="mt-6 pt-4 border-t border-slate-50 flex justify-between text-sm text-slate-400">
+                            <div className="mt-6 pt-4 border-t border-border-color flex justify-between text-sm text-text-muted">
                                 <span className="flex items-center">
-                                    <UserIcon className="h-4 w-4 mr-1" /> No Driver
+                                    <span className="material-symbols-outlined text-[16px] mr-1">person</span> No Driver
                                 </span>
                                 <span className="flex items-center">
-                                    <SignalIcon className="h-4 w-4 mr-1" /> No Device
+                                    <span className="material-symbols-outlined text-[16px] mr-1">devices</span> No Device
                                 </span>
                             </div>
                         </div>
@@ -88,9 +89,9 @@ export const Vehicles: React.FC = () => {
                     {vehicles.length === 0 && (
                         <div 
                             onClick={() => navigate('/admin/vehicles/new')}
-                            className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:border-blue-300 hover:text-blue-500 cursor-pointer transition-colors min-h-[200px]"
+                            className="border-2 border-dashed border-border-color rounded-xl p-6 flex flex-col items-center justify-center text-text-muted hover:border-primary/50 hover:text-primary cursor-pointer transition-colors min-h-[200px]"
                         >
-                            <PlusIcon className="h-8 w-8 mb-2" />
+                            <span className="material-symbols-outlined text-[32px] mb-2">add</span>
                             <span className="font-medium">Register First Vehicle</span>
                         </div>
                     )}

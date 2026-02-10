@@ -1,5 +1,0 @@
-warning: both GOPATH and GOROOT are the same directory (/home/abhishek/go); see https://go.dev/wiki/InstallTroubleshooting
-{"level":"info","ts":1770648988.0541043,"caller":"cmd/main.go:79","msg":"Starting integrations-service","port":"8087"}
-2026/02/09 20:27:23 [abhishek/NslYZjstkd-000001] "GET http://localhost:8087/api/v1/webhooks/ HTTP/1.1" from [::1]:32988 - 200 319B in 3.571657ms
-2026/02/09 20:28:33 [abhishek/NslYZjstkd-000002] "GET http://localhost:8087/api/v1/api-clients/ HTTP/1.1" from [::1]:51142 - 200 298B in 1.937913ms
-2026/02/09 20:28:33 [abhishek/NslYZjstkd-000003] "GET http://localhost:8087/api/v1/integrations/ HTTP/1.1" from [::1]:51146 - 200 307B in 1.386958ms

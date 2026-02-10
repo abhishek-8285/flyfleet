@@ -43,12 +43,12 @@ type WorkOrder struct {
 	VehicleID       uuid.UUID           `json:"vehicle_id" db:"vehicle_id"`
 	Title           string              `json:"title" db:"title"`
 	Description     string              `json:"description" db:"description"`
-	MaintenanceType MaintenanceTypeEnum `json:"maintenance_type" db:"maintenance_type"`
+	MaintenanceType MaintenanceTypeEnum `json:"type" db:"maintenance_type"`
 	Priority        WorkOrderPriority   `json:"priority" db:"priority"`
 	Status          WorkOrderStatus     `json:"status" db:"status"`
 	AssignedTo      *uuid.UUID          `json:"assigned_to,omitempty" db:"assigned_to"`
 	ScheduledDate   *time.Time          `json:"scheduled_date,omitempty" db:"scheduled_date"`
-	CompletedDate   *time.Time          `json:"completed_date,omitempty" db:"completed_date"`
+	CompletedDate   *time.Time          `json:"completion_date,omitempty" db:"completed_date"`
 	EstimatedCost   float64             `json:"estimated_cost" db:"estimated_cost"`
 	ActualCost      float64             `json:"actual_cost" db:"actual_cost"`
 	CreatedBy       uuid.UUID           `json:"created_by" db:"created_by"`
@@ -100,10 +100,10 @@ type InventoryPart struct {
 	PartNumber        string    `json:"part_number" db:"part_number"`
 	Name              string    `json:"name" db:"name"`
 	Description       string    `json:"description,omitempty" db:"description"`
-	StockLocation     string    `json:"stock_location,omitempty" db:"stock_location"`
-	QuantityAvailable int       `json:"quantity_available" db:"quantity_available"`
+	StockLocation     string    `json:"location,omitempty" db:"stock_location"`
+	QuantityAvailable int       `json:"quantity" db:"quantity_available"`
 	ReorderLevel      int       `json:"reorder_level" db:"reorder_level"`
-	UnitCost          float64   `json:"unit_cost" db:"unit_cost"`
+	UnitCost          float64   `json:"unit_price" db:"unit_cost"`
 	CreatedAt         time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
 }

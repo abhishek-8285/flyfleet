@@ -106,3 +106,5 @@ export const Roles: React.FC = () => {
       </div>
     );
 };
+
+export default Roles;

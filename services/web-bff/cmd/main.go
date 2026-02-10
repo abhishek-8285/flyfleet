@@ -35,10 +35,15 @@ func main() {
 	monitoringHandlers := handlers.NewMonitoringHandlers(cfg, logger)
 	searchHandlers := handlers.NewSearchHandlers(cfg, logger)
 	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger)
+	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger)
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 	
 	// Setup routes
 	mux := http.NewServeMux()
+
+	// Dashboard & Global Stats
+	mux.Handle("/api/v1/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(dashboardHandlers.GetGlobalStats)))
+	mux.Handle("/api/v1/admin/organizations/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(dashboardHandlers.GetOrganizationStats)))
 	
 	// Health check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +66,10 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/profile", mfaHandlers.ProxyProfile)
 	mux.HandleFunc("/api/v1/admin/organizations/", mfaHandlers.ProxyOrganization)
 	mux.HandleFunc("/api/v1/admin/organizations", mfaHandlers.ProxyOrganization)
+	mux.HandleFunc("/api/v1/admin/alerts/", mfaHandlers.ProxyAlerts)
+	mux.HandleFunc("/api/v1/admin/alerts", mfaHandlers.ProxyAlerts)
+	mux.HandleFunc("/api/v1/admin/users/", mfaHandlers.ProxyUsers)
+	mux.HandleFunc("/api/v1/admin/users", mfaHandlers.ProxyUsers)
 	
 	// Security endpoints (RBAC Enforcement - Centralized)
 	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
@@ -85,6 +94,7 @@ func main() {
 	mux.Handle("/api/v1/admin/documents/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyDocument)))
 	mux.Handle("/api/v1/admin/bulk-jobs/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyBulkJobs))) // Bulk Jobs share vehicle resource
 	mux.Handle("/api/v1/admin/trips/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
+	mux.Handle("/api/v1/admin/trips", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
 
 	// Maintenance Module (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/work-orders/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))

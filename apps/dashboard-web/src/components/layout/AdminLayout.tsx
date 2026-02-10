@@ -4,22 +4,51 @@ import { Sidebar } from './Sidebar';
 
 export const AdminLayout: React.FC = () => {
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-end px-8 shadow-sm">
-           {/* Top Bar content like User Profile dropdown could go here if moving from Sidebar */}
-           <div className="flex items-center space-x-4">
-              <span className="text-sm text-slate-500">Admin Portal</span>
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                 A
+      <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-white text-lg font-bold">FlyFleet Admin Portal</h2>
+              <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5 uppercase tracking-wide font-medium">
+                <span>Enterprise Management</span>
+                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                <span className="text-white">Dashboard</span>
               </div>
-           </div>
+            </div>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+              Live: Production
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+              <input 
+                className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" 
+                placeholder="Search..." 
+                type="text" 
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-center bg-no-repeat bg-cover rounded-full size-8 border-2 border-border-color" 
+                   style={{backgroundImage: 'url("https://ui-avatars.com/api/?name=A&background=137fec&color=fff")'}}>
+              </div>
+              <div className="flex flex-col overflow-hidden">
+                <span className="text-sm font-medium text-white truncate">Admin User</span>
+                <span className="text-xs text-text-muted truncate">System Administrator</span>
+              </div>
+              <button className="ml-auto text-text-muted hover:text-white">
+                <span className="material-symbols-outlined text-[20px]">logout</span>
+              </button>
+            </div>
+          </div>
         </header>
-        <main className="flex-1 overflow-auto bg-slate-50">
+        <div className="flex-1 overflow-auto custom-scrollbar p-6">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

@@ -9,7 +9,7 @@ const SupportDashboard: React.FC = () => {
     const [autoRefresh, setAutoRefresh] = useState(true);
 
     const fetchData = async () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

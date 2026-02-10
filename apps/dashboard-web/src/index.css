@@ -47,29 +47,56 @@
     scrollbar-width: none;
   }
 
-  /* Premium Custom Scrollbar */
+  /* Premium Custom Scrollbar - Match Canonical Styling */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+    background: #111a22;
+    border-radius: 4px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.1);
-    border-radius: 10px;
+    background: #233648;
+    border-radius: 4px;
     transition: all 0.2s ease;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(19, 127, 236, 0.3);
+    background: #2d4255;
   }
 
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.1) transparent;
+    scrollbar-color: #233648 #111a22;
+  }
+
+  /* Global scrollbar styles for dark theme */
+  html.dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  html.dark ::-webkit-scrollbar-track {
+    background: #111a22;
+    border-radius: 4px;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    background: #233648;
+    border-radius: 4px;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: #2d4255;
+  }
+
+  /* Firefox scrollbar */
+  html.dark {
+    scrollbar-width: thin;
+    scrollbar-color: #233648 #111a22;
   }
 
   .mobile-frame {

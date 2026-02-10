@@ -1,4 +1,4 @@
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+
 import React, { useState } from 'react';
 import { DataGrid } from '../../components/common/DataGrid';
 import apiClient from '../../services/apiClient';
@@ -33,7 +33,7 @@ export const Drivers: React.FC = () => {
         header: 'Status', 
         render: (row: Driver) => (
             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                row.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                row.status === 'active' ? 'bg-success/20 text-success' : 'bg-text-muted/20 text-text-muted'
             }`}>
                 {row.status.toUpperCase()}
             </span>
@@ -47,22 +47,20 @@ export const Drivers: React.FC = () => {
       render: (row: Driver) => (
         <button 
           onClick={() => handleDelete(row.id)}
-          className="text-red-500 hover:text-red-700 transition-colors"
+          className="text-error hover:text-error-dark transition-colors"
           title="Delete"
         >
-          <TrashIcon className="h-4 w-4" />
+          <span className="material-symbols-outlined text-[16px]">delete</span>
         </button>
       )
     }
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-           <h1 className="text-2xl font-bold text-slate-800">Drivers</h1>
-           <p className="text-slate-500 mt-1">Manage driver profiles and assignments</p>
-        </div>
+    <div className="w-full">
+      <div className="mb-6">
+        <h1 className="text-white text-2xl font-bold mb-1">Drivers</h1>
+        <p className="text-text-muted text-sm">Manage driver profiles and assignments</p>
       </div>
       
       <DataGrid<Driver>
@@ -71,9 +69,9 @@ export const Drivers: React.FC = () => {
         columns={columns}
         refreshTrigger={refreshTrigger}
         actions={
-          <button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm shadow-blue-900/20">
-            <PlusIcon className="h-5 w-5" />
-            <span>Add Driver</span>
+          <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            Add Driver
           </button>
         }
       />

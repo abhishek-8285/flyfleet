@@ -21,50 +21,47 @@ func NewTripRepository(db *pgxpool.Pool) *TripRepository {
 }
 
 func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
+	startLocJSON, _ := json.Marshal(trip.StartLocation)
+	endLocJSON, _ := json.Marshal(trip.EndLocation)
+
 	query := `
 		INSERT INTO trips (id, trip_id, vehicle_id, driver_id, start_location, end_location, 
-			start_time, end_time, distance, status, organization_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			start_time, end_time, distance, status, organization_id, fuel_consumed_liters, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	_, err := r.db.Exec(ctx, query,
 		trip.ID, trip.TripID, trip.VehicleID, trip.DriverID,
-		trip.StartLocation, trip.EndLocation, trip.StartTime, trip.EndTime,
-		trip.Distance, trip.Status, trip.OrganizationID, trip.CreatedAt, trip.UpdatedAt)
+		startLocJSON, endLocJSON, trip.StartTime, trip.EndTime,
+		trip.Distance, trip.Status, trip.OrganizationID, trip.FuelConsumed, trip.CreatedAt, trip.UpdatedAt)
 	return err
 }
 
-func (r *TripRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
-	query := `
-		SELECT id, trip_id, vehicle_id, driver_id, start_location, end_location,
-			start_time, end_time, distance, status, organization_id, created_at, updated_at
-		FROM trips WHERE id = $1
-	`
+func (r *TripRepository) scanTrip(row interface{ Scan(dest ...interface{}) error }) (*models.Trip, error) {
 	var trip models.Trip
-	err := r.db.QueryRow(ctx, query, id).Scan(
+	var startLocJSON, endLocJSON []byte
+	err := row.Scan(
 		&trip.ID, &trip.TripID, &trip.VehicleID, &trip.DriverID,
-		&trip.StartLocation, &trip.EndLocation, &trip.StartTime, &trip.EndTime,
-		&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.CreatedAt, &trip.UpdatedAt)
+		&startLocJSON, &endLocJSON, &trip.StartTime, &trip.EndTime,
+		&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
+	json.Unmarshal(startLocJSON, &trip.StartLocation)
+	json.Unmarshal(endLocJSON, &trip.EndLocation)
 	return &trip, nil
 }
 
+const tripSelectCols = `id, trip_id, vehicle_id, driver_id, start_location, end_location,
+			start_time, end_time, distance, status, organization_id, fuel_consumed_liters, created_at, updated_at`
+
+func (r *TripRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
+	query := fmt.Sprintf(`SELECT %s FROM trips WHERE id = $1`, tripSelectCols)
+	return r.scanTrip(r.db.QueryRow(ctx, query, id))
+}
+
 func (r *TripRepository) GetByTripID(ctx context.Context, tripID string) (*models.Trip, error) {
-	query := `
-		SELECT id, trip_id, vehicle_id, driver_id, start_location, end_location,
-			start_time, end_time, distance, status, organization_id, created_at, updated_at
-		FROM trips WHERE trip_id = $1
-	`
-	var trip models.Trip
-	err := r.db.QueryRow(ctx, query, tripID).Scan(
-		&trip.ID, &trip.TripID, &trip.VehicleID, &trip.DriverID,
-		&trip.StartLocation, &trip.EndLocation, &trip.StartTime, &trip.EndTime,
-		&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.CreatedAt, &trip.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &trip, nil
+	query := fmt.Sprintf(`SELECT %s FROM trips WHERE trip_id = $1`, tripSelectCols)
+	return r.scanTrip(r.db.QueryRow(ctx, query, tripID))
 }
 
 func (r *TripRepository) List(ctx context.Context, params models.TripListParams) ([]models.Trip, int, error) {
@@ -109,11 +106,8 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 	}
 
 	// List query
-	listQuery := fmt.Sprintf(`
-		SELECT id, trip_id, vehicle_id, driver_id, start_location, end_location,
-			start_time, end_time, distance, status, organization_id, created_at, updated_at
-		%s ORDER BY start_time DESC LIMIT $%d OFFSET $%d
-	`, baseQuery, argIdx, argIdx+1)
+	listQuery := fmt.Sprintf(`SELECT %s %s ORDER BY start_time DESC LIMIT $%d OFFSET $%d`,
+		tripSelectCols, baseQuery, argIdx, argIdx+1)
 	args = append(args, params.Limit, offset)
 
 	rows, err := r.db.Query(ctx, listQuery, args...)
@@ -125,13 +119,16 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 	var trips []models.Trip
 	for rows.Next() {
 		var trip models.Trip
+		var startLocJSON, endLocJSON []byte
 		if err := rows.Scan(
 			&trip.ID, &trip.TripID, &trip.VehicleID, &trip.DriverID,
-			&trip.StartLocation, &trip.EndLocation, &trip.StartTime, &trip.EndTime,
-			&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.CreatedAt, &trip.UpdatedAt,
+			&startLocJSON, &endLocJSON, &trip.StartTime, &trip.EndTime,
+			&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
+		json.Unmarshal(startLocJSON, &trip.StartLocation)
+		json.Unmarshal(endLocJSON, &trip.EndLocation)
 		trips = append(trips, trip)
 	}
 	return trips, total, nil
@@ -147,14 +144,16 @@ func (r *TripRepository) Update(ctx context.Context, id uuid.UUID, req *models.U
 		args = append(args, req.DriverID)
 		argIdx++
 	}
-	if req.StartLocation != "" {
+	if req.StartLocation != nil {
+		startLocJSON, _ := json.Marshal(req.StartLocation)
 		sets = append(sets, fmt.Sprintf("start_location = $%d", argIdx))
-		args = append(args, req.StartLocation)
+		args = append(args, startLocJSON)
 		argIdx++
 	}
-	if req.EndLocation != "" {
+	if req.EndLocation != nil {
+		endLocJSON, _ := json.Marshal(req.EndLocation)
 		sets = append(sets, fmt.Sprintf("end_location = $%d", argIdx))
-		args = append(args, req.EndLocation)
+		args = append(args, endLocJSON)
 		argIdx++
 	}
 	if req.StartTime != nil {

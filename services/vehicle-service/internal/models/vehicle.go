@@ -6,15 +6,23 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	MinVehicleYear = 1900
+	MaxVehicleYear = 2030
+	MinCapacity = 1
+	MinOdometer = 0
+)
+
 type Vehicle struct {
 	ID           uuid.UUID  `json:"id" db:"id"`
 	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
-	LicensePlate string     `json:"license_plate" db:"license_plate"`
+	LicensePlate string     `json:"registration_number" db:"license_plate"`
 	Model        string     `json:"model" db:"model"`
 	Make         string     `json:"make" db:"make"`
 	Year         int        `json:"year" db:"year"`
 	Color        string     `json:"color" db:"color"`
 	Status       string     `json:"status" db:"status"` // active, inactive, maintenance, retired
+	VehicleType  string     `json:"type" db:"vehicle_type"`
 	Capacity     int        `json:"capacity" db:"capacity"`
 	FuelType     string     `json:"fuel_type" db:"fuel_type"` // petrol, diesel, electric, hybrid
 	VIN          string     `json:"vin" db:"vin"`
@@ -39,7 +47,7 @@ type VehicleLocation struct {
 }
 
 type CreateVehicleRequest struct {
-	LicensePlate string `json:"license_plate" validate:"required"`
+	LicensePlate string `json:"registration_number" validate:"required"`
 	Model        string `json:"model" validate:"required"`
 	Make         string `json:"make" validate:"required"`
 	Year         int    `json:"year" validate:"required,min=1900,max=2030"`

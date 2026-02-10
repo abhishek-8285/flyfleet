@@ -16,33 +16,53 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 	// 1. Seed Permissions
 	permissions := []models.PermissionDefinition{
 		// Users
-		{Module: "users", Action: "read", Description: "View users"},
-		{Module: "users", Action: "create", Description: "Create users"},
-		{Module: "users", Action: "update", Description: "Update users"},
-		{Module: "users", Action: "delete", Description: "Delete users"},
+		{Module: "user", Action: "read", Description: "View users"},
+		{Module: "user", Action: "create", Description: "Create users"},
+		{Module: "user", Action: "update", Description: "Update users"},
+		{Module: "user", Action: "delete", Description: "Delete users"},
 		
 		// Roles
 		{Module: "roles", Action: "read", Description: "View roles"},
 		{Module: "roles", Action: "create", Description: "Create roles"},
 		{Module: "roles", Action: "update", Description: "Update roles"},
 		{Module: "roles", Action: "delete", Description: "Delete roles"},
+
+		// Organizations
+		{Module: "org", Action: "read", Description: "View organizations"},
+		{Module: "org", Action: "create", Description: "Create organizations"},
+		{Module: "org", Action: "update", Description: "Update organizations"},
+		{Module: "org", Action: "delete", Description: "Delete organizations"},
 		
 		// Vehicles
-		{Module: "vehicles", Action: "read", Description: "View vehicles"},
-		{Module: "vehicles", Action: "create", Description: "Create vehicles"},
-		{Module: "vehicles", Action: "update", Description: "Update vehicles"},
-		{Module: "vehicles", Action: "delete", Description: "Delete vehicles"},
+		{Module: "vehicle", Action: "read", Description: "View vehicles"},
+		{Module: "vehicle", Action: "create", Description: "Create vehicles"},
+		{Module: "vehicle", Action: "update", Description: "Update vehicles"},
+		{Module: "vehicle", Action: "delete", Description: "Delete vehicles"},
 		
-		// Reports
+		// Trips & Drivers
+		{Module: "trip", Action: "read", Description: "View trips"},
+		{Module: "driver", Action: "read", Description: "View drivers"},
+		{Module: "device", Action: "read", Description: "View devices"},
+		
+		// Reports & Documents
 		{Module: "reports", Action: "read", Description: "View reports"},
 		{Module: "reports", Action: "export", Description: "Export reports"},
+		{Module: "documents", Action: "read", Description: "View documents"},
 		
 		// Settings
 		{Module: "settings", Action: "read", Description: "View settings"},
 		{Module: "settings", Action: "update", Description: "Update settings"},
 
 		// Audit
-		{Module: "audit", Action: "read", Description: "View audit logs"},
+		{Module: "audit_logs", Action: "read", Description: "View audit logs"},
+
+		// Dashboard
+		{Module: "dashboard", Action: "read", Description: "View dashboard"},
+		
+		// Modules from Sidebar
+		{Module: "fuel", Action: "read", Description: "Fuel management"},
+		{Module: "governance", Action: "read", Description: "Governance"},
+		{Module: "disaster_recovery", Action: "read", Description: "DR"},
 	}
 
 	permMap := make(map[string]uuid.UUID)
@@ -189,6 +209,9 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 				if err := s.repo.AssignRoleToUser(ctx, admin.ID, superAdminRole.ID, uuid.Nil); err != nil {
 					s.logger.Error("Failed to assign Super Admin role", zap.Error(err))
 				}
+				// Also update the primary RoleID on the user struct
+				admin.RoleID = &superAdminRole.ID
+				s.repo.UpdateUser(ctx, admin)
 			}
 		}
 	} else if admin.PasswordHash == "hash" {

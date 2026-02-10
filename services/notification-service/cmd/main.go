@@ -29,7 +29,7 @@ func main() {
 	}
 
 	if cfg.DatabaseURL == "" {
-		cfg.DatabaseURL = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+		cfg.DatabaseURL = ""
 	}
 	if cfg.Port == "" {
 		cfg.Port = "8080"

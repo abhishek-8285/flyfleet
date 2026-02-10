@@ -633,12 +633,12 @@ const Landing = () => {
                                 <h2 className="text-lg font-bold">{branding.companyName}</h2>
                             </div>
                             <p className="text-slate-500 dark:text-text-secondary text-sm max-w-xs mb-6">
-                                The world's most advanced AI-driven fleet management platform. Optimization made simple by {branding.companyName} Inc.
+                                The world's most advanced AI-driven fleet management platform. Optimization made simple by {branding.companyName} Global Operations.
                             </p>
                          </div>
                     </div>
                      <div className="border-t border-slate-200 dark:border-border-dark pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-slate-400 text-sm">© 2026 {branding.companyName} Inc. All rights reserved.</p>
+                        <p className="text-slate-400 text-sm">© 2026 {branding.companyName} Global Operations. All rights reserved.</p>
                     </div>
                 </div>
             </footer>

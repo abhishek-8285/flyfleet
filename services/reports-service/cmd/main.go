@@ -22,7 +22,7 @@ func main() {
 	// 2. Database
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+		dbURL = ""
 	}
 
 	config, err := pgxpool.ParseConfig(dbURL)
@@ -42,7 +42,7 @@ func main() {
 	// 4. Queue & Worker
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
-		redisAddr = "localhost:6379" // Default for local dev
+		redisAddr = "" // Default for local dev
 	}
 	
 	notifServiceURL := os.Getenv("NOTIFICATION_SERVICE_URL")

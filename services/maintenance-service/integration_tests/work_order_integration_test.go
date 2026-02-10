@@ -11,6 +11,19 @@ import (
 	"github.com/flyfleet/maintenance-service/internal/models"
 )
 
+const (
+	TestEstimatedCost = 150.00
+	TestPartQuantity  = 100
+	TestReorderLevel  = 10
+	TestUnitCost      = 25.00
+	TestQuantity1     = 2
+	TestQuantity2     = 1
+	TestQuantity3     = 5
+	TestUnitCost1     = 25.00
+	TestUnitCost2     = 100.00
+	TestUnitCost3     = 10.00
+)
+
 // WorkOrderIntegrationTestSuite tests the complete work order lifecycle
 type WorkOrderIntegrationTestSuite struct {
 	suite.Suite
@@ -35,14 +48,14 @@ func (s *WorkOrderIntegrationTestSuite) TestWorkOrderLifecycle_FullFlow() {
 		MaintenanceType: models.WOMaintenanceTypePreventive,
 		Priority:        models.WorkOrderPriorityMedium,
 		Status:          models.WorkOrderStatusOpen,
-		EstimatedCost:   150.00,
+		EstimatedCost:   TestEstimatedCost,
 		CreatedBy:       uuid.New(),
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
 
 	assert.Equal(t, models.WorkOrderStatusOpen, workOrder.Status)
-	assert.Equal(t, 150.00, workOrder.EstimatedCost)
+	assert.Equal(t, TestEstimatedCost, workOrder.EstimatedCost)
 	t.Log("Work order created in OPEN status")
 
 	// Step 2: Start Work (Transition to IN_PROGRESS)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/vehicle-service/internal/middleware"
@@ -130,7 +131,7 @@ func (h *TripHandlers) GetTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := h.getTripID(r)
 	if idStr == "" {
 		h.writeError(w, http.StatusBadRequest, "Missing trip ID", nil)
 		return
@@ -162,7 +163,7 @@ func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := h.getTripID(r)
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid trip ID", err)
@@ -204,7 +205,7 @@ func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
+	idStr := h.getTripID(r)
 	tripID, err := uuid.Parse(idStr)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid trip ID", err)
@@ -280,6 +281,21 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helpers
+func (h *TripHandlers) getTripID(r *http.Request) string {
+	id := r.PathValue("id")
+	if id != "" {
+		return id
+	}
+	// Fallback for routers that don't support PathValue (like Gin wrapper)
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	for i, part := range parts {
+		if part == "trips" && i+1 < len(parts) {
+			return parts[i+1]
+		}
+	}
+	return ""
+}
+
 func (h *TripHandlers) getOrgID(r *http.Request) uuid.UUID {
 	orgIDStr := r.Header.Get("X-Organization-ID")
 	if orgIDStr == "" {

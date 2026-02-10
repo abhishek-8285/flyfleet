@@ -43,8 +43,10 @@ type Alert struct {
 	DriverID        *uuid.UUID        `json:"driver_id" db:"driver_id"`
 	Location        *Location         `json:"location" db:"location"`
 	Timestamp       time.Time         `json:"timestamp" db:"timestamp"`
+	Message         string            `json:"message" db:"message"`
 	Details         map[string]interface{} `json:"details" db:"details"` // Rule-specific data
 	Status          string            `json:"status" db:"status"` // new, acknowledged, resolved, escalated
+	Acknowledged    bool              `json:"acknowledged" db:"-"` // Calculated field for frontend
 	AcknowledgedBy  *uuid.UUID        `json:"acknowledged_by" db:"acknowledged_by"`
 	AcknowledgedAt  *time.Time        `json:"acknowledged_at" db:"acknowledged_at"`
 	ResolvedBy      *uuid.UUID        `json:"resolved_by" db:"resolved_by"`
@@ -69,7 +71,7 @@ type Geofence struct {
 	Name           string      `json:"name" db:"name"`
 	Type           string      `json:"type" db:"type"` // circle, polygon, route_corridor
 	Center         *Location   `json:"center" db:"center"`         // For circle geofences
-	RadiusMeters   *int        `json:"radius_meters" db:"radius_meters"` // For circle geofences
+	RadiusMeters   *int        `json:"radius" db:"radius_meters"` // For circle geofences
 	Coordinates    []Location  `json:"coordinates" db:"coordinates"`     // For polygon geofences
 	RoutePolyline  *string     `json:"route_polyline" db:"route_polyline"` // For route corridors
 	BufferMeters   *int        `json:"buffer_meters" db:"buffer_meters"`   // For route corridors
@@ -77,7 +79,7 @@ type Geofence struct {
 	ExitAlert      bool        `json:"exit_alert" db:"exit_alert"`
 	SpeedLimit     *int        `json:"speed_limit" db:"speed_limit"`
 	Vehicles       []uuid.UUID `json:"vehicles" db:"vehicles"` // Specific vehicles or empty for all
-	Enabled        bool        `json:"enabled" db:"enabled"`
+	Enabled        bool        `json:"active" db:"enabled"`
 	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at"`
 	CreatedBy      uuid.UUID   `json:"created_by" db:"created_by"`

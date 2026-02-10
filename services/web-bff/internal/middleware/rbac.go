@@ -67,6 +67,14 @@ func RBACMiddleware(sp security.SecretProvider, resource string) func(http.Handl
 				return
 			}
 
+			// Propagate organization and user context to upstream services
+			if orgID, ok := claims["org_id"].(string); ok {
+				r.Header.Set("X-Organization-ID", orgID)
+			}
+			if userID, ok := claims["user_id"].(string); ok {
+				r.Header.Set("X-User-ID", userID)
+			}
+
 			next.ServeHTTP(w, r)
 		})
 	}

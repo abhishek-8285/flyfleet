@@ -14,6 +14,11 @@ import (
 	"github.com/flyfleet/alert-service/internal/models"
 )
 
+const (
+	DefaultPageSize = 20
+	MaxPageSize     = 100
+)
+
 type AlertRepository struct {
 	db *pgxpool.Pool
 }

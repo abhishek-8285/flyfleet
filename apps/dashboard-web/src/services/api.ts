@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081/api/v1';
 const BFF_URL = process.env.REACT_APP_BFF_URL || 'http://localhost:8081';
 
 class ApiService {
@@ -27,7 +27,7 @@ class ApiService {
     const setupInterceptors = (instance: AxiosInstance) => {
       instance.interceptors.request.use(
         (config) => {
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('access_token');
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
@@ -146,6 +146,11 @@ class ApiService {
     return response.data;
   }
 
+  async getOrganizationStats() {
+    const response = await this.bffClient.get('/api/v1/admin/organizations/stats');
+    return response.data.data;
+  }
+
   // Drivers
   async getDrivers(params?: any) {
     const response = await this.client.get('/admin/drivers', { params });
@@ -185,7 +190,7 @@ class ApiService {
 
   // Statistics
   async getStatistics() {
-    const response = await this.client.get('/admin/alerts/stats/summary');
+    const response = await this.bffClient.get('/api/v1/dashboard/stats');
     return response.data;
   }
 

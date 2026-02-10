@@ -25,7 +25,7 @@ func main() {
 
 	// Load configuration from environment
 	port := getEnv("PORT", "8084")
-	databaseURL := getEnv("DATABASE_URL", "postgres://fleet:fleet@localhost:5433/fleetdb")
+	databaseURL := getEnv("DATABASE_URL", "")
 
 	// Initialize database connection
 	db, err := pgxpool.New(context.Background(), databaseURL)

@@ -18,7 +18,7 @@ const NewTicketModal: React.FC<NewTicketModalProps> = ({ isOpen, onClose, onCrea
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         try {
             const res = await fetch('/bff/support/incidents/create', {
                 method: 'POST',

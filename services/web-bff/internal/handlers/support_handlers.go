@@ -25,7 +25,7 @@ func NewSupportHandlers(cfg *config.Config, logger *zap.Logger) *SupportHandlers
 		cfg:              cfg,
 		logger:           logger,
 		incidents:        make(map[string]map[string]interface{}),
-		supportServiceURL: "http://localhost:8082", // Will be configurable
+		supportServiceURL: "", // Will be configurable
 	}
 	h.seedIncidents()
 	return h

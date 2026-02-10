@@ -22,6 +22,8 @@ type User struct {
 	Email          string     `json:"email" db:"email"`
 	PasswordHash   string     `json:"-" db:"password_hash"`
 	Name           string     `json:"name" db:"name"`
+	Role           string     `json:"role" db:"-"`
+	OrgID          uuid.UUID  `json:"org_id" db:"-"`
 	Phone          string     `json:"phone,omitempty" db:"phone"`
 	MFAEnabled     bool       `json:"mfa_enabled" db:"mfa_enabled"`
 	MFASecret      string     `json:"-" db:"mfa_secret"`
@@ -71,7 +73,7 @@ type Vehicle struct {
 	OrgID        uuid.UUID  `json:"org_id" db:"org_id"`
 	CurrentDriverID *uuid.UUID `json:"current_driver_id,omitempty" db:"current_driver_id"`
 	Name         string     `json:"name,omitempty" db:"name"` // Optional, microservice uses Make/Model often
-	LicensePlate string     `json:"license_plate" db:"license_plate"`
+	LicensePlate string     `json:"registration_number" db:"license_plate"`
 	Make         string     `json:"make,omitempty" db:"make"`
 	Model        string     `json:"model,omitempty" db:"model"`
 	Year         int        `json:"year,omitempty" db:"year"`
@@ -92,7 +94,7 @@ type Driver struct {
 	OrgID           uuid.UUID  `json:"org_id" db:"org_id"`
 	FirstName       string     `json:"first_name" db:"first_name"`
 	LastName        string     `json:"last_name" db:"last_name"`
-	FullName        string     `json:"full_name" db:"full_name"`
+	FullName        string     `json:"name" db:"full_name"`
 	Email           string     `json:"email" db:"email"`
 	Phone           string     `json:"phone" db:"phone"`
 	LicenseNumber   string     `json:"license_number,omitempty" db:"license_number"`
@@ -263,13 +265,15 @@ type Trip struct {
 	Title                string                 `json:"title" db:"title"`
 	Description          string                 `json:"description" db:"description"`
 	EstimatedDistanceKm  float64                `json:"estimated_distance_km" db:"estimated_distance_km"`
-	ActualDistanceKm     float64                `json:"actual_distance_km" db:"actual_distance_km"`
+	DistanceKm           float64                `json:"distance_km" db:"actual_distance_km"`
+	FuelConsumedLiters   float64                `json:"fuel_consumed_liters" db:"fuel_consumed_liters"`
 	ScheduledStart       time.Time              `json:"scheduled_start" db:"scheduled_start"`
-	StartedAt            *time.Time             `json:"started_at" db:"started_at"`
-	EndedAt              *time.Time             `json:"ended_at" db:"ended_at"`
+	StartTime            *time.Time             `json:"start_time" db:"started_at"`
+	EndTime              *time.Time             `json:"end_time" db:"ended_at"`
 	StartLocation        map[string]interface{} `json:"start_location" db:"start_location"`
 	EndLocation          map[string]interface{} `json:"end_location" db:"end_location"`
 	Waypoints            []interface{}          `json:"waypoints" db:"waypoints"`
+	Route                []interface{}          `json:"route,omitempty" db:"actual_route"`
 	Events               []interface{}          `json:"events" db:"events"`
 	IsDeleted            bool                   `json:"is_deleted" db:"is_deleted"`
 	CreatedAt            time.Time              `json:"created_at" db:"created_at"`

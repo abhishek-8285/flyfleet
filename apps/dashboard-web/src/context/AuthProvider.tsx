@@ -33,10 +33,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (token) {
             try {
                 // Verify session effectively by fetching profile
-                const profile = await apiClient.get('/auth/profile');
-                setUser(profile as unknown as User); 
+                const profileData = await apiClient.get('/auth/profile') as any;
+                
+                // profileData is { user, permissions, orgs }
+                const userData: User = {
+                  ...profileData.user,
+                  permissions: profileData.permissions?.map((p: any) => 
+                      typeof p === 'string' ? p : `${p.module}:${p.action}`
+                  ) || []
+                };
+                
+                setUser(userData); 
             } catch (err) {
                 // Token invalid
+                console.error('Session hydration failed:', err);
                 logout();
             }
         }

@@ -4,8 +4,11 @@ export const ActivityFeed: React.FC = () => {
     return (
         <div className="bg-surface-dark rounded-xl border border-border-color flex-1 min-h-[400px] flex flex-col">
             <div className="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
-                <h3 className="text-white font-semibold">Recent Activity</h3>
-                <button className="text-xs text-primary hover:text-white">Filter</button>
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-lg">history</span>
+                    Operation Stream
+                </h3>
+                <button className="text-xs text-primary hover:text-white bg-primary/10 px-2 py-1 rounded border border-primary/20">Real-time</button>
             </div>
             <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
                 {/* Activity Item 1 */}

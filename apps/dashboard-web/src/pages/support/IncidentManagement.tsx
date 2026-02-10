@@ -11,7 +11,7 @@ const IncidentManagement: React.FC = () => {
     const [activeTab, setActiveTab] = useState('daily');
 
     const fetchData = useCallback(async () => {
-        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
         try {

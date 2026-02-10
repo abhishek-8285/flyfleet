@@ -14,7 +14,7 @@ const OrganizationHub: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchData = React.useCallback(async () => {
-        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
         try {
@@ -49,7 +49,7 @@ const OrganizationHub: React.FC = () => {
     }, [id]);
 
     const handleImpersonate = async () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         try {
             const res = await fetch(`/bff/support/orgs/${id}/impersonate`, {
                 method: 'POST',

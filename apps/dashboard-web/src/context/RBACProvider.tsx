@@ -15,17 +15,28 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // For now, we assume user.permissions is a list of strings like "vehicle:active", "org:read"
   
   const can = (action: string, resource: string) => {
-    if (!user) return false;
-    // Super Admin Bypass
-    if (user.role_id === 'super_admin_uuid_or_name') return true; 
+    if (!user) {
+      console.log('[RBAC] No user found');
+      return false;
+    }
+    
+    // Super Admin Bypass - check for both common forms
+    const isSuperAdmin = user.role_id === 'super_admin' || user.role_id === 'Super Admin' || user.role_id === 'super_admin_uuid_or_name';
+    
+    if (isSuperAdmin) return true; 
 
     const permissionKey = `${resource}:${action}`;
-    return user.permissions?.includes(permissionKey) || false;
+    const hasPerm = user.permissions?.includes(permissionKey) || false;
+    
+    if (!hasPerm) {
+      console.log(`[RBAC] Access denied for ${permissionKey}`, { userPermissions: user.permissions, userRole: user.role_id });
+    }
+    
+    return hasPerm;
   };
 
   const hasRole = (roleName: string) => {
-      // Logic depends on if role_id is UUID or name. Assuming Name or mapped ID for simplicity
-      return user?.role_id === roleName; 
+      return user?.role_id === roleName || (roleName === 'super_admin' && (user?.role_id === 'Super Admin' || user?.role_id === 'super_admin')); 
   };
 
   return (

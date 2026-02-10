@@ -13,7 +13,7 @@ type Geofence struct {
 	Name           string      `json:"name" db:"name"`
 	Type           string      `json:"type" db:"type"` // circle, polygon, route_corridor
 	Center         *Location   `json:"center,omitempty" db:"center"`         // For circle geofences
-	RadiusMeters   *int        `json:"radius_meters,omitempty" db:"radius_meters"` // For circle geofences
+	RadiusMeters   *int        `json:"radius,omitempty" db:"radius_meters"` // For circle geofences
 	Coordinates    []Location  `json:"coordinates,omitempty" db:"coordinates"`     // For polygon geofences
 	RoutePolyline  *string     `json:"route_polyline,omitempty" db:"route_polyline"` // For route corridors
 	BufferMeters   *int        `json:"buffer_meters,omitempty" db:"buffer_meters"`   // For route corridors
@@ -45,7 +45,7 @@ type CreateGeofenceRequest struct {
 	Name          string      `json:"name" validate:"required,max=100"`
 	Type          string      `json:"type" validate:"required,oneof=circle polygon route_corridor"`
 	Center        *Location   `json:"center,omitempty"`         // Required for circle
-	RadiusMeters  *int        `json:"radius_meters,omitempty" validate:"omitempty,min=10,max=50000"` // Required for circle
+	RadiusMeters  *int        `json:"radius,omitempty" validate:"omitempty,min=10,max=50000"` // Required for circle
 	Coordinates   []Location  `json:"coordinates,omitempty"`    // Required for polygon (min 3 points)
 	RoutePolyline *string     `json:"route_polyline,omitempty"` // Required for route corridor
 	BufferMeters  *int        `json:"buffer_meters,omitempty" validate:"omitempty,min=10,max=1000"` // Required for route corridor
@@ -62,7 +62,7 @@ type UpdateGeofenceRequest struct {
 	Name          *string     `json:"name,omitempty" validate:"omitempty,max=100"`
 	Type          *string     `json:"type,omitempty" validate:"omitempty,oneof=circle polygon route_corridor"`
 	Center        *Location   `json:"center,omitempty"`
-	RadiusMeters  *int        `json:"radius_meters,omitempty" validate:"omitempty,min=10,max=50000"`
+	RadiusMeters  *int        `json:"radius,omitempty" validate:"omitempty,min=10,max=50000"`
 	Coordinates   []Location  `json:"coordinates,omitempty"`
 	RoutePolyline *string     `json:"route_polyline,omitempty"`
 	BufferMeters  *int        `json:"buffer_meters,omitempty" validate:"omitempty,min=10,max=1000"`

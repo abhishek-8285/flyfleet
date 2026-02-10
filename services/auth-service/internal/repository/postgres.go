@@ -13,11 +13,11 @@ import (
 // User operations
 // User operations
 func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	query := `SELECT id, email, password_hash, name, COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, failed_logins, locked_until, verified, COALESCE(theme, ''), created_at, updated_at FROM users WHERE email = $1`
+	query := `SELECT id, email, password_hash, name, COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, verified, COALESCE(theme, ''), created_at, updated_at FROM users WHERE email = $1`
 	var user models.User
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Phone,
-		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
+		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, nil
@@ -32,11 +32,11 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *models.User) 
 }
 
 func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	query := `SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, failed_logins, locked_until, verified, COALESCE(theme, 'light'), created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, verified, COALESCE(theme, 'light'), created_at, updated_at FROM users WHERE id = $1`
 	var user models.User
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Phone,
-		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
+		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -1088,9 +1088,26 @@ func (r *postgresRepository) UpdateRolePermissions(ctx context.Context, roleID u
 }
 
 func (r *postgresRepository) AssignRoleToUser(ctx context.Context, userID, roleID, assignedBy uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Insert into join table
 	query := `INSERT INTO user_roles (user_id, role_id, assigned_by, assigned_at) VALUES ($1, $2, $3, NOW()) ON CONFLICT (user_id, role_id) DO NOTHING`
-	_, err := r.db.Exec(ctx, query, userID, roleID, assignedBy)
-	return err
+	_, err = tx.Exec(ctx, query, userID, roleID, assignedBy)
+	if err != nil {
+		return err
+	}
+
+	// 2. Update users table primary role_id
+	_, err = tx.Exec(ctx, `UPDATE users SET role_id = $1, updated_at = NOW() WHERE id = $2`, roleID, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *postgresRepository) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error {

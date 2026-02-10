@@ -46,7 +46,7 @@ func (suite *AlertServiceTestSuite) SetupSuite() {
 	suite.logger = logger
 
 	// Connect to test database
-	dbURL := "postgres://fleet:fleet123@localhost:5432/fleetdb_test"
+	dbURL := ""
 	db, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		suite.T().Fatal("Failed to connect to test database:", err)
@@ -566,7 +566,7 @@ func (suite *AlertServiceTestSuite) TestResolveAlert() {
 		Description: "Rule for testing resolution",
 		Conditions:  map[string]interface{}{"min_battery_level": 20.0},
 		Severity:    models.SeverityCritical,
-		Actions:     []models.AlertAction{{Type: models.ActionTypeEmail, Target: "admin@example.com"}},
+		Actions:     []models.AlertAction{{Type: models.ActionTypeEmail, Target: ""}},
 		Vehicles:    []uuid.UUID{},
 		DriverIDs:   []uuid.UUID{},
 	}

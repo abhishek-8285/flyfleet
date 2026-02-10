@@ -26,7 +26,7 @@ func main() {
 
 	// Load configuration
 	port := getEnv("PORT", "8082")
-	dbURL := getEnv("DATABASE_URL", "postgres://fleet:fleet123@localhost:5432/fleetdb")
+	dbURL := getEnv("DATABASE_URL", "")
 	natsURL := getEnv("NATS_URL", nats.DefaultURL)
 
 	// Database connection

@@ -26,7 +26,7 @@ func main() {
 	// DB
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+		dbURL = ""
 	}
 	
 	pool, err := pgxpool.New(context.Background(), dbURL)

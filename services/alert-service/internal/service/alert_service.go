@@ -255,6 +255,7 @@ func (s *AlertService) GetAlert(ctx context.Context, id string) (*models.Alert, 
 		s.logger.Error("failed to get alert", zap.String("alert_id", id), zap.Error(err))
 		return nil, fmt.Errorf("alert not found: %w", err)
 	}
+	s.populateAlertMetadata(alert)
 	return alert, nil
 }
 
@@ -264,6 +265,9 @@ func (s *AlertService) ListAlerts(ctx context.Context, filter models.AlertListFi
 	if err != nil {
 		s.logger.Error("failed to list alerts", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list alerts: %w", err)
+	}
+	for _, alert := range alerts {
+		s.populateAlertMetadata(alert)
 	}
 	return alerts, totalCount, nil
 }
@@ -383,6 +387,16 @@ func (s *AlertService) ProcessTelemetryEvent(ctx context.Context, eventType stri
 		return s.ruleEngine.ProcessDriverEvent(data)
 	default:
 		return fmt.Errorf("unsupported telemetry event type: %s", eventType)
+	}
+}
+
+func (s *AlertService) populateAlertMetadata(alert *models.Alert) {
+	if alert == nil {
+		return
+	}
+	alert.Acknowledged = (alert.Status == models.AlertStatusAcknowledged || alert.Status == models.AlertStatusResolved)
+	if alert.Message == "" {
+		alert.Message = s.formatAlertMessage(alert, "default")
 	}
 }
 

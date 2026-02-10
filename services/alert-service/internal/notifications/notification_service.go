@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/sendgrid/sendgrid-go"
@@ -96,7 +97,7 @@ func NewSendGridClient(apiKey string) EmailService {
 	
 	return &SendGridClient{
 		client: sendgrid.NewSendClient(apiKey),
-		from:   "noreply@fleetplatform.com",
+		from:   os.Getenv("NOTIFICATION_SENDER_EMAIL"),
 	}
 }
 

@@ -25,7 +25,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:                        getEnv("PORT", "8081"),
-		AuthServiceURL:              getEnv("AUTH_SERVICE_URL", "http://localhost:8089"),
+		AuthServiceURL:              getEnv("AUTH_SERVICE_URL", ""),
 		VehicleServiceURL:           getEnv("VEHICLE_SERVICE_URL", "http://vehicle-service:8084"),
 		MaintenanceServiceURL:       getEnv("MAINTENANCE_SERVICE_URL", "http://maintenance-service:8086"),
 		FuelServiceURL:              getEnv("FUEL_SERVICE_URL", "http://fuel-service:8082"),
@@ -37,7 +37,7 @@ func Load() *Config {
 		SettingsServiceURL:          getEnv("SETTINGS_SERVICE_URL", "http://settings-service:8085"),
 		IntegrationsServiceURL:      getEnv("INTEGRATIONS_SERVICE_URL", "http://integrations-service:8087"),
 		DeviceDiagnosticsServiceURL: getEnv("DEVICE_DIAGNOSTICS_SERVICE_URL", "http://device-diagnostics-service:8088"),
-		JWTSecret:                   getEnv("JWT_SECRET", "super-secret-key"),
+		JWTSecret:                   getEnv("JWT_SECRET", ""),
 		LogLevel:                    getEnv("LOG_LEVEL", "info"),
 	}
 }

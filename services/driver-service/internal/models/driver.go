@@ -10,7 +10,7 @@ type Driver struct {
 	OrgID                string             `json:"org_id" db:"org_id"`
 	FirstName            string             `json:"first_name" db:"first_name"`
 	LastName             string             `json:"last_name" db:"last_name"`
-	FullName             string             `json:"full_name" db:"full_name"`
+	FullName             string             `json:"name" db:"full_name"`
 	Email                string             `json:"email" db:"email"`
 	Phone                string             `json:"phone" db:"phone"`
 	LicenseNumber        string             `json:"license_number" db:"license_number"`

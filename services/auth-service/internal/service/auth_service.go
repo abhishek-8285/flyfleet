@@ -423,6 +423,10 @@ func (s *AuthService) ListUsers(ctx context.Context, orgID uuid.UUID, page, size
 	return s.repo.ListUsers(ctx, orgID, page, size)
 }
 
+func (s *AuthService) GetRoleByID(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+	return s.repo.GetRoleByID(ctx, id)
+}
+
 func (s *AuthService) SoftDeleteOrganization(ctx context.Context, id uuid.UUID) error {
 	// TODO: Audit Log
 	return s.repo.SoftDeleteOrganization(ctx, id)

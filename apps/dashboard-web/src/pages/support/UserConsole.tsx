@@ -12,7 +12,7 @@ const UserConsole: React.FC = () => {
     const [searchId, setSearchId] = useState('USR-882910'); // Default for demo
 
     const fetchData = async (userId: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
         try {
@@ -43,7 +43,7 @@ const UserConsole: React.FC = () => {
     }, [searchId]);
 
     const handleAction = async (action: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
             const res = await fetch(`/bff/support/users/${searchId}/${action}`, { method: 'POST', headers });
@@ -54,7 +54,7 @@ const UserConsole: React.FC = () => {
     };
 
     const handleRevoke = async (sessionId: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
             const res = await fetch(`/bff/support/users/${searchId}/sessions/${sessionId}/revoke`, { method: 'POST', headers });
@@ -68,7 +68,7 @@ const UserConsole: React.FC = () => {
 
     const saveNote = async () => {
         if (!newNote) return;
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
         try {
             const res = await fetch(`/bff/support/users/${searchId}/notes`, { 

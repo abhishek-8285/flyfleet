@@ -14,7 +14,7 @@ const TroubleshootingLogs: React.FC = () => {
     const fetchLogs = useCallback(async () => {
         if (!isLive && logs.length > 0) return;
 
-        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
         try {
@@ -36,7 +36,7 @@ const TroubleshootingLogs: React.FC = () => {
     }, [isLive, logs.length]);
 
     const fetchLogDetail = async (traceId: string) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token');
         try {
             const res = await fetch(`/bff/support/logs/${traceId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }

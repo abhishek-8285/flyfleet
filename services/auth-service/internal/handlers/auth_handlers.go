@@ -364,6 +364,18 @@ func (h *AuthHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 	// Frontend likely expects a list of permission codes strings or objects
 	// Let's return the full object for flexibility
 	
+	if len(orgs) > 0 {
+		user.OrgID = orgs[0].ID // Default to first org for profile
+	}
+
+	// Fetch role name if RoleID is present
+	if user.RoleID != nil {
+		role, err := h.service.GetRoleByID(r.Context(), *user.RoleID)
+		if err == nil && role != nil {
+			user.Role = role.Name
+		}
+	}
+
 	resp := map[string]interface{}{
 		"user":        user,
 		"permissions": permissions,

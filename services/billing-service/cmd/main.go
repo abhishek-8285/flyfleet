@@ -25,7 +25,7 @@ func main() {
 
 	// Load configuration
 	port := getEnv("PORT", "8086") // Note: Use unique port if running locally outside docker
-	dbURL := getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable")
+	dbURL := getEnv("DATABASE_URL", "")
 	natsURL := getEnv("NATS_URL", nats.DefaultURL)
 
 	// Database connection

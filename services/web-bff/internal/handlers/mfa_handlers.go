@@ -43,6 +43,14 @@ func (h *MFAHandlers) ProxyLogin(w http.ResponseWriter, r *http.Request) {
 	h.proxyToAuth(w, r, "/api/v1/auth/login", "/api/v1/auth/login")
 }
 
+func (h *MFAHandlers) ProxyAlerts(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/v1/admin/alerts", "/api/v1/admin/alerts")
+}
+
+func (h *MFAHandlers) ProxyUsers(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/v1/admin/users", "/api/v1/admin/users")
+}
+
 func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
 	if !strings.HasPrefix(path, sourcePrefix) {

@@ -11,7 +11,7 @@ const IncidentDetail: React.FC = () => {
   const [newOwner, setNewOwner] = useState('');
 
   const fetchIncident = async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/bff/support/incidents/detail?id=${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -35,7 +35,7 @@ const IncidentDetail: React.FC = () => {
   const handlePostComment = async () => {
     if (!comment.trim()) return;
     setSubmitting(true);
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/support/incidents/comment?id=${id}`, {
         method: 'POST',
@@ -57,7 +57,7 @@ const IncidentDetail: React.FC = () => {
   };
 
   const handleUpdate = async (updates: any) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     try {
       const res = await fetch(`/api/support/incidents/update?id=${id}`, {
         method: 'PATCH',

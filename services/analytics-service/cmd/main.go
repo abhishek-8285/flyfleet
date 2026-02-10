@@ -30,7 +30,7 @@ func main() {
 
 	// Load configuration
 	port := getEnv("PORT", "8080")
-	databaseURL := getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/analytics_db?sslmode=disable")
+	databaseURL := getEnv("DATABASE_URL", "")
 
 	// Create database connection pool
 	db, err := pgxpool.New(context.Background(), databaseURL)

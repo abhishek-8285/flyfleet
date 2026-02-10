@@ -1,14 +1,15 @@
 package middleware
 
 import (
+"os"
 	"net/http"
 )
 
 func CORSMiddleware(next http.Handler) http.Handler {
 	allowedOrigins := []string{
-		"http://localhost:3000",
-		"http://localhost:3001",
-		"http://localhost:3006",
+		os.Getenv("FRONTEND_URL"),
+		os.Getenv("ADMIN_FRONTEND_URL"),
+		os.Getenv("MOBILE_APP_URL"),
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -21,14 +22,19 @@ func CORSMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
+		// Clear potentially conflicting headers from proxy
+		w.Header().Del("Access-Control-Allow-Origin")
+		w.Header().Del("Access-Control-Allow-Credentials")
+		w.Header().Del("Access-Control-Allow-Methods")
+		w.Header().Del("Access-Control-Allow-Headers")
+
 		if allowed {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Credentials", "true") // Often needed when specific origins are used
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		} else {
-			// If origin is not in the allowed list, you might choose to not set the header
-			// or set a default, or return an error. For now, we'll just not set it.
-			// If you want to allow all for non-listed origins, you could set it to "*" here,
-			// but that defeats the purpose of a specific list.
+			// Default for local development if origin is empty or not matched but we suspect it should be 3000
+			w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_URL"))
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")

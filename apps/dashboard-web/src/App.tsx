@@ -82,14 +82,14 @@ import History from './pages/History';
 import IntegrationsCenter from './pages/integrations/IntegrationsCenter';
 import Landing from './pages/Landing';
 import LiveMap from './pages/LiveMap';
-import Login from './pages/Login';
+import Login from './pages/LoginPage';
 import Maintenance from './pages/Maintenance';
 import {
-    AddWorkOrder,
-    Inventory,
-    PartAssignment,
-    WorkOrderDetail,
-    WorkOrderList,
+  AddWorkOrder,
+  Inventory,
+  PartAssignment,
+  WorkOrderDetail,
+  WorkOrderList,
 } from './pages/maintenance';
 import MFAExceptions from './pages/MFAExceptions';
 import MFAOverrides from './pages/MFAOverrides';

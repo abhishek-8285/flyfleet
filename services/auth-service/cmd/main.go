@@ -503,3 +503,23 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	
 	return router
 }
+func organizationsHandler(admin *handlers.AdminHandlers) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			if r.URL.Query().Get("id") != "" {
+				admin.GetOrganization(w, r)
+			} else {
+				admin.ListOrganizations(w, r)
+			}
+		case http.MethodPost:
+			admin.CreateOrganization(w, r)
+		case http.MethodPut:
+			admin.UpdateOrganization(w, r)
+		case http.MethodDelete:
+			admin.DeleteOrganization(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
