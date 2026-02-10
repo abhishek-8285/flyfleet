@@ -15,6 +15,7 @@ import InvoiceForm from './pages/admin/billing/InvoiceForm';
 import JobDetail from './pages/admin/BulkUploads/JobDetail';
 import JobsList from './pages/admin/BulkUploads/JobsList';
 import NewUpload from './pages/admin/BulkUploads/NewUpload';
+import { DeviceDetail } from './pages/admin/DeviceDetail';
 import { Devices } from './pages/admin/Devices';
 import BackupDetailView from './pages/admin/dr/BackupDetailView';
 import CreateBackupView from './pages/admin/dr/CreateBackupView';
@@ -110,7 +111,7 @@ import SessionExpired from './pages/SessionExpired';
 import Signup from './pages/Signup';
 import IncidentDetail from './pages/support/IncidentDetail';
 import IncidentManagement from './pages/support/IncidentManagement';
-import OrgConsole from './pages/support/OrgConsole';
+import OrganizationHub from './pages/support/OrganizationHub';
 import SLAReports from './pages/support/SLAReports';
 import SupportDashboard from './pages/support/SupportDashboard';
 import TroubleshootingLogs from './pages/support/TroubleshootingLogs';
@@ -207,6 +208,7 @@ function App() {
                 <Route path="vehicles/:id/edit" element={<FleetEditVehicle />} />
                 <Route path="drivers" element={<AdminDrivers />} />
                 <Route path="devices" element={<Devices />} />
+                <Route path="devices/:id" element={<DeviceDetail />} />
                 <Route path="bulk-uploads" element={<JobsList />} />
                 <Route path="bulk-uploads/new" element={<NewUpload />} />
                 <Route path="bulk-uploads/:id" element={<JobDetail />} />
@@ -377,11 +379,11 @@ function App() {
                 }
               />
               <Route
-                path="/support/org-console"
+                path="/support/org-console/:id"
                 element={
                   <PrivateRoute>
                     <SupportLayout>
-                      <OrgConsole />
+                      <OrganizationHub />
                     </SupportLayout>
                   </PrivateRoute>
                 }

@@ -455,3 +455,11 @@ src/pages/support/SupportDashboard.tsx
 
 webpack compiled with 1 warning
 No issues found.
+The build failed because the process exited too early. This probably means the system ran out of memory or someone called `kill -9` on the process.
+npm error Lifecycle script `start` failed with error:
+npm error code 1
+npm error path /home/abhishek/Desktop/flyfleet/apps/dashboard-web
+npm error workspace @flyfleet/dashboard-web@0.1.0
+npm error location /home/abhishek/Desktop/flyfleet/apps/dashboard-web
+npm error command failed
+npm error command sh -c react-scripts start

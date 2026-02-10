@@ -23,3 +23,194 @@ warning: both GOPATH and GOROOT are the same directory (/home/abhishek/go); see 
 {"level":"info","ts":1770667992.2004387,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
 {"level":"info","ts":1770667992.216227,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
 {"level":"info","ts":1770667992.2203279,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"error","ts":1770668205.502646,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770668220.7906816,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668220.7925506,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668222.4210665,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668222.42603,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668227.211223,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668227.2133694,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668229.7629888,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668229.7648141,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668231.8702607,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668231.872572,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668233.755184,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668233.7564807,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668235.61321,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668235.614806,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668237.4479764,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668237.4497006,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668240.3963943,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668240.4001102,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668241.7118628,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668241.7148123,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668247.4668446,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668247.4684134,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668250.4150813,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668250.4176548,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668263.416828,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770668263.42099,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668265.5883434,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668265.5901337,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668267.5174832,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668267.5192075,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668268.8250647,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770668268.8270848,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668270.2590163,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668270.2639353,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668271.71979,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668271.7217093,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668272.913056,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770668272.9151983,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668274.2181644,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668274.219587,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668276.7118757,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668276.713449,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668276.717432,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668276.724205,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668276.7257528,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668276.730741,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668291.1479974,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668291.1507623,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668291.1561487,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668291.1618154,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668291.1635134,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668291.1692271,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668293.9453228,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668293.9473152,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668293.948858,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668293.9566774,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668293.9568624,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668293.9640522,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668305.2047963,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668305.2062979,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668305.2091985,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668305.217175,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668305.2191746,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668305.223802,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668311.9714916,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668311.9731224,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668314.797658,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668314.7993705,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668314.803422,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668314.8091085,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668314.810752,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668314.8164988,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668321.8133123,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668321.815575,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668324.8191612,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770668324.8210833,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668326.9321725,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668326.933855,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668330.1143808,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668330.1163676,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668330.1197956,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668330.1258512,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668330.133531,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668330.1386406,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668338.8954642,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668338.8969805,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770668342.856203,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668342.8579257,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770668346.2198303,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668346.221164,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668346.22432,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668346.2331653,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668346.2348945,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668346.2403948,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"error","ts":1770668505.4794443,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770668752.499892,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668752.5025156,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770668752.8422506,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668752.8458588,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770668752.8638453,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770668752.8662522,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"error","ts":1770668805.481906,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770668933.0269694,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669064.0772777,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669064.0805705,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669064.1791346,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669064.1859016,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669064.1920376,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669064.198552,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669090.599018,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669097.255625,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"error","ts":1770669105.482308,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770669118.8974347,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669118.9017022,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669119.0016613,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669119.0062833,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669119.0146463,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669119.018175,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669122.3256433,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669122.3312256,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669123.8692656,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669123.872311,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669123.8737109,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669123.8824465,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669123.882479,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669123.888104,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669125.9573843,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669125.9607685,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669128.0626686,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669128.0669146,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669131.376473,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669131.3793805,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669131.3808002,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669131.3892143,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669131.3893476,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669131.3956454,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669138.7909915,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669138.7944686,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669147.9297333,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669147.9340127,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669150.7508662,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669150.7549875,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669152.8653922,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669152.8683443,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669152.86943,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669152.8785117,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669152.8786216,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669152.8835475,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669359.8898435,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669359.8946786,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669359.9020064,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669359.9059966,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669359.9099164,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669359.9165545,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669365.0038319,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669365.0928583,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669365.1822221,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770669371.0986898,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669371.1689863,"caller":"handlers/support_handlers.go:338","msg":"Support update incident request"}
+{"level":"info","ts":1770669376.980258,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669389.8946016,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669389.900167,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669389.9076138,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669402.3782194,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669402.381869,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669402.4750025,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669402.4798913,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669402.4874425,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669402.491044,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"error","ts":1770669405.4777875,"caller":"middleware/firewall_manager.go:53","msg":"Failed to fetch IP rules","error":"Get \"http://auth-service:8080/api/v1/security/ip-rules/all\": dial tcp: lookup auth-service on 127.0.0.53:53: server misbehaving","stacktrace":"github.com/flyfleet/web-bff/internal/middleware.(*FirewallManager).refreshRules\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:53\ngithub.com/flyfleet/web-bff/internal/middleware.NewFirewallManager.func1\n\t/home/abhishek/Desktop/flyfleet/services/web-bff/internal/middleware/firewall_manager.go:40"}
+{"level":"info","ts":1770669405.5988834,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669405.602018,"caller":"handlers/support_handlers.go:243","msg":"Support incident detail request"}
+{"level":"info","ts":1770669415.9211264,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669415.9249165,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669415.9261465,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669415.9346526,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669415.9346757,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669415.9405763,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669445.922132,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669445.9265206,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669445.9347272,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669475.9220147,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669475.9262242,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669475.933599,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669476.1212344,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+{"level":"info","ts":1770669476.1769,"caller":"handlers/support_handlers.go:229","msg":"Support incidents request"}
+{"level":"info","ts":1770669505.922175,"caller":"handlers/support_handlers.go:102","msg":"Support dashboard stats request"}
+{"level":"info","ts":1770669505.9255693,"caller":"handlers/support_handlers.go:138","msg":"Support dashboard trends request"}
+{"level":"info","ts":1770669505.932583,"caller":"handlers/support_handlers.go:146","msg":"Support dashboard recent activity request"}
+signal: killed

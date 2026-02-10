@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  support-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/flyfleet
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    networks:
+      - flyfleet-network
+
+networks:
+  flyfleet-network:
+    external: true

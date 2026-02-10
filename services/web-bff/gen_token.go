@@ -9,7 +9,7 @@ import (
 
 func main() {
 	secret := "super-secret-key"
-	token := jwt.NewWithClaims(jwt.SigningMethodHMAC256, jwt.MapClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"role": "admin",
 		"exp":  time.Now().Add(time.Hour * 24).Unix(),
 	})

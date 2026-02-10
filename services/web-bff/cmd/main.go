@@ -54,6 +54,39 @@ func main() {
 			"security_policy_hash": security.GetPolicyVersion(),
 		})
 	})
+
+	// Simple login endpoint for testing
+	mux.HandleFunc("/api/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		
+		var req struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+		
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		
+		// Simple validation - in production, verify against database
+		if req.Email == "admin@test.com" && req.Password == "test123" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMTQ3NmE5ODctNzZhZC00OTYzLWI2NGEtMDFhNzFlYjczOWNhIiwib3JnX2lkIjoiMTQ3NmE5ODctNzZhZC00OTYzLWI2NGEtMDFhNzFlYjczOWNhIiwiZXhwIjo0MDcwODQ0OTUyfQ.test-token",
+				"user": map[string]string{
+					"id":    "1476a987-76ad-4963-b64a-01a71eb739ca",
+					"email": req.Email,
+					"name":  "Admin User",
+				},
+			})
+		} else {
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		}
+	})
 	
 	// Security endpoints (RBAC Enforcement - Centralized)
 	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
@@ -70,7 +103,11 @@ func main() {
 
 	// Asset Management (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVehicle)))
-	mux.Handle("/api/v1/admin/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyDevice))) // Devices share vehicle resource for now
+	mux.Handle("/api/v1/admin/devices", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDevices))) 
+	mux.Handle("/api/v1/admin/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDevices))) 
+	mux.Handle("/api/v1/admin/devices/{id}/telemetry", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDeviceTelemetry)))
+	mux.Handle("/api/v1/admin/devices/{id}/logs", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDeviceLogs)))
+	mux.Handle("/api/v1/admin/devices/{id}/commands", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.PostDeviceCommand)))
 	mux.Handle("/api/v1/admin/drivers/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyDriver)))   // Drivers share trips resource for now
 	mux.Handle("/api/v1/admin/documents/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyDocument)))
 	mux.Handle("/api/v1/admin/bulk-jobs/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyBulkJobs))) // Bulk Jobs share vehicle resource
@@ -162,27 +199,98 @@ func main() {
 	mux.Handle("/api/timeline/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineStats)))
 	mux.Handle("/api/timeline/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineFilters)))
 
-	// FleetSupport Module (New)
+	// FleetSupport Module (BFF Layer)
+	logger.Info("Registering Support handlers")
 	supportHandlers := handlers.NewSupportHandlers(cfg, logger)
-	mux.Handle("/api/support/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardStats)))
-	mux.Handle("/api/support/dashboard/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardTrends)))
-	mux.Handle("/api/support/dashboard/recent-activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentActivity)))
+	mux.Handle("/bff/support/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardStats)))
+	mux.Handle("/bff/support/dashboard/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardTrends)))
+	mux.Handle("/bff/support/dashboard/recent-activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentActivity)))
 
-	mux.Handle("/api/support/users/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserProfile)))
-	mux.Handle("/api/support/users/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
+	// New Support Command Center Routes
+	mux.Handle("/bff/support/auth/me", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetAuthMe)))
+	mux.Handle("/bff/support/dashboard/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardMetrics)))
+	mux.Handle("/bff/support/dashboard/top-errors", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetTopErrors)))
+	mux.Handle("/bff/support/tickets/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentTickets)))
+	mux.Handle("/bff/support/tickets/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.SearchTickets)))
+	mux.Handle("/bff/support/tickets/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetTicketFilters)))
+	mux.Handle("/bff/support/tickets/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ExportTickets)))
+	mux.Handle("/bff/support/dashboard/live", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetLiveDashboard)))
 
-	mux.Handle("/api/support/orgs/overview", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetOrgOverview)))
+	mux.Handle("/bff/support/user/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserProfile)))
 
-	mux.Handle("/api/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetIncidents)))
-	mux.Handle("/api/support/incidents/create", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.CreateIncident)))
-	mux.Handle("/api/support/incidents/detail", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetIncidentDetail)))
-	mux.Handle("/api/support/incidents/comment", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.PostComment)))
-	mux.Handle("/api/support/incidents/update", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.UpdateIncident)))
-	mux.Handle("/api/support/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetSystemLogs)))
+	mux.Handle("/bff/support/user/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
+
+	// New User Console Support Routes
+	mux.Handle("/bff/support/users/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.SearchUsers)))
+	mux.Handle("/bff/support/users/{id}/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserFullProfile)))
+	mux.Handle("/bff/support/users/{id}/security", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSecurity)))
+	mux.Handle("/bff/support/users/{id}/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
+	mux.Handle("/bff/support/users/{id}/sessions/{sessionId}/revoke", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.RevokeUserSession)))
+	mux.Handle("/bff/support/users/{id}/logins", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserLoginHistory)))
+	mux.Handle("/bff/support/users/{id}/logins/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ExportUserLoginHistory)))
+	mux.Handle("/bff/support/users/{id}/roles", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserRoles)))
+	mux.Handle("/bff/support/users/{id}/permissions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserPermissions)))
+	mux.Handle("/bff/support/users/{id}/reset-password", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ResetUserPassword)))
+	mux.Handle("/bff/support/users/{id}/unlock", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.UnlockUserAccount)))
+	mux.Handle("/bff/support/users/{id}/mfa-reset", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ResetUserMFA)))
+	mux.Handle("/bff/support/users/{id}/force-logout", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ForceUserLogout)))
+	mux.Handle("/bff/support/users/{id}/notes", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserNotes)))
+	mux.Handle("POST /bff/support/users/{id}/notes", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.AddUserNote)))
+	mux.Handle("/bff/support/users/{id}/audit", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserAuditLog)))
+
+	mux.Handle("/bff/support/org/overview", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetOrgOverview)))
+
+
+	// Organization Support Hub Routes
+	supportOrgHandlers := handlers.NewSupportOrgHandlers(cfg, logger)
+	mux.Handle("GET /bff/support/orgs/{id}/summary", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgSummary)))
+	mux.Handle("GET /bff/support/orgs/{id}/devices/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgDeviceStats)))
+	mux.Handle("GET /bff/support/orgs/{id}/integration/health", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgIntegrationHealth)))
+	mux.Handle("GET /bff/support/orgs/{id}/fleet/locations", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgFleetLocations)))
+	mux.Handle("GET /bff/support/orgs/{id}/diagnostics/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgRecentDiagnostics)))
+	mux.Handle("GET /bff/support/orgs/{id}/diagnostics/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgDiagnosticLogs)))
+	mux.Handle("GET /bff/support/orgs/{id}/alerts", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgAlerts)))
+	mux.Handle("GET /bff/support/orgs/{id}/contacts", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgContacts)))
+	mux.Handle("GET /bff/support/orgs/{id}/users", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgUsers)))
+	mux.Handle("POST /bff/support/orgs/{id}/impersonate", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.ImpersonateOrg)))
+	mux.Handle("GET /bff/support/orgs/{id}/config/diagnostics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgConfigDiagnostics)))
+	mux.Handle("GET /bff/support/orgs/{id}/activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgActivity)))
+	mux.Handle("GET /bff/support/orgs/{id}/config", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgConfig)))
+	mux.Handle("GET /bff/support/orgs/{id}/devices/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.SearchOrgDevices)))
+	mux.Handle("POST /bff/support/alerts/{alertId}/acknowledge", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.AcknowledgeAlert)))
+	mux.Handle("GET /bff/support/orgs/{id}/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.ExportOrgData)))
+
+	// Incident Management Routes
+	incidentHandlers := handlers.NewIncidentHandlers(cfg, logger)
+	mux.Handle("GET /bff/support/incidents/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentMetrics)))
+	mux.Handle("GET /bff/support/incidents/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentTrends)))
+	mux.Handle("GET /bff/support/incidents/feed", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentFeed)))
+	mux.Handle("GET /bff/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidents)))
+	mux.Handle("GET /bff/support/incidents/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidents))) // reusing same handler as metrics search
+	mux.Handle("POST /bff/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.CreateIncident)))
+	mux.Handle("PUT /bff/support/incidents/{id}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.UpdateIncident)))
+	mux.Handle("POST /bff/support/incidents/{id}/assign", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.AssignIncident)))
+	mux.Handle("POST /bff/support/incidents/{id}/status", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.ChangeIncidentStatus)))
+	mux.Handle("GET /bff/support/incidents/{id}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentDetail)))
+	mux.Handle("GET /bff/support/incidents/{id}/comments", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentComments)))
+	mux.Handle("POST /bff/support/incidents/{id}/comments", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.PostIncidentComment)))
+	mux.Handle("GET /bff/support/incidents/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.ExportIncidents)))
+	mux.Handle("GET /bff/support/incidents/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentFilters)))
+
+	// Troubleshooting Logs Routes
+	logHandlers := handlers.NewLogHandlers(cfg, logger)
+	mux.Handle("GET /bff/support/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogs)))
+	mux.Handle("GET /bff/support/logs/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.SearchLogs)))
+	mux.Handle("GET /bff/support/logs/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogFilters)))
+	mux.Handle("GET /bff/support/logs/{traceId}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogDetail)))
+	mux.Handle("GET /bff/support/logs/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.ExportLogs)))
+	mux.Handle("GET /bff/support/logs/{traceId}/context", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogContext)))
+	mux.Handle("POST /bff/support/logs/{traceId}/jira", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.CreateLogJiraTicket)))
+	mux.Handle("GET /bff/support/logs/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogStats)))
 
 	// Server configuration
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Addr:    fmt.Sprintf("0.0.0.0:%s", cfg.Port),
 		Handler: middleware.CORSMiddleware(mux),
 	}
 	

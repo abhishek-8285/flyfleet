@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Environment-aware base URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_URL,

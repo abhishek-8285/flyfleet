@@ -5,7 +5,7 @@ const OrgConsole: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:8081/api/support/orgs/overview', {
+    fetch('/api/support/orgs/overview', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.ok ? res.json() : null)

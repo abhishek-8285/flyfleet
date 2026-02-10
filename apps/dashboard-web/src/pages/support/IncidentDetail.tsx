@@ -13,7 +13,7 @@ const IncidentDetail: React.FC = () => {
   const fetchIncident = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:8081/api/support/incidents/detail?id=${id}`, {
+      const res = await fetch(`/bff/support/incidents/detail?id=${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -37,7 +37,7 @@ const IncidentDetail: React.FC = () => {
     setSubmitting(true);
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:8081/api/support/incidents/comment?id=${id}`, {
+      const res = await fetch(`/api/support/incidents/comment?id=${id}`, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -59,7 +59,7 @@ const IncidentDetail: React.FC = () => {
   const handleUpdate = async (updates: any) => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:8081/api/support/incidents/update?id=${id}`, {
+      const res = await fetch(`/api/support/incidents/update?id=${id}`, {
         method: 'PATCH',
         headers: { 
           'Authorization': `Bearer ${token}`,

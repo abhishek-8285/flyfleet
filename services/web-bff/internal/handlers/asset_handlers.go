@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/flyfleet/web-bff/internal/config"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -683,4 +685,156 @@ func (h *AssetHandlers) proxyToDR(w http.ResponseWriter, r *http.Request, source
 // ProxyDR forwards disaster recovery requests
 func (h *AssetHandlers) ProxyDR(w http.ResponseWriter, r *http.Request) {
 	h.proxyToDR(w, r, "/api/v1/admin/dr", "/api/v1/admin/dr")
+}
+
+// GetDevices returns mock hardware device data for verification
+func (h *AssetHandlers) GetDevices(w http.ResponseWriter, r *http.Request) {
+	devices := []map[string]interface{}{
+		{
+			"id":               "DV-8821-XJ",
+			"serial_number":    "FF-OBD2-8921-A",
+			"type":             "OBD-II",
+			"status":           "active",
+			"vehicle_id":       "Ford Transit #402",
+			"last_heartbeat":   "2 mins ago",
+			"firmware_version": "v4.2.1",
+			"signal_dbm":       -65,
+			"battery_pct":      98,
+			"last_ping_at":     "2026-02-10T13:45:22Z",
+			"created_at":       "2024-01-15T10:00:00Z",
+		},
+		{
+			"id":               "DV-9001-AB",
+			"serial_number":    "FF-GPS-4421-B",
+			"type":             "GPS-Tracker",
+			"status":           "active",
+			"vehicle_id":       "Toyota Prius #115",
+			"last_heartbeat":   "5 mins ago",
+			"firmware_version": "v4.2.1",
+			"signal_dbm":       -89,
+			"battery_pct":      82,
+			"last_ping_at":     "2026-02-10T14:10:05Z",
+			"created_at":       "2024-03-22T08:30:00Z",
+		},
+		{
+			"id":               "DV-3321-KL",
+			"serial_number":    "FF-CAM-3091-C",
+			"type":             "Dashcam",
+			"status":           "offline",
+			"vehicle_id":       "Mercedes Sprinter #88",
+			"last_heartbeat":   "4 hours ago",
+			"firmware_version": "v4.1.9",
+			"signal_dbm":       0,
+			"battery_pct":      12,
+			"last_ping_at":     nil,
+			"created_at":       "2025-11-02T16:20:00Z",
+		},
+		{
+			"id":               "DV-1102-ZX",
+			"serial_number":    "FF-OBD2-1102-D",
+			"type":             "OBD-II",
+			"status":           "active",
+			"vehicle_id":       "Dodge Ram #221",
+			"last_heartbeat":   "Just now",
+			"firmware_version": "v4.2.2 (Beta)",
+			"signal_dbm":       -58,
+			"battery_pct":      100,
+			"last_ping_at":     "2026-02-10T14:12:33Z",
+			"created_at":       "2026-01-20T11:00:00Z",
+		},
+		{
+			"id":               "DV-7741-QA",
+			"serial_number":    "FF-OBD2-6671-E",
+			"type":             "OBD-II",
+			"status":           "warning",
+			"vehicle_id":       "Chevy Express #55",
+			"last_heartbeat":   "45 mins ago",
+			"firmware_version": "v4.2.1",
+			"signal_dbm":       -102,
+			"battery_pct":      8,
+			"last_ping_at":     "2026-02-10T14:05:11Z",
+			"created_at":       "2026-02-01T09:00:00Z",
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": devices,
+		"meta": map[string]interface{}{
+			"total":           4285,
+			"online":          4102,
+			"offline":         183,
+			"low_battery":     42,
+			"signal_warnings": 89,
+			"system_errors":   12,
+		},
+	})
+}
+
+// GetDeviceTelemetry returns detailed telemetry for a specific device
+func (h *AssetHandlers) GetDeviceTelemetry(w http.ResponseWriter, r *http.Request) {
+	deviceID := chi.URLParam(r, "id")
+	
+	telemetry := map[string]interface{}{
+		"device_id": deviceID,
+		"model":     "Connect X4",
+		"imei":      "864209041223561",
+		"iccid":     "8901410321156789",
+		"voltage":   13.2,
+		"temp":      42,
+		"ignition":  true,
+		"gps": map[string]interface{}{
+			"status": "3D Fix",
+			"sats":   9,
+			"lat":    40.7128,
+			"lon":    -74.0060,
+		},
+		"accelerometer": map[string]float64{
+			"x": 0.02,
+			"y": -0.01,
+			"z": 0.98,
+		},
+		"storage_used_pct": 42,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(telemetry)
+}
+
+// GetDeviceLogs returns mock connection logs for a device
+func (h *AssetHandlers) GetDeviceLogs(w http.ResponseWriter, r *http.Request) {
+	logs := []map[string]interface{}{
+		{"ts": "14:35:01.241", "level": "INFO", "msg": "Connection established to ws://relay-04.fleet.net", "color": "#c586c0"},
+		{"ts": "14:35:01.450", "level": "INFO", "msg": "Auth handshake successful (Token ID: 99a8...)", "color": "#c586c0"},
+		{"ts": "14:35:02.112", "level": "DEBUG", "msg": "Sensor polling interval: 1000ms", "color": "#4ec9b0"},
+		{"ts": "14:35:03.001", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 0, \"lat\": 40.7128, \"lon\": -74.0060 }", "color": "#ce9178"},
+		{"ts": "14:35:04.005", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 0, \"lat\": 40.7128, \"lon\": -74.0060 }", "color": "#ce9178"},
+		{"ts": "14:35:05.110", "level": "WARN", "msg": "Weak signal strength detected (-89dBm)", "color": "#dcdcaa"},
+		{"ts": "14:35:06.002", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 12, \"lat\": 40.7129, \"lon\": -74.0061 }", "color": "#ce9178"},
+		{"ts": "14:35:07.004", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 24, \"lat\": 40.7132, \"lon\": -74.0063 }", "color": "#ce9178"},
+		{"ts": "14:35:08.012", "level": "ERROR", "msg": "CAN Bus frame dropped (ID: 0x4F2)", "color": "#f44747"},
+		{"ts": "14:35:08.015", "level": "INFO", "msg": "Retrying frame transmission...", "color": "#c586c0"},
+		{"ts": "14:35:08.120", "level": "INFO", "msg": "Frame sent successfully", "color": "#c586c0"},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(logs)
+}
+
+// PostDeviceCommand handles remote actions
+func (h *AssetHandlers) PostDeviceCommand(w http.ResponseWriter, r *http.Request) {
+	var cmd map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
+		http.Error(w, "Invalid command", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Info("Executing device command", zap.Any("command", cmd))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"msg":    "Command enqueued",
+		"job_id": "job-12345",
+	})
 }
