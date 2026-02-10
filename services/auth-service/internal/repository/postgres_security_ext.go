@@ -11,9 +11,19 @@ import (
 // IP Rules
 
 func (r *postgresRepository) ListIPRules(ctx context.Context, orgID uuid.UUID) ([]models.IPRule, error) {
-	query := `SELECT id, org_id, cidr, action, description, added_by, created_at, updated_at 
-			  FROM ip_rules WHERE org_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(ctx, query, orgID)
+	var query string
+	var args []interface{}
+
+	if orgID == uuid.Nil {
+		query = `SELECT id, org_id, cidr, action, description, added_by, created_at, updated_at 
+				  FROM ip_rules ORDER BY created_at DESC`
+	} else {
+		query = `SELECT id, org_id, cidr, action, description, added_by, created_at, updated_at 
+				  FROM ip_rules WHERE org_id = $1 ORDER BY created_at DESC`
+		args = append(args, orgID)
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

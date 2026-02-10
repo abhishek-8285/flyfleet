@@ -126,6 +126,9 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	router.HandleFunc("/api/v1/auth/register", limiter.Limit(auth.Register))
 	router.HandleFunc("/api/v1/user/theme", auth.UpdateTheme)
 	router.HandleFunc("/api/v1/auth/refresh-token", auth.RefreshToken)
+	
+	// Profile Endpoint (Authenticated)
+	router.Handle("/api/v1/auth/profile", middleware.AuthMiddleware(sp)(http.HandlerFunc(auth.GetProfile)))
 
 	// MFA Security APIs
 	router.HandleFunc("/api/v1/security/mfa/dashboard", securityHandlers.GetMFADashboard)

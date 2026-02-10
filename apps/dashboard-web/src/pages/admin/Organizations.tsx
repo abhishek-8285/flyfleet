@@ -58,26 +58,36 @@ export const Organizations: React.FC = () => {
   ];
 
   return (
-    <div className="p-8">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-           <h1 className="text-2xl font-bold text-slate-800">Organization Management</h1>
-           <p className="text-slate-500 mt-1">Manage tenant organizations and their configurations</p>
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Sub-Header - Optimized for AdminLayout */}
+      <header className="h-16 flex items-center justify-between px-6 border-b border-slate-200 bg-white flex-shrink-0 z-20">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-slate-900 text-lg font-bold">Organization Management</h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">Manage tenant organizations and their configurations</p>
+          </div>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 border border-emerald-200">
+            Platform Online
+          </span>
         </div>
-      </div>
-      
-      <DataGrid<Organization>
-        title="All Organizations"
-        endpoint="/admin/organizations"
-        columns={columns}
-        refreshTrigger={refreshTrigger}
-        actions={
-          <button className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm shadow-blue-900/20">
-            <PlusIcon className="h-5 w-5" />
+        <div className="flex items-center gap-3">
+          <button 
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-blue-600/20"
+          >
+            <PlusIcon className="h-4 w-4" />
             <span>New Organization</span>
           </button>
-        }
-      />
+        </div>
+      </header>
+      
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <DataGrid<Organization>
+          title="Active Tenants"
+          endpoint="/admin/organizations"
+          columns={columns}
+          refreshTrigger={refreshTrigger}
+        />
+      </div>
     </div>
   );
 };

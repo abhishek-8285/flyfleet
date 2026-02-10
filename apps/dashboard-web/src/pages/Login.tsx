@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import EnterpriseAuthLayout from '../components/auth/EnterpriseAuthLayout';
+import { useAuth } from '../context/AuthProvider';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const [captchaRequired, setCaptchaRequired] = useState(false);
   const [captchaSolved, setCaptchaSolved] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,11 +48,12 @@ const Login: React.FC = () => {
         return;
       }
 
-      localStorage.setItem('token', data.access_token);
+      login(data.token || data.access_token, data.refresh_token || '', data.user);
+
       if (rememberMe) {
         localStorage.setItem('remembered_email', email);
       }
-      navigate('/dashboard');
+      navigate('/admin'); // Redirect to admin dashboard instead of just /dashboard
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -32,7 +32,7 @@ func (r *postgresRepository) CreateUser(ctx context.Context, user *models.User) 
 }
 
 func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	query := `SELECT id, email, password_hash, name, phone, mfa_enabled, mfa_secret, status, failed_logins, locked_until, verified, theme, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, failed_logins, locked_until, verified, COALESCE(theme, 'light'), created_at, updated_at FROM users WHERE id = $1`
 	var user models.User
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Phone,
@@ -45,8 +45,8 @@ func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*mo
 }
 
 func (r *postgresRepository) UpdateUser(ctx context.Context, user *models.User) error {
-	query := `UPDATE users SET email=$1, name=$2, phone=$3, status=$4, theme=$5, updated_at=NOW() WHERE id=$6`
-	_, err := r.db.Exec(ctx, query, user.Email, user.Name, user.Phone, user.Status, user.Theme, user.ID)
+	query := `UPDATE users SET email=$1, name=$2, phone=$3, status=$4, theme=$5, password_hash=$6, verified=$7, failed_logins=$8, updated_at=NOW() WHERE id=$9`
+	_, err := r.db.Exec(ctx, query, user.Email, user.Name, user.Phone, user.Status, user.Theme, user.PasswordHash, user.Verified, user.FailedLogins, user.ID)
 	return err
 }
 
@@ -289,7 +289,7 @@ func (r *postgresRepository) GetOrganizationsByUserID(ctx context.Context, userI
 }
 
 func (r *postgresRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
-	query := `SELECT id, name, domain, default_theme, status, created_at, updated_at FROM organizations WHERE id = $1 AND is_deleted = FALSE`
+	query := `SELECT id, name, COALESCE(domain, ''), COALESCE(default_theme, 'light'), status, created_at, updated_at FROM organizations WHERE id = $1 AND is_deleted = FALSE`
 	var o models.Organization
 	err := r.db.QueryRow(ctx, query, id).Scan(&o.ID, &o.Name, &o.Domain, &o.DefaultTheme, &o.Status, &o.CreatedAt, &o.UpdatedAt)
 	if err != nil {
@@ -375,7 +375,7 @@ func (r *postgresRepository) ListOrganizations(ctx context.Context, page, size i
 
 	// Get data
 	query := `
-		SELECT id, name, domain, default_theme, status, created_at, updated_at 
+		SELECT id, name, COALESCE(domain, ''), COALESCE(default_theme, 'light'), status, created_at, updated_at 
 		FROM organizations 
 		WHERE is_deleted = FALSE 
 		ORDER BY created_at DESC 

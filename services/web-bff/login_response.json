@@ -1,0 +1,28 @@
+Note: Unnecessary use of -X or --request, POST is already inferred.
+* Host localhost:8081 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8081...
+* Connected to localhost (::1) port 8081
+> POST /api/v1/auth/login HTTP/1.1
+> Host: localhost:8081
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 48
+> 
+} [48 bytes data]
+< HTTP/1.1 502 Bad Gateway
+< Access-Control-Allow-Headers: Content-Type, Authorization, X-Admin-ID, X-Organization-ID
+< Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+< Content-Type: text/plain; charset=utf-8
+< X-Content-Type-Options: nosniff
+< Date: Tue, 10 Feb 2026 12:00:48 GMT
+< Content-Length: 12
+< 
+{ [12 bytes data]
+100    60  100    12  100    48   8163  32653 --:--:-- --:--:-- --:--:-- 60000
+* Connection #0 to host localhost left intact
+Bad Gateway

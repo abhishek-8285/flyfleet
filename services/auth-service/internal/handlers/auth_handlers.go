@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flyfleet/auth-service/internal/models"
 	"github.com/flyfleet/auth-service/internal/service"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -327,6 +328,48 @@ func (h *AuthHandlers) CreateUser(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "use register for now", http.StatusNotImplemented)
 }
 
-func (h *AuthHandlers) GetUser(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
+func (h *AuthHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(uuid.UUID)
+	if !ok {
+		http.Error(w, "User not found in context", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := h.service.GetUserByID(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to fetch user", zap.Error(err))
+		http.Error(w, "Failed to fetch user profile", http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	permissions, err := h.service.GetEffectivePermissions(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to fetch permissions", zap.Error(err))
+		// continue without permissions or return error?
+		// Return empty permissions to allow partial load
+		permissions = []models.PermissionDefinition{}
+	}
+
+	orgs, err := h.service.GetUserOrganizations(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("Failed to fetch organizations", zap.Error(err))
+		orgs = []models.Organization{}
+	}
+
+	// Transform Permissions to simple string list if needed, or keep as definitions
+	// Frontend likely expects a list of permission codes strings or objects
+	// Let's return the full object for flexibility
+	
+	resp := map[string]interface{}{
+		"user":        user,
+		"permissions": permissions,
+		"orgs":        orgs,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

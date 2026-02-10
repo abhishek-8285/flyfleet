@@ -66,8 +66,6 @@ import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
 import AuditCenter from './pages/audit/AuditCenter';
 import Dashboard from './pages/Dashboard';
-import DeviceDashboard from './pages/devices/DeviceDashboard';
-import DeviceDiagnostics from './pages/devices/DeviceDiagnostics';
 import DeviceTelemetry from './pages/devices/DeviceTelemetry';
 import FirmwareManager from './pages/devices/FirmwareManager';
 import RemoteCommands from './pages/devices/RemoteCommands';
@@ -288,12 +286,9 @@ function App() {
                 <Route path="integrations" element={<IntegrationsCenter />} />
 
                 {/* Device Diagnostics Module */}
-                <Route path="devices" element={<DeviceDashboard />} />
-                <Route path="devices/:id" element={<DeviceDiagnostics />} />
-                <Route path="devices/diagnostics" element={<DeviceDiagnostics />} />
-                <Route path="devices/telemetry" element={<DeviceTelemetry />} />
-                <Route path="devices/commands" element={<RemoteCommands />} />
-                <Route path="devices/firmware" element={<FirmwareManager />} />
+                <Route path="devices/:id/telemetry" element={<DeviceTelemetry />} />
+                <Route path="devices/:id/commands" element={<RemoteCommands />} />
+                <Route path="devices/:id/firmware" element={<FirmwareManager />} />
                 
                 {/* Future: etc */}
               <Route path="devices/firmware" element={<FirmwareManager />} />

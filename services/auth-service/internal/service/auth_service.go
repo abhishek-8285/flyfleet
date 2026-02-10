@@ -138,6 +138,10 @@ func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string)
 	return s.issueTokens(ctx, user, ip, ua)
 }
 
+func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	return s.repo.GetUserByID(ctx, id)
+}
+
 func (s *AuthService) Register(ctx context.Context, email, password, name, ip, ua string) (*models.User, error) {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	user := &models.User{
@@ -941,11 +945,16 @@ func (s *AuthService) CreateRole(ctx context.Context, name, description string, 
 		return nil, errors.New("role with this name already exists")
 	}
 
+	var orgIDPtr *uuid.UUID
+	if orgID != uuid.Nil {
+		orgIDPtr = &orgID
+	}
+
 	role := &models.Role{
 		ID:             uuid.New(),
 		Name:           name,
 		Description:    description,
-		OrganizationID: &orgID,
+		OrganizationID: orgIDPtr,
 		IsSystem:       isSystem,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
@@ -1040,7 +1049,7 @@ func (s *AuthService) UpdateRolePermissions(ctx context.Context, roleID uuid.UUI
 	if err != nil {
 		return err
 	}
-	if role.IsSystem {
+	if role.IsSystem && actorID != uuid.Nil {
 		return errors.New("cannot modify permissions of system roles")
 	}
 	

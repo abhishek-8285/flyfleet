@@ -55,38 +55,12 @@ func main() {
 		})
 	})
 
-	// Simple login endpoint for testing
-	mux.HandleFunc("/api/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		
-		var req struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
-		
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-		
-		// Simple validation - in production, verify against database
-		if req.Email == "admin@test.com" && req.Password == "test123" {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMTQ3NmE5ODctNzZhZC00OTYzLWI2NGEtMDFhNzFlYjczOWNhIiwib3JnX2lkIjoiMTQ3NmE5ODctNzZhZC00OTYzLWI2NGEtMDFhNzFlYjczOWNhIiwiZXhwIjo0MDcwODQ0OTUyfQ.test-token",
-				"user": map[string]string{
-					"id":    "1476a987-76ad-4963-b64a-01a71eb739ca",
-					"email": req.Email,
-					"name":  "Admin User",
-				},
-			})
-		} else {
-			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		}
-	})
+	// Security proxy routes
+	mux.HandleFunc("/api/v1/auth/login", mfaHandlers.ProxyLogin)
+	mux.HandleFunc("/api/v1/auth/profile/", mfaHandlers.ProxyProfile)
+	mux.HandleFunc("/api/v1/auth/profile", mfaHandlers.ProxyProfile)
+	mux.HandleFunc("/api/v1/admin/organizations/", mfaHandlers.ProxyOrganization)
+	mux.HandleFunc("/api/v1/admin/organizations", mfaHandlers.ProxyOrganization)
 	
 	// Security endpoints (RBAC Enforcement - Centralized)
 	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
@@ -98,8 +72,7 @@ func main() {
 	mux.Handle("/api/audit/policy", middleware.RBACMiddleware(sp, security.ResourceAuditPolicy)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
 	mux.Handle("/api/audit/", middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
 	
-	mux.Handle("/api/organizations/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyOrganization)))
-	mux.Handle("/api/rbac/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyRBAC)))
+	mux.Handle("/api/v1/admin/rbac", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyRBAC)))
 
 	// Asset Management (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVehicle)))

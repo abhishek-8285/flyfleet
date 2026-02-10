@@ -7,6 +7,7 @@ import (
 	"github.com/flyfleet/auth-service/internal/models"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func (s *AuthService) EnsureSeedData(ctx context.Context) error {
@@ -140,6 +141,93 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 
 		if err := s.UpdateRolePermissions(ctx, roleID, permIDs, uuid.Nil); err != nil { // System action
 			s.logger.Error("Failed to update role permissions", zap.String("role", r.Name), zap.Error(err))
+		}
+	}
+
+	// 3. Seed Default Organization
+	orgID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	org, err := s.repo.GetOrganizationByID(ctx, orgID)
+	if err != nil {
+		s.logger.Info("Creating default organization...")
+		org = &models.Organization{
+			ID:           orgID,
+			Name:         "FlyFleet Global",
+			Domain:       "test.com",
+			DefaultTheme: "light",
+			Status:       "active",
+		}
+		if err := s.repo.CreateOrganization(ctx, org); err != nil {
+			s.logger.Error("Failed to seed default organization", zap.Error(err))
+		}
+	}
+
+	// 4. Seed Super Admin User
+	adminEmail := "admin@test.com"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("test123"), bcrypt.DefaultCost)
+	admin, err := s.repo.GetUserByEmail(ctx, adminEmail)
+	if err != nil || admin == nil {
+		s.logger.Info("Creating default admin user...")
+		admin = &models.User{
+			ID:           uuid.New(),
+			Email:        adminEmail,
+			Name:         "Admin User",
+			PasswordHash: string(hashedPassword),
+			Status:       "active",
+			Verified:     true,
+		}
+		if err := s.repo.CreateUser(ctx, admin); err != nil {
+			s.logger.Error("Failed to seed admin user", zap.Error(err))
+		} else {
+			// Link to Org
+			if err := s.repo.AddUserToOrganization(ctx, admin.ID, orgID, "super_admin"); err != nil {
+				s.logger.Error("Failed to link admin to organization", zap.Error(err))
+			}
+			
+			// Assign Role
+			superAdminRole, _ := s.repo.GetRoleByName(ctx, uuid.Nil, "Super Admin")
+			if superAdminRole != nil {
+				if err := s.repo.AssignRoleToUser(ctx, admin.ID, superAdminRole.ID, uuid.Nil); err != nil {
+					s.logger.Error("Failed to assign Super Admin role", zap.Error(err))
+				}
+			}
+		}
+	} else if admin.PasswordHash == "hash" {
+		s.logger.Info("Updating default admin user password...")
+		admin.PasswordHash = string(hashedPassword)
+		if err := s.repo.UpdateUser(ctx, admin); err != nil {
+			s.logger.Error("Failed to update admin password", zap.Error(err))
+		}
+	}
+
+	// Always ensure Admin is linked to Org and has Role
+	if admin != nil {
+		// Link to Org if not already linked
+		_, err := s.repo.GetUserRoleInOrg(ctx, admin.ID, orgID)
+		if err != nil { // Likely "sql: no rows in result set"
+			s.logger.Info("Linking admin to organization...")
+			if err := s.repo.AddUserToOrganization(ctx, admin.ID, orgID, "super_admin"); err != nil {
+				s.logger.Error("Failed to link admin to organization", zap.Error(err))
+			}
+		}
+
+		// Assign Super Admin Role if not assigned
+		superAdminRole, _ := s.repo.GetRoleByName(ctx, uuid.Nil, "Super Admin")
+		if superAdminRole != nil {
+			// Check if already assigned
+			userRoles, _ := s.repo.GetUserRoles(ctx, admin.ID)
+			hasRole := false
+			for _, r := range userRoles {
+				if r.ID == superAdminRole.ID {
+					hasRole = true
+					break
+				}
+			}
+			if !hasRole {
+				s.logger.Info("Assigning Super Admin role to admin...")
+				if err := s.repo.AssignRoleToUser(ctx, admin.ID, superAdminRole.ID, uuid.Nil); err != nil {
+					s.logger.Error("Failed to assign Super Admin role", zap.Error(err))
+				}
+			}
 		}
 	}
 

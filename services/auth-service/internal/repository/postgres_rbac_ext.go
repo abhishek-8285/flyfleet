@@ -115,8 +115,18 @@ func (r *postgresRepository) CountUsersWithRole(ctx context.Context, roleName st
 }
 
 func (r *postgresRepository) GetRoleByName(ctx context.Context, orgID uuid.UUID, name string) (*models.Role, error) {
-	query := `SELECT id, name, description, organization_id, is_system, created_at, updated_at FROM roles WHERE organization_id = $1 AND name = $2`
-	rows, err := r.db.Query(ctx, query, orgID, name)
+	var query string
+	var args []interface{}
+	
+	if orgID == uuid.Nil {
+		query = `SELECT id, name, description, organization_id, is_system, created_at, updated_at FROM roles WHERE organization_id IS NULL AND name = $1`
+		args = []interface{}{name}
+	} else {
+		query = `SELECT id, name, description, organization_id, is_system, created_at, updated_at FROM roles WHERE organization_id = $1 AND name = $2`
+		args = []interface{}{orgID, name}
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

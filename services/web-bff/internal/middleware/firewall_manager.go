@@ -60,19 +60,17 @@ func (fm *FirewallManager) refreshRules() {
 		return
 	}
 
-	var data struct {
-		Rules []IPRule `json:"rules"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	var rules []IPRule
+	if err := json.NewDecoder(resp.Body).Decode(&rules); err != nil {
 		fm.logger.Error("Failed to decode IP rules response", zap.Error(err))
 		return
 	}
 
 	fm.Lock()
-	fm.rules = data.Rules
+	fm.rules = rules
 	fm.Unlock()
 	
-	fm.logger.Info("Successfully refreshed IP firewall rules", zap.Int("count", len(data.Rules)))
+	fm.logger.Info("Successfully refreshed IP firewall rules", zap.Int("count", len(rules)))
 }
 
 func (fm *FirewallManager) IsBlocked(ipStr string) bool {

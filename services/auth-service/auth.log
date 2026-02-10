@@ -1,0 +1,3 @@
+{"level":"info","ts":1770726812.4766874,"caller":"service/seeding.go:14","msg":"Starting RBAC Seeding..."}
+{"level":"info","ts":1770726812.808369,"caller":"service/seeding.go:234","msg":"RBAC Seeding Completed"}
+{"level":"info","ts":1770726812.8087685,"caller":"cmd/main.go:71","msg":"Starting enterprise auth service","port":"8089"}

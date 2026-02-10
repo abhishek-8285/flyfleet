@@ -28,11 +28,19 @@ func (h *MFAHandlers) ProxyAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MFAHandlers) ProxyOrganization(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/organizations/", "/api/v1/admin/organizations/")
+	h.proxyToAuth(w, r, "/api/v1/admin/organizations", "/api/v1/admin/organizations")
 }
 
 func (h *MFAHandlers) ProxyRBAC(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/rbac/", "/api/v1/admin/rbac/")
+	h.proxyToAuth(w, r, "/api/v1/admin/rbac", "/api/v1/admin/rbac")
+}
+
+func (h *MFAHandlers) ProxyProfile(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/v1/auth/profile", "/api/v1/auth/profile")
+}
+
+func (h *MFAHandlers) ProxyLogin(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAuth(w, r, "/api/v1/auth/login", "/api/v1/auth/login")
 }
 
 func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
@@ -85,6 +93,10 @@ func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, source
 	
 	// Copy response headers
 	for name, values := range resp.Header {
+		// Skip CORS headers as BFF middleware handles them
+		if strings.HasPrefix(strings.ToLower(name), "access-control-") {
+			continue
+		}
 		for _, value := range values {
 			w.Header().Add(name, value)
 		}

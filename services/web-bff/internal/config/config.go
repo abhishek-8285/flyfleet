@@ -25,7 +25,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:                        getEnv("PORT", "8081"),
-		AuthServiceURL:              getEnv("AUTH_SERVICE_URL", "http://auth-service:8080"),
+		AuthServiceURL:              getEnv("AUTH_SERVICE_URL", "http://localhost:8089"),
 		VehicleServiceURL:           getEnv("VEHICLE_SERVICE_URL", "http://vehicle-service:8084"),
 		MaintenanceServiceURL:       getEnv("MAINTENANCE_SERVICE_URL", "http://maintenance-service:8086"),
 		FuelServiceURL:              getEnv("FUEL_SERVICE_URL", "http://fuel-service:8082"),

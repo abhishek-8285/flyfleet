@@ -79,10 +79,16 @@ func writeJSON(w http.ResponseWriter, data interface{}, statusCode int) {
 
 func (h *SecurityExtHandlers) ListIPRules(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.URL.Query().Get("org_id")
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil || orgID == uuid.Nil {
-		writeError(w, service.ErrInvalidOrgID, http.StatusBadRequest)
-		return
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		parsed, err := uuid.Parse(orgIDStr)
+		if err != nil {
+			writeError(w, service.ErrInvalidOrgID, http.StatusBadRequest)
+			return
+		}
+		orgID = parsed
+	} else {
+		orgID = uuid.Nil
 	}
 
 	rules, err := h.service.ListIPRules(r.Context(), orgID)

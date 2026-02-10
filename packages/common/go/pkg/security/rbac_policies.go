@@ -45,7 +45,7 @@ const (
 // PolicyManifest defines the required roles for each resource
 // This centralizes policy definitions to prevent configuration drift
 var PolicyManifest = map[string][]string{
-	ResourceOrganizations:  {RoleSuperAdmin},
+	ResourceOrganizations:  {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceAuditLogs:      {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceAuditSettings:  {RoleSuperAdmin, RoleOrgAdmin},
 	ResourceUsers:         {RoleSuperAdmin, RoleOrgAdmin},

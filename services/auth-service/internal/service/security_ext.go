@@ -40,9 +40,6 @@ var ValidItemStatuses = map[string]bool{
 // IP Rules
 
 func (s *AuthService) ListIPRules(ctx context.Context, orgID uuid.UUID) ([]models.IPRule, error) {
-	if orgID == uuid.Nil {
-		return nil, ErrInvalidOrgID
-	}
 	return s.repo.ListIPRules(ctx, orgID)
 }
 
