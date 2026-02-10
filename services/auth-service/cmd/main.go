@@ -129,6 +129,7 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	
 	// Profile Endpoint (Authenticated)
 	router.Handle("/api/v1/auth/profile", middleware.AuthMiddleware(sp)(http.HandlerFunc(auth.GetProfile)))
+	router.Handle("/api/v1/auth/profile/", middleware.AuthMiddleware(sp)(http.HandlerFunc(auth.GetProfile)))
 
 	// MFA Security APIs
 	router.HandleFunc("/api/v1/security/mfa/dashboard", securityHandlers.GetMFADashboard)
@@ -205,24 +206,8 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 
 	// Admin Portal Endpoints (Standardized and Centralized)
 	// Organizations
-	router.Handle("/api/v1/admin/organizations", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			if r.URL.Query().Get("id") != "" {
-				admin.GetOrganization(w, r)
-			} else {
-				admin.ListOrganizations(w, r)
-			}
-		case http.MethodPost:
-			admin.CreateOrganization(w, r)
-		case http.MethodPut:
-			admin.UpdateOrganization(w, r)
-		case http.MethodDelete:
-			admin.DeleteOrganization(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))))
+	router.Handle("/api/v1/admin/organizations", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(organizationsHandler(admin)))))
+	router.Handle("/api/v1/admin/organizations/", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(organizationsHandler(admin)))))
 
 	// Users (Org Scoped)
 	router.Handle("/api/v1/admin/users", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

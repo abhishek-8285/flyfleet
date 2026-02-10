@@ -1,3 +1,5 @@
-{"level":"info","ts":1770726812.4766874,"caller":"service/seeding.go:14","msg":"Starting RBAC Seeding..."}
-{"level":"info","ts":1770726812.808369,"caller":"service/seeding.go:234","msg":"RBAC Seeding Completed"}
-{"level":"info","ts":1770726812.8087685,"caller":"cmd/main.go:71","msg":"Starting enterprise auth service","port":"8089"}
+nohup: ignoring input
+{"level":"info","ts":1770729868.5477905,"caller":"service/seeding.go:14","msg":"Starting RBAC Seeding..."}
+{"level":"info","ts":1770729868.8654327,"caller":"service/seeding.go:234","msg":"RBAC Seeding Completed"}
+{"level":"info","ts":1770729868.8657913,"caller":"cmd/main.go:71","msg":"Starting enterprise auth service","port":"8080"}
+{"level":"fatal","ts":1770729868.8659835,"caller":"cmd/main.go:73","msg":"Failed to start server","error":"listen tcp :8080: bind: address already in use","stacktrace":"main.main.func2\n\t/home/abhishek/Desktop/flyfleet/services/auth-service/cmd/main.go:73"}

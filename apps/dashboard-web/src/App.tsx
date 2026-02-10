@@ -121,7 +121,7 @@ import VehicleDetails from './pages/VehicleDetails';
 import VerifyEmail from './pages/VerifyEmail';
 import { store } from './store';
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('access_token');
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
@@ -193,7 +193,7 @@ function App() {
                   </PrivateRoute>
                 }
               >
-                <Route index element={<Navigate to="organizations" replace />} />
+                <Route index element={<Organizations />} />
                 <Route path="organizations" element={<Organizations />} />
                 <Route path="organizations/new" element={<AddOrganization />} />
                 <Route path="organizations/:id" element={<OrganizationDetail />} />
