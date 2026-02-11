@@ -24,4 +24,5 @@ use (
 	./services/vehicle-service
 	./services/video-service
 	./services/web-bff
+	./services/support-service
 )

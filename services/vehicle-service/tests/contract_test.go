@@ -1,8 +1,3 @@
-const (
-	TestLimitMax = 100
-	TestTelemetryLimitMax = 500
-)
-
 package contract_test
 
 import (
@@ -19,6 +14,11 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers/legacy"
+)
+
+const (
+	TestLimitMax = 100
+	TestTelemetryLimitMax = 500
 )
 
 var specDoc *openapi3.T

@@ -1,3 +1,4 @@
+package repository
 
 import (
 	"context"
@@ -37,6 +38,20 @@ func NewTicketRepository(db *pgxpool.Pool, logger *zap.Logger) TicketRepository 
 }
 
 func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.SupportTicket) error {
+	// Validate required fields
+	if ticket == nil {
+		return fmt.Errorf("ticket cannot be nil")
+	}
+	if ticket.Title == "" {
+		return fmt.Errorf("ticket title is required")
+	}
+	if ticket.OrgID == uuid.Nil {
+		return fmt.Errorf("organization ID is required")
+	}
+	if ticket.ReporterID == uuid.Nil {
+		return fmt.Errorf("reporter ID is required")
+	}
+
 	query := `
 		INSERT INTO support_tickets (
 			id, ticket_id, org_id, title, description, status, priority, category, 
@@ -60,9 +75,12 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 	}
 
 	// Log audit trail
-	r.logAudit(ctx, nil, ticket.ID, ticket.ReporterID, "CREATE", nil, map[string]interface{}{
+	if err := r.logAudit(ctx, nil, ticket.ID, ticket.ReporterID, "CREATE", nil, map[string]interface{}{
 		"title": ticket.Title, "status": ticket.Status,
-	}, "Ticket created")
+	}, "Ticket created"); err != nil {
+		r.logger.Warn("Failed to log audit for ticket creation", zap.Error(err))
+		// Continue with the operation even if audit logging fails
+	}
 
 	return nil
 }
@@ -116,17 +134,19 @@ func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID str
 func (r *ticketRepository) ListTickets(ctx context.Context, filter models.TicketFilter) ([]*models.SupportTicket, int, error) {
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM support_tickets WHERE 1=1"
-	args := []interface{}{}
-	argIndex := 1
+	countArgs := []interface{}{}
+	countArgIndex := 1
+	var args []interface{}
+	var argIndex int
 
 	if filter.Status != "" {
-		countQuery += fmt.Sprintf(" AND status = $%d", argIndex)
-		args = append(args, filter.Status)
-		argIndex++
+		countQuery += fmt.Sprintf(" AND status = $%d", countArgIndex)
+		countArgs = append(countArgs, filter.Status)
+		// countArgIndex++ // Not needed since we only have one filter condition
 	}
 
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, countArgs...).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -181,6 +201,10 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 		tickets = append(tickets, &ticket)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
 	return tickets, totalCount, nil
 }
 
@@ -211,6 +235,14 @@ func (r *ticketRepository) DeleteTicket(ctx context.Context, id uuid.UUID) error
 }
 
 func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string) error {
+	// Validate inputs
+	if id == uuid.Nil {
+		return fmt.Errorf("ticket ID is required")
+	}
+	if status == "" {
+		return fmt.Errorf("status is required")
+	}
+
 	// Get current ticket for audit
 	currentTicket, err := r.GetTicketByID(ctx, id)
 	if err != nil {
@@ -232,10 +264,13 @@ func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID,
 	}
 
 	// Log audit trail
-	r.logAudit(ctx, currentTicket, id, uuid.Nil, "STATUS_CHANGE", 
+	if err := r.logAudit(ctx, currentTicket, id, uuid.Nil, "STATUS_CHANGE", 
 		map[string]interface{}{"status": currentTicket.Status},
 		map[string]interface{}{"status": status},
-		fmt.Sprintf("Status changed from %s to %s", currentTicket.Status, status))
+		fmt.Sprintf("Status changed from %s to %s", currentTicket.Status, status)); err != nil {
+		r.logger.Warn("Failed to log audit for status change", zap.Error(err))
+		// Continue with the operation even if audit logging fails
+	}
 
 	return nil
 }
@@ -277,6 +312,10 @@ func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUI
 		tickets = append(tickets, &ticket)
 	}
 
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return tickets, nil
 }
 
@@ -305,6 +344,17 @@ func (r *ticketRepository) GetDashboardSummary(ctx context.Context, orgID uuid.U
 }
 
 func (r *ticketRepository) AddComment(ctx context.Context, comment *models.IncidentComment) error {
+	// Validate required fields
+	if comment == nil {
+		return fmt.Errorf("comment cannot be nil")
+	}
+	if comment.TicketID == uuid.Nil {
+		return fmt.Errorf("ticket ID is required")
+	}
+	if comment.Content == "" {
+		return fmt.Errorf("comment content is required")
+	}
+
 	query := `
 		INSERT INTO incident_comments (
 			id, ticket_id, author_id, author_name, comment_type, content, 
@@ -350,6 +400,10 @@ func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.
 			return nil, err
 		}
 		comments = append(comments, &comment)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return comments, nil
@@ -400,14 +454,31 @@ func (r *ticketRepository) UpdateOrgMetrics(ctx context.Context, metrics *models
 	return err
 }
 
-func (r *ticketRepository) logAudit(ctx context.Context, oldTicket *models.SupportTicket, ticketID uuid.UUID, userID uuid.UUID, action string, oldValue, newValue map[string]interface{}, details string) {
+func (r *ticketRepository) logAudit(ctx context.Context, oldTicket *models.SupportTicket, ticketID uuid.UUID, userID uuid.UUID, action string, oldValue, newValue map[string]interface{}, details string) error {
 	query := `
 		INSERT INTO support_audit_log (
 			id, ticket_id, user_id, action, old_value, new_value, details, created_at, ip_address
 		) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, NOW(), '')`
 
-	_, err := r.db.Exec(ctx, query, ticketID, userID, action, oldValue, newValue, details)
-	if err != nil {
-		r.logger.Error("Failed to log audit", zap.Error(err))
+	// Convert oldTicket to JSON if provided
+	var oldTicketJSON map[string]interface{}
+	if oldTicket != nil {
+		oldTicketJSON = map[string]interface{}{
+			"title":       oldTicket.Title,
+			"status":      oldTicket.Status,
+			"priority":    oldTicket.Priority,
+			"category":    oldTicket.Category,
+			"assigned_to": oldTicket.AssignedTo,
+			"updated_at":  oldTicket.UpdatedAt,
+		}
 	}
+
+	_, err := r.db.Exec(ctx, query, ticketID, userID, action, oldTicketJSON, newValue, details)
+	if err != nil {
+		r.logger.Error("Failed to log audit", zap.Error(err), 
+			zap.String("ticket_id", ticketID.String()), 
+			zap.String("action", action))
+		return fmt.Errorf("failed to log audit: %w", err)
+	}
+	return nil
 }

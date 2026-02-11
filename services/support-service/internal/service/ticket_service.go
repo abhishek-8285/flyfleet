@@ -1,3 +1,4 @@
+package service
 
 import (
 	"context"
@@ -83,8 +84,8 @@ func (s *ticketService) ListTickets(ctx context.Context, filter models.TicketFil
 func (s *ticketService) UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID) error {
 	// Validate status
 	validStatuses := map[string]bool{
-		"OPEN": "true", "IN_PROGRESS": "true", "RESOLVED": "true", 
-		"CLOSED": "true", "ESCALATED": "true",
+		"OPEN": true, "IN_PROGRESS": true, "RESOLVED": true, 
+		"CLOSED": true, "ESCALATED": true,
 	}
 	
 	if !validStatuses[status] {

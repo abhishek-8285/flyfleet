@@ -40,7 +40,9 @@ func (s *WorkOrderIntegrationTestSuite) TestWorkOrderLifecycle_FullFlow() {
 
 	// Step 1: Create Work Order
 	t.Log("Step 1: Creating work order")
+	workOrderID := uuid.New()
 	workOrder := &models.WorkOrder{
+		ID:              workOrderID,
 		OrganizationID:  s.orgID,
 		VehicleID:       uuid.New(),
 		Title:           "Scheduled Oil Change",
@@ -70,7 +72,7 @@ func (s *WorkOrderIntegrationTestSuite) TestWorkOrderLifecycle_FullFlow() {
 	t.Log("Step 3: Adding parts to work order")
 	part1 := &models.WorkOrderPart{
 		ID:          uuid.New(),
-		WorkOrderID: workOrder.ID,
+		WorkOrderID: workOrderID,
 		PartID:      uuid.New(),
 		Quantity:    1,
 		UnitCost:    45.00,
@@ -79,7 +81,7 @@ func (s *WorkOrderIntegrationTestSuite) TestWorkOrderLifecycle_FullFlow() {
 	}
 	part2 := &models.WorkOrderPart{
 		ID:          uuid.New(),
-		WorkOrderID: workOrder.ID,
+		WorkOrderID: workOrderID,
 		PartID:      uuid.New(),
 		Quantity:    5,
 		UnitCost:    12.00,

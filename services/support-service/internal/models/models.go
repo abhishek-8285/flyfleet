@@ -60,3 +60,26 @@ type DashboardSummary struct {
 	ActiveErrors     int `json:"active_errors"`
 	AvgResolutionHrs float64 `json:"avg_resolution_hrs"`
 }
+
+type IncidentComment struct {
+	ID          uuid.UUID `json:"id" db:"id"`
+	TicketID    uuid.UUID `json:"ticket_id" db:"ticket_id"`
+	AuthorID    *uuid.UUID `json:"author_id,omitempty" db:"author_id"`
+	AuthorName  string    `json:"author_name" db:"author_name"`
+	CommentType string    `json:"comment_type" db:"comment_type"`
+	Content     string    `json:"content" db:"content"`
+	IsPrivate   bool      `json:"is_private" db:"is_private"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type OrgSupportMetrics struct {
+	OrgID             uuid.UUID `json:"org_id" db:"org_id"`
+	OpenTickets       int       `json:"open_tickets" db:"open_tickets"`
+	ResolvedTickets   int       `json:"resolved_tickets" db:"resolved_tickets"`
+	AvgResolutionTime float64   `json:"avg_resolution_time" db:"avg_resolution_time"`
+	SLABreaches       int       `json:"sla_breaches" db:"sla_breaches"`
+	CriticalIssues    int       `json:"critical_issues" db:"critical_issues"`
+	LastCalculated    time.Time `json:"last_calculated" db:"last_calculated"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+}

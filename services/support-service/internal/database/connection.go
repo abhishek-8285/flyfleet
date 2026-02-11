@@ -1,3 +1,5 @@
+package database
+
 import (
 	"context"
 	"fmt"

@@ -291,14 +291,14 @@ func (h *TicketHandlers) GetTicketComments(w http.ResponseWriter, r *http.Reques
 }
 
 // Helper methods
-func (h *TicketHandlers) getOrgID(r *http.Request) uuid.UUID {
+func (h *TicketHandlers) getOrgID(_ *http.Request) uuid.UUID {
 	// In real implementation, this would come from auth context
 	// For now, using a default org ID
 	orgID, _ := uuid.Parse("00000000-0000-0000-0000-000000000001")
 	return orgID
 }
 
-func (h *TicketHandlers) getUserID(r *http.Request) uuid.UUID {
+func (h *TicketHandlers) getUserID(_ *http.Request) uuid.UUID {
 	// In real implementation, this would come from auth context
 	// For now, using a default user ID
 	userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000002")

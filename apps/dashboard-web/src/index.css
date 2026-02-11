@@ -1,3 +1,5 @@
+/* For VS Code CSS validation */
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
