@@ -20,7 +20,7 @@ func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (
 		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
-		return nil, nil
+		return nil, err // Returns pgx.ErrNoRows if not found
 	}
 	return &user, nil
 }
@@ -319,7 +319,11 @@ func (r *postgresRepository) AddUserToOrganization(ctx context.Context, userID, 
 // Security & Audit operations
 func (r *postgresRepository) LogSecurityEvent(ctx context.Context, event *models.SecurityEvent) error {
 	query := `INSERT INTO security_events (user_id, event_type, ip_address, user_agent, metadata) VALUES ($1, $2, $3, $4, $5)`
-	_, err := r.db.Exec(ctx, query, event.UserID, event.EventType, event.IPAddress, event.UserAgent, event.Metadata)
+	metadata := event.Metadata
+	if metadata == "" {
+		metadata = "{}"
+	}
+	_, err := r.db.Exec(ctx, query, event.UserID, event.EventType, event.IPAddress, event.UserAgent, metadata)
 	return err
 }
 
@@ -1230,4 +1234,35 @@ func (r *postgresRepository) UpdateAuditPolicy(ctx context.Context, p *models.Au
 			  retention_years = $2, archive_policy = $3, masking_rules = $4, updated_by = $5, updated_at = NOW()`
 	_, err := r.db.Exec(ctx, query, p.OrgID, p.RetentionYears, p.ArchivePolicy, p.MaskingRules, p.UpdatedBy)
 	return err
+}
+
+func (r *postgresRepository) GetSystemStats(ctx context.Context) (*models.SystemStats, error) {
+	var stats models.SystemStats
+	
+	// Complex aggregations 
+	query := `
+		SELECT
+			(SELECT COUNT(*) FROM users WHERE is_deleted = FALSE),
+			(SELECT COUNT(*) FROM users WHERE status = 'active' AND is_deleted = FALSE),
+			(SELECT COUNT(*) FROM organizations WHERE is_deleted = FALSE),
+			(SELECT COUNT(*) FROM organizations WHERE status = 'active' AND is_deleted = FALSE),
+			(SELECT COUNT(*) FROM organizations WHERE status = 'pending' AND is_deleted = FALSE),
+			(SELECT COUNT(*) FROM organizations WHERE status = 'inactive' AND is_deleted = FALSE),
+			(SELECT COUNT(*) FROM drivers WHERE deleted_at IS NULL)
+	`
+	
+	err := r.db.QueryRow(ctx, query).Scan(
+		&stats.TotalUsers,
+		&stats.ActiveUsers,
+		&stats.TotalOrgs,
+		&stats.ActiveOrgs,
+		&stats.PendingOrgs,
+		&stats.InactiveOrgs,
+		&stats.TotalDrivers,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }

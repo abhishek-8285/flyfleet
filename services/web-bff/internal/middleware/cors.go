@@ -1,8 +1,8 @@
 package middleware
 
 import (
-"os"
 	"net/http"
+	"os"
 )
 
 func CORSMiddleware(next http.Handler) http.Handler {
@@ -10,6 +10,8 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		os.Getenv("FRONTEND_URL"),
 		os.Getenv("ADMIN_FRONTEND_URL"),
 		os.Getenv("MOBILE_APP_URL"),
+		"http://localhost:3000",
+		"http://localhost:5173",
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

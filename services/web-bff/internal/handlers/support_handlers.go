@@ -22,10 +22,10 @@ type SupportHandlers struct {
 
 func NewSupportHandlers(cfg *config.Config, logger *zap.Logger) *SupportHandlers {
 	h := &SupportHandlers{
-		cfg:              cfg,
-		logger:           logger,
-		incidents:        make(map[string]map[string]interface{}),
-		supportServiceURL: "", // Will be configurable
+		cfg:               cfg,
+		logger:            logger,
+		incidents:         make(map[string]map[string]interface{}),
+		supportServiceURL: cfg.AdminSupportServiceURL,
 	}
 	h.seedIncidents()
 	return h

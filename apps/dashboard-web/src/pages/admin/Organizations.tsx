@@ -1,44 +1,109 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { DataGrid } from '../../components/common/DataGrid';
-import apiClient from '../../services/apiClient';
-
-interface Organization {
-  id: string;
-  name: string;
-  domain: string;
-  status: string;
-  default_theme: string;
-  created_at: string;
-}
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '../../services/api';
+import { Organization } from '../../types';
 
 export const Organizations: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // State
+  const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [error, setError] = useState<{ message: string; code?: string; traceId?: string } | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+
+  // Data State
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [stats, setStats] = useState({
     total_orgs: 0,
     active_orgs: 0,
     pending_orgs: 0,
-    inactive_orgs: 0
+    inactive_orgs: 0,
+    total_users: 0,
+    total_vehicles: 0,
+    total_devices: 0,
+    total_trips: 0,
+    active_alerts: 0
   });
 
-  const fetchStats = async () => {
+  // Pagination State
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '1'));
+  const [pageSize, setPageSize] = useState(parseInt(searchParams.get('size') || '10'));
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const data = await apiClient.get('/admin/organizations/stats');
-      setStats(data.data);
-    } catch (error) {
-       console.error("Failed to fetch organization stats", error);
+      // Fetch Stats and Orgs in parallel
+      const [orgStats, orgsResponse, globalStats] = await Promise.all([
+        api.getOrganizationStats().catch(err => {
+          console.warn("Failed to fetch org stats", err);
+          return {}; // Fallback
+        }),
+        api.getOrganizations({ page, limit: pageSize, search: searchQuery }),
+        api.getStatistics().catch(err => {
+          console.warn("Failed to fetch global stats", err);
+          return {};
+        })
+      ]);
+
+      // Normalize Stats
+      // Both getOrganizationStats and getStatistics now return { data: ... }
+      const statsData = (orgStats as any)?.data || (globalStats as any)?.data;
+      const orgsMeta = (orgsResponse as any)?.meta;
+      const orgsList = (orgsResponse as any)?.data || (Array.isArray(orgsResponse) ? orgsResponse : []);
+
+      setStats({
+        total_orgs: statsData?.total_orgs || orgsMeta?.total || 0,
+        active_orgs: statsData?.active_orgs || 0,
+        pending_orgs: statsData?.pending_orgs || 0,
+        inactive_orgs: statsData?.inactive_orgs || 0,
+        total_users: statsData?.total_users || statsData?.total_drivers || 0,
+        total_vehicles: statsData?.total_vehicles || 0,
+        total_devices: statsData?.total_devices || 0,
+        total_trips: statsData?.total_trips || statsData?.active_trips || 0,
+        active_alerts: statsData?.active_alerts || statsData?.alerts_count || 0
+      });
+
+      // Normalize Organizations Data
+      const total = orgsMeta?.total || (orgsResponse as any)?.total || orgsList.length;
+
+      setOrganizations(Array.isArray(orgsList) ? orgsList : []);
+      setTotalItems(total);
+
+    } catch (err: any) {
+      console.error("Failed to fetch organization data", err);
+      setError({
+        message: err.message || 'Failed to load organization data',
+        code: err.code || 'UNKNOWN_ERROR',
+        traceId: err.traceId || 'N/A'
+      });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [page, pageSize, searchQuery]);
+
+  // Effects
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, refreshTrigger]);
 
   useEffect(() => {
-    fetchStats();
-  }, [refreshTrigger]);
+    const params: any = { page: page.toString(), size: pageSize.toString() };
+    if (searchQuery) params.search = searchQuery;
+    setSearchParams(params);
+  }, [page, pageSize, searchQuery, setSearchParams]);
 
+  // Handlers
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this organization?')) {
       try {
-        await apiClient.delete(`/admin/organizations?id=${id}`);
+        await api.deleteOrganization(id);
         setRefreshTrigger(prev => prev + 1);
       } catch (error) {
         alert('Failed to delete organization');
@@ -46,48 +111,61 @@ export const Organizations: React.FC = () => {
     }
   };
 
-  const columns = [
-    { 
-      field: 'name', 
-      header: 'Name', 
-      width: '25%',
-      render: (row: Organization) => (
-        <button 
-          onClick={() => navigate(`/admin/organizations/${row.id}`)}
-          className="text-primary hover:underline font-medium"
-        >
-          {row.name}
-        </button>
-      )
-    },
-    { field: 'domain', header: 'Domain', width: '20%' },
-    { 
-        field: 'status', 
-        header: 'Status', 
-        render: (row: Organization) => (
-            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                row.status === 'active' ? 'bg-success/20 text-success' : 'bg-text-muted/20 text-text-muted'
-            }`}>
-                {row.status.toUpperCase()}
-            </span>
-        ) 
-    },
-    { field: 'created_at', header: 'Created', render: (row: Organization) => new Date(row.created_at).toLocaleDateString() },
-    {
-      field: 'actions',
-      header: '',
-      width: '10%',
-      render: (row: Organization) => (
-        <button 
-          onClick={() => handleDelete(row.id)}
-          className="text-error hover:text-error-dark transition-colors"
-          title="Delete"
-        >
-          <span className="material-symbols-outlined text-[16px]">delete</span>
-        </button>
-      )
+  const toggleDropdown = (orgId: string) => {
+    setDropdownOpen(dropdownOpen === orgId ? null : orgId);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= Math.ceil(totalItems / pageSize)) {
+      setPage(newPage);
     }
-  ];
+  };
+
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  if (loading && !organizations.length) {
+    return (
+      <div className="p-8">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-white text-2xl font-bold mb-2">Organizations</h1>
+            <p className="text-text-muted">Loading organization data...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-6">
+          <h3 className="text-white text-lg font-bold mb-2">Failed to Load Organizations</h3>
+          <p className="text-text-muted mb-4">{error.message}</p>
+          <button
+            onClick={() => setRefreshTrigger(prev => prev + 1)}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -95,71 +173,218 @@ export const Organizations: React.FC = () => {
         <h1 className="text-white text-2xl font-bold mb-1">Organization Management</h1>
         <p className="text-text-muted text-sm">Manage tenant organizations and their configurations</p>
       </div>
-      
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase text-text-muted font-bold">Total Orgs</div>
-            <div className="text-xl font-bold text-white">{stats.total_orgs || '...'}</div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <div onClick={() => navigate('/admin/organizations?status=all')} className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-blue-500/50 transition-all cursor-pointer group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="material-symbols-outlined text-blue-400 text-xl">corporate_fare</span>
+            <span className="text-xs font-bold text-blue-400 bg-blue-400/20 px-2 py-1 rounded">ORGANIZATIONS</span>
           </div>
-          <span className="material-symbols-outlined text-primary text-2xl">corporate_fare</span>
+          <p className="text-2xl font-bold text-white">{stats.total_orgs?.toLocaleString()}</p>
         </div>
-        <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase text-text-muted font-bold">Active</div>
-            <div className="text-xl font-bold text-success">{stats.active_orgs || '...'}</div>
+        <div onClick={() => navigate('/admin/users')} className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-indigo-500/50 transition-all cursor-pointer group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="material-symbols-outlined text-indigo-400 text-xl">group</span>
+            <span className="text-xs font-bold text-indigo-400 bg-indigo-400/20 px-2 py-1 rounded">USERS</span>
           </div>
-          <span className="material-symbols-outlined text-success text-2xl">check_circle</span>
+          <p className="text-2xl font-bold text-white">{stats.total_users?.toLocaleString()}</p>
         </div>
-        <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase text-text-muted font-bold">Pending</div>
-            <div className="text-xl font-bold text-warning">{stats.pending_orgs || '...'}</div>
+        <div onClick={() => navigate('/admin/vehicles')} className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-emerald-500/50 transition-all cursor-pointer group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="material-symbols-outlined text-emerald-400 text-xl">directions_car</span>
+            <span className="text-xs font-bold text-emerald-400 bg-emerald-400/20 px-2 py-1 rounded">VEHICLES</span>
           </div>
-          <span className="material-symbols-outlined text-warning text-2xl">schedule</span>
+          <p className="text-2xl font-bold text-white">{stats.total_vehicles?.toLocaleString()}</p>
         </div>
-        <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase text-text-muted font-bold">Inactive</div>
-            <div className="text-xl font-bold text-text-muted">{stats.inactive_orgs || '...'}</div>
+        <div onClick={() => navigate('/admin/devices')} className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-amber-500/50 transition-all cursor-pointer group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="material-symbols-outlined text-amber-400 text-xl">devices</span>
+            <span className="text-xs font-bold text-amber-400 bg-amber-400/20 px-2 py-1 rounded">DEVICES</span>
           </div>
-          <span className="material-symbols-outlined text-text-muted text-2xl">block</span>
+          <p className="text-2xl font-bold text-white">{stats.total_devices?.toLocaleString()}</p>
+        </div>
+        <div onClick={() => navigate('/admin/alerts')} className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-red-500/50 transition-all cursor-pointer group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="material-symbols-outlined text-red-400 text-xl">warning</span>
+            <span className="text-xs font-bold text-red-400 bg-red-400/20 px-2 py-1 rounded">ALERTS</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{stats.active_alerts?.toLocaleString()}</p>
         </div>
       </div>
-      
-      <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
-          <div className="flex items-center gap-3">
-            <button className="text-xs font-semibold text-white border-b-2 border-primary pb-0.5">All Organizations</button>
-            <button className="text-xs font-medium text-text-muted hover:text-white transition-colors pb-0.5">Active</button>
-            <button className="text-xs font-medium text-text-muted hover:text-white transition-colors pb-0.5">Pending</button>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white flex items-center gap-1 text-[10px] border border-border-color">
-              <span className="material-symbols-outlined text-[14px]">filter_list</span>
-              Filter
-            </button>
-            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
-              <span className="material-symbols-outlined text-[18px]">refresh</span>
-            </button>
-            <button 
+
+      {/* Toolbar */}
+      <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+        <div className="p-4 border-b border-border-color bg-surface-darker">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-6 whitespace-nowrap">
+              <button className="text-sm font-semibold text-white border-b-2 border-primary pb-2">All Organizations</button>
+            </div>
+            <button
               onClick={() => navigate('/admin/organizations/new')}
-              className="px-3 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-1 transition-colors shadow-lg shadow-primary/20"
+              className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
             >
-              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span className="material-symbols-outlined text-base">add</span>
               New Organization
             </button>
           </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-muted">search</span>
+              <input
+                type="text"
+                placeholder="Search organizations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && setPage(1)} // Reset to page 1 on new search
+                className="w-full bg-surface-dark border border-border-color text-sm text-white rounded-lg pl-10 pr-4 py-2 focus:ring-2 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50"
+              />
+            </div>
+            <button
+              onClick={() => fetchData()}
+              className="p-2 hover:bg-border-color rounded-lg text-text-muted hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">refresh</span>
+            </button>
+          </div>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <DataGrid<Organization>
-          title="Active Tenants"
-          endpoint="/admin/organizations"
-          columns={columns}
-          refreshTrigger={refreshTrigger}
-        />
+
+      {/* Table */}
+      <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden mt-4">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-surface-darker border-b border-border-color">
+              <tr>
+                <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Org Name</th>
+                <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Domain</th>
+                <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
+                <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Created At</th>
+                <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider min-w-[120px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-color">
+              {organizations.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-text-muted">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="material-symbols-outlined text-4xl text-border-color">corporate_fare</span>
+                      <p>No organizations found</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                organizations.map((org) => (
+                  <tr key={org.id} className="hover:text-amber-200 hover:bg-surface-dark/10 transition-colors">
+                    <td className="p-4">
+                      <div className="font-medium text-white">{org.name}</div>
+                    </td>
+                    <td className="p-4 text-text-muted">{org.domain}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold border 
+                        ${org.status?.toLowerCase() === 'active' ? 'bg-success/20 text-success border-success/30' :
+                          org.status?.toLowerCase() === 'suspended' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                            'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                        {(org.status || 'UNKNOWN').toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="p-4 text-text-muted">{org.created_at ? new Date(org.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td className="p-4 relative">
+                      <div ref={dropdownRef}>
+                        <button
+                          onClick={() => toggleDropdown(org.id)}
+                          className="p-2 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                        </button>
+
+                        {dropdownOpen === org.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-surface-dark border border-border-color rounded-lg shadow-lg z-50">
+                            <button
+                              onClick={() => navigate(`/admin/organizations/${org.id}`)}
+                              className="w-full px-4 py-3 text-left text-white hover:text-amber-200 hover:bg-surface-dark flex items-center gap-3 text-sm font-medium transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-base">visibility</span>
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => handleDelete(org.id)}
+                              className="w-full px-4 py-3 text-left text-red-400 hover:bg-red-500/20 flex items-center gap-3 text-sm font-medium transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-base">block</span>
+                              Suspend
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Dynamic Pagination Controls */}
+        <div className="p-4 border-t border-border-color bg-surface-darker flex items-center justify-between">
+          <div className="text-sm text-text-muted">
+            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalItems)} of {totalItems} results
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1); // Reset to first page
+                }}
+                className="bg-surface-dark border border-border-color text-text-muted text-sm rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={page === 1}
+                onClick={() => handlePageChange(page - 1)}
+                className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_left</span>
+              </button>
+
+              {/* Simplified pagination numbers */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let p = i + 1;
+                // Adjust logic to show relevant pages if totalPages > 5
+                if (totalPages > 5 && page > 3) {
+                  p = page - 2 + i;
+                }
+                if (p > totalPages) return null;
+
+                return (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`px-3 py-1 text-sm rounded transition-colors ${page === p ? 'bg-primary text-white font-medium' : 'hover:bg-border-color text-white'}`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+
+              <button
+                disabled={page === totalPages || totalPages === 0}
+                onClick={() => handlePageChange(page + 1)}
+                className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

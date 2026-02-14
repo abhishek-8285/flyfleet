@@ -5,7 +5,7 @@ import axios from 'axios';
 // For now, we will use a direct instance to ensure we hit the new BFF on 8081
 // since the main apiClient defaults to 8080 (which might be another gateway).
 
-const MONITORING_API_URL = process.env.REACT_APP_MONITORING_API_URL || 'http://localhost:8081/api/v1/admin/monitoring';
+const MONITORING_API_URL = process.env.REACT_APP_MONITORING_API_URL || '/api/v1/admin/monitoring';
 
 const monitoringClient = axios.create({
   baseURL: MONITORING_API_URL,
@@ -24,55 +24,55 @@ monitoringClient.interceptors.request.use((config) => {
 });
 
 export interface SystemHealthData {
-    status: string;
-    uptime_percent: number;
-    avg_latency_ms: number;
-    error_rate_percent: number;
-    database_status: string;
-    queue_backlog: number;
-    active_integrations: {
-        total: number;
-        active: number;
-    };
-    top_errors: Array<{
-        service: string;
-        code: number;
-        type: string;
-        count: number;
-    }>;
+  status: string;
+  uptime_percent: number;
+  avg_latency_ms: number;
+  error_rate_percent: number;
+  database_status: string;
+  queue_backlog: number;
+  active_integrations: {
+    total: number;
+    active: number;
+  };
+  top_errors: Array<{
+    service: string;
+    code: number;
+    type: string;
+    count: number;
+  }>;
 }
 
 export interface MetricsData {
-    throughput: number;
-    db_latency_ms: number;
-    cache_hit_ratio: number;
-    cluster_usage: Array<{
-        service: string;
-        cpu: number;
-        memory_gb: number;
-        status: string;
-    }>;
+  throughput: number;
+  db_latency_ms: number;
+  cache_hit_ratio: number;
+  cluster_usage: Array<{
+    service: string;
+    cpu: number;
+    memory_gb: number;
+    status: string;
+  }>;
 }
 
 export interface QueueData {
-    running_jobs: number;
-    pending_queue: number;
-    failed_24h: number;
-    dlq_count: number;
-    active_jobs: Array<{
-        id: string;
-        type: string;
-        progress: number;
-        duration: string;
-    }>;
+  running_jobs: number;
+  pending_queue: number;
+  failed_24h: number;
+  dlq_count: number;
+  active_jobs: Array<{
+    id: string;
+    type: string;
+    progress: number;
+    duration: string;
+  }>;
 }
 
 export interface SLAData {
-    global_uptime_90d: number;
-    mttr_minutes: number;
-    error_budget_remaining: string;
-    active_incidents: number;
-    heatmap: number[];
+  global_uptime_90d: number;
+  mttr_minutes: number;
+  error_budget_remaining: string;
+  active_incidents: number;
+  heatmap: number[];
 }
 
 export interface LogEntry {

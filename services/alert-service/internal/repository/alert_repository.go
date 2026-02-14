@@ -620,3 +620,17 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 
 	return &summary, nil
 }
+func (r *AlertRepository) GetStats(ctx context.Context) (*models.AlertStats, error) {
+	query := `
+		SELECT 
+			COUNT(*) as total_alerts,
+			COUNT(CASE WHEN status = 'new' THEN 1 END) as new_alerts
+		FROM alerts`
+	
+	var stats models.AlertStats
+	err := r.db.QueryRow(ctx, query).Scan(&stats.TotalAlerts, &stats.NewAlerts)
+	if err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}

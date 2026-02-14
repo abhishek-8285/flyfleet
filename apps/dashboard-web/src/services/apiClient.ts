@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Environment-aware base URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8081/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -20,7 +20,7 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     if (orgId) {
       config.headers['X-Organization-ID'] = orgId;
     }
@@ -39,12 +39,12 @@ apiClient.interceptors.response.use(
 
     // 1. Handle Token Expiry / Unauthorized
     if (status === 401) {
-        // Only redirect if not already on login to avoid loops
-        if (window.location.pathname !== '/login') {
-             // Optional: Attempt Refresh Token flow here before logout
-            localStorage.removeItem('access_token');
-            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-        }
+      // Only redirect if not already on login to avoid loops
+      if (window.location.pathname !== '/login') {
+        // Optional: Attempt Refresh Token flow here before logout
+        localStorage.removeItem('access_token');
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      }
     }
 
     // 2. Handle Forbidden (RBAC)
@@ -60,10 +60,10 @@ apiClient.interceptors.response.use(
 
     // Pass standardized error object downstream
     return Promise.reject({
-        status,
-        message: data?.error?.message || 'An unexpected error occurred',
-        code: data?.error?.code || 'UNKNOWN_ERROR',
-        traceId: data?.error?.trace_id
+      status,
+      message: data?.error?.message || 'An unexpected error occurred',
+      code: data?.error?.code || 'UNKNOWN_ERROR',
+      traceId: data?.error?.trace_id
     });
   }
 );

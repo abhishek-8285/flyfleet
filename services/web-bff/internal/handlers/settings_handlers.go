@@ -32,7 +32,7 @@ func (h *SettingsHandlers) ProxySettings(w http.ResponseWriter, r *http.Request)
 	
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 	
-	targetURL, err := url.Parse(h.cfg.SettingsServiceURL)
+	targetURL, err := url.Parse(h.cfg.AdminSupportServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse settings service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

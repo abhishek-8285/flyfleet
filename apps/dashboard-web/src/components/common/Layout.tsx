@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppDispatch, RootState } from '../../store';
 import { logout } from '../../store/authSlice';
+import { getSidebarCollapsed, setSidebarCollapsed } from '../../utils/storage';
 
 const Layout: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -36,26 +37,38 @@ const Layout: React.FC = () => {
     { path: '/dashboard/security/mfa', label: 'MFA Center', icon: 'admin_panel_settings' },
   ];
 
-  const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(window.innerWidth >= 1024);
+  const [isSidebarExpanded, setIsSidebarExpanded] = React.useState(false);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [isNotifOpen, setIsNotifOpen] = React.useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
 
-  const toggleSidebar = () => setIsSidebarExpanded(!isSidebarExpanded);
+  // Load persisted sidebar state on mount
+  useEffect(() => {
+    const isCollapsed = getSidebarCollapsed();
+    setIsSidebarExpanded(!isCollapsed);
+  }, []);
 
-  React.useEffect(() => {
+  const toggleSidebar = () => {
+    const newExpanded = !isSidebarExpanded;
+    setIsSidebarExpanded(newExpanded);
+    setSidebarCollapsed(!newExpanded);
+  };
+
+  // Handle responsive behavior
+  useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
         setIsSidebarExpanded(false);
       } else {
-        setIsSidebarExpanded(true);
+        // Restore persisted state on larger screens
+        const isPersistedCollapsed = getSidebarCollapsed();
+        setIsSidebarExpanded(!isPersistedCollapsed);
       }
     };
 
     window.addEventListener('resize', handleResize);
-    // Initial check
-    handleResize();
+    handleResize(); // Initial check
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);

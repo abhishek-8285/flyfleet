@@ -78,6 +78,29 @@ func AdminMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 // OrgScopeMiddleware enforces usage of Organization-Id header or query param
 func OrgScopeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 1. Check if user is super_admin (Global Scope)
+		if role, ok := r.Context().Value("role").(string); ok && role == "super_admin" {
+			// Super admins can access global data if org_id is missing
+			orgIDStr := r.Header.Get("X-Organization-ID")
+			if orgIDStr == "" {
+				orgIDStr = r.URL.Query().Get("orgId")
+			}
+
+			if orgIDStr != "" {
+				if uid, err := uuid.Parse(orgIDStr); err == nil {
+					ctx := context.WithValue(r.Context(), "org_id", uid)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+
+			// If no org provided, use uuid.Nil for global scope
+			ctx := context.WithValue(r.Context(), "org_id", uuid.Nil)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// 2. Standard Org Scoping for other roles
 		orgIDStr := r.Header.Get("X-Organization-ID")
 		if orgIDStr == "" {
 			orgIDStr = r.URL.Query().Get("orgId")

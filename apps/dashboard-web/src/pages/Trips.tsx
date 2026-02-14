@@ -15,7 +15,7 @@ const Trips: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-lg text-gray-600">Loading trips...</div>
+        <div className="text-lg text-text-muted">Loading trips...</div>
       </div>
     );
   }
@@ -23,69 +23,68 @@ const Trips: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Trips</h1>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        <h1 className="text-3xl font-bold text-white">Trips</h1>
+        <button className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors font-medium">
           Create Trip
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-surface-dark rounded-xl border border-border-color shadow-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-border-color">
+          <thead className="bg-[#1d2936]">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Vehicle
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Driver
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Start Time
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Distance
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-surface-dark divide-y divide-border-color">
             {trips.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                  No trips found
+                <td colSpan={6} className="px-6 py-10 text-center text-text-muted italic">
+                  No active trips found.
                 </td>
               </tr>
             ) : (
               trips.map((trip: Trip) => (
-                <tr key={trip.id} className="hover:bg-gray-50">
+                <tr key={trip.id} className="hover:bg-[#1d2936] transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        trip.status === 'ongoing'
-                          ? 'bg-blue-100 text-blue-800'
+                      className={`px-2 py-1 text-xs font-semibold rounded-md border ${trip.status === 'ongoing'
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                           : trip.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-surface-darker text-text-muted border-border-color'
+                        }`}
                     >
                       {trip.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{trip.vehicle_id.slice(0, 8)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{trip.driver_id.slice(0, 8)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-white font-medium">{trip.vehicle_id.slice(-8)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-text-muted">{trip.driver_id.slice(-8)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-text-muted text-xs">
                     {new Date(trip.start_time).toLocaleString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-white font-medium">
                     {trip.distance_km ? `${trip.distance_km.toFixed(1)} km` : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-blue-600 hover:text-blue-900">View</button>
+                    <button className="text-primary hover:text-white transition-colors">View Details</button>
                   </td>
                 </tr>
               ))

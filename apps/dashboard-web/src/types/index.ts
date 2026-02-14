@@ -28,6 +28,9 @@ export interface Vehicle {
   current_location?: Location;
   last_seen?: string;
   gps_device_id?: string;
+  odometer?: number;
+  fuel_level?: number;
+  engine_hours?: number;
   metadata: Record<string, any>;
 }
 
@@ -111,4 +114,33 @@ export interface Statistics {
   total_distance_today: number;
   fuel_consumed_today: number;
   alerts_count: number;
+}
+
+export interface TimelineEvent {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: 'info' | 'warning' | 'critical';
+  timestamp: string;
+  actor: string;
+  actor_type: string;
+  metadata: Record<string, any>;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  domain: string;
+  plan: string;
+  status: 'active' | 'inactive' | 'suspended' | 'pending';
+  sla_tier: string;
+  users_count: number;
+  vehicles_count: number;
+  devices_count: number;
+  billing_status: string;
+  created_at: string;
+  last_activity: string;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  default_theme: string;
 }

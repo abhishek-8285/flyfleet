@@ -362,3 +362,35 @@ func (r *postgresRepository) UpdateMFAUserStatus(ctx context.Context, userID uui
 	_, err := r.db.Exec(ctx, `UPDATE mfa_users SET status = $1, updated_at = NOW() WHERE user_id = $2`, status, userID)
 	return err
 }
+
+func (r *postgresRepository) GetSecurityTelemetry(ctx context.Context) (map[string]any, error) {
+	var totalUsers int
+	var mfaUsers int
+	var failedLogins24h int
+	var totalLogins24h int
+
+	// Total and MFA users
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&totalUsers)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE mfa_enabled = true").Scan(&mfaUsers)
+
+	// Logins in last 24h
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM login_events WHERE status = 'failed' AND created_at > NOW() - INTERVAL '24 hours'").Scan(&failedLogins24h)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM login_events WHERE created_at > NOW() - INTERVAL '24 hours'").Scan(&totalLogins24h)
+
+	mfaAdoption := 0.0
+	if totalUsers > 0 {
+		mfaAdoption = (float64(mfaUsers) / float64(totalUsers)) * 100.0
+	}
+
+	loginFailureRate := 0.0
+	if totalLogins24h > 0 {
+		loginFailureRate = (float64(failedLogins24h) / float64(totalLogins24h)) * 100.0
+	}
+
+	return map[string]any{
+		"mfa_adoption":       mfaAdoption,
+		"failed_login_ratio": loginFailureRate,
+		"total_users":        totalUsers,
+		"mfa_users":          mfaUsers,
+	}, nil
+}

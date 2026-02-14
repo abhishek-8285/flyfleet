@@ -117,6 +117,7 @@ func (h *TelemetryHandler) IngestGPS(c *gin.Context) {
         "longitude":  payload.Longitude,
         "speed":      payload.Speed,
         "ignition":   payload.Ignition,
+        "odometer":   payload.Odometer,
         "timestamp":  timestamp.Unix(),
     })
 

@@ -45,12 +45,15 @@ bin/
 *.test
 *.out
 vendor/
+*.log
+*.md
 
 # Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+
 
 # Docker
 docker-compose.override.yml

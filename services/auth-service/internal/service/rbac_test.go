@@ -153,6 +153,10 @@ func (m *MockRepository) GetEffectivePermissions(ctx context.Context, userID uui
 func (m *MockRepository) CountUsersWithRole(ctx context.Context, roleName string, orgID *uuid.UUID) (int, error) { return 0, nil }
 func (m *MockRepository) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]models.Role, error) { return nil, nil }
 
+func (m *MockRepository) GetSystemStats(ctx context.Context) (*models.SystemStats, error) {
+	return &models.SystemStats{}, nil
+}
+
 // IP Rules
 func (m *MockRepository) ListIPRules(ctx context.Context, orgID uuid.UUID) ([]models.IPRule, error) { return nil, nil }
 func (m *MockRepository) GetIPRuleByID(ctx context.Context, id uuid.UUID) (*models.IPRule, error) { return nil, nil }
@@ -193,6 +197,7 @@ func (m *MockRepository) GetEvidenceExportByID(ctx context.Context, id uuid.UUID
 func (m *MockRepository) UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error { return nil }
 func (m *MockRepository) GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error) { return nil, nil }
 func (m *MockRepository) UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error { return nil }
+func (m *MockRepository) GetSecurityTelemetry(ctx context.Context) (map[string]any, error) { return nil, nil }
 
 
 func TestRBAC_UniqueRoleName(t *testing.T) {
@@ -200,7 +205,7 @@ func TestRBAC_UniqueRoleName(t *testing.T) {
 		roles: make(map[uuid.UUID]*models.Role),
 	}
 	logger := zap.NewNop()
-	svc := NewAuthService(repo, "", "", "", "", "", logger)
+	svc := NewAuthService(repo, "", "", "", logger)
 
 	orgID := uuid.New()
 
@@ -231,7 +236,7 @@ func TestRBAC_SystemRoleLockdown(t *testing.T) {
 		roles: make(map[uuid.UUID]*models.Role),
 	}
 	logger := zap.NewNop()
-	svc := NewAuthService(repo, "", "", "", "", "", logger)
+	svc := NewAuthService(repo, "", "", "", logger)
 
 	// Create System Role via Repo (bypassing service check if any)
 	sysRole := &models.Role{

@@ -20,7 +20,7 @@ import (
 
 	"github.com/flyfleet/alert-service/internal/handlers"
 	"github.com/flyfleet/alert-service/internal/models"
-	"github.com/flyfleet/alert-service/internal/notifications"
+	"github.com/flyfleet/alert-service/internal/providers"
 	"github.com/flyfleet/alert-service/internal/repository"
 	"github.com/flyfleet/alert-service/internal/rule_engine"
 	"github.com/flyfleet/alert-service/internal/service"
@@ -37,7 +37,7 @@ type AlertServiceTestSuite struct {
 	testUserID          uuid.UUID
 	logger              *zap.Logger
 	natsConn            *nats.Conn
-	notificationService *notifications.NotificationService
+	notificationService *providers.NotificationService
 }
 
 func (suite *AlertServiceTestSuite) SetupSuite() {
@@ -69,10 +69,10 @@ func (suite *AlertServiceTestSuite) SetupSuite() {
 	suite.alertRepo = repository.NewAlertRepository(db)
 	
 	// Mock notification service for testing
-	mockSMSService := &notifications.MockSMSService{}
-	mockEmailService := &notifications.MockEmailService{}
+	mockSMSService := &providers.MockSMSService{}
+	mockEmailService := &providers.MockEmailService{}
 	mockPushService := &MockPushService{}
-	suite.notificationService = notifications.NewNotificationService(mockSMSService, mockEmailService, mockPushService, logger)
+	suite.notificationService = providers.NewNotificationService(mockSMSService, mockEmailService, mockPushService, logger)
 	
 	ruleEngine := rule_engine.NewRuleEngine(suite.alertRepo, logger)
 	suite.alertService = service.NewAlertService(suite.alertRepo, ruleEngine, suite.notificationService, logger)

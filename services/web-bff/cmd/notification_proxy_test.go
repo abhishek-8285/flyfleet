@@ -13,7 +13,7 @@ import (
 func TestNotificationProxyRouteRegistration(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	cfg := &config.Config{
-		NotificationServiceURL: "http://notification-service:8080",
+		AlertServiceURL: "http://alert-service:8080",
 	}
 
 	assetHandlers := handlers.NewAssetHandlers(cfg, logger)

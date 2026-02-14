@@ -172,6 +172,10 @@ type AuthRepository interface {
 	UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error
 	GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error)
 	UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error
+
+	// Stats
+	GetSystemStats(ctx context.Context) (*models.SystemStats, error)
+	GetSecurityTelemetry(ctx context.Context) (map[string]any, error)
 }
 
 type postgresRepository struct {

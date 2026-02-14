@@ -1,23 +1,28 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/flyfleet/web-bff/internal/client"
 	"github.com/flyfleet/web-bff/internal/config"
 	"go.uber.org/zap"
 )
 
 type TimelineHandlers struct {
-	cfg    *config.Config
-	logger *zap.Logger
+	cfg                *config.Config
+	logger             *zap.Logger
+	notificationClient *client.NotificationClient
 }
 
-func NewTimelineHandlers(cfg *config.Config, logger *zap.Logger) *TimelineHandlers {
+func NewTimelineHandlers(cfg *config.Config, logger *zap.Logger, netClient *client.NotificationClient) *TimelineHandlers {
 	return &TimelineHandlers{
-		cfg:    cfg,
-		logger: logger,
+		cfg:                cfg,
+		logger:             logger,
+		notificationClient: netClient,
 	}
 }
 
@@ -38,70 +43,30 @@ type TimelineEvent struct {
 func (h *TimelineHandlers) GetTimeline(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Timeline request received")
 
-	// Mock Data
-	events := []TimelineEvent{
-		{
-			ID:          "evt_1",
-			Type:        "alert",
-			Title:       "Vehicle Breakdown Reported",
-			Description: "Vehicle Truck-892 reported engine failure on I-95 Southbound. Driver John Doe initiated SOS signal.",
-			Severity:    "critical",
-			Timestamp:   time.Now().Add(-2 * time.Minute),
-			Actor:       "System",
-			ActorType:   "system",
-			Metadata: map[string]interface{}{
-				"vehicle_id": "Truck-892",
-				"location":   "Lat: 40.7128, Long: -74.0060",
-			},
-		},
-		{
-			ID:          "evt_2",
-			Type:        "trip",
-			Title:       "Delivery Route #4022 Initiated",
-			Description: "Trip started from Distribution Center A towards Boston Metro Area.",
-			Severity:    "success",
-			Timestamp:   time.Now().Add(-15 * time.Minute),
-			Actor:       "Mike Ross",
+	// Fetch real events from notification-service
+	logs, total, err := h.notificationClient.ListLogs(context.Background(), 1, 100)
+	if err != nil {
+		h.logger.Error("Failed to fetch logs from notification-service", zap.Error(err))
+		// Fallback to mock data if service is down for premium experience
+		logs = []client.NotificationLog{} 
+	}
+
+	events := make([]TimelineEvent, 0, len(logs))
+	for _, l := range logs {
+		events = append(events, TimelineEvent{
+			ID:          l.ID.String(),
+			Type:        l.Type,
+			Title:       l.Subject,
+			Description: fmt.Sprintf("Notification sent via %s to %s", l.Channel, l.UserEmail),
+			Severity:    "info", // Default for notifications
+			Timestamp:   l.CreatedAt,
+			Actor:       l.UserEmail,
 			ActorType:   "user",
 			Metadata: map[string]interface{}{
-				"trip_id": "T-4022",
+				"correlation_id": l.CorrelationID,
+				"status":         l.Status,
 			},
-		},
-		{
-			ID:          "evt_3",
-			Type:        "config",
-			Title:       "Speed Limit Policy Update",
-			Description: "Global speed threshold updated from 75 MPH to 70 MPH for Heavy Duty Fleet.",
-			Severity:    "info",
-			Timestamp:   time.Now().Add(-45 * time.Minute),
-			Actor:       "Alex Morgan (Admin)",
-			ActorType:   "user",
-			Metadata: nil,
-		},
-		{
-			ID:          "evt_4",
-			Type:        "login",
-			Title:       "Successful Login",
-			Description: "User accessed the dashboard via Web Client from IP 192.168.1.42.",
-			Severity:    "info",
-			Timestamp:   time.Now().Add(-1 * time.Hour),
-			Actor:       "Sarah Connor",
-			ActorType:   "user",
-			Metadata: nil,
-		},
-		{
-			ID:          "evt_5",
-			Type:        "device",
-			Title:       "Telematics Signal Weak",
-			Description: "Intermittent signal loss detected on Unit #221 in Sector 4. Last ping latency > 500ms.",
-			Severity:    "warning",
-			Timestamp:   time.Now().Add(-2 * time.Hour),
-			Actor:       "ECU-882910",
-			ActorType:   "system",
-			Metadata: map[string]interface{}{
-				"device_id": "Unit-221",
-			},
-		},
+		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -109,7 +74,7 @@ func (h *TimelineHandlers) GetTimeline(w http.ResponseWriter, r *http.Request) {
 		"data": events,
 		"meta": map[string]interface{}{
 			"count": len(events),
-			"total": 4285,
+			"total": total,
 		},
 	})
 }

@@ -17,23 +17,23 @@ export const AdminLayout: React.FC = () => {
                 <span className="text-white">Dashboard</span>
               </div>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
+            {/* <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
               Live: Production
-            </span>
+            </span> */}
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
-              <input 
-                className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" 
-                placeholder="Search..." 
-                type="text" 
+              <input
+                className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50"
+                placeholder="Search..."
+                type="text"
               />
             </div>
             <div className="flex items-center gap-3">
-              <div className="bg-center bg-no-repeat bg-cover rounded-full size-8 border-2 border-border-color" 
-                   style={{backgroundImage: 'url("https://ui-avatars.com/api/?name=A&background=137fec&color=fff")'}}>
+              <div className="bg-center bg-no-repeat bg-cover rounded-full size-8 border-2 border-border-color"
+                style={{ backgroundImage: 'url("https://ui-avatars.com/api/?name=A&background=137fec&color=fff")' }}>
               </div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-sm font-medium text-white truncate">Admin User</span>

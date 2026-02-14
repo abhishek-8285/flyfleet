@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/flyfleet/web-bff/internal/config"
-	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
@@ -94,8 +92,13 @@ func (h *AssetHandlers) proxyToVehicle(w http.ResponseWriter, r *http.Request, s
 	}
 	
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	// Strip trailing slash if it exists
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
 	
-	targetURL, err := url.Parse(h.cfg.VehicleServiceURL)
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse vehicle service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -168,7 +171,7 @@ func (h *AssetHandlers) ProxyBulkJobs(w http.ResponseWriter, r *http.Request) {
 // ProxyVehicle forwards vehicle management requests
 // Maps /api/v1/admin/vehicles/* -> /api/v1/admin/vehicles/* (Direct forwarding)
 func (h *AssetHandlers) ProxyVehicle(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/v1/admin/vehicles", "/api/v1/admin/vehicles")
+	h.proxyToVehicle(w, r, "/api/v1/admin/vehicles", "/api/v1/vehicles")
 }
 
 // ProxyDevice forwards device management requests
@@ -178,7 +181,72 @@ func (h *AssetHandlers) ProxyDevice(w http.ResponseWriter, r *http.Request) {
 
 // ProxyDriver forwards driver management requests
 func (h *AssetHandlers) ProxyDriver(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/v1/admin/drivers", "/api/v1/admin/drivers")
+	h.proxyToDriver(w, r, "/api/v1/admin/drivers", "/api/v1/drivers")
+}
+
+// proxyToDriver is a helper to forward requests to the driver-service
+func (h *AssetHandlers) proxyToDriver(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	path := r.URL.Path
+	if !strings.HasPrefix(path, sourcePrefix) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+	
+	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	// Strip trailing slash if it exists
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+	
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
+	if err != nil {
+		h.logger.Error("Failed to parse driver service URL", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	
+	targetURL.Path = targetPath
+	targetURL.RawQuery = r.URL.RawQuery
+	
+	h.logger.Info("Proxying driver request", 
+		zap.String("method", r.Method),
+		zap.String("source", path),
+		zap.String("target", targetURL.String()),
+	)
+	
+	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	if err != nil {
+		h.logger.Error("Failed to create request", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Copy headers
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+	
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		h.logger.Error("Failed to call driver service", zap.Error(err))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	
+	// Copy response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+	
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
 }
 
 // ProxyDocument forwards document management requests
@@ -187,9 +255,69 @@ func (h *AssetHandlers) ProxyDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 // ProxyTrips forwards trip management requests to vehicle-service
-// /api/v1/admin/trips -&gt; /api/v1/trips
+// proxyToTrip is a helper to forward requests to the trip-service
+func (h *AssetHandlers) proxyToTrip(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	path := r.URL.Path
+	if !strings.HasPrefix(path, sourcePrefix) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+	
+	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
+	if err != nil {
+		h.logger.Error("Failed to parse trip service URL", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	
+	targetURL.Path = targetPath
+	targetURL.RawQuery = r.URL.RawQuery
+	
+	h.logger.Info("Proxying trip request", 
+		zap.String("method", r.Method),
+		zap.String("source", path),
+		zap.String("target", targetURL.String()),
+	)
+	
+	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	if err != nil {
+		h.logger.Error("Failed to create request", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	
+	// Copy headers
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+	
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		h.logger.Error("Failed to call trip service", zap.Error(err))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	
+	// Copy response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+	
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// ProxyTrips forwards trip management requests
 func (h *AssetHandlers) ProxyTrips(w http.ResponseWriter, r *http.Request) {
-	h.proxyToVehicle(w, r, "/api/v1/admin/trips", "/api/v1/trips")
+	h.proxyToTrip(w, r, "/api/v1/admin/trips", "/api/v1/trips")
 }
 
 // proxyToMaintenance is a helper to forward requests to the maintenance-service
@@ -202,7 +330,12 @@ func (h *AssetHandlers) proxyToMaintenance(w http.ResponseWriter, r *http.Reques
 
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 
-	targetURL, err := url.Parse(h.cfg.MaintenanceServiceURL)
+	// Trim trailing slash to be consistent with core service expectations
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse maintenance service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -279,7 +412,12 @@ func (h *AssetHandlers) proxyToFuel(w http.ResponseWriter, r *http.Request, sour
 
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 
-	targetURL, err := url.Parse(h.cfg.FuelServiceURL)
+	// Trim trailing slash
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse fuel service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -349,7 +487,12 @@ func (h *AssetHandlers) proxyToGovernance(w http.ResponseWriter, r *http.Request
 
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 
-	targetURL, err := url.Parse(h.cfg.GovernanceServiceURL)
+	// Trim trailing slash
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+
+	targetURL, err := url.Parse(h.cfg.AdminSupportServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse governance service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -417,6 +560,11 @@ func (h *AssetHandlers) proxyToBilling(w http.ResponseWriter, r *http.Request, s
 	}
 
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	// Trim trailing slash
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
 
 	targetURL, err := url.Parse(h.cfg.BillingServiceURL)
 	if err != nil {
@@ -492,7 +640,7 @@ func (h *AssetHandlers) proxyToNotification(w http.ResponseWriter, r *http.Reque
 
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 
-	targetURL, err := url.Parse(h.cfg.NotificationServiceURL)
+	targetURL, err := url.Parse(h.cfg.AlertServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse notification service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -619,7 +767,7 @@ func (h *AssetHandlers) proxyToReports(w http.ResponseWriter, r *http.Request, s
 
 // ProxyReports forwards reports management requests
 func (h *AssetHandlers) ProxyReports(w http.ResponseWriter, r *http.Request) {
-	h.proxyToReports(w, r, "/api/v1/admin/reports", "/api/v1/admin/reports")
+	h.proxyToReports(w, r, "/api/v1/admin/reports", "/api/v1/reports")
 }
 
 // proxyToDR is a helper to forward requests to the dr-service
@@ -687,154 +835,243 @@ func (h *AssetHandlers) ProxyDR(w http.ResponseWriter, r *http.Request) {
 	h.proxyToDR(w, r, "/api/v1/admin/dr", "/api/v1/admin/dr")
 }
 
-// GetDevices returns mock hardware device data for verification
-func (h *AssetHandlers) GetDevices(w http.ResponseWriter, r *http.Request) {
-	devices := []map[string]interface{}{
-		{
-			"id":               "DV-8821-XJ",
-			"serial_number":    "FF-OBD2-8921-A",
-			"type":             "OBD-II",
-			"status":           "active",
-			"vehicle_id":       "Ford Transit #402",
-			"last_heartbeat":   "2 mins ago",
-			"firmware_version": "v4.2.1",
-			"signal_dbm":       -65,
-			"battery_pct":      98,
-			"last_ping_at":     "2026-02-10T13:45:22Z",
-			"created_at":       "2024-01-15T10:00:00Z",
-		},
-		{
-			"id":               "DV-9001-AB",
-			"serial_number":    "FF-GPS-4421-B",
-			"type":             "GPS-Tracker",
-			"status":           "active",
-			"vehicle_id":       "Toyota Prius #115",
-			"last_heartbeat":   "5 mins ago",
-			"firmware_version": "v4.2.1",
-			"signal_dbm":       -89,
-			"battery_pct":      82,
-			"last_ping_at":     "2026-02-10T14:10:05Z",
-			"created_at":       "2024-03-22T08:30:00Z",
-		},
-		{
-			"id":               "DV-3321-KL",
-			"serial_number":    "FF-CAM-3091-C",
-			"type":             "Dashcam",
-			"status":           "offline",
-			"vehicle_id":       "Mercedes Sprinter #88",
-			"last_heartbeat":   "4 hours ago",
-			"firmware_version": "v4.1.9",
-			"signal_dbm":       0,
-			"battery_pct":      12,
-			"last_ping_at":     nil,
-			"created_at":       "2025-11-02T16:20:00Z",
-		},
-		{
-			"id":               "DV-1102-ZX",
-			"serial_number":    "FF-OBD2-1102-D",
-			"type":             "OBD-II",
-			"status":           "active",
-			"vehicle_id":       "Dodge Ram #221",
-			"last_heartbeat":   "Just now",
-			"firmware_version": "v4.2.2 (Beta)",
-			"signal_dbm":       -58,
-			"battery_pct":      100,
-			"last_ping_at":     "2026-02-10T14:12:33Z",
-			"created_at":       "2026-01-20T11:00:00Z",
-		},
-		{
-			"id":               "DV-7741-QA",
-			"serial_number":    "FF-OBD2-6671-E",
-			"type":             "OBD-II",
-			"status":           "warning",
-			"vehicle_id":       "Chevy Express #55",
-			"last_heartbeat":   "45 mins ago",
-			"firmware_version": "v4.2.1",
-			"signal_dbm":       -102,
-			"battery_pct":      8,
-			"last_ping_at":     "2026-02-10T14:05:11Z",
-			"created_at":       "2026-02-01T09:00:00Z",
-		},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": devices,
-		"meta": map[string]interface{}{
-			"total":           4285,
-			"online":          4102,
-			"offline":         183,
-			"low_battery":     42,
-			"signal_warnings": 89,
-			"system_errors":   12,
-		},
-	})
-}
-
-// GetDeviceTelemetry returns detailed telemetry for a specific device
-func (h *AssetHandlers) GetDeviceTelemetry(w http.ResponseWriter, r *http.Request) {
-	deviceID := chi.URLParam(r, "id")
-	
-	telemetry := map[string]interface{}{
-		"device_id": deviceID,
-		"model":     "Connect X4",
-		"imei":      "864209041223561",
-		"iccid":     "8901410321156789",
-		"voltage":   13.2,
-		"temp":      42,
-		"ignition":  true,
-		"gps": map[string]interface{}{
-			"status": "3D Fix",
-			"sats":   9,
-			"lat":    40.7128,
-			"lon":    -74.0060,
-		},
-		"accelerometer": map[string]float64{
-			"x": 0.02,
-			"y": -0.01,
-			"z": 0.98,
-		},
-		"storage_used_pct": 42,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(telemetry)
-}
-
-// GetDeviceLogs returns mock connection logs for a device
-func (h *AssetHandlers) GetDeviceLogs(w http.ResponseWriter, r *http.Request) {
-	logs := []map[string]interface{}{
-		{"ts": "14:35:01.241", "level": "INFO", "msg": "Connection established to ws://relay-04.fleet.net", "color": "#c586c0"},
-		{"ts": "14:35:01.450", "level": "INFO", "msg": "Auth handshake successful (Token ID: 99a8...)", "color": "#c586c0"},
-		{"ts": "14:35:02.112", "level": "DEBUG", "msg": "Sensor polling interval: 1000ms", "color": "#4ec9b0"},
-		{"ts": "14:35:03.001", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 0, \"lat\": 40.7128, \"lon\": -74.0060 }", "color": "#ce9178"},
-		{"ts": "14:35:04.005", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 0, \"lat\": 40.7128, \"lon\": -74.0060 }", "color": "#ce9178"},
-		{"ts": "14:35:05.110", "level": "WARN", "msg": "Weak signal strength detected (-89dBm)", "color": "#dcdcaa"},
-		{"ts": "14:35:06.002", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 12, \"lat\": 40.7129, \"lon\": -74.0061 }", "color": "#ce9178"},
-		{"ts": "14:35:07.004", "level": "DATA", "msg": "Payload: { \"ign\": 1, \"spd\": 24, \"lat\": 40.7132, \"lon\": -74.0063 }", "color": "#ce9178"},
-		{"ts": "14:35:08.012", "level": "ERROR", "msg": "CAN Bus frame dropped (ID: 0x4F2)", "color": "#f44747"},
-		{"ts": "14:35:08.015", "level": "INFO", "msg": "Retrying frame transmission...", "color": "#c586c0"},
-		{"ts": "14:35:08.120", "level": "INFO", "msg": "Frame sent successfully", "color": "#c586c0"},
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(logs)
-}
-
-// PostDeviceCommand handles remote actions
-func (h *AssetHandlers) PostDeviceCommand(w http.ResponseWriter, r *http.Request) {
-	var cmd map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&cmd); err != nil {
-		http.Error(w, "Invalid command", http.StatusBadRequest)
+// proxyToAlert is a helper to forward requests to the alert-service
+func (h *AssetHandlers) proxyToAlert(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	path := r.URL.Path
+	if !strings.HasPrefix(path, sourcePrefix) {
+		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 
-	h.logger.Info("Executing device command", zap.Any("command", cmd))
+	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
-		"msg":    "Command enqueued",
-		"job_id": "job-12345",
-	})
+	targetURL, err := url.Parse(h.cfg.AlertServiceURL)
+	if err != nil {
+		h.logger.Error("Failed to parse alert service URL", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	targetURL.Path = targetPath
+	targetURL.RawQuery = r.URL.RawQuery
+
+	h.logger.Info("Proxying alert request", 
+		zap.String("method", r.Method),
+		zap.String("source", path),
+		zap.String("target", targetURL.String()),
+	)
+
+	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	if err != nil {
+		h.logger.Error("Failed to create request", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Copy headers
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		h.logger.Error("Failed to call alert service", zap.Error(err))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// ProxyAlerts forwards alert management requests
+func (h *AssetHandlers) ProxyAlerts(w http.ResponseWriter, r *http.Request) {
+	h.proxyToAlert(w, r, "/api/v1/admin/alerts", "/api/v1/alerts")
+}
+
+
+// proxyToVideo is a helper to forward requests to the video service (part of fleet-core)
+func (h *AssetHandlers) proxyToVideo(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	path := r.URL.Path
+	if !strings.HasPrefix(path, sourcePrefix) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	// Trim trailing slash
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+
+	targetURL, err := url.Parse(h.cfg.FleetCoreServiceURL)
+	if err != nil {
+		h.logger.Error("Failed to parse fleet core service URL for video", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	targetURL.Path = targetPath
+	targetURL.RawQuery = r.URL.RawQuery
+
+	h.logger.Info("Proxying video request",
+		zap.String("method", r.Method),
+		zap.String("source", path),
+		zap.String("target", targetURL.String()),
+	)
+
+	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	if err != nil {
+		h.logger.Error("Failed to create request", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Copy headers
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		h.logger.Error("Failed to call fleet core service for video", zap.Error(err))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// ProxyVideo forwards video management requests to fleet-core-service
+// /api/v1/admin/video/* -> /api/v1/video/*
+func (h *AssetHandlers) ProxyVideo(w http.ResponseWriter, r *http.Request) {
+	h.proxyToVideo(w, r, "/api/v1/admin/video", "/api/v1/video")
+}
+
+// ProxyAnalytics forwards analytics requests to fleet-core-service
+// /api/v1/admin/analytics/* -> /api/v1/analytics/*
+func (h *AssetHandlers) ProxyAnalytics(w http.ResponseWriter, r *http.Request) {
+	h.proxyToVehicle(w, r, "/api/v1/admin/analytics", "/api/v1/analytics")
+}
+
+// ProxyRouteOptimization forwards route optimization requests to fleet-core-service
+// /api/v1/routes/* -> /api/v1/routes/* (Direct proxy, no path rewriting needed if prefix matches)
+func (h *AssetHandlers) ProxyRouteOptimization(w http.ResponseWriter, r *http.Request) {
+    // Using proxyToVehicle as it targets fleet-core-service
+    // Source: /api/v1/routes, Target: /api/v1/routes
+	h.proxyToVehicle(w, r, "/api/v1/routes", "/api/v1/routes")
+}
+
+// proxyToIndia is a helper to forward requests to the india-integration-service
+func (h *AssetHandlers) proxyToIndia(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	path := r.URL.Path
+	if !strings.HasPrefix(path, sourcePrefix) {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
+
+	// Trim trailing slash
+	if strings.HasSuffix(targetPath, "/") && len(targetPath) > 1 {
+		targetPath = strings.TrimSuffix(targetPath, "/")
+	}
+
+	targetURL, err := url.Parse(h.cfg.IndiaIntegrationServiceURL)
+	if err != nil {
+		h.logger.Error("Failed to parse india integration service URL", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	targetURL.Path = targetPath
+	targetURL.RawQuery = r.URL.RawQuery
+
+	h.logger.Info("Proxying india integration request",
+		zap.String("method", r.Method),
+		zap.String("source", path),
+		zap.String("target", targetURL.String()),
+	)
+
+	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	if err != nil {
+		h.logger.Error("Failed to create request", zap.Error(err))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Copy headers
+	for name, values := range r.Header {
+		for _, value := range values {
+			req.Header.Add(name, value)
+		}
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		h.logger.Error("Failed to call india integration service", zap.Error(err))
+		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
+
+// ProxyFASTag forwards FASTag requests
+func (h *AssetHandlers) ProxyFASTag(w http.ResponseWriter, r *http.Request) {
+	h.proxyToIndia(w, r, "/api/v1/india/fastag", "/api/fastag")
+}
+
+// ProxyEWayBill forwards E-Way Bill requests
+func (h *AssetHandlers) ProxyEWayBill(w http.ResponseWriter, r *http.Request) {
+	h.proxyToIndia(w, r, "/api/v1/india/ewaybill", "/api/ewaybill")
+}
+
+// ProxyVahan forwards Vahan requests
+func (h *AssetHandlers) ProxyVahan(w http.ResponseWriter, r *http.Request) {
+	h.proxyToIndia(w, r, "/api/v1/india/vahan", "/api/vahan")
+}
+
+// ProxySarathi forwards Sarathi requests
+func (h *AssetHandlers) ProxySarathi(w http.ResponseWriter, r *http.Request) {
+	h.proxyToIndia(w, r, "/api/v1/india/sarathi", "/api/sarathi")
+}
+
+// ProxyGST forwards GST requests
+func (h *AssetHandlers) ProxyGST(w http.ResponseWriter, r *http.Request) {
+	h.proxyToIndia(w, r, "/api/v1/india/gst", "/api/gst")
 }

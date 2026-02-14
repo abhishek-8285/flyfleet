@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/alert-service/internal/models"
-	"github.com/flyfleet/alert-service/internal/notifications"
+	"github.com/flyfleet/alert-service/internal/providers"
 	"github.com/flyfleet/alert-service/internal/repository"
 	"github.com/flyfleet/alert-service/internal/rule_engine"
 )
@@ -17,14 +17,14 @@ import (
 type AlertService struct {
 	repo                *repository.AlertRepository
 	ruleEngine          *rule_engine.RuleEngine
-	notificationService *notifications.NotificationService
+	notificationService *providers.NotificationService
 	logger              *zap.Logger
 }
 
 func NewAlertService(
 	repo *repository.AlertRepository,
 	ruleEngine *rule_engine.RuleEngine,
-	notificationService *notifications.NotificationService,
+	notificationService *providers.NotificationService,
 	logger *zap.Logger,
 ) *AlertService {
 	return &AlertService{
@@ -408,28 +408,28 @@ func (s *AlertService) sendAlertNotifications(alert *models.Alert) error {
 		return fmt.Errorf("failed to get rule for alert: %w", err)
 	}
 
-	var notifs []*notifications.Notification
+	var notifs []*providers.Notification
 
 	// Process each action
 	for _, action := range rule.Actions {
-		var notification *notifications.Notification
+		var notification *providers.Notification
 
 		switch action.Type {
 		case models.ActionTypeSMS:
-			notification = &notifications.Notification{
+			notification = &providers.Notification{
 				Type:      "sms",
 				Recipient: action.Target,
 				Body:      s.formatAlertMessage(alert, action.Template),
 			}
 		case models.ActionTypeEmail:
-			notification = &notifications.Notification{
+			notification = &providers.Notification{
 				Type:      "email",
 				Recipient: action.Target,
 				Subject:   s.formatAlertSubject(alert, action.Template),
 				Body:      s.formatAlertMessage(alert, action.Template),
 			}
 		case models.ActionTypePush:
-			notification = &notifications.Notification{
+			notification = &providers.Notification{
 				Type:      "push",
 				Recipient: action.Target,
 				Subject:   s.formatAlertSubject(alert, action.Template),
@@ -437,7 +437,7 @@ func (s *AlertService) sendAlertNotifications(alert *models.Alert) error {
 				Data:      map[string]interface{}{"alert_id": alert.ID, "type": alert.Type},
 			}
 		case models.ActionTypeNotification:
-			notification = &notifications.Notification{
+			notification = &providers.Notification{
 				Type:      "notification",
 				Recipient: action.Target,
 				Body:      s.formatAlertMessage(alert, action.Template),
@@ -474,4 +474,12 @@ func (s *AlertService) formatAlertMessage(alert *models.Alert, templateName stri
 // formatAlertSubject formats an alert subject for email notifications
 func (s *AlertService) formatAlertSubject(alert *models.Alert, templateName string) string {
 	return fmt.Sprintf("[%s] %s Alert", alert.Severity, alert.Type)
+}
+func (s *AlertService) GetStats(ctx context.Context) (*models.AlertStats, error) {
+	stats, err := s.repo.GetStats(ctx)
+	if err != nil {
+		s.logger.Error("failed to get alert stats", zap.Error(err))
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+	return stats, nil
 }

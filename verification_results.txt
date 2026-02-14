@@ -1,0 +1,21 @@
+--- Global Stats (Fake Token) ---
+{
+  "total_vehicles": 1248,
+  "active_vehicles": 892,
+  "total_drivers": 156,
+  "active_trips": 342,
+  "total_distance_today": 12450.5,
+  "fuel_consumed_today": 1850.2,
+  "alerts_count": 5
+}
+--- Organization Stats (Fake Token) ---
+{
+  "data": {
+    "active_orgs": 9,
+    "avg_org_size": 13,
+    "inactive_orgs": 1,
+    "pending_orgs": 2,
+    "total_orgs": 12,
+    "total_users": 156
+  }
+}

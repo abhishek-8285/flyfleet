@@ -38,7 +38,7 @@ func TestAuthServiceIntegration(t *testing.T) {
 
 	// Initialize components
 	repo := repository.NewRepository(db, logger)
-	authService := service.NewAuthService(repo, cfg.JWTSecret, "http://driver", "http://vehicle", "http://trip", "http://alert", logger)
+	authService := service.NewAuthService(repo, cfg.JWTSecret, "http://fleet-core", "http://alert", logger)
 	authHandlers := handlers.NewAuthHandlers(authService, logger)
 
 	// Test registration

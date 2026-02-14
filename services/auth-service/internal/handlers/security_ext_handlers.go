@@ -509,3 +509,17 @@ func (h *SecurityExtHandlers) ListMFAUsers(w http.ResponseWriter, r *http.Reques
 	}, http.StatusOK)
 }
 
+
+func (h *SecurityExtHandlers) GetSecurityTelemetry(w http.ResponseWriter, r *http.Request) {
+telemetry, err := h.service.GetSecurityTelemetry(r.Context())
+if err != nil {
+h.logger.Error("Failed to fetch security telemetry", zap.Error(err))
+http.Error(w, "Failed to fetch security telemetry", http.StatusInternalServerError)
+return
+}
+
+w.Header().Set("Content-Type", "application/json")
+json.NewEncoder(w).Encode(map[string]interface{}{
+"data": telemetry,
+})
+}

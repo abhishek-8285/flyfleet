@@ -13,6 +13,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/flyfleet/billing-service/internal/config"
 	"github.com/flyfleet/billing-service/internal/handlers"
 	"github.com/flyfleet/billing-service/internal/repository"
 	"github.com/flyfleet/billing-service/internal/service"
@@ -24,12 +26,10 @@ func main() {
 	defer logger.Sync()
 
 	// Load configuration
-	port := getEnv("PORT", "8086") // Note: Use unique port if running locally outside docker
-	dbURL := getEnv("DATABASE_URL", "")
-	natsURL := getEnv("NATS_URL", nats.DefaultURL)
+	cfg := config.Load()
 
 	// Database connection
-	db, err := pgxpool.New(context.Background(), dbURL)
+	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
@@ -42,7 +42,7 @@ func main() {
 	logger.Info("Connected to database")
 
 	// NATS connection
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(cfg.NatsURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to NATS", zap.Error(err))
 	}
@@ -58,6 +58,7 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(loggingMiddleware(logger))
+	r.Use(middleware.AuthMiddleware(cfg))
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -86,13 +87,13 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 
 	// Start server in goroutine
 	go func() {
-		logger.Info("Starting billing service", zap.String("port", port))
+		logger.Info("Starting billing service", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
 		}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/security"
+	"github.com/flyfleet/web-bff/internal/client"
 	"github.com/flyfleet/web-bff/internal/config"
 	"github.com/flyfleet/web-bff/internal/handlers"
 	"github.com/flyfleet/web-bff/internal/middleware"
@@ -27,6 +28,16 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 	
+	// Initialize clients
+	authClient := client.NewAuthClient(cfg.AuthServiceURL)
+	fleetCoreClient := client.NewVehicleClient(cfg.FleetCoreServiceURL) // Reusing vehicle client for core
+	tripClient := client.NewTripClient(cfg.FleetCoreServiceURL)        // All core logic here
+	alertClient := client.NewAlertClient(cfg.AlertServiceURL)
+	notificationClient := client.NewNotificationClient(cfg.AlertServiceURL)
+	
+	billingClient := client.NewBillingClient(cfg.BillingServiceURL)
+	supportClient := client.NewSupportClient(cfg.AdminSupportServiceURL)
+	
 	// Initialize handlers
 	mfaHandlers := handlers.NewMFAHandlers(cfg, logger)
 	assetHandlers := handlers.NewAssetHandlers(cfg, logger)
@@ -34,8 +45,11 @@ func main() {
 	integrationsHandlers := handlers.NewIntegrationsHandlers(cfg, logger)
 	monitoringHandlers := handlers.NewMonitoringHandlers(cfg, logger)
 	searchHandlers := handlers.NewSearchHandlers(cfg, logger)
-	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger)
-	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger)
+	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger, notificationClient)
+	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger, authClient, fleetCoreClient, tripClient, alertClient, billingClient, supportClient)
+	supportOrgHandlers := handlers.NewSupportOrgHandlers(cfg, logger, authClient)
+	deviceDiagnosticsHandlers := handlers.NewDeviceDiagnosticsHandler(cfg)
+	trackingHandlers := handlers.NewTrackingHandlers(cfg, logger)
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 	
 	// Setup routes
@@ -44,6 +58,7 @@ func main() {
 	// Dashboard & Global Stats
 	mux.Handle("/api/v1/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(dashboardHandlers.GetGlobalStats)))
 	mux.Handle("/api/v1/admin/organizations/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(dashboardHandlers.GetOrganizationStats)))
+	mux.Handle("GET /api/v1/admin/dashboard/data", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(dashboardHandlers.GetAdminDashboardData)))
 	
 	// Health check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -66,8 +81,8 @@ func main() {
 	mux.HandleFunc("/api/v1/auth/profile", mfaHandlers.ProxyProfile)
 	mux.HandleFunc("/api/v1/admin/organizations/", mfaHandlers.ProxyOrganization)
 	mux.HandleFunc("/api/v1/admin/organizations", mfaHandlers.ProxyOrganization)
-	mux.HandleFunc("/api/v1/admin/alerts/", mfaHandlers.ProxyAlerts)
-	mux.HandleFunc("/api/v1/admin/alerts", mfaHandlers.ProxyAlerts)
+	mux.HandleFunc("/api/v1/admin/alerts/", assetHandlers.ProxyAlerts)
+	mux.HandleFunc("/api/v1/admin/alerts", assetHandlers.ProxyAlerts)
 	mux.HandleFunc("/api/v1/admin/users/", mfaHandlers.ProxyUsers)
 	mux.HandleFunc("/api/v1/admin/users", mfaHandlers.ProxyUsers)
 	
@@ -85,11 +100,11 @@ func main() {
 
 	// Asset Management (RBAC Enforcement)
 	mux.Handle("/api/v1/admin/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVehicle)))
-	mux.Handle("/api/v1/admin/devices", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDevices))) 
-	mux.Handle("/api/v1/admin/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDevices))) 
-	mux.Handle("/api/v1/admin/devices/{id}/telemetry", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDeviceTelemetry)))
-	mux.Handle("/api/v1/admin/devices/{id}/logs", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.GetDeviceLogs)))
-	mux.Handle("/api/v1/admin/devices/{id}/commands", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.PostDeviceCommand)))
+	mux.Handle("/api/v1/admin/devices", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest))) 
+	mux.Handle("/api/v1/admin/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest))) 
+	mux.Handle("/api/v1/admin/devices/{id}/telemetry", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
+	mux.Handle("/api/v1/admin/devices/{id}/logs", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
+	mux.Handle("/api/v1/admin/devices/{id}/commands", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
 	mux.Handle("/api/v1/admin/drivers/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyDriver)))   // Drivers share trips resource for now
 	mux.Handle("/api/v1/admin/documents/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyDocument)))
 	mux.Handle("/api/v1/admin/bulk-jobs/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyBulkJobs))) // Bulk Jobs share vehicle resource
@@ -97,8 +112,11 @@ func main() {
 	mux.Handle("/api/v1/admin/trips", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
 
 	// Maintenance Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/work-orders", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))
 	mux.Handle("/api/v1/admin/work-orders/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))
+	mux.Handle("/api/v1/admin/inventory", middleware.RBACMiddleware(sp, security.ResourceInventory)(http.HandlerFunc(assetHandlers.ProxyInventory)))
 	mux.Handle("/api/v1/admin/inventory/", middleware.RBACMiddleware(sp, security.ResourceInventory)(http.HandlerFunc(assetHandlers.ProxyInventory)))
+	mux.Handle("/api/v1/admin/maintenance-settings", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyMaintenanceSettings)))
 	mux.Handle("/api/v1/admin/maintenance-settings/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyMaintenanceSettings)))
 
 	// Fuel Module (RBAC Enforcement)
@@ -126,6 +144,12 @@ func main() {
 
 	// Global Settings Module (RBAC Enforcement)
 	mux.Handle("/api/settings/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(settingsHandlers.ProxySettings)))
+
+	// Video Telematics Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/video/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVideo)))
+	
+	// Analytics Module (RBAC Enforcement)
+	mux.Handle("/api/v1/admin/analytics/", middleware.RBACMiddleware(sp, security.ResourceAnalytics)(http.HandlerFunc(assetHandlers.ProxyAnalytics)))
 	
 	// Security Operations Module (RBAC Enforcement + IP Firewall)
 	securityHandlers := handlers.NewSecurityHandlers(cfg, logger)
@@ -153,8 +177,26 @@ func main() {
 	mux.Handle("/api/api-clients/", middleware.RBACMiddleware(sp, security.ResourceApiClients)(http.HandlerFunc(integrationsHandlers.ProxyApiClients)))
 	mux.Handle("/api/webhooks/", middleware.RBACMiddleware(sp, security.ResourceWebhooks)(http.HandlerFunc(integrationsHandlers.ProxyWebhooks)))
 
+	// India Integration Module (RBAC Enforcement)
+	mux.Handle("/api/v1/india/fastag/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyFASTag)))
+	mux.Handle("/api/v1/india/ewaybill/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyEWayBill)))
+	mux.Handle("/api/v1/india/vahan/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyVahan)))
+	mux.Handle("/api/v1/india/sarathi/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxySarathi)))
+	mux.Handle("/api/v1/india/gst/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyGST)))
+
+	// Tracking Module (RBAC Enforcement)
+	mux.Handle("/api/v1/tracking/telemetry/gps", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
+	mux.Handle("/api/v1/tracking/telemetry/obd", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
+	mux.Handle("/api/v1/tracking/telemetry/fuel", middleware.RBACMiddleware(sp, security.ResourceFuel)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
+	mux.Handle("/api/v1/tracking/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyVehicleHistory))) // Catch-all for subpaths
+
+    // Route Optimization Module (Direct proxy to fleet-core)
+    // Note: Using ResourceVehicles for now as it relates to vehicle routing, or ResourceTrips. 
+    // Going with ResourceTrips as routes are essentially planned trips.
+    mux.Handle("/api/v1/routes/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyRouteOptimization)))
+    mux.Handle("/api/v1/routes", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyRouteOptimization)))
+
 	// Device Diagnostics Module
-	deviceDiagnosticsHandlers := handlers.NewDeviceDiagnosticsHandler(cfg)
 	mux.Handle("/api/devices/summary", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
 	mux.Handle("/api/devices/status", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
 	mux.Handle("/api/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
@@ -225,7 +267,6 @@ func main() {
 
 
 	// Organization Support Hub Routes
-	supportOrgHandlers := handlers.NewSupportOrgHandlers(cfg, logger)
 	mux.Handle("GET /bff/support/orgs/{id}/summary", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgSummary)))
 	mux.Handle("GET /bff/support/orgs/{id}/devices/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgDeviceStats)))
 	mux.Handle("GET /bff/support/orgs/{id}/integration/health", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgIntegrationHealth)))

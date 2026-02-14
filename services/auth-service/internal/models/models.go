@@ -432,3 +432,13 @@ type MFADashboardSummary struct {
 	FailedAttempts24h int `json:"failed_attempts_24h"`
 	LockedAccounts    int `json:"locked_accounts"`
 }
+
+type SystemStats struct {
+	TotalUsers     int `json:"total_users"`
+	ActiveUsers    int `json:"active_users"`
+	TotalDrivers   int `json:"total_drivers"`
+	TotalOrgs      int `json:"total_orgs"`
+	ActiveOrgs     int `json:"active_orgs"`
+	PendingOrgs    int `json:"pending_orgs"`
+	InactiveOrgs   int `json:"inactive_orgs"`
+}

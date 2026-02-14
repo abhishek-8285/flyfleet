@@ -14,11 +14,18 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/alert-service/internal/handlers"
-	"github.com/flyfleet/alert-service/internal/notifications"
-	"github.com/flyfleet/alert-service/internal/repository"
-	"github.com/flyfleet/alert-service/internal/rule_engine"
-	"github.com/flyfleet/alert-service/internal/service"
+	"github.com/flyfleet/alert-service/internal/config"
+	"github.com/flyfleet/alert-service/internal/middleware"
+	"github.com/flyfleet/alert-service/internal/providers"
+
+	alertHandlers "github.com/flyfleet/alert-service/internal/domains/alerts/handlers"
+	alertRepo "github.com/flyfleet/alert-service/internal/domains/alerts/repository"
+	alertRule "github.com/flyfleet/alert-service/internal/domains/alerts/rule_engine"
+	alertService "github.com/flyfleet/alert-service/internal/domains/alerts/service"
+
+	notifyHandlers "github.com/flyfleet/alert-service/internal/domains/notifications/handlers"
+	notifyRepo "github.com/flyfleet/alert-service/internal/domains/notifications/repository"
+	notifyService "github.com/flyfleet/alert-service/internal/domains/notifications/service"
 )
 
 func main() {
@@ -33,17 +40,10 @@ func main() {
 	}()
 
 	// Load configuration
-	port := getEnv("PORT", "8085")
-	dbURL := getEnv("DATABASE_URL", "")
-	natsURL := getEnv("NATS_URL", nats.DefaultURL)
-	twilioAccountSID := getEnv("TWILIO_ACCOUNT_SID", "")
-	twilioAuthToken := getEnv("TWILIO_AUTH_TOKEN", "")
-	twilioPhoneNumber := getEnv("TWILIO_PHONE_NUMBER", "")
-	sendgridAPIKey := getEnv("SENDGRID_API_KEY", "")
-	_ = getEnv("AWS_REGION", "ap-south-1")
+	cfg := config.Load()
 
 	// Database connection
-	db, err := pgxpool.New(context.Background(), dbURL)
+	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
@@ -56,33 +56,38 @@ func main() {
 	logger.Info("Connected to database")
 
 	// NATS connection
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(cfg.NatsURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to NATS", zap.Error(err))
 	}
 	defer nc.Close()
 	logger.Info("Connected to NATS")
 
-	// Initialize notification clients
-	smsClient := notifications.NewTwilioClient(twilioAccountSID, twilioAuthToken, twilioPhoneNumber)
-	emailClient := notifications.NewSendGridClient(sendgridAPIKey)
-	pushClient := notifications.NewFirebaseClient() // Will be implemented later
+	// Initialize notification clients (Providers)
+	smsClient := providers.NewTwilioClient(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioPhoneNumber)
+	emailClient := providers.NewSendGridClient(cfg.SendGridAPIKey)
+	pushClient := providers.NewFirebaseClient() // Will be implemented later
 
-	// Initialize components
-	alertRepo := repository.NewAlertRepository(db)
-	ruleEngine := rule_engine.NewRuleEngine(alertRepo, logger)
-	notificationService := notifications.NewNotificationService(smsClient, emailClient, pushClient, logger)
-	
-	alertService := service.NewAlertService(alertRepo, ruleEngine, notificationService, logger)
-	alertHandler := handlers.NewAlertHandler(alertService, logger)
+	// Initialize Alert Domain
+	aRepo := alertRepo.NewAlertRepository(db)
+	aRuleEngine := alertRule.NewRuleEngine(aRepo, logger)
+	aNotificationSvc := providers.NewNotificationService(smsClient, emailClient, pushClient, logger)
+	aService := alertService.NewAlertService(aRepo, aRuleEngine, aNotificationSvc, logger)
+	aHandler := alertHandlers.NewAlertHandler(aService, logger)
+
+	// Initialize Notification Domain
+	nRepo := notifyRepo.NewNotificationRepository(db)
+	nService := notifyService.NewNotificationService(nRepo, logger)
+	nHandler := notifyHandlers.NewNotificationHandlers(nService, logger)
 
 	// Subscribe to NATS topics for real-time alert processing
-	subscribeToTelemetryEvents(nc, ruleEngine, logger)
+	subscribeToTelemetryEvents(nc, aRuleEngine, logger)
 
 	// Setup Gin router
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -93,44 +98,22 @@ func main() {
 		})
 	})
 
-	// Alert API endpoints
+	// API endpoints
 	api := r.Group("/api/v1")
 	{
-		alerts := api.Group("/alerts")
-		{
-			// Alert rules management
-			alerts.POST("/rules", alertHandler.CreateRule)
-			alerts.GET("/rules", alertHandler.ListRules)
-			alerts.GET("/rules/:id", alertHandler.GetRule)
-			alerts.PUT("/rules/:id", alertHandler.UpdateRule)
-			alerts.DELETE("/rules/:id", alertHandler.DeleteRule)
-			alerts.POST("/rules/:id/enable", alertHandler.EnableRule)
-			alerts.POST("/rules/:id/disable", alertHandler.DisableRule)
-
-			// Alert instances
-			alerts.GET("", alertHandler.ListAlerts)
-			alerts.GET("/:id", alertHandler.GetAlert)
-			alerts.POST("/:id/acknowledge", alertHandler.AcknowledgeAlert)
-			alerts.POST("/:id/resolve", alertHandler.ResolveAlert)
-			alerts.POST("/:id/escalate", alertHandler.EscalateAlert)
-
-			// Alert statistics and analytics
-			alerts.GET("/stats/summary", alertHandler.GetAlertSummary)
-			alerts.GET("/stats/trends", alertHandler.GetAlertTrends)
-		}
-
-		// Geofence endpoints
+		aHandler.RegisterRoutes(api)
+		nHandler.RegisterRoutes(api)
 	}
 
 	// Start server
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 
 	// Start server in goroutine
 	go func() {
-		logger.Info("Starting alert service", zap.String("port", port))
+		logger.Info("Starting alert service", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
 		}
@@ -161,7 +144,7 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func subscribeToTelemetryEvents(nc *nats.Conn, ruleEngine *rule_engine.RuleEngine, logger *zap.Logger) {
+func subscribeToTelemetryEvents(nc *nats.Conn, ruleEngine *alertRule.RuleEngine, logger *zap.Logger) {
 	// Implementation for subscribing to telemetry events
 	// This would typically subscribe to NATS topics for vehicle telemetry data
 	logger.Info("Subscribed to telemetry events")

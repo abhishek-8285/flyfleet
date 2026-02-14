@@ -218,3 +218,8 @@ type AlertTrend struct {
         Warning       int       `json:"warning"`
         Info          int       `json:"info"`
 }
+
+type AlertStats struct {
+	TotalAlerts int `json:"total_alerts"`
+	NewAlerts   int `json:"new_alerts"`
+}

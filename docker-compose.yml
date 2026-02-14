@@ -71,154 +71,44 @@ services:
       args:
         SERVICE_NAME: auth-service
     container_name: fleet-auth-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
       - JWT_SECRET=your-jwt-secret-key-here
       - PORT=8080
-      - DRIVER_SERVICE_URL=http://driver-service:8080/api/v1
-      - VEHICLE_SERVICE_URL=http://vehicle-service:8080/api/v1
-      - TRIP_SERVICE_URL=http://trip-service:8080/api/v1
-      - ALERT_SERVICE_URL=http://alert-service:8080/api/v1
+      - FLEET_CORE_SERVICE_URL=http://fleet-core-service:8084
+      - ALERT_SERVICE_URL=http://alert-service:8085
     networks:
       - fleet-network
     depends_on:
       postgres:
         condition: service_healthy
 
-  vehicle-service:
+  fleet-core-service:
     build:
       context: .
       dockerfile: infrastructure/docker/GoService.Dockerfile
       args:
-        SERVICE_NAME: vehicle-service
-    container_name: fleet-vehicle-service
+        SERVICE_NAME: fleet-core-service
+    container_name: fleet-core-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
-      - "8082:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-
-  driver-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: driver-service
-    container_name: fleet-driver-service
-    ports:
-      - "8083:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  trip-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: trip-service
-    container_name: fleet-trip-service
-    ports:
-      - "8084:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-      - NATS_URL=nats://nats:4222
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-
-  tracking-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: tracking-service
-    container_name: fleet-tracking-service
-    ports:
-      - "8085:8080"
+      - "8084:8084"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - PORT=8080
+      - PORT=8084
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
       postgres:
         condition: service_healthy
       nats:
-        condition: service_healthy
-
-  route-optimization-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: route-optimization-service
-    container_name: fleet-route-service
-    ports:
-      - "8086:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  maintenance-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: maintenance-service
-    container_name: fleet-maintenance-service
-    ports:
-      - "8087:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  geofencing-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: geofencing-service
-    container_name: fleet-geofencing-service
-    ports:
-      - "8088:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
         condition: service_healthy
 
   alert-service:
@@ -228,12 +118,15 @@ services:
       args:
         SERVICE_NAME: alert-service
     container_name: fleet-alert-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
-      - "8089:8080"
+      - "8085:8085"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - PORT=8080
+      - PORT=8085
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
@@ -242,54 +135,21 @@ services:
       nats:
         condition: service_healthy
 
-  video-service:
+  admin-support-service:
     build:
       context: .
       dockerfile: infrastructure/docker/GoService.Dockerfile
       args:
-        SERVICE_NAME: video-service
-    container_name: fleet-video-service
+        SERVICE_NAME: admin-support-service
+    container_name: fleet-admin-support-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
-      - "8090:8080"
+      - "8086:8086"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  india-integration-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: india-integration-service
-    container_name: fleet-india-service
-    ports:
-      - "8091:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  analytics-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: analytics-service
-    container_name: fleet-analytics-service
-    ports:
-      - "8092:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
+      - PORT=8086
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
@@ -303,16 +163,43 @@ services:
       args:
         SERVICE_NAME: billing-service
     container_name: fleet-billing-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
-      - "8093:8080"
+      - "8087:8087"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
+      - PORT=8087
       - NATS_URL=nats://nats:4222
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
       postgres:
+        condition: service_healthy
+
+  tracking-service:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/GoService.Dockerfile
+      args:
+        SERVICE_NAME: tracking-service
+    container_name: fleet-tracking-service
+    volumes:
+      - ./config.toml:/app/config.toml
+    ports:
+      - "8082:8082"
+    environment:
+      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - PORT=8082
+      - JWT_SECRET=your-jwt-secret-key-here
+    networks:
+      - fleet-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
         condition: service_healthy
 
   web-bff:
@@ -322,45 +209,29 @@ services:
       args:
         SERVICE_NAME: web-bff
     container_name: fleet-web-bff
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
       - "8081:8081"
     environment:
       - PORT=8081
       - AUTH_SERVICE_URL=http://auth-service:8080
-      - BILLING_SERVICE_URL=http://billing-service:8080
-      - REPORTS_SERVICE_URL=http://reports-service:8080
-      - DR_SERVICE_URL=http://dr-service:8080
-      - NOTIFICATION_SERVICE_URL=http://notification-service:8080
-      - GOVERNANCE_SERVICE_URL=http://governance-service:8080
-      - LOG_LEVEL=info
+      - FLEET_CORE_SERVICE_URL=http://fleet-core-service:8084
+      - ALERT_SERVICE_URL=http://alert-service:8085
+      - ADMIN_SUPPORT_SERVICE_URL=http://admin-support-service:8086
+      - BILLING_SERVICE_URL=http://billing-service:8087
+      - TRACKING_SERVICE_URL=http://tracking-service:8082
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
       - auth-service
+      - fleet-core-service
+      - alert-service
+      - admin-support-service
       - billing-service
+      - tracking-service
       - reports-service
-      - dr-service
-
-  dr-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: dr-service
-    container_name: fleet-dr-service
-    ports:
-      - "8097:8084"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - REDIS_URL=redis:6379
-      - PORT=8084
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
   reports-service:
     build:
@@ -369,50 +240,38 @@ services:
       args:
         SERVICE_NAME: reports-service
     container_name: fleet-reports-service
+    volumes:
+      - ./config.toml:/app/config.toml
     ports:
-      - "8094:8080"
+      - "8083:8083"
     environment:
       - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
+      - REDIS_ADDR=redis:6379
+      - NOTIFICATION_SERVICE_URL=http://alert-service:8085
+      - PORT=8083
+      - JWT_SECRET=your-jwt-secret-key-here
     networks:
       - fleet-network
     depends_on:
       postgres:
         condition: service_healthy
-
-  notification-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: notification-service
-    container_name: fleet-notification-service
-    ports:
-      - "8095:8080"
-    environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
-      - NATS_URL=nats://nats:4222
-    networks:
-      - fleet-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      nats:
+      redis:
         condition: service_healthy
 
-  governance-service:
-    build:
-      context: .
-      dockerfile: infrastructure/docker/GoService.Dockerfile
-      args:
-        SERVICE_NAME: governance-service
-    container_name: fleet-governance-service
-    ports:
-      - "8096:8080"
+  # Disaster Recovery & Maintenance
+  db-backup:
+    image: prodrigestivill/postgres-backup-local:16-alpine
+    container_name: fleet-db-backup
+    restart: always
+    volumes:
+      - ./backups:/backups
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
-      - PORT=8080
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=fleet_db
+      - POSTGRES_USER=fleet_user
+      - POSTGRES_PASSWORD=fleet_password
+      - SCHEDULE=@daily
+      - BACKUP_KEEP_DAYS=7
     networks:
       - fleet-network
     depends_on:

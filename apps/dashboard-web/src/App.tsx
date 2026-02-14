@@ -2,7 +2,7 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/common/Layout';
-import { AdminLayout } from './components/layout/AdminLayout';
+import { GlobalAdminLayout } from './components/layout/GlobalAdminLayout';
 import SupportLayout from './components/support/SupportLayout';
 import { AuthProvider } from './context/AuthProvider';
 import { RBACProvider } from './context/RBACProvider';
@@ -32,6 +32,7 @@ import { AddVehicle as FleetAddVehicle } from './pages/admin/FleetCommand/AddVeh
 import { EditVehicle as FleetEditVehicle } from './pages/admin/FleetCommand/EditVehicle';
 import { VehicleDetail as FleetVehicleDetail } from './pages/admin/FleetCommand/VehicleDetail';
 import { VehicleList as FleetVehicleList } from './pages/admin/FleetCommand/VehicleList';
+import { GlobalAdminDashboard } from './pages/admin/GlobalAdminDashboard';
 import GlobalNotificationSettings from './pages/admin/notifications/GlobalNotificationSettings';
 import NotificationDetail from './pages/admin/notifications/NotificationDetail';
 import NotificationLogs from './pages/admin/notifications/NotificationLogs';
@@ -41,6 +42,8 @@ import UserPreferencesList from './pages/admin/notifications/UserPreferencesList
 import { OrganizationDetail } from './pages/admin/OrganizationDetail';
 import { Organizations } from './pages/admin/Organizations';
 import { OrganizationSettings } from './pages/admin/OrganizationSettings';
+import { OrganizationUsers } from './pages/admin/OrganizationUsers';
+import { OrganizationVehicles } from './pages/admin/OrganizationVehicles';
 import { RoleMatrix } from './pages/admin/rbac/RoleMatrix';
 import { Roles } from './pages/admin/rbac/Roles';
 import { SecurityLogs } from './pages/admin/rbac/SecurityLogs';
@@ -48,6 +51,8 @@ import { UserAssignments } from './pages/admin/rbac/UserAssignments';
 import CreateReport from './pages/admin/reports/CreateReport';
 import ExecutionHistory from './pages/admin/reports/ExecutionHistory';
 import ScheduledReportsList from './pages/admin/reports/ScheduledReportsList';
+// RouteOptimization import moved to consolidated block
+import RouteOptimization from './pages/admin/RouteOptimization';
 import AccessReview from './pages/admin/security/AccessReview';
 import ActiveSessions from './pages/admin/security/ActiveSessions';
 import IPControls from './pages/admin/security/IPControls';
@@ -62,6 +67,7 @@ import PoliciesLimits from './pages/admin/settings/PoliciesLimits';
 import Templates from './pages/admin/settings/Templates';
 import { AddTrip, EditTrip, TripDetail, TripSettings, TripsList, TripTelemetry } from './pages/admin/Trips';
 import { Users } from './pages/admin/Users';
+import VideoTelematics from './pages/admin/VideoTelematics';
 import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
 import AuditCenter from './pages/audit/AuditCenter';
@@ -144,7 +150,7 @@ function App() {
               <Route path="/session-expired" element={<SessionExpired />} />
               <Route path="/error" element={<ErrorScreen />} />
               <Route path="/trusted-devices" element={<TrustedDevices />} />
-              
+
               {/* User Dashboard */}
               <Route
                 path="/dashboard"
@@ -172,33 +178,44 @@ function App() {
               </Route>
 
               {/* Security Module (Expansion) */}
-              <Route path="/security" element={<PrivateRoute><MFACenter /></PrivateRoute>} />
-              <Route path="/security/logins" element={<PrivateRoute><LoginActivityLogs /></PrivateRoute>} />
-              <Route path="/security/threats" element={<PrivateRoute><ThreatAlerts /></PrivateRoute>} />
-              <Route path="/security/sessions" element={<PrivateRoute><ActiveSessions /></PrivateRoute>} />
-              <Route path="/security/ip-access" element={<PrivateRoute><IPControls /></PrivateRoute>} />
-              <Route path="/security/access-review" element={<PrivateRoute><AccessReview /></PrivateRoute>} />
-              
-              <Route path="/security/policy" element={<PrivateRoute><MFAPolicyEditor /></PrivateRoute>} />
-              <Route path="/security/exceptions" element={<PrivateRoute><MFAExceptions /></PrivateRoute>} />
-              <Route path="/security/overrides" element={<PrivateRoute><MFAOverrides /></PrivateRoute>} />
-              <Route path="/security/audit" element={<PrivateRoute><AuditCenter /></PrivateRoute>} />
+              <Route
+                path="/security"
+                element={
+                  <PrivateRoute>
+                    <Layout />
+                  </PrivateRoute>
+                }
+              >
+                <Route index element={<MFACenter />} />
+                <Route path="logins" element={<LoginActivityLogs />} />
+                <Route path="threats" element={<ThreatAlerts />} />
+                <Route path="sessions" element={<ActiveSessions />} />
+                <Route path="ip-access" element={<IPControls />} />
+                <Route path="access-review" element={<AccessReview />} />
+                <Route path="policy" element={<MFAPolicyEditor />} />
+                <Route path="exceptions" element={<MFAExceptions />} />
+                <Route path="overrides" element={<MFAOverrides />} />
+                <Route path="audit" element={<AuditCenter />} />
+              </Route>
 
               {/* Admin Portal */}
               <Route
                 path="/admin"
                 element={
                   <PrivateRoute>
-                    <AdminLayout />
+                    <GlobalAdminLayout />
                   </PrivateRoute>
                 }
               >
-                <Route index element={<Organizations />} />
+                <Route index element={<GlobalAdminDashboard />} />
+                <Route path="dashboard" element={<GlobalAdminDashboard />} />
                 <Route path="organizations" element={<Organizations />} />
                 <Route path="organizations/new" element={<AddOrganization />} />
                 <Route path="organizations/:id" element={<OrganizationDetail />} />
                 <Route path="organizations/:id/edit" element={<EditOrganization />} />
                 <Route path="organizations/:id/settings" element={<OrganizationSettings />} />
+                <Route path="organizations/:id/users" element={<OrganizationUsers />} />
+                <Route path="organizations/:id/vehicles" element={<OrganizationVehicles />} />
                 <Route path="users" element={<Users />} />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/new" element={<FleetAddVehicle />} />
@@ -211,36 +228,38 @@ function App() {
                 <Route path="bulk-uploads/new" element={<NewUpload />} />
                 <Route path="bulk-uploads/:id" element={<JobDetail />} />
                 <Route path="trips" element={<TripsList />} />
+                <Route path="route-optimization" element={<RouteOptimization />} />
+                <Route path="video" element={<VideoTelematics />} />
                 <Route path="trips/add" element={<AddTrip />} />
                 <Route path="trips/settings" element={<TripSettings />} />
                 <Route path="trips/:id" element={<TripDetail />} />
                 <Route path="trips/:id/edit" element={<EditTrip />} />
                 <Route path="trips/:id/telemetry" element={<TripTelemetry />} />
-                
+
                 {/* Maintenance Module */}
                 <Route path="work-orders" element={<WorkOrderList />} />
                 <Route path="work-orders/new" element={<AddWorkOrder />} />
                 <Route path="work-orders/:id" element={<WorkOrderDetail />} />
                 <Route path="work-orders/:id/parts" element={<PartAssignment />} />
                 <Route path="inventory" element={<Inventory />} />
-                
+
                 {/* Fuel Module */}
                 <Route path="fuel/add" element={<AddFuelLog />} />
                 <Route path="fuel/settings" element={<FuelSettingsView />} />
-                
+
                 {/* Governance Module */}
                 <Route path="governance" element={<RequestList />} />
                 <Route path="governance/requests/new" element={<NewRequest />} />
                 <Route path="governance/requests/:id" element={<RequestDetail />} />
                 <Route path="governance/settings" element={<GovernanceSettingsView />} />
-                
+
                 {/* Billing Module */}
                 <Route path="billing" element={<BillingDashboard />} />
                 <Route path="billing/new" element={<InvoiceForm />} />
                 <Route path="billing/invoices/:id" element={<InvoiceDetail />} />
                 <Route path="billing/invoices/:id/edit" element={<InvoiceForm />} />
                 <Route path="billing/settings" element={<BillingSettingsPage />} />
-                
+
                 {/* Notification Module */}
                 <Route path="notifications" element={<NotificationLogs />} />
                 <Route path="notifications/:id" element={<NotificationDetail />} />
@@ -266,11 +285,10 @@ function App() {
                 <Route path="dr/tests/create" element={<CreateDRTestView />} />
                 <Route path="dr/tests/settings" element={<DRTestSettingsView />} />
                 <Route path="dr/tests/:id" element={<DRTestDetailView />} />
-                
+
                 {/* RBAC Module */}
                 <Route path="rbac/roles" element={<Roles />} />
                 <Route path="rbac/roles/:id/permissions" element={<RoleMatrix />} />
-                <Route path="rbac/assignments" element={<UserAssignments />} />
                 <Route path="rbac/assignments" element={<UserAssignments />} />
                 <Route path="rbac/logs" element={<SecurityLogs />} />
 
@@ -281,7 +299,7 @@ function App() {
                 <Route path="settings/templates" element={<Templates />} />
                 <Route path="settings/channels" element={<NotificationChannels />} />
                 <Route path="settings/policies" element={<PoliciesLimits />} />
-                
+
                 {/* Integrations Module */}
                 <Route path="integrations" element={<IntegrationsCenter />} />
 
@@ -289,10 +307,10 @@ function App() {
                 <Route path="devices/:id/telemetry" element={<DeviceTelemetry />} />
                 <Route path="devices/:id/commands" element={<RemoteCommands />} />
                 <Route path="devices/:id/firmware" element={<FirmwareManager />} />
-                
+
                 {/* Future: etc */}
-              <Route path="devices/firmware" element={<FirmwareManager />} />
-                
+                <Route path="devices/firmware" element={<FirmwareManager />} />
+
                 {/* Future: etc */}
               </Route>
 
@@ -383,16 +401,10 @@ function App() {
                   </PrivateRoute>
                 }
               />
-              <Route
-                path="/support/reports"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <SLAReports />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
+              <Route path="/support/reports" element={<PrivateRoute><SupportLayout><SLAReports /></SupportLayout></PrivateRoute>} />
+
+              {/* 404 Catch-all */}
+              <Route path="*" element={<Navigate to="/error" replace />} />
             </Routes>
           </BrowserRouter>
         </RBACProvider>

@@ -13,31 +13,43 @@ const Dashboard = () => {
         total_vehicles: 842, // Default mock values to match design initially
         active_trips: 125,
         active_alerts: 3,
+        total_drivers: 0,
         online_drivers: 0
     });
     const [trips, setTrips] = useState<Trip[]>([]);
-    const [alerts, setAlerts] = useState<Alert[]>([]); // eslint-disable-line @typescript-eslint/no-unused-vars
-    const [loading, setLoading] = useState(true); // eslint-disable-line @typescript-eslint/no-unused-vars
-    const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false); // Added state
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
+    const [refreshInterval, setRefreshInterval] = useState<number>(30000); // 30s default
+    const [division, setDivision] = useState('Global Fleet Ops');
+    const [timezone, setTimezone] = useState('UTC-05:00 (EST)');
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            // Fetch real data but fallback to mock if fails (for dev/demo robustnes)
             const [tripsData, alertsData, statsData] = await Promise.all([
                 api.getTrips({ page: 1, size: 50, status: 'ongoing' }).catch(() => ({ trips: [], total: 0 })),
                 api.getAlerts({ page: 1, size: 5, severity: 'critical' }).catch(() => ({ alerts: [], total: 0 })),
-                api.getStatistics().catch(() => ({ total_vehicles: 842, active_trips: 125 })) 
+                api.getStatistics().catch((err) => {
+                    console.error("Stats fetch failed", err);
+                    return null;
+                })
             ]);
 
             setTrips(tripsData.trips || []);
             setAlerts(alertsData.alerts || []);
-            setStats({
-                ...statsData,
-                total_vehicles: statsData.total_vehicles || 842,
-                active_trips: tripsData.total || 125,
-                active_alerts: alertsData.total || 3
-            });
+
+            if (statsData && (statsData as any).data) {
+                const s = (statsData as any).data;
+                setStats({
+                    ...stats,
+                    total_vehicles: s.total_vehicles,
+                    active_trips: s.active_trips || (tripsData as any).total,
+                    active_alerts: s.alerts_count || (alertsData as any).total,
+                    total_drivers: s.total_drivers,
+                    online_drivers: s.active_vehicles || 0
+                });
+            }
         } catch (error) {
             console.error("Failed to load dashboard data", error);
         } finally {
@@ -47,19 +59,29 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 30000); 
+        if (refreshInterval === 0) return;
+
+        const interval = setInterval(fetchData, refreshInterval);
         return () => clearInterval(interval);
-    }, []);
+    }, [refreshInterval]); // Re-run when interval changes
+
+    const handleRefreshChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        if (val === 'Off') setRefreshInterval(0);
+        else if (val === '30s') setRefreshInterval(30000);
+        else if (val === '1m') setRefreshInterval(60000);
+        else if (val === '5m') setRefreshInterval(300000);
+    };
 
     return (
-        <div className="flex flex-col h-full"> 
-           {/* Modal Overlay */}
-           <AddVehicleModal 
-              isOpen={isAddVehicleModalOpen} 
-              onClose={() => setIsAddVehicleModalOpen(false)} 
-           />
+        <div className="flex flex-col h-full">
+            {/* Modal Overlay */}
+            <AddVehicleModal
+                isOpen={isAddVehicleModalOpen}
+                onClose={() => setIsAddVehicleModalOpen(false)}
+            />
 
-           {/* Quick Filters Bar */}
+            {/* Quick Filters Bar */}
             <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="relative">
@@ -72,7 +94,11 @@ const Dashboard = () => {
                         <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">calendar_today</span>
                     </div>
                     <div className="relative">
-                        <select className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+                        <select
+                            value={division}
+                            onChange={(e) => setDivision(e.target.value)}
+                            className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors"
+                        >
                             <option>Global Fleet Ops</option>
                             <option>North America Div</option>
                             <option>Europe Logistics</option>
@@ -80,7 +106,11 @@ const Dashboard = () => {
                         <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">domain</span>
                     </div>
                     <div className="relative hidden lg:block">
-                        <select className="appearance-none bg-surface-dark border border-border-color text-text-muted text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+                        <select
+                            value={timezone}
+                            onChange={(e) => setTimezone(e.target.value)}
+                            className="appearance-none bg-surface-dark border border-border-color text-text-muted text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors"
+                        >
                             <option>UTC-05:00 (EST)</option>
                             <option>UTC+00:00 (GMT)</option>
                             <option>UTC-08:00 (PST)</option>
@@ -99,7 +129,11 @@ const Dashboard = () => {
                     </button>
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-text-muted">Auto:</span>
-                        <select className="bg-transparent text-xs text-white border-none p-0 pr-4 focus:ring-0 cursor-pointer font-medium">
+                        <select
+                            onChange={handleRefreshChange}
+                            value={refreshInterval === 0 ? 'Off' : refreshInterval === 30000 ? '30s' : refreshInterval === 60000 ? '1m' : '5m'}
+                            className="bg-transparent text-xs text-white border-none p-0 pr-4 focus:ring-0 cursor-pointer font-medium"
+                        >
                             <option>30s</option>
                             <option>1m</option>
                             <option>5m</option>
@@ -117,8 +151,8 @@ const Dashboard = () => {
 
                     {/* Middle Row: Map & Critical Table */}
                     <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-                         <LiveOperationsMap trips={trips} />
-                         <CriticalVehiclesTable />
+                        <LiveOperationsMap trips={trips} />
+                        <CriticalVehiclesTable alerts={alerts} />
                     </div>
 
                     {/* Right Column: Quick Actions & Activity */}
@@ -127,7 +161,7 @@ const Dashboard = () => {
                         <ActivityFeed />
                     </div>
                 </div>
-                
+
                 <footer className="mt-8 text-center text-xs text-[#64748b] pb-6 flex flex-col items-center gap-1">
                     <span>© 2026 FlyFleet Global Operations. All rights reserved.</span>
                     <span className="text-[10px]">v2.5.0-PRO | Node: {window.location.hostname} | Server Time: <span className="font-mono">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' })} UTC</span></span>

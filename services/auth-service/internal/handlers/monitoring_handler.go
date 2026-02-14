@@ -221,11 +221,6 @@ func (h *MonitoringHandler) collectDatabaseMetrics() (*DatabaseMetrics, error) {
 }
 
 func (h *MonitoringHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	// Check database connectivity
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

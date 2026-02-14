@@ -77,7 +77,7 @@ func main() {
 		c.Next()
 	})
 
-	api := r.Group("/api/v1/admin/reports")
+	api := r.Group("/api/v1/reports")
 	{
 		api.POST("/schedules", h.CreateReport)
 		api.GET("/schedules", h.ListReports)

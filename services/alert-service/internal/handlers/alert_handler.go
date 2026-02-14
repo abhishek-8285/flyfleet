@@ -315,8 +315,11 @@ func (h *AlertHandler) GetAlert(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /alerts [get]
 func (h *AlertHandler) ListAlerts(c *gin.Context) {
-	// Get organization ID from context
-	orgIDStr := c.GetString("org_id")
+	// Get organization ID from query param or context
+	orgIDStr := c.Query("org_id")
+	if orgIDStr == "" {
+		orgIDStr = c.GetString("org_id")
+	}
 	if orgIDStr == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
 		return
@@ -594,4 +597,14 @@ func (h *AlertHandler) UpdateTemplate(c *gin.Context) {
 func (h *AlertHandler) DeleteTemplate(c *gin.Context) {
 	id := c.Param("id")
 	c.JSON(http.StatusOK, gin.H{"message": "Template deleted", "template_id": id})
+}
+func (h *AlertHandler) GetStats(c *gin.Context) {
+	stats, err := h.service.GetStats(c.Request.Context())
+	if err != nil {
+		h.logger.Error("failed to get alert stats", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

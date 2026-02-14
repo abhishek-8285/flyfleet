@@ -41,7 +41,7 @@ func main() {
 	repo := repository.NewRepository(db, logger)
 	
 	// Initialize service
-	authService := service.NewAuthService(repo, cfg.JWTSecret, cfg.DriverServiceURL, cfg.VehicleServiceURL, cfg.TripServiceURL, cfg.AlertServiceURL, logger)
+	authService := service.NewAuthService(repo, cfg.JWTSecret, cfg.FleetCoreServiceURL, cfg.AlertServiceURL, logger)
 	
 	// Seed RBAC Data
 	if err := authService.EnsureSeedData(context.Background()); err != nil {
@@ -183,6 +183,7 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	router.HandleFunc("/api/v1/security/alerts", extHandlers.ListThreatAlerts)
 	router.HandleFunc("/api/v1/security/alerts/", extHandlers.UpdateThreatAlertStatus) // /alerts/{id}/status handled inside
 	router.HandleFunc("/api/v1/security/mfa/users", extHandlers.ListMFAUsers)
+	router.HandleFunc("/api/v1/security/telemetry", extHandlers.GetSecurityTelemetry)
 
 	// Access Reviews
 	router.HandleFunc("/api/v1/security/access-reviews", extHandlers.ListAccessReviews)
@@ -210,6 +211,8 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	router.Handle("/api/v1/admin/organizations/", adminChain(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(organizationsHandler(admin)))))
 
 	// Users (Org Scoped)
+	router.Handle("/api/v1/admin/users/stats", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(http.HandlerFunc(admin.GetStats))))
+
 	router.Handle("/api/v1/admin/users", adminChain(middleware.RBACMiddleware(sp, security.ResourceUsers)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			admin.ListUsers(w, r)

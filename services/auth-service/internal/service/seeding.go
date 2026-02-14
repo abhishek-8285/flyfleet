@@ -63,6 +63,8 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 		{Module: "fuel", Action: "read", Description: "Fuel management"},
 		{Module: "governance", Action: "read", Description: "Governance"},
 		{Module: "disaster_recovery", Action: "read", Description: "DR"},
+		{Module: "billing", Action: "read", Description: "View billing"},
+		{Module: "tracking", Action: "read", Description: "Real-time tracking"},
 	}
 
 	permMap := make(map[string]uuid.UUID)
@@ -182,8 +184,8 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 	}
 
 	// 4. Seed Super Admin User
-	adminEmail := "admin@test.com"
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("test123"), bcrypt.DefaultCost)
+	adminEmail := "admin@flyfleet.com"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
 	admin, err := s.repo.GetUserByEmail(ctx, adminEmail)
 	if err != nil || admin == nil {
 		s.logger.Info("Creating default admin user...")

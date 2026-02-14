@@ -28,7 +28,7 @@ func (h *MFAHandlers) ProxyAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MFAHandlers) ProxyOrganization(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/v1/admin/organizations", "/api/v1/admin/organizations")
+	h.proxyToAdminSupport(w, r, "/api/v1/admin/organizations", "/api/v1/organizations")
 }
 
 func (h *MFAHandlers) ProxyRBAC(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,15 @@ func (h *MFAHandlers) ProxyUsers(w http.ResponseWriter, r *http.Request) {
 	h.proxyToAuth(w, r, "/api/v1/admin/users", "/api/v1/admin/users")
 }
 
+func (h *MFAHandlers) proxyToAdminSupport(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	h.proxyToService(h.cfg.AdminSupportServiceURL, w, r, sourcePrefix, targetPrefix)
+}
+
 func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
+	h.proxyToService(h.cfg.AuthServiceURL, w, r, sourcePrefix, targetPrefix)
+}
+
+func (h *MFAHandlers) proxyToService(serviceURL string, w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
 	if !strings.HasPrefix(path, sourcePrefix) {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -60,9 +68,9 @@ func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, source
 	
 	targetPath := strings.Replace(path, sourcePrefix, targetPrefix, 1)
 	
-	targetURL, err := url.Parse(h.cfg.AuthServiceURL)
+	targetURL, err := url.Parse(serviceURL)
 	if err != nil {
-		h.logger.Error("Failed to parse auth service URL", zap.Error(err))
+		h.logger.Error("Failed to parse service URL", zap.Error(err), zap.String("url", serviceURL))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -93,7 +101,7 @@ func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, source
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		h.logger.Error("Failed to call auth service", zap.Error(err))
+		h.logger.Error("Failed to call service", zap.Error(err), zap.String("url", serviceURL))
 		http.Error(w, "Bad Gateway", http.StatusBadGateway)
 		return
 	}

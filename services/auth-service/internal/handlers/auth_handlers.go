@@ -39,7 +39,11 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.Login(r.Context(), req.Email, req.Password, ip, ua)
 	if err != nil {
 		h.logger.Error("Login failed", zap.Error(err), zap.String("ip", ip))
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
 		return
 	}
 

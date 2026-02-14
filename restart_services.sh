@@ -1,11 +1,20 @@
 #!/bin/bash
 
-# Define service ports to clean up (Backend + Frontend)
-PORTS=(8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091 8092 3000 3001)
+# FlyFleet Integrated Startup Script
+# This script handles port cleanup, service builds, migrations, and frontend startup.
 
-echo "Stopping any existing services on ports ${PORTS[*]}..."
+# 1. Pull latest changes (Optional, uncomment if using Git)
+# git pull
 
-for port in "${PORTS[@]}"; do
+# 2. Ensure scripts are executable
+chmod +x migrate.sh
+
+# Define service ports to clean up (Backend + Frontend + Infrastructure)
+PORTS="8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091 8092 3000 3001 4222 8222 6380"
+
+echo "Stopping any existing services on ports $PORTS..."
+
+for port in $PORTS; do
   pid=$(lsof -t -i:$port)
   if [ -n "$pid" ]; then
     echo "Killing process on port $port (PID: $pid)..."
@@ -18,6 +27,13 @@ docker-compose down
 
 echo "Building and starting Backend services..."
 docker-compose up --build -d
+
+echo "Waiting for database to be ready..."
+sleep 10
+
+echo "Running database migrations..."
+chmod +x migrate.sh
+./migrate.sh
 
 echo "Starting Frontend services..."
 

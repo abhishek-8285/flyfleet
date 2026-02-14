@@ -3,26 +3,12 @@ go 1.25.7
 use (
 	./packages/common/go
 	./services/alert-service
-	./services/analytics-service
 	./services/auth-service
-	./services/billing-service
-	./services/device-diagnostics-service
-	./services/dr-service
-	./services/driver-service
-	./services/fuel-service
-	./services/geofencing-service
-	./services/governance-service
-	./services/india-integration-service
-	./services/integrations-service
-	./services/maintenance-service
-	./services/notification-service
-	./services/reports-service
-	./services/route-optimization-service
-	./services/settings-service
-	./services/tracking-service
-	./services/trip-service
-	./services/vehicle-service
-	./services/video-service
+	./services/fleet-core-service
+	./services/admin-support-service
 	./services/web-bff
-	./services/support-service
+	./services/billing-service
+	./services/tracking-service
+	./services/reports-service
+	./services/india-integration-service
 )

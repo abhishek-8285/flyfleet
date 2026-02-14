@@ -10,11 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"github.com/flyfleet/tracking-service/internal/config"
 	"github.com/flyfleet/tracking-service/internal/handlers"
 )
 
@@ -30,12 +32,10 @@ func main() {
 	}()
 
 	// Load configuration
-	port := getEnv("PORT", "8082")
-	dbURL := getEnv("DATABASE_URL", "")
-	natsURL := getEnv("NATS_URL", nats.DefaultURL)
+	cfg := config.Load()
 
 	// Database connection
-	db, err := pgxpool.New(context.Background(), dbURL)
+	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
@@ -48,13 +48,13 @@ func main() {
 	logger.Info("Connected to database")
 
 	// NATS connection
-	nc, err := nats.Connect(natsURL)
+	nc, err := nats.Connect(cfg.NatsURL)
 	if err != nil {
 		logger.Fatal("Failed to connect to NATS", zap.Error(err))
 	}
 	defer nc.Close()
 
-	logger.Info("Connected to NATS", zap.String("url", natsURL))
+	logger.Info("Connected to NATS", zap.String("url", cfg.NatsURL))
 
 	// Initialize handlers
 	telemetryHandler := handlers.NewTelemetryHandler(db, nc, logger)
@@ -64,7 +64,7 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(loggingMiddleware(logger))
 
-	// Health check endpoint
+	// Health check endpoint (public)
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":    "healthy",
@@ -73,23 +73,27 @@ func main() {
 		})
 	})
 
-	// Device telemetry endpoints (API key auth)
-	r.POST("/api/v1/device/telemetry/gps", telemetryHandler.IngestGPS)
-	r.POST("/api/v1/device/telemetry/obd", telemetryHandler.IngestOBD)
+	// Wrap everything else in AuthMiddleware
+	auth := r.Group("/")
+	auth.Use(middleware.AuthMiddleware(cfg))
+	
+	// Device telemetry endpoints (JWT secured)
+	auth.POST("/api/v1/device/telemetry/gps", telemetryHandler.IngestGPS)
+	auth.POST("/api/v1/device/telemetry/obd", telemetryHandler.IngestOBD)
 
-	// Web admin endpoints (JWT auth)
-	r.GET("/api/v1/vehicles/:id/history", telemetryHandler.GetVehicleHistory)
+	// Web admin endpoints (JWT auth secured by Group)
+	auth.GET("/api/v1/vehicles/:id/history", telemetryHandler.GetVehicleHistory)
 
 	// Legacy endpoints for backward compatibility
-	r.POST("/telemetry/gps", func(c *gin.Context) {
+	auth.POST("/telemetry/gps", func(c *gin.Context) {
 		telemetryHandler.IngestGPS(c)
 	})
-	r.POST("/telemetry/obd", func(c *gin.Context) {
+	auth.POST("/telemetry/obd", func(c *gin.Context) {
 		telemetryHandler.IngestOBD(c)
 	})
 
 	// Analytics endpoints
-	r.POST("/telemetry/fuel", func(c *gin.Context) {
+	auth.POST("/telemetry/fuel", func(c *gin.Context) {
 		var payload map[string]interface{}
 		if err := c.BindJSON(&payload); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
@@ -121,7 +125,7 @@ func main() {
 	})
 
 	// Batch telemetry endpoint
-	r.POST("/telemetry/batch", func(c *gin.Context) {
+	auth.POST("/telemetry/batch", func(c *gin.Context) {
 		var batch struct {
 			GPSData  []map[string]interface{} `json:"gps_data,omitempty"`
 			OBData   []map[string]interface{} `json:"obd_data,omitempty"`
@@ -163,13 +167,13 @@ func main() {
 
 		c.JSON(http.StatusAccepted, gin.H{
 			"status": "accepted",
-			"message": fmt.Sprintf("Batch processed: %%d GPS, %%d OBD, %%d Fuel records",
+			"message": fmt.Sprintf("Batch processed: %d GPS, %d OBD, %d Fuel records",
 				len(batch.GPSData), len(batch.OBData), len(batch.FuelData)),
 		})
 	})
 
 	// Device heartbeat endpoint
-	r.POST("/devices/heartbeat", func(c *gin.Context) {
+	auth.POST("/devices/heartbeat", func(c *gin.Context) {
 		var heartbeat map[string]interface{}
 		if err := c.BindJSON(&heartbeat); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
@@ -198,13 +202,13 @@ func main() {
 
 	// Start server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
 		Handler: r,
 	}
 
 	// Run server in goroutine
 	go func() {
-		logger.Info("Starting tracking service", zap.String("port", port))
+		logger.Info("Starting tracking service", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
 		}

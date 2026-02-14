@@ -42,9 +42,31 @@ func (h *ReportHandler) CreateReport(c *gin.Context) {
 		return
 	}
 
-	// Set Org ID (From Context/JWT in real app)
-	req.OrganizationID = uuid.New() // Placeholder
-	req.CreatedBy = uuid.New()      // Placeholder
+	// Get Organization ID from context (set by auth middleware)
+	orgIDVal, exists := c.Get("org_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID not found in context"})
+		return
+	}
+	orgID, ok := orgIDVal.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid organization ID format"})
+		return
+	}
+	req.OrganizationID = uuid.MustParse(orgID)
+
+	// Get User ID from context (set by auth middleware)
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+		return
+	}
+	userID, ok := userIDVal.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	req.CreatedBy = uuid.MustParse(userID)
 
 	id, err := h.svc.CreateReport(c.Request.Context(), &req)
 	if err != nil {

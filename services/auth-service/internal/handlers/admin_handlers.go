@@ -514,3 +514,17 @@ func (h *AdminHandlers) GetTripStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(stats)
 }
+
+// GET /api/v1/admin/users/stats
+func (h *AdminHandlers) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.GetSystemStats(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to get system stats", zap.Error(err))
+		http.Error(w, `{"error": "Internal Error"}`, http.StatusInternalServerError)
+		return
+	}
+	// BFF expects { "data": stats } or just stats? 
+	// BFF AuthClient.GetStats unmarshals into a struct matching fields.
+	// Let's return the struct directly.
+	middleware.WriteSuccess(w, stats, 1, 1, 1)
+}

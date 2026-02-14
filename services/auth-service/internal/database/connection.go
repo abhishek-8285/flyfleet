@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -16,8 +17,8 @@ func NewConnection(databaseURL string) (*pgxpool.Pool, error) {
 	// Configure connection pool
 	config.MaxConns = 20
 	config.MinConns = 5
-	config.MaxConnLifetime = 0 // No limit
-	config.MaxConnIdleTime = 30 * 60 // 30 minutes
+	config.MaxConnLifetime = 1 * time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {

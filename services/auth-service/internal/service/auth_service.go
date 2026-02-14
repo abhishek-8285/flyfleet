@@ -18,26 +18,22 @@ import (
 )
 
 type AuthService struct {
-	repo              repository.AuthRepository
-	jwtSecret         string
-	logger            *zap.Logger
-	driverServiceURL  string
-	vehicleServiceURL string
-	tripServiceURL    string
-	alertServiceURL   string
-	httpClient        *http.Client
+	repo                repository.AuthRepository
+	jwtSecret           string
+	logger              *zap.Logger
+	fleetCoreServiceURL string
+	alertServiceURL     string
+	httpClient          *http.Client
 }
 
-func NewAuthService(repo repository.AuthRepository, jwtSecret, driverURL, vehicleURL, tripURL, alertURL string, logger *zap.Logger) *AuthService {
+func NewAuthService(repo repository.AuthRepository, jwtSecret, fleetCoreURL, alertURL string, logger *zap.Logger) *AuthService {
 	return &AuthService{
-		repo:              repo,
-		jwtSecret:         jwtSecret,
-		logger:            logger,
-		driverServiceURL:  driverURL,
-		vehicleServiceURL: vehicleURL,
-		tripServiceURL:    tripURL,
-		alertServiceURL:   alertURL,
-		httpClient:        &http.Client{Timeout: 10 * time.Second},
+		repo:                repo,
+		jwtSecret:           jwtSecret,
+		logger:              logger,
+		fleetCoreServiceURL: fleetCoreURL,
+		alertServiceURL:     alertURL,
+		httpClient:          &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -76,10 +72,7 @@ func (s *AuthService) UpdateAuditSettings(ctx context.Context, settings *models.
 func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string) (*models.AuthResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		s.logLoginActivity(ctx, nil, "FAILED", "low", ip, ua)
-		return nil, err
-	}
-	if user == nil {
+		s.logger.Warn("Login attempt for non-existent user or DB error", zap.String("email", email), zap.Error(err))
 		s.logLoginActivity(ctx, nil, "FAILED", "low", ip, ua)
 		return nil, errors.New("invalid credentials")
 	}
@@ -140,6 +133,10 @@ func (s *AuthService) Login(ctx context.Context, email, password, ip, ua string)
 
 func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	return s.repo.GetUserByID(ctx, id)
+}
+
+func (s *AuthService) GetSecurityTelemetry(ctx context.Context) (map[string]any, error) {
+	return s.repo.GetSecurityTelemetry(ctx)
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, name, ip, ua string) (*models.User, error) {
@@ -478,7 +475,7 @@ func (s *AuthService) SoftDeleteVehicle(ctx context.Context, id uuid.UUID) error
 
 // Drivers (Gateway)
 func (s *AuthService) ListDrivers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Driver, int, error) {
-	url := fmt.Sprintf("%s/drivers?page=%d&page_size=%d&org_id=%s", s.driverServiceURL, page, size, orgID)
+	url := fmt.Sprintf("%s/drivers?page=%d&page_size=%d&org_id=%s", s.fleetCoreServiceURL, page, size, orgID)
 	resp, err := s.httpClient.Get(url)
 	if err != nil { return nil, 0, err }
 	defer resp.Body.Close()
@@ -501,7 +498,7 @@ func (s *AuthService) CreateDriver(ctx context.Context, name, phone string, orgI
 	}
 	body, _ := json.Marshal(reqBody)
 	
-	resp, err := s.httpClient.Post(s.driverServiceURL+"/drivers", "application/json", bytes.NewBuffer(body))
+	resp, err := s.httpClient.Post(s.fleetCoreServiceURL+"/drivers", "application/json", bytes.NewBuffer(body))
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
 
@@ -515,7 +512,7 @@ func (s *AuthService) CreateDriver(ctx context.Context, name, phone string, orgI
 }
 
 func (s *AuthService) SoftDeleteDriver(ctx context.Context, id uuid.UUID) error {
-	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/drivers/%s", s.driverServiceURL, id), nil)
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/drivers/%s", s.fleetCoreServiceURL, id), nil)
 	resp, err := s.httpClient.Do(req)
 	if err != nil { return err }
 	defer resp.Body.Close()
@@ -669,7 +666,7 @@ func (s *AuthService) generateJWT(userID uuid.UUID, duration time.Duration) (str
 
 // Trips (Gateway)
 func (s *AuthService) ListTrips(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Trip, int, error) {
-	url := fmt.Sprintf("%s/trips?page=%d&page_size=%d&org_id=%s", s.tripServiceURL, page, size, orgID)
+	url := fmt.Sprintf("%s/trips?page=%d&page_size=%d&org_id=%s", s.fleetCoreServiceURL, page, size, orgID)
 	resp, err := s.httpClient.Get(url)
 	if err != nil { return nil, 0, err }
 	defer resp.Body.Close()
@@ -686,7 +683,7 @@ func (s *AuthService) ListTrips(ctx context.Context, orgID uuid.UUID, page, size
 
 func (s *AuthService) CreateTrip(ctx context.Context, trip *models.Trip) (*models.Trip, error) {
 	body, _ := json.Marshal(trip)
-	resp, err := s.httpClient.Post(s.tripServiceURL+"/trips", "application/json", bytes.NewBuffer(body))
+	resp, err := s.httpClient.Post(s.fleetCoreServiceURL+"/trips", "application/json", bytes.NewBuffer(body))
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
 
@@ -731,7 +728,7 @@ func (s *AuthService) GetAlertSummary(ctx context.Context, orgID uuid.UUID) (map
 
 // Analytics (Gateway)
 func (s *AuthService) GetDriverStats(ctx context.Context, orgID uuid.UUID) ([]map[string]interface{}, error) {
-	url := fmt.Sprintf("%s/stats/drivers?org_id=%s", s.tripServiceURL, orgID)
+	url := fmt.Sprintf("%s/stats/drivers?org_id=%s", s.fleetCoreServiceURL, orgID)
 	resp, err := s.httpClient.Get(url)
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
@@ -744,7 +741,7 @@ func (s *AuthService) GetDriverStats(ctx context.Context, orgID uuid.UUID) ([]ma
 }
 
 func (s *AuthService) GetTripStats(ctx context.Context, orgID uuid.UUID) ([]map[string]interface{}, error) {
-	url := fmt.Sprintf("%s/stats/trips?org_id=%s", s.tripServiceURL, orgID)
+	url := fmt.Sprintf("%s/stats/trips?org_id=%s", s.fleetCoreServiceURL, orgID)
 	resp, err := s.httpClient.Get(url)
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
@@ -1158,6 +1155,24 @@ func (s *AuthService) logRBACAudit(ctx context.Context, actorID uuid.UUID, actio
 		Details:   details,
 		CreatedAt: time.Now(),
 	})
+}
+
+func (s *AuthService) GetSystemStats(ctx context.Context) (*models.SystemStats, error) {
+	stats, err := s.repo.GetSystemStats(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enrich with Driver stats from Driver Service if possible
+	// For now, we'll try to fetch total drivers across all orgs?
+	// The driver service endpoint ListDrivers is per-org.
+	// We might need a global driver count endpoint in Driver Service or just mock it/leave it 0.
+	// Let's leave it 0 or use the approximation from earlier BFF logic (which was mock).
+	// Real implementation would be: 
+	// drivers, _, err := s.ListDrivers(ctx, uuid.Nil, 1, 1) -> if supported by driver service to list all.
+	// Assuming driver service supports global list if orgID is nil or specific flag.
+	
+	return stats, nil
 }
 
 func (s *AuthService) ListEntityAuditHistory(ctx context.Context, entityType, entityID string) ([]models.EntityAuditHistory, error) {

@@ -1,0 +1,17 @@
+[server]
+port = "8081"
+log_level = "info"
+
+[security]
+jwt_secret = "your-jwt-secret-key-here"
+
+[services]
+auth_url = "http://localhost:8080"
+fleet_core_url = "http://localhost:8084"
+alert_url = "http://localhost:8085"
+billing_url = "http://localhost:8087"
+tracking_url = "http://localhost:8082"
+admin_support_url = "http://localhost:8086"
+reports_url = "http://localhost:8084"
+dr_url = "http://localhost:8086"
+integrations_url = "http://localhost:8084"

@@ -16,7 +16,7 @@ type DeviceDiagnosticsHandler struct {
 
 func NewDeviceDiagnosticsHandler(cfg *config.Config) *DeviceDiagnosticsHandler {
 	return &DeviceDiagnosticsHandler{
-		serviceURL: cfg.DeviceDiagnosticsServiceURL,
+		serviceURL: cfg.FleetCoreServiceURL,
 		client:     &http.Client{},
 	}
 }
@@ -24,8 +24,27 @@ func NewDeviceDiagnosticsHandler(cfg *config.Config) *DeviceDiagnosticsHandler {
 // ProxyDeviceRequest forwards requests to device-diagnostics-service
 func (h *DeviceDiagnosticsHandler) ProxyDeviceRequest(w http.ResponseWriter, r *http.Request) {
 	// Build target URL
-	path := strings.TrimPrefix(r.URL.Path, "/api")
-	targetURL := h.serviceURL + "/api/v1" + path
+	path := r.URL.Path
+	// Handle multiple possible prefixes for transparency
+	// We map them to the core diagnostics prefix.
+	// If the path is exactly the prefix (device list), we ensure /devices is present.
+	var targetPath string
+	if strings.HasPrefix(path, "/api/v1/admin/devices") {
+		targetPath = "/api/v1/diagnostics/devices" + strings.TrimPrefix(path, "/api/v1/admin/devices")
+	} else if strings.HasPrefix(path, "/api/v1/devices") {
+		targetPath = "/api/v1/diagnostics/devices" + strings.TrimPrefix(path, "/api/v1/devices")
+	} else if strings.HasPrefix(path, "/api/devices/summary") {
+		targetPath = "/api/v1/diagnostics/summary" + strings.TrimPrefix(path, "/api/devices/summary")
+	} else if strings.HasPrefix(path, "/api/devices/status") {
+		targetPath = "/api/v1/diagnostics/status" + strings.TrimPrefix(path, "/api/devices/status")
+	} else if strings.HasPrefix(path, "/api/devices") {
+		targetPath = "/api/v1/diagnostics/devices" + strings.TrimPrefix(path, "/api/devices")
+	} else {
+		// Fallback for any other /api/v1/admin/devices style paths if they occur
+		targetPath = "/api/v1/diagnostics" + path
+	}
+
+	targetURL := h.serviceURL + targetPath
 
 	// Add query params
 	if r.URL.RawQuery != "" {
@@ -76,8 +95,15 @@ func (h *DeviceDiagnosticsHandler) ProxyDeviceRequest(w http.ResponseWriter, r *
 
 // ProxyFirmwareRequest forwards firmware requests
 func (h *DeviceDiagnosticsHandler) ProxyFirmwareRequest(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/api")
-	targetURL := h.serviceURL + "/api/v1" + path
+	path := r.URL.Path
+	prefixes := []string{"/api/v1/admin/firmware", "/api/firmware", "/api/v1/firmware"}
+	for _, p := range prefixes {
+		if strings.HasPrefix(path, p) {
+			path = strings.TrimPrefix(path, p)
+			break
+		}
+	}
+	targetURL := h.serviceURL + "/api/v1/diagnostics/firmware" + path
 
 	if r.URL.RawQuery != "" {
 		targetURL += "?" + r.URL.RawQuery
