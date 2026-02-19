@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -14,9 +15,23 @@ type Postgres struct {
 	logger *zap.Logger
 }
 
+type Scanner interface {
+	Scan(dest ...interface{}) error
+}
+
+type Transaction interface {
+	Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error)
+	QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner
+	Execute(ctx context.Context, sql string, args ...interface{}) error
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
 type Database interface {
 	Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error)
+	QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner
 	Execute(ctx context.Context, sql string, args ...interface{}) error
+	WithTenant(ctx context.Context, orgID string, fn func(ctx context.Context, tx Transaction) error) error
 	Close() error
 }
 
@@ -98,6 +113,19 @@ func (pg *Postgres) Query(ctx context.Context, sql string, args ...interface{}) 
 	return results, nil
 }
 
+func (pg *Postgres) QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner {
+	row := pg.pool.QueryRow(ctx, sql, args...)
+	return &PostgresRow{row: row}
+}
+
+type PostgresRow struct {
+	row pgx.Row
+}
+
+func (pr *PostgresRow) Scan(dest ...interface{}) error {
+	return pr.row.Scan(dest...)
+}
+
 func (pg *Postgres) Execute(ctx context.Context, sql string, args ...interface{}) error {
 	tag, err := pg.pool.Exec(ctx, sql, args...)
 	if err != nil {
@@ -114,9 +142,90 @@ func (pg *Postgres) Execute(ctx context.Context, sql string, args ...interface{}
 	return nil
 }
 
+type PostgresTransaction struct {
+	tx     pgx.Tx
+	logger *zap.Logger
+}
+
+func (pg *Postgres) WithTenant(ctx context.Context, orgID string, fn func(ctx context.Context, tx Transaction) error) error {
+	tx, err := pg.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Set the session variable for RLS
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL app.current_org_id = '%s'", orgID))
+	if err != nil {
+		return fmt.Errorf("failed to set tenant context: %w", err)
+	}
+
+	ptx := &PostgresTransaction{
+		tx:     tx,
+		logger: pg.logger,
+	}
+
+	if err := fn(ctx, ptx); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (ptx *PostgresTransaction) Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error) {
+	rows, err := ptx.tx.Query(ctx, sql, args...)
+	if err != nil {
+		ptx.logger.Error("Transaction query failed", zap.String("sql", sql), zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	fieldDescriptions := rows.FieldDescriptions()
+	columns := make([]string, len(fieldDescriptions))
+	for i, fd := range fieldDescriptions {
+		columns[i] = string(fd.Name)
+	}
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, err
+		}
+		row := make(map[string]interface{})
+		for i, col := range columns {
+			row[col] = values[i]
+		}
+		results = append(results, row)
+	}
+	return results, rows.Err()
+}
+
+func (ptx *PostgresTransaction) QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner {
+	row := ptx.tx.QueryRow(ctx, sql, args...)
+	return &PostgresRow{row: row}
+}
+
+func (ptx *PostgresTransaction) Execute(ctx context.Context, sql string, args ...interface{}) error {
+	_, err := ptx.tx.Exec(ctx, sql, args...)
+	return err
+}
+
+func (ptx *PostgresTransaction) Commit(ctx context.Context) error {
+	return ptx.tx.Commit(ctx)
+}
+
+func (ptx *PostgresTransaction) Rollback(ctx context.Context) error {
+	return ptx.tx.Rollback(ctx)
+}
+
 func (pg *Postgres) Close() error {
 	pg.pool.Close()
 	pg.logger.Info("Database connection pool closed")
 	return nil
+}
 
+// GetPool returns the underlying pgxpool.Pool for services that need direct pool access
+func (pg *Postgres) GetPool() *pgxpool.Pool {
+	return pg.pool
 }

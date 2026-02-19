@@ -1,0 +1,63 @@
+# Admin Page API Mapping
+
+This is a living map of admin pages to backend endpoints. It also captures pages that currently lack backend APIs so we can build them later.
+
+## Implemented / Already Wired
+- `src/pages/admin/GlobalAdminDashboard.tsx` -> `GET /api/v1/admin/dashboard/data`
+- `src/pages/admin/Organizations.tsx` -> `GET /admin/organizations`, `POST /admin/organizations`, `GET /admin/organizations/stats`
+- `src/pages/admin/OrganizationDetail.tsx` -> `GET /admin/organizations/{id}`, `PUT /admin/organizations/{id}`, `DELETE /admin/organizations/{id}`
+- `src/pages/admin/OrganizationUsers.tsx` -> `GET /admin/users?org_id=...`
+- `src/pages/admin/OrganizationVehicles.tsx` -> `GET /admin/vehicles?org_id=...`
+- `src/pages/admin/Users.tsx` -> `GET /admin/users`, `DELETE /admin/users?id=...`
+- `src/pages/admin/Drivers.tsx` -> `GET /admin/drivers`, `DELETE /admin/drivers?id=...`
+- `src/pages/admin/Vehicles.tsx` -> `GET /admin/vehicles`
+- `src/pages/admin/VehicleDetail.tsx` -> `GET /admin/vehicles?id=...` (fallback to list)
+- `src/pages/admin/Trips/TripsList.tsx` -> `GET /admin/trips`
+- `src/pages/admin/Trips/TripDetail.tsx` -> `GET /admin/trips/{id}`
+- `src/pages/admin/Trips/TripTelemetry.tsx` -> `GET /admin/trips/{id}/telemetry`
+- `src/pages/admin/Trips/TripSettings.tsx` -> `GET /admin/trips/settings`, `PUT /admin/trips/settings`
+- `src/pages/admin/BulkUploads/*` -> `GET/POST /admin/bulk-jobs`, `GET /admin/bulk-jobs/{id}`, `GET /admin/bulk-jobs/{id}/records`
+- `src/pages/admin/integrations/IntegrationHub.tsx` -> `GET/POST /api/integrations`, `PUT /api/integrations/{id}`, `POST /api/integrations/{id}/test`
+- `src/pages/admin/RouteOptimization.tsx` -> `GET/POST /routes/requests`, `GET /routes/results`
+- `src/pages/admin/VideoTelematics.tsx` -> `GET /admin/video/streams`, `GET /admin/video/recordings`, `GET /admin/video/analytics`
+- `src/pages/admin/DisasterRecovery.tsx` -> `GET /admin/dr/backups`, `GET /admin/dr/restore-jobs`, `POST /admin/dr/backups`, `POST /admin/dr/restore-jobs`
+- `src/pages/admin/dr/*` (Backups/Restore) -> `GET/POST /admin/dr/backups`, `GET/POST /admin/dr/restore-jobs`
+- `src/pages/admin/dr/BackupDetailView.tsx` -> `GET /api/v1/admin/dr/backups/{id}`, `POST /api/v1/admin/dr/backups/{id}/verify`
+- `src/pages/admin/dr/DetailRestorePage.tsx` -> `GET /api/v1/admin/dr/restore-jobs/{id}`, `GET /api/v1/admin/dr/restore-jobs/{id}/logs`
+- `src/pages/admin/dr/DRTestListView.tsx` -> `GET /api/v1/admin/dr/tests`, `GET /api/v1/admin/dr/tests/metrics`
+- `src/pages/admin/dr/DRTestDetailView.tsx` -> `GET /api/v1/admin/dr/tests/{id}`, `POST /api/v1/admin/dr/tests/{id}/abort`
+- `src/pages/admin/dr/CreateDRTestView.tsx` -> `POST /api/v1/admin/dr/tests`
+- `src/pages/admin/dr/DRTestSettingsView.tsx` -> `GET/PUT /api/v1/admin/dr/tests/settings`
+- `src/pages/admin/finance/FuelDashboard.tsx` -> `GET /finance/fuel`
+- `src/pages/admin/finance/ExpenseApprovals.tsx` -> `GET /admin/finance/expenses/reports`, `POST /admin/finance/expenses/reports/{id}/approve|reject`
+- `src/pages/admin/finance/PolicySettings.tsx` -> `GET/PUT /admin/finance/expenses/policies`
+- `src/pages/admin/revenue/ForecastingDashboard.tsx` -> `GET /admin/revenue/forecast`, `GET /admin/revenue/experiments`
+- `src/pages/admin/maintenance/WorkOrderManagement.tsx` -> `GET /admin/work-orders`, `PATCH /admin/work-orders/{id}/status`
+- `src/pages/admin/reports/ScheduledReportsList.tsx` -> `GET /api/v1/admin/reports/schedules`, `POST /api/v1/admin/reports/schedules/{id}/pause|resume`
+- `src/pages/admin/reports/ExecutionHistory.tsx` -> `GET /api/v1/admin/reports/executions`
+- `src/pages/admin/reports/CreateReport.tsx` -> `POST /api/v1/admin/reports/schedules`
+- `src/pages/admin/settings/FeatureFlags.tsx` -> `GET /settings/flags`, `PATCH /settings/flags/{id}/toggle`
+- `src/pages/admin/settings/Localization.tsx` -> `GET/PUT /settings/localization`
+- `src/pages/admin/settings/NotificationChannels.tsx` -> `GET/PUT /settings/channels`
+- `src/pages/admin/settings/PlatformConfig.tsx` -> `GET/PUT /settings/platform`
+- `src/pages/admin/settings/PoliciesLimits.tsx` -> `GET/PUT /settings/limits`
+- `src/pages/admin/settings/Templates.tsx` -> `GET /settings/templates`, `PUT /settings/templates/{id}`
+- `src/pages/admin/notifications/NotificationLogs.tsx` -> `GET /api/v1/admin/notifications` (alert-service) via notificationService
+- `src/pages/admin/notifications/UserPreferencesList.tsx` -> `GET /api/v1/admin/notifications/preferences` via notificationService
+- `src/pages/admin/notifications/UserPreferenceDetail.tsx` -> `GET/PUT /api/v1/admin/notifications/preferences/{id}` via notificationService
+- `src/pages/admin/notifications/NotificationSettings.tsx` -> `PUT /api/v1/admin/notifications/settings` via notificationService
+- `src/pages/admin/notifications/GlobalNotificationSettings.tsx` -> notificationService (global defaults)
+- `src/pages/admin/billing/BillingDashboard.tsx` -> billingService (metrics + invoices)
+- `src/pages/admin/billing/BillingSettings.tsx` -> billingService
+- `src/pages/admin/rbac/Roles.tsx` -> `GET/POST /admin/rbac/roles`, `GET /admin/rbac/permissions`
+- `src/pages/admin/rbac/UserAssignments.tsx` -> `POST /admin/rbac/users/assign`, `POST /admin/rbac/users/unassign`, `GET /admin/rbac/users/{id}/roles`, `GET /admin/rbac/users/{id}/permissions`
+- `src/pages/admin/rbac/RoleMatrix.tsx` -> `GET /admin/rbac/roles/{id}`, `GET /admin/rbac/permissions`, `GET /admin/rbac/roles/{id}/permissions`, `PUT /admin/rbac/roles/{id}/permissions`
+- `src/pages/admin/security/LoginActivityLogs.tsx` -> `GET /api/security/logins`
+- `src/pages/admin/security/ThreatAlerts.tsx` -> `GET /api/security/alerts`, `PATCH /api/security/alerts/{id}/status`
+- `src/pages/admin/security/ActiveSessions.tsx` -> `GET /api/security/sessions`, `DELETE /api/security/sessions/{sessionId}`
+- `src/pages/admin/security/AccessReview.tsx` -> `GET /api/security/access-reviews`, `POST /api/security/access-reviews/status`
+- `src/pages/admin/security/IPControls.tsx` -> `GET /api/security/ip-rules`, `POST /api/security/ip-rules`
+- `src/pages/admin/security/MFACenter.tsx` -> `GET /api/mfa/*` endpoints
+- `src/pages/admin/Devices.tsx` -> `GET /admin/devices` (metrics via meta)
+- `src/pages/admin/DeviceDetail.tsx` -> `GET /admin/devices/{id}/telemetry`, `GET /admin/devices/{id}/logs`, `POST /admin/devices/{id}/commands`
+- `src/pages/admin/emergency/EmergencyDashboard.tsx` -> `GET /admin/emergency/incidents`, `POST /admin/emergency/incidents/{id}/acknowledge|resolve` (not in openapi)

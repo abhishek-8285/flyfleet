@@ -165,13 +165,13 @@ func (h *AssetHandlers) proxyToVehicle(w http.ResponseWriter, r *http.Request, s
 // ProxyBulkJobs forwards bulk job requests to vehicle-service
 // /api/v1/admin/bulk-jobs -> /api/v1/bulk-jobs
 func (h *AssetHandlers) ProxyBulkJobs(w http.ResponseWriter, r *http.Request) {
-	h.proxyToVehicle(w, r, "/api/v1/admin/bulk-jobs", "/api/v1/bulk-jobs")
+	h.proxyToVehicle(w, r, "/api/v1/bulk-jobs", "/api/v1/bulk-jobs")
 }
 
 // ProxyVehicle forwards vehicle management requests
-// Maps /api/v1/admin/vehicles/* -> /api/v1/admin/vehicles/* (Direct forwarding)
+// Maps /api/v1/vehicles/* -> /api/v1/vehicles/* (Direct forwarding)
 func (h *AssetHandlers) ProxyVehicle(w http.ResponseWriter, r *http.Request) {
-	h.proxyToVehicle(w, r, "/api/v1/admin/vehicles", "/api/v1/vehicles")
+	h.proxyToVehicle(w, r, "/api/v1/vehicles", "/api/v1/vehicles")
 }
 
 // ProxyDevice forwards device management requests
@@ -181,7 +181,7 @@ func (h *AssetHandlers) ProxyDevice(w http.ResponseWriter, r *http.Request) {
 
 // ProxyDriver forwards driver management requests
 func (h *AssetHandlers) ProxyDriver(w http.ResponseWriter, r *http.Request) {
-	h.proxyToDriver(w, r, "/api/v1/admin/drivers", "/api/v1/drivers")
+	h.proxyToDriver(w, r, "/api/v1/drivers", "/api/v1/drivers")
 }
 
 // proxyToDriver is a helper to forward requests to the driver-service
@@ -251,7 +251,7 @@ func (h *AssetHandlers) proxyToDriver(w http.ResponseWriter, r *http.Request, so
 
 // ProxyDocument forwards document management requests
 func (h *AssetHandlers) ProxyDocument(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAuth(w, r, "/api/v1/admin/documents", "/api/v1/admin/documents")
+	h.proxyToAuth(w, r, "/api/v1/documents", "/api/v1/admin/documents")
 }
 
 // ProxyTrips forwards trip management requests to vehicle-service
@@ -317,7 +317,7 @@ func (h *AssetHandlers) proxyToTrip(w http.ResponseWriter, r *http.Request, sour
 
 // ProxyTrips forwards trip management requests
 func (h *AssetHandlers) ProxyTrips(w http.ResponseWriter, r *http.Request) {
-	h.proxyToTrip(w, r, "/api/v1/admin/trips", "/api/v1/trips")
+	h.proxyToTrip(w, r, "/api/v1/trips", "/api/v1/trips")
 }
 
 // proxyToMaintenance is a helper to forward requests to the maintenance-service
@@ -386,21 +386,36 @@ func (h *AssetHandlers) proxyToMaintenance(w http.ResponseWriter, r *http.Reques
 }
 
 // ProxyWorkOrders forwards work order requests to maintenance-service
-// /api/v1/admin/work-orders/* -> /api/v1/work-orders/*
+// /api/v1/work-orders/* -> /api/v1/work-orders/*
 func (h *AssetHandlers) ProxyWorkOrders(w http.ResponseWriter, r *http.Request) {
-	h.proxyToMaintenance(w, r, "/api/v1/admin/work-orders", "/api/v1/work-orders")
+	h.proxyToMaintenance(w, r, "/api/v1/work-orders", "/api/v1/work-orders")
 }
 
 // ProxyInventory forwards inventory requests to maintenance-service
-// /api/v1/admin/inventory/* -> /api/v1/inventory/*
+// /api/v1/inventory/* -> /api/v1/inventory/*
 func (h *AssetHandlers) ProxyInventory(w http.ResponseWriter, r *http.Request) {
-	h.proxyToMaintenance(w, r, "/api/v1/admin/inventory", "/api/v1/inventory")
+	h.proxyToMaintenance(w, r, "/api/v1/inventory", "/api/v1/inventory")
 }
 
 // ProxyMaintenanceSettings forwards settings requests to maintenance-service
-// /api/v1/admin/maintenance-settings/* -> /api/v1/settings/*
+// /api/v1/maintenance-settings/* -> /api/v1/settings/*
 func (h *AssetHandlers) ProxyMaintenanceSettings(w http.ResponseWriter, r *http.Request) {
-	h.proxyToMaintenance(w, r, "/api/v1/admin/maintenance-settings", "/api/v1/settings")
+	h.proxyToMaintenance(w, r, "/api/v1/maintenance-settings", "/api/v1/settings")
+}
+
+// ProxyVendors forwards vendor requests to maintenance-service
+func (h *AssetHandlers) ProxyVendors(w http.ResponseWriter, r *http.Request) {
+	h.proxyToMaintenance(w, r, "/api/v1/vendors", "/api/v1/vendors")
+}
+
+// ProxyInspections forwards inspection requests to maintenance-service
+func (h *AssetHandlers) ProxyInspections(w http.ResponseWriter, r *http.Request) {
+	h.proxyToMaintenance(w, r, "/api/v1/inspections", "/api/v1/inspections")
+}
+
+// ProxyEmergency forwards emergency requests to fleet-core-service
+func (h *AssetHandlers) ProxyEmergency(w http.ResponseWriter, r *http.Request) {
+	h.proxyToVehicle(w, r, "/api/v1/emergency", "/api/v1/emergency")
 }
 // proxyToFuel is a helper to forward requests to the fuel-service
 func (h *AssetHandlers) proxyToFuel(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
@@ -474,7 +489,7 @@ func (h *AssetHandlers) ProxyFuelLogs(w http.ResponseWriter, r *http.Request) {
 
 // ProxyFuelSettings forwards fuel settings requests to fuel-service
 func (h *AssetHandlers) ProxyFuelSettings(w http.ResponseWriter, r *http.Request) {
-	h.proxyToFuel(w, r, "/api/v1/admin/fuel", "/api/v1/fuel")
+	h.proxyToFuel(w, r, "/api/v1/fuel", "/api/v1/fuel")
 }
 
 // proxyToGovernance is a helper to forward requests to the governance-service
@@ -544,12 +559,12 @@ func (h *AssetHandlers) proxyToGovernance(w http.ResponseWriter, r *http.Request
 
 // ProxyGovernanceRequests forwards governance requests to governance-service
 func (h *AssetHandlers) ProxyGovernanceRequests(w http.ResponseWriter, r *http.Request) {
-	h.proxyToGovernance(w, r, "/api/v1/admin/governance/requests", "/api/v1/governance/requests")
+	h.proxyToGovernance(w, r, "/api/v1/governance/requests", "/api/v1/governance/requests")
 }
 
 // ProxyGovernanceSettings forwards governance settings requests to governance-service
 func (h *AssetHandlers) ProxyGovernanceSettings(w http.ResponseWriter, r *http.Request) {
-	h.proxyToGovernance(w, r, "/api/v1/admin/governance/settings", "/api/v1/governance/settings")
+	h.proxyToGovernance(w, r, "/api/v1/governance/settings", "/api/v1/governance/settings")
 }
 // proxyToBilling is a helper to forward requests to the billing-service
 func (h *AssetHandlers) proxyToBilling(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
@@ -618,17 +633,17 @@ func (h *AssetHandlers) proxyToBilling(w http.ResponseWriter, r *http.Request, s
 
 // ProxyBilling forwards invoice requests to billing-service
 func (h *AssetHandlers) ProxyBilling(w http.ResponseWriter, r *http.Request) {
-	h.proxyToBilling(w, r, "/api/v1/admin/billing", "/api/v1/billing")
+	h.proxyToBilling(w, r, "/api/v1/billing", "/api/v1/billing")
 }
 
 // ProxyBillingSettings forwards settings requests to billing-service
 func (h *AssetHandlers) ProxyBillingSettings(w http.ResponseWriter, r *http.Request) {
-	h.proxyToBilling(w, r, "/api/v1/admin/billing-settings", "/api/v1/billing/settings")
+	h.proxyToBilling(w, r, "/api/v1/billing/settings", "/api/v1/billing/settings")
 }
 
 // ProxyBillingMetrics forwards metrics requests to billing-service
 func (h *AssetHandlers) ProxyBillingMetrics(w http.ResponseWriter, r *http.Request) {
-	h.proxyToBilling(w, r, "/api/v1/admin/billing-metrics", "/api/v1/billing/metrics")
+	h.proxyToBilling(w, r, "/api/v1/billing/metrics", "/api/v1/billing/metrics")
 }
 // proxyToNotification is a helper to forward requests to the notification-service
 func (h *AssetHandlers) proxyToNotification(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
@@ -692,17 +707,17 @@ func (h *AssetHandlers) proxyToNotification(w http.ResponseWriter, r *http.Reque
 
 // ProxyNotification forwards notification management requests
 func (h *AssetHandlers) ProxyNotification(w http.ResponseWriter, r *http.Request) {
-	h.proxyToNotification(w, r, "/api/v1/admin/notifications", "/api/v1/admin/notifications")
+	h.proxyToNotification(w, r, "/api/v1/notifications", "/api/v1/admin/notifications")
 }
 
 // ProxyNotificationPreferences forwards notification preference requests
 func (h *AssetHandlers) ProxyNotificationPreferences(w http.ResponseWriter, r *http.Request) {
-	h.proxyToNotification(w, r, "/api/v1/admin/preferences", "/api/v1/admin/notifications/preferences")
+	h.proxyToNotification(w, r, "/api/v1/notifications/preferences", "/api/v1/admin/notifications/preferences")
 }
 
 // ProxyNotificationGlobalDefaults forwards global notification default requests
 func (h *AssetHandlers) ProxyNotificationGlobalDefaults(w http.ResponseWriter, r *http.Request) {
-	h.proxyToNotification(w, r, "/api/v1/admin/preferences/global", "/api/v1/admin/notifications/preferences/global")
+	h.proxyToNotification(w, r, "/api/v1/notifications/preferences/global", "/api/v1/admin/notifications/preferences/global")
 }
 
 // proxyToReports is a helper to forward requests to the reports-service
@@ -767,7 +782,7 @@ func (h *AssetHandlers) proxyToReports(w http.ResponseWriter, r *http.Request, s
 
 // ProxyReports forwards reports management requests
 func (h *AssetHandlers) ProxyReports(w http.ResponseWriter, r *http.Request) {
-	h.proxyToReports(w, r, "/api/v1/admin/reports", "/api/v1/reports")
+	h.proxyToReports(w, r, "/api/v1/reports", "/api/v1/reports")
 }
 
 // proxyToDR is a helper to forward requests to the dr-service
@@ -832,7 +847,7 @@ func (h *AssetHandlers) proxyToDR(w http.ResponseWriter, r *http.Request, source
 
 // ProxyDR forwards disaster recovery requests
 func (h *AssetHandlers) ProxyDR(w http.ResponseWriter, r *http.Request) {
-	h.proxyToDR(w, r, "/api/v1/admin/dr", "/api/v1/admin/dr")
+	h.proxyToDR(w, r, "/api/v1/dr", "/api/v1/admin/dr")
 }
 
 // proxyToAlert is a helper to forward requests to the alert-service
@@ -897,7 +912,7 @@ func (h *AssetHandlers) proxyToAlert(w http.ResponseWriter, r *http.Request, sou
 
 // ProxyAlerts forwards alert management requests
 func (h *AssetHandlers) ProxyAlerts(w http.ResponseWriter, r *http.Request) {
-	h.proxyToAlert(w, r, "/api/v1/admin/alerts", "/api/v1/alerts")
+	h.proxyToAlert(w, r, "/api/v1/alerts", "/api/v1/alerts")
 }
 
 
@@ -967,15 +982,15 @@ func (h *AssetHandlers) proxyToVideo(w http.ResponseWriter, r *http.Request, sou
 }
 
 // ProxyVideo forwards video management requests to fleet-core-service
-// /api/v1/admin/video/* -> /api/v1/video/*
+// /api/v1/video/* -> /api/v1/video/*
 func (h *AssetHandlers) ProxyVideo(w http.ResponseWriter, r *http.Request) {
-	h.proxyToVideo(w, r, "/api/v1/admin/video", "/api/v1/video")
+	h.proxyToVideo(w, r, "/api/v1/video", "/api/v1/video")
 }
 
 // ProxyAnalytics forwards analytics requests to fleet-core-service
-// /api/v1/admin/analytics/* -> /api/v1/analytics/*
+// /api/v1/analytics/* -> /api/v1/analytics/*
 func (h *AssetHandlers) ProxyAnalytics(w http.ResponseWriter, r *http.Request) {
-	h.proxyToVehicle(w, r, "/api/v1/admin/analytics", "/api/v1/analytics")
+	h.proxyToVehicle(w, r, "/api/v1/analytics", "/api/v1/analytics")
 }
 
 // ProxyRouteOptimization forwards route optimization requests to fleet-core-service
@@ -1074,4 +1089,22 @@ func (h *AssetHandlers) ProxySarathi(w http.ResponseWriter, r *http.Request) {
 // ProxyGST forwards GST requests
 func (h *AssetHandlers) ProxyGST(w http.ResponseWriter, r *http.Request) {
 	h.proxyToIndia(w, r, "/api/v1/india/gst", "/api/gst")
+}
+
+// ProxyGeofences forwards geofence management requests to fleet-core-service
+// /api/v1/geofences/* -> /api/v1/geofencing/*
+func (h *AssetHandlers) ProxyGeofences(w http.ResponseWriter, r *http.Request) {
+	h.proxyToVehicle(w, r, "/api/v1/geofences", "/api/v1/geofencing")
+}
+// ProxyFinance forwards finance requests to finance-service
+func (h *AssetHandlers) ProxyFinance(w http.ResponseWriter, r *http.Request) {
+    // Determine target service based on path or logic
+    // For now assuming finance is part of fleet-core-service as per implementation
+    // fleet-core-service has /api/v1/finance routes
+    
+    // Map /api/v1/finance/* -> /api/v1/finance/*
+    // We can reuse proxyToVehicle or create a generic proxyToCore
+    // proxyToVehicle forwards to FleetCoreServiceURL
+    
+    h.proxyToVehicle(w, r, "/api/v1/finance", "/api/v1/finance")
 }

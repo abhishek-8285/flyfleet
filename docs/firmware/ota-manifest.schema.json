@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.local/schemas/ota-manifest.schema.json",
+  "title": "FlyFleet OTA Manifest",
+  "type": "object",
+  "required": [
+    "manifest_version",
+    "release_id",
+    "firmware_version",
+    "hardware_compatibility",
+    "min_bootloader_version",
+    "artifact",
+    "signature",
+    "released_at"
+  ],
+  "properties": {
+    "manifest_version": {
+      "type": "string",
+      "pattern": "^v[0-9]+$"
+    },
+    "release_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "firmware_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "hardware_compatibility": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "min_bootloader_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["uri", "size_bytes", "sha256"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "signature": {
+      "type": "object",
+      "required": ["algorithm", "key_id", "value"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["ed25519", "rsa-pss-sha256", "ecdsa-p256-sha256"]
+        },
+        "key_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "rollout_policy": {
+      "type": "object",
+      "properties": {
+        "rings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "percentage", "soak_minutes"],
+            "properties": {
+              "name": {"type": "string"},
+              "percentage": {"type": "number", "minimum": 0, "maximum": 100},
+              "soak_minutes": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "auto_pause_thresholds": {
+          "type": "object",
+          "properties": {
+            "max_failure_rate": {"type": "number", "minimum": 0, "maximum": 1},
+            "max_boot_failure_rate": {"type": "number", "minimum": 0, "maximum": 1},
+            "max_silence_rate": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "released_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

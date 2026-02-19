@@ -22,6 +22,10 @@ import com.flyfleet.driver.data.remote.ApiService
 import com.google.android.gms.location.*
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.json.JSONArray
+import org.json.JSONObject
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -36,19 +40,55 @@ class LocationTrackingService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val uploadMutex = Mutex()
+    private val retryStateByItemId = mutableMapOf<String, RetryState>()
+    private val deadLetterIds = mutableSetOf<String>()
+    private var periodicFlushJob: Job? = null
 
     companion object {
         const val CHANNEL_ID = "location_tracking_channel"
         const val NOTIFICATION_ID = 1001
         const val ACTION_START_TRACKING = "START_TRACKING"
         const val ACTION_STOP_TRACKING = "STOP_TRACKING"
+        private const val RETRY_BASE_DELAY_MS = 5_000L
+        private const val RETRY_MAX_DELAY_MS = 5 * 60 * 1000L
+        private const val MAX_RETRY_ATTEMPTS = 5
+        private const val MAX_DEAD_LETTER_EVENTS = 200
+        private const val PREFS_NAME = "flyfleet"
+        private const val PREF_DEAD_LETTER_IDS = "gps_dead_letter_ids"
+        private const val PREF_DEAD_LETTER_EVENTS = "gps_dead_letter_events"
     }
+
+    private data class RetryState(
+        var attempts: Int = 0,
+        var nextAttemptAtMs: Long = 0L,
+        var lastError: String = ""
+    )
+
+    private data class DeadLetterEvent(
+        val id: String,
+        val deviceId: String,
+        val timestamp: Long,
+        val reason: String
+    )
 
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
+        loadDeadLetterState()
+        startPeriodicFlush()
+    }
+
+    private fun startPeriodicFlush() {
+        periodicFlushJob?.cancel()
+        periodicFlushJob = serviceScope.launch {
+            while (isActive) {
+                delay(30_000L)
+                tryUploadGPSData()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -109,14 +149,25 @@ class LocationTrackingService : Service() {
         }
     }
 
-    private suspend fun tryUploadGPSData() {
+    private suspend fun tryUploadGPSData() = uploadMutex.withLock {
         val pendingItems = gpsQueueDao.getUnsyncedItems(limit = 50)
-        
         if (pendingItems.isEmpty()) return
 
+        val now = System.currentTimeMillis()
+        val eligibleItems = pendingItems.filter { item ->
+            val itemKey = item.id.toString()
+            if (deadLetterIds.contains(itemKey)) {
+                return@filter false
+            }
+            val retryState = retryStateByItemId[itemKey]
+            retryState == null || retryState.nextAttemptAtMs <= now
+        }
+
+        if (eligibleItems.isEmpty()) return
+
         try {
-            // Upload batch
-            val response = apiService.uploadGPSBatch(pendingItems.map { item ->
+            val response = apiService.uploadGPSBatch(eligibleItems.map { item ->
+                val ignitionState = getIgnitionState(item.speed)
                 mapOf(
                     "device_id" to item.deviceId,
                     "timestamp" to item.timestamp,
@@ -126,27 +177,115 @@ class LocationTrackingService : Service() {
                     "speed" to item.speed,
                     "heading" to item.heading,
                     "accuracy" to item.accuracy,
-                    "ignition" to true // TODO: Get from OBD/vehicle state
+                    "ignition" to ignitionState
                 )
             })
 
             if (response.isSuccessful) {
-                // Mark as synced
-                gpsQueueDao.markAsSynced(pendingItems.map { it.id })
-                
+                gpsQueueDao.markAsSynced(eligibleItems.map { it.id })
+                eligibleItems.forEach { retryStateByItemId.remove(it.id.toString()) }
+
                 // Delete old synced items (keep last 24 hours)
                 val cutoffTime = System.currentTimeMillis() / 1000 - (24 * 3600)
                 gpsQueueDao.deleteOldSyncedItems(cutoffTime)
+                return
             }
+
+            val failureCode = response.code()
+            if (failureCode == 409 || failureCode == 422) {
+                eligibleItems.forEach { markDeadLetter(it, "conflict_http_$failureCode") }
+                return
+            }
+            registerBatchFailure(eligibleItems, "http_$failureCode")
         } catch (e: Exception) {
-            // Will retry on next location update
-            e.printStackTrace()
+            registerBatchFailure(eligibleItems, e.message ?: e::class.java.simpleName)
         }
     }
 
+    private fun registerBatchFailure(items: List<GPSQueueItem>, reason: String) {
+        val now = System.currentTimeMillis()
+        items.forEach { item ->
+            val itemKey = item.id.toString()
+            val current = retryStateByItemId[itemKey] ?: RetryState()
+            current.attempts += 1
+            current.lastError = reason
+
+            if (current.attempts >= MAX_RETRY_ATTEMPTS) {
+                retryStateByItemId[itemKey] = current.apply { nextAttemptAtMs = Long.MAX_VALUE }
+                markDeadLetter(item, "max_retries:$reason")
+                return@forEach
+            }
+
+            val exp = (1L shl (current.attempts - 1).coerceAtMost(10))
+            val backoff = (RETRY_BASE_DELAY_MS * exp).coerceAtMost(RETRY_MAX_DELAY_MS)
+            current.nextAttemptAtMs = now + backoff
+            retryStateByItemId[itemKey] = current
+        }
+    }
+
+    private fun markDeadLetter(item: GPSQueueItem, reason: String) {
+        val itemKey = item.id.toString()
+        deadLetterIds.add(itemKey)
+        persistDeadLetterIds()
+        appendDeadLetterEvent(
+            DeadLetterEvent(
+                id = itemKey,
+                deviceId = item.deviceId,
+                timestamp = item.timestamp,
+                reason = reason
+            )
+        )
+    }
+
+    private fun loadDeadLetterState() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val serialized = prefs.getString(PREF_DEAD_LETTER_IDS, "[]") ?: "[]"
+        runCatching {
+            val arr = JSONArray(serialized)
+            for (i in 0 until arr.length()) {
+                deadLetterIds.add(arr.getString(i))
+            }
+        }
+    }
+
+    private fun persistDeadLetterIds() {
+        val arr = JSONArray()
+        deadLetterIds.forEach { arr.put(it) }
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putString(PREF_DEAD_LETTER_IDS, arr.toString())
+            .apply()
+    }
+
+    private fun appendDeadLetterEvent(event: DeadLetterEvent) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val raw = prefs.getString(PREF_DEAD_LETTER_EVENTS, "[]") ?: "[]"
+        val arr = runCatching { JSONArray(raw) }.getOrElse { JSONArray() }
+        val obj = JSONObject()
+            .put("id", event.id)
+            .put("device_id", event.deviceId)
+            .put("timestamp", event.timestamp)
+            .put("reason", event.reason)
+        arr.put(obj)
+
+        while (arr.length() > MAX_DEAD_LETTER_EVENTS) {
+            arr.remove(0)
+        }
+        prefs.edit().putString(PREF_DEAD_LETTER_EVENTS, arr.toString()).apply()
+    }
+
     private fun getDeviceId(): String {
-        val prefs = getSharedPreferences("flyfleet", MODE_PRIVATE)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         return prefs.getString("device_id", "UNKNOWN") ?: "UNKNOWN"
+    }
+
+    private fun getIgnitionState(speedKmh: Double): Boolean {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        if (prefs.contains("ignition_state")) {
+            return prefs.getBoolean("ignition_state", false)
+        }
+        // Fallback heuristic when OBD state is unavailable.
+        return speedKmh > 3.0
     }
 
     private fun createNotificationChannel() {
@@ -189,6 +328,7 @@ class LocationTrackingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         fusedLocationClient.removeLocationUpdates(locationCallback)
+        periodicFlushJob?.cancel()
         serviceScope.cancel()
     }
 

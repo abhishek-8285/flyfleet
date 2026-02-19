@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface DRTest {
     id: string;
@@ -27,19 +28,26 @@ const DRTestListView: React.FC = () => {
     const [tests, setTests] = useState<DRTest[]>([]);
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchTests = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const [testsRes, metricsRes] = await Promise.all([
-                fetch('/api/v1/admin/dr/tests'),
-                fetch('/api/v1/admin/dr/tests/metrics')
+                apiClient.get('/admin/dr/tests') as any,
+                apiClient.get('/admin/dr/tests/metrics') as any
             ]);
-            const testsData = await testsRes.json();
-            const metricsData = await metricsRes.json();
-            setTests(testsData.data || []);
-            setMetrics(metricsData.data);
+            const testsData = testsRes;
+            const metricsData = metricsRes;
+            const items = testsData?.data || testsData?.items || testsData?.tests || testsData || [];
+            setTests(Array.isArray(items) ? items : []);
+            setMetrics(metricsData?.data || metricsData?.metrics || null);
         } catch (error) {
             console.error('Failed to fetch DR tests:', error);
+            setError('Failed to load DR tests.');
+            setTests([]);
+            setMetrics(null);
         } finally {
             setLoading(false);
         }
@@ -134,6 +142,8 @@ const DRTestListView: React.FC = () => {
                     <div className="flex-1 overflow-auto">
                         {loading ? (
                             <div className="flex items-center justify-center h-32 text-white/50">Loading...</div>
+                        ) : error ? (
+                            <div className="flex items-center justify-center h-32 text-red-400">{error}</div>
                         ) : tests.length === 0 ? (
                             <div className="flex items-center justify-center h-32 text-white/50">
                                 No DR tests found. Create your first test to get started.

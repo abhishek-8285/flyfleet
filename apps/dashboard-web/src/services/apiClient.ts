@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { createTraceId, REQUEST_ID_HEADER, TRACE_ID_HEADER } from '../utils/trace';
 
 // Environment-aware base URL
 const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
@@ -24,6 +25,10 @@ apiClient.interceptors.request.use(
     if (orgId) {
       config.headers['X-Organization-ID'] = orgId;
     }
+
+    const traceId = createTraceId();
+    config.headers[TRACE_ID_HEADER] = traceId;
+    config.headers[REQUEST_ID_HEADER] = traceId;
 
     return config;
   },

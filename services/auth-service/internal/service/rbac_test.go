@@ -30,6 +30,10 @@ func (m *MockRepository) GetPermission(ctx context.Context, module, action strin
 	return nil, nil // Mock: not found
 }
 
+func (m *MockRepository) CleanupExpiredTokens(ctx context.Context) error {
+	return nil // Mock implementation
+}
+
 func (m *MockRepository) GetRoleByName(ctx context.Context, orgID uuid.UUID, name string) (*models.Role, error) {
 	for _, r := range m.roles {
 		if r.Name == name {
@@ -75,6 +79,8 @@ func (m *MockRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 func (m *MockRepository) CreateUser(ctx context.Context, user *models.User) error { return nil }
 func (m *MockRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) { return nil, nil }
 func (m *MockRepository) UpdateUser(ctx context.Context, user *models.User) error { return nil }
+func (m *MockRepository) UpdateUserPassword(ctx context.Context, user *models.User) error { return nil }
+func (m *MockRepository) UpdateUserVerified(ctx context.Context, userID uuid.UUID, verified bool) error { return nil }
 func (m *MockRepository) UpdateTheme(ctx context.Context, userID uuid.UUID, theme string) error { return nil }
 func (m *MockRepository) ResetFailedLogins(ctx context.Context, userID uuid.UUID) error { return nil }
 func (m *MockRepository) IncrementFailedLogins(ctx context.Context, userID uuid.UUID) (int, error) { return 0, nil }
@@ -86,6 +92,8 @@ func (m *MockRepository) GetTokenByRefresh(ctx context.Context, refreshToken str
 func (m *MockRepository) GetTokensByUserID(ctx context.Context, userID uuid.UUID) ([]models.AuthToken, error) { return nil, nil }
 func (m *MockRepository) DeleteToken(ctx context.Context, accessToken string) error { return nil }
 func (m *MockRepository) DeleteTokensByUserID(ctx context.Context, userID uuid.UUID) error { return nil }
+func (m *MockRepository) GetTokenByAccessToken(ctx context.Context, accessToken string) (*models.AuthToken, error) { return nil, nil }
+func (m *MockRepository) UpdateTokenLastActive(ctx context.Context, accessToken string) error { return nil }
 func (m *MockRepository) LogSecurityEvent(ctx context.Context, event *models.SecurityEvent) error { return nil }
 func (m *MockRepository) GetSecurityEvents(ctx context.Context, userID uuid.UUID) ([]models.SecurityEvent, error) { return nil, nil }
 func (m *MockRepository) SaveMFACode(ctx context.Context, code *models.MFACode) error { return nil }
@@ -99,7 +107,7 @@ func (m *MockRepository) CreateOrganization(ctx context.Context, org *models.Org
 func (m *MockRepository) UpdateOrganization(ctx context.Context, org *models.Organization) error { return nil }
 func (m *MockRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) { return nil, nil }
 func (m *MockRepository) ListOrganizations(ctx context.Context, page, size int) ([]models.Organization, int, error) { return nil, 0, nil }
-func (m *MockRepository) ListUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.User, int, error) { return nil, 0, nil }
+func (m *MockRepository) ListUsers(ctx context.Context, filter models.UserFilter) ([]models.User, int, error) { return nil, 0, nil }
 func (m *MockRepository) SoftDeleteOrganization(ctx context.Context, id uuid.UUID) error { return nil }
 func (m *MockRepository) SoftDeleteUser(ctx context.Context, id uuid.UUID) error { return nil }
 func (m *MockRepository) ListVehicles(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Vehicle, int, error) { return nil, 0, nil }
@@ -118,6 +126,7 @@ func (m *MockRepository) AssignDriverToVehicle(ctx context.Context, driverID, ve
 func (m *MockRepository) CreateDocument(ctx context.Context, d *models.Document) error { return nil }
 func (m *MockRepository) GetDocumentByID(ctx context.Context, id uuid.UUID) (*models.Document, error) { return nil, nil }
 func (m *MockRepository) ListDocumentsByVehicleID(ctx context.Context, vehicleID uuid.UUID) ([]models.Document, error) { return nil, nil }
+func (m *MockRepository) ListDocuments(ctx context.Context, orgID uuid.UUID, filter *models.DocumentFilter) ([]models.Document, int, error) { return nil, 0, nil }
 func (m *MockRepository) UpdateDocument(ctx context.Context, d *models.Document) error { return nil }
 func (m *MockRepository) DeleteDocument(ctx context.Context, id uuid.UUID) error { return nil }
 func (m *MockRepository) AddUserToOrganization(ctx context.Context, userID, orgID uuid.UUID, role string) error { return nil }
@@ -128,7 +137,7 @@ func (m *MockRepository) GetMFAMethodDistribution(ctx context.Context, orgID uui
 func (m *MockRepository) GetMFAEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.MFAEvent, int, error) { return nil, 0, nil }
 func (m *MockRepository) GetTopFailureLocations(ctx context.Context, orgID uuid.UUID) ([]map[string]any, error) { return nil, nil }
 func (m *MockRepository) GetTopFailureUsers(ctx context.Context, orgID uuid.UUID) ([]map[string]any, error) { return nil, nil }
-func (m *MockRepository) GetLockedUsers(ctx context.Context, orgID uuid.UUID) ([]models.User, error) { return nil, nil }
+func (m *MockRepository) GetLockedUsers(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.User, int, error) { return nil, 0, nil }
 func (m *MockRepository) UnlockUser(ctx context.Context, userID uuid.UUID) error { return nil }
 func (m *MockRepository) ResetMFA(ctx context.Context, userID uuid.UUID) error { return nil }
 func (m *MockRepository) GetMFAPolicy(ctx context.Context, orgID uuid.UUID) (*models.MFAPolicy, error) { return nil, nil }
@@ -139,7 +148,7 @@ func (m *MockRepository) GetMFAOrgOverride(ctx context.Context, orgID uuid.UUID)
 func (m *MockRepository) UpdateMFAOrgOverride(ctx context.Context, o *models.MFAOrgOverride) error { return nil }
 func (m *MockRepository) AddMFAException(ctx context.Context, exc *models.MFAException) error { return nil }
 func (m *MockRepository) GetMFAExceptionByID(ctx context.Context, id uuid.UUID) (*models.MFAException, error) { return nil, nil }
-func (m *MockRepository) GetMFAExceptions(ctx context.Context, orgID uuid.UUID) ([]models.MFAException, error) { return nil, nil }
+func (m *MockRepository) GetMFAExceptions(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.MFAException, int, error) { return nil, 0, nil }
 func (m *MockRepository) DeleteMFAException(ctx context.Context, id uuid.UUID) error { return nil }
 func (m *MockRepository) LogMFAEvent(ctx context.Context, e *models.MFAEvent) error { return nil }
 func (m *MockRepository) LogMFAFailure(ctx context.Context, f *models.MFAFailure) error { return nil }
@@ -199,6 +208,13 @@ func (m *MockRepository) GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*
 func (m *MockRepository) UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error { return nil }
 func (m *MockRepository) GetSecurityTelemetry(ctx context.Context) (map[string]any, error) { return nil, nil }
 
+func (m *MockRepository) GetSecuritySettings(ctx context.Context, orgID uuid.UUID) (*models.SecuritySettings, error) { return nil, nil }
+func (m *MockRepository) UpdateSecuritySettings(ctx context.Context, settings *models.SecuritySettings) error { return nil }
+func (m *MockRepository) GetSecurityMetrics(ctx context.Context, orgID uuid.UUID) (*models.SecurityMetrics, error) { return nil, nil }
+func (m *MockRepository) GetVulnerabilityReport(ctx context.Context, orgID uuid.UUID) (*models.VulnerabilityReport, error) { return nil, nil }
+func (m *MockRepository) GetComplianceReport(ctx context.Context, orgID uuid.UUID, reportType string, startDate, endDate time.Time) (*models.ComplianceReport, error) { return nil, nil }
+func (m *MockRepository) ListSecurityEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.SecurityEvent, int, error) { return nil, 0, nil }
+
 
 func TestRBAC_UniqueRoleName(t *testing.T) {
 	repo := &MockRepository{
@@ -247,14 +263,16 @@ func TestRBAC_SystemRoleLockdown(t *testing.T) {
 	}
 	repo.CreateRole(context.Background(), sysRole)
 
+	actorID := uuid.New()
+
 	// 1. Try Update Name
-	_, err := svc.UpdateRole(context.Background(), sysRole.ID, "HackAdmin", "desc", uuid.Nil)
+	_, err := svc.UpdateRole(context.Background(), sysRole.ID, "HackAdmin", "desc", actorID)
 	if err == nil {
 		t.Error("Expected error when updating system role, got nil")
 	}
 
 	// 2. Try Update Permissions
-	err = svc.UpdateRolePermissions(context.Background(), sysRole.ID, []uuid.UUID{uuid.New()}, uuid.Nil)
+	err = svc.UpdateRolePermissions(context.Background(), sysRole.ID, []uuid.UUID{uuid.New()}, actorID)
 	if err == nil {
 		t.Error("Expected error when updating system role permissions, got nil")
 	} else if err.Error() != "cannot modify permissions of system roles" {

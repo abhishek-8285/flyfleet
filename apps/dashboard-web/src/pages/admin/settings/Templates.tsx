@@ -14,6 +14,7 @@ interface Template {
 const Templates: React.FC = () => {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -23,11 +24,19 @@ const Templates: React.FC = () => {
     }, []);
 
     const fetchTemplates = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/templates');
-            setTemplates(response.data || []);
+            const response = await apiClient.get('/settings/templates') as any;
+            const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+            setTemplates(items);
+            setSelectedTemplate((prev) => (prev ? prev : items[0] || null));
         } catch (error) {
             console.error('Failed to fetch templates', error);
+            setError('Failed to load templates');
         } finally {
             setLoading(false);
         }
@@ -72,24 +81,30 @@ const Templates: React.FC = () => {
                             placeholder="Search templates..."
                         />
                     </div>
-                    <div className="divide-y divide-[#233648]">
-                        {templates.map(template => (
-                            <div 
-                                key={template.id} 
-                                onClick={() => { setSelectedTemplate(template); setEditMode(false); }}
-                                className={`p-4 cursor-pointer hover:bg-[#111a22] transition-colors ${selectedTemplate?.id === template.id ? 'bg-[#111a22] border-l-2 border-[#137fec]' : 'border-l-2 border-transparent'}`}
-                            >
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs font-mono text-[#137fec]">{template.template_key}</span>
-                                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${template.channel === 'EMAIL' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
-                                        {template.channel}
-                                    </span>
+                    {error ? (
+                        <div className="p-4 text-sm text-red-200">{error}</div>
+                    ) : (
+                        <div className="divide-y divide-[#233648]">
+                            {templates.length === 0 ? (
+                                <div className="p-4 text-sm text-[#92adc9]">No templates available.</div>
+                            ) : templates.map(template => (
+                                <div 
+                                    key={template.id} 
+                                    onClick={() => { setSelectedTemplate(template); setEditMode(false); }}
+                                    className={`p-4 cursor-pointer hover:bg-[#111a22] transition-colors ${selectedTemplate?.id === template.id ? 'bg-[#111a22] border-l-2 border-[#137fec]' : 'border-l-2 border-transparent'}`}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-xs font-mono text-[#137fec]">{template.template_key}</span>
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${template.channel === 'EMAIL' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
+                                            {template.channel}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-white font-medium truncate">{template.subject || '(No Subject)'}</div>
+                                    <div className="text-[10px] text-[#92adc9] mt-1">Updated {new Date(template.updated_at).toLocaleDateString()}</div>
                                 </div>
-                                <div className="text-sm text-white font-medium truncate">{template.subject || '(No Subject)'}</div>
-                                <div className="text-[10px] text-[#92adc9] mt-1">Updated {new Date(template.updated_at).toLocaleDateString()}</div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1 overflow-y-auto bg-[#0b1219] p-6">
                     {selectedTemplate ? (

@@ -1,0 +1,22 @@
+:root {
+  --ff-color-primary: #0f7ecf;
+  --ff-color-success: #0f9d58;
+  --ff-color-warning: #f59e0b;
+  --ff-color-danger: #dc2626;
+  --ff-bg-light: #f4f7fb;
+  --ff-bg-dark: #0f1722;
+  --ff-surface-light: #ffffff;
+  --ff-surface-dark: #111a22;
+  --ff-text-primary: #0f172a;
+  --ff-text-inverse: #f8fafc;
+
+  --ff-space-xs: 4px;
+  --ff-space-sm: 8px;
+  --ff-space-md: 12px;
+  --ff-space-lg: 16px;
+  --ff-space-xl: 24px;
+
+  --ff-radius-sm: 6px;
+  --ff-radius-md: 10px;
+  --ff-radius-lg: 14px;
+}

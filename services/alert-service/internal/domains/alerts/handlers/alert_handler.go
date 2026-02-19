@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/alert-service/internal/domains/alerts/models"
 	"github.com/flyfleet/alert-service/internal/domains/alerts/service"
 )
@@ -24,148 +26,89 @@ func NewAlertHandler(svc *service.AlertService, logger *zap.Logger) *AlertHandle
 	}
 }
 
-func (h *AlertHandler) RegisterRoutes(router *gin.RouterGroup) {
-	alerts := router.Group("/alerts")
-	{
+func (h *AlertHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/alerts", func(r chi.Router) {
 		// Alert rules management
-		alerts.POST("/rules", h.CreateRule)
-		alerts.GET("/rules", h.ListRules)
-		alerts.GET("/rules/:id", h.GetRule)
-		alerts.PUT("/rules/:id", h.UpdateRule)
-		alerts.DELETE("/rules/:id", h.DeleteRule)
-		alerts.POST("/rules/:id/enable", h.EnableRule)
-		alerts.POST("/rules/:id/disable", h.DisableRule)
+		r.Post("/rules", h.CreateRule)
+		r.Get("/rules", h.ListRules)
+		r.Get("/rules/{id}", h.GetRule)
+		r.Put("/rules/{id}", h.UpdateRule)
+		r.Delete("/rules/{id}", h.DeleteRule)
+		r.Post("/rules/{id}/enable", h.EnableRule)
+		r.Post("/rules/{id}/disable", h.DisableRule)
 
 		// Alert instances
-		alerts.GET("", h.ListAlerts)
-		alerts.GET("/:id", h.GetAlert)
-		alerts.POST("/:id/acknowledge", h.AcknowledgeAlert)
-		alerts.POST("/:id/resolve", h.ResolveAlert)
-		alerts.POST("/:id/escalate", h.EscalateAlert)
+		r.Get("/", h.ListAlerts)
+		r.Get("/{id}", h.GetAlert)
+		r.Post("/{id}/acknowledge", h.AcknowledgeAlert)
+		r.Post("/{id}/resolve", h.ResolveAlert)
+		r.Post("/{id}/escalate", h.EscalateAlert)
 
 		// Alert statistics and analytics
-		alerts.GET("/stats/summary", h.GetAlertSummary)
-		alerts.GET("/stats/trends", h.GetAlertTrends)
-		alerts.GET("/stats/new", h.GetStats)
+		r.Get("/stats/summary", h.GetAlertSummary)
+		r.Get("/stats/trends", h.GetAlertTrends)
+		r.Get("/stats/new", h.GetStats)
 		
-		// Templates (Merged from logic previously in Handler but under-utilized)
-		alerts.POST("/templates", h.CreateTemplate)
-		alerts.GET("/templates", h.ListTemplates)
-		alerts.GET("/templates/:id", h.GetTemplate)
-		alerts.PUT("/templates/:id", h.UpdateTemplate)
-		alerts.DELETE("/templates/:id", h.DeleteTemplate)
-	}
+		// Templates
+		r.Post("/templates", h.CreateTemplate)
+		r.Get("/templates", h.ListTemplates)
+		r.Get("/templates/{id}", h.GetTemplate)
+		r.Put("/templates/{id}", h.UpdateTemplate)
+		r.Delete("/templates/{id}", h.DeleteTemplate)
+	})
 }
 
-// CreateRule godoc
-// @Summary Create alert rule
-// @Description Create a new alert rule for monitoring fleet events
-// @Tags Alerts
-// @Accept json
-// @Produce json
-// @Param rule body models.CreateRuleRequest true "Rule creation request"
-// @Success 201 {object} models.AlertRule
-// @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules [post]
-func (h *AlertHandler) CreateRule(c *gin.Context) {
+func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateRuleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Get organization ID from context (would come from auth middleware)
-	orgIDStr := c.GetString("org_id")
-	if orgIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.errorJSON(w, "User ID required", http.StatusUnauthorized)
 		return
 	}
 
-	// Get user ID from context (would come from auth middleware)
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID required"})
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	rule, err := h.service.CreateRule(c.Request.Context(), orgID, &req, userID)
+	rule, err := h.service.CreateRule(r.Context(), orgID, &req, userID)
 	if err != nil {
 		h.logger.Error("failed to create alert rule", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusCreated, rule)
+	h.json(w, rule, http.StatusCreated)
 }
 
-// GetRule godoc
-// @Summary Get alert rule
-// @Description Retrieve a specific alert rule by ID
-// @Tags Alerts
-// @Produce json
-// @Param id path string true "Rule ID"
-// @Success 200 {object} models.AlertRule
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules/{id} [get]
-func (h *AlertHandler) GetRule(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) GetRule(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	rule, err := h.service.GetRule(c.Request.Context(), id)
+	rule, err := h.service.GetRule(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get alert rule", zap.String("rule_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert rule not found"})
+		h.errorJSON(w, "Alert rule not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, rule)
+	h.json(w, rule, http.StatusOK)
 }
 
-// ListRules godoc
-// @Summary List alert rules
-// @Description List alert rules with filtering and pagination
-// @Tags Alerts
-// @Produce json
-// @Param type query []string false "Filter by rule type"
-// @Param severity query []string false "Filter by severity"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Items per page" default(20)
-// @Param order_by query string false "Order by field"
-// @Param order_dir query string false "Order direction" Enums(asc, desc)
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules [get]
-func (h *AlertHandler) ListRules(c *gin.Context) {
-	// Get organization ID from context
-	orgIDStr := c.GetString("org_id")
-	if orgIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
-		return
-	}
-
-	// Parse query parameters
+	query := r.URL.Query()
 	filter := models.AlertListFilter{
 		Page:     1,
 		PageSize: 20,
@@ -173,198 +116,126 @@ func (h *AlertHandler) ListRules(c *gin.Context) {
 		OrderDir: "desc",
 	}
 
-	if page := c.Query("page"); page != "" {
-		// Would parse page number
-	}
-	if pageSize := c.Query("page_size"); pageSize != "" {
-		// Would parse page size
+	// Simple pagination parsing (could be improved)
+	if page := query.Get("page"); page != "" {
+		// Would parse page number if needed
 	}
 
-	// Parse type filter
-	if types := c.QueryArray("type"); len(types) > 0 {
+	if types := query["type"]; len(types) > 0 {
 		filter.Type = types
 	}
 
-	// Parse severity filter
-	if severities := c.QueryArray("severity"); len(severities) > 0 {
+	if severities := query["severity"]; len(severities) > 0 {
 		filter.Severity = severities
 	}
 
-	rules, totalCount, err := h.service.ListRules(c.Request.Context(), orgID, filter)
+	rules, totalCount, err := h.service.ListRules(r.Context(), orgID, filter)
 	if err != nil {
 		h.logger.Error("failed to list alert rules", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list alert rules"})
+		h.errorJSON(w, "Failed to list alert rules", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":       rules,
-		"total":      totalCount,
-		"page":       filter.Page,
-		"page_size":  filter.PageSize,
+	h.json(w, map[string]interface{}{
+		"data":        rules,
+		"total":       totalCount,
+		"page":        filter.Page,
+		"page_size":   filter.PageSize,
 		"total_pages": (totalCount + filter.PageSize - 1) / filter.PageSize,
-	})
+	}, http.StatusOK)
 }
 
-// UpdateRule godoc
-// @Summary Update alert rule
-// @Description Update an existing alert rule
-// @Tags Alerts
-// @Accept json
-// @Produce json
-// @Param id path string true "Rule ID"
-// @Param rule body models.UpdateRuleRequest true "Rule update request"
-// @Success 200 {object} models.AlertRule
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules/{id} [put]
-func (h *AlertHandler) UpdateRule(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var req models.UpdateRuleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	rule, err := h.service.UpdateRule(c.Request.Context(), id, &req)
+	rule, err := h.service.UpdateRule(r.Context(), id, &req)
 	if err != nil {
 		h.logger.Error("failed to update alert rule", zap.String("rule_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert rule not found"})
+		h.errorJSON(w, "Alert rule not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, rule)
+	h.json(w, rule, http.StatusOK)
 }
 
-// DeleteRule godoc
-// @Summary Delete alert rule
-// @Description Delete an alert rule
-// @Tags Alerts
-// @Produce json
-// @Param id path string true "Rule ID"
-// @Success 204
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules/{id} [delete]
-func (h *AlertHandler) DeleteRule(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteRule(c.Request.Context(), id); err != nil {
+	if err := h.service.DeleteRule(r.Context(), id); err != nil {
 		h.logger.Error("failed to delete alert rule", zap.String("rule_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert rule not found"})
+		h.errorJSON(w, "Alert rule not found", http.StatusNotFound)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// EnableRule godoc
-// @Summary Enable alert rule
-// @Description Enable an alert rule
-// @Tags Alerts
-// @Produce json
-// @Param id path string true "Rule ID"
-// @Success 200 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules/{id}/enable [post]
-func (h *AlertHandler) EnableRule(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) EnableRule(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.EnableRule(c.Request.Context(), id); err != nil {
+	if err := h.service.EnableRule(r.Context(), id); err != nil {
 		h.logger.Error("failed to enable alert rule", zap.String("rule_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert rule not found"})
+		h.errorJSON(w, "Alert rule not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Alert rule enabled"})
+	h.json(w, map[string]string{"message": "Alert rule enabled"}, http.StatusOK)
 }
 
-// DisableRule godoc
-// @Summary Disable alert rule
-// @Description Disable an alert rule
-// @Tags Alerts
-// @Produce json
-// @Param id path string true "Rule ID"
-// @Success 200 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/rules/{id}/disable [post]
-func (h *AlertHandler) DisableRule(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) DisableRule(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DisableRule(c.Request.Context(), id); err != nil {
+	if err := h.service.DisableRule(r.Context(), id); err != nil {
 		h.logger.Error("failed to disable alert rule", zap.String("rule_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert rule not found"})
+		h.errorJSON(w, "Alert rule not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Alert rule disabled"})
+	h.json(w, map[string]string{"message": "Alert rule disabled"}, http.StatusOK)
 }
 
-// GetAlert godoc
-// @Summary Get alert
-// @Description Retrieve a specific alert by ID
-// @Tags Alerts
-// @Produce json
-// @Param id path string true "Alert ID"
-// @Success 200 {object} models.Alert
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/{id} [get]
-func (h *AlertHandler) GetAlert(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	alert, err := h.service.GetAlert(c.Request.Context(), id)
+	alert, err := h.service.GetAlert(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get alert", zap.String("alert_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "Alert not found"})
+		h.errorJSON(w, "Alert not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, alert)
+	h.json(w, alert, http.StatusOK)
 }
 
-// ListAlerts godoc
-// @Summary List alerts
-// @Description List alerts with filtering and pagination
-// @Tags Alerts
-// @Produce json
-// @Param status query []string false "Filter by status"
-// @Param severity query []string false "Filter by severity"
-// @Param vehicle_id query string false "Filter by vehicle ID"
-// @Param driver_id query string false "Filter by driver ID"
-// @Param from_date query string false "From date (RFC3339)"
-// @Param to_date query string false "To date (RFC3339)"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Items per page" default(20)
-// @Param order_by query string false "Order by field"
-// @Param order_dir query string false "Order direction" Enums(asc, desc)
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts [get]
-func (h *AlertHandler) ListAlerts(c *gin.Context) {
-	// Get organization ID from query param or context
-	orgIDStr := c.Query("org_id")
+func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	
+	orgIDStr := query.Get("org_id")
 	if orgIDStr == "" {
-		orgIDStr = c.GetString("org_id")
+		orgID := h.getOrgID(r)
+		if orgID != uuid.Nil {
+			orgIDStr = orgID.String()
+		}
 	}
+
 	if orgIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		h.errorJSON(w, "Invalid organization ID", http.StatusBadRequest)
 		return
 	}
 
-	// Parse query parameters
 	filter := models.AlertListFilter{
 		OrgID:    orgID,
 		Page:     1,
@@ -373,271 +244,220 @@ func (h *AlertHandler) ListAlerts(c *gin.Context) {
 		OrderDir: "desc",
 	}
 
-	// Parse date filters
-	if fromDateStr := c.Query("from_date"); fromDateStr != "" {
-		fromDate, err := time.Parse(time.RFC3339, fromDateStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid from_date format"})
-			return
+	if fromDateStr := query.Get("from_date"); fromDateStr != "" {
+		if fromDate, err := time.Parse(time.RFC3339, fromDateStr); err == nil {
+			filter.FromDate = fromDate
 		}
-		filter.FromDate = fromDate
 	}
 
-	if toDateStr := c.Query("to_date"); toDateStr != "" {
-		toDate, err := time.Parse(time.RFC3339, toDateStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid to_date format"})
-			return
+	if toDateStr := query.Get("to_date"); toDateStr != "" {
+		if toDate, err := time.Parse(time.RFC3339, toDateStr); err == nil {
+			filter.ToDate = toDate
 		}
-		filter.ToDate = toDate
 	}
 
-	// Parse other filters
-	if statuses := c.QueryArray("status"); len(statuses) > 0 {
+	if statuses := query["status"]; len(statuses) > 0 {
 		filter.Status = statuses
 	}
 
-	if severities := c.QueryArray("severity"); len(severities) > 0 {
+	if severities := query["severity"]; len(severities) > 0 {
 		filter.Severity = severities
 	}
 
-	if vehicleIDStr := c.Query("vehicle_id"); vehicleIDStr != "" {
-		vehicleID, err := uuid.Parse(vehicleIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle_id"})
-			return
+	if vehicleIDStr := query.Get("vehicle_id"); vehicleIDStr != "" {
+		if vehicleID, err := uuid.Parse(vehicleIDStr); err == nil {
+			filter.VehicleID = &vehicleID
 		}
-		filter.VehicleID = &vehicleID
 	}
 
-	if driverIDStr := c.Query("driver_id"); driverIDStr != "" {
-		driverID, err := uuid.Parse(driverIDStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver_id"})
-			return
+	if driverIDStr := query.Get("driver_id"); driverIDStr != "" {
+		if driverID, err := uuid.Parse(driverIDStr); err == nil {
+			filter.DriverID = &driverID
 		}
-		filter.DriverID = &driverID
 	}
 
-	alerts, totalCount, err := h.service.ListAlerts(c.Request.Context(), filter)
+	alerts, totalCount, err := h.service.ListAlerts(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("failed to list alerts", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list alerts"})
+		h.errorJSON(w, "Failed to list alerts", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.json(w, map[string]interface{}{
 		"data":        alerts,
 		"total":       totalCount,
 		"page":        filter.Page,
 		"page_size":   filter.PageSize,
 		"total_pages": (totalCount + filter.PageSize - 1) / filter.PageSize,
-	})
+	}, http.StatusOK)
 }
 
-// AcknowledgeAlert godoc
-// @Summary Acknowledge alert
-// @Description Mark an alert as acknowledged
-// @Tags Alerts
-// @Accept json
-// @Produce json
-// @Param id path string true "Alert ID"
-// @Param request body map[string]string false "Acknowledge request with optional notes"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/{id}/acknowledge [post]
-func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) AcknowledgeAlert(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var req struct {
 		Notes string `json:"notes,omitempty"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// Notes are optional, so ignore binding errors
-		req.Notes = ""
-	}
+	json.NewDecoder(r.Body).Decode(&req)
 
-	// Get user ID from context
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID required"})
+	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.errorJSON(w, "User ID required", http.StatusUnauthorized)
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	if err := h.service.AcknowledgeAlert(c.Request.Context(), id, userID, req.Notes); err != nil {
+	if err := h.service.AcknowledgeAlert(r.Context(), id, userID, req.Notes); err != nil {
 		h.logger.Error("failed to acknowledge alert", zap.String("alert_id", id), zap.Error(err))
 		if err.Error() == "alert must be in 'new' status to acknowledge" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Alert not found"})
+			h.errorJSON(w, "Alert not found", http.StatusNotFound)
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Alert acknowledged"})
+	h.json(w, map[string]interface{}{"data": map[string]string{"message": "Alert acknowledged"}}, http.StatusOK)
 }
 
-// ResolveAlert godoc
-// @Summary Resolve alert
-// @Description Mark an alert as resolved
-// @Tags Alerts
-// @Accept json
-// @Produce json
-// @Param id path string true "Alert ID"
-// @Param request body map[string]string false "Resolve request with optional notes"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/{id}/resolve [post]
-func (h *AlertHandler) ResolveAlert(c *gin.Context) {
-	id := c.Param("id")
+func (h *AlertHandler) ResolveAlert(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var req struct {
 		Notes string `json:"notes,omitempty"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		// Notes are optional, so ignore binding errors
-		req.Notes = ""
-	}
+	json.NewDecoder(r.Body).Decode(&req)
 
-	// Get user ID from context
-	userIDStr := c.GetString("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID required"})
+	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.errorJSON(w, "User ID required", http.StatusUnauthorized)
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	if err := h.service.ResolveAlert(c.Request.Context(), id, userID, req.Notes); err != nil {
+	if err := h.service.ResolveAlert(r.Context(), id, userID, req.Notes); err != nil {
 		h.logger.Error("failed to resolve alert", zap.String("alert_id", id), zap.Error(err))
 		if err.Error() == "alert is already resolved" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Alert not found"})
+			h.errorJSON(w, "Alert not found", http.StatusNotFound)
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Alert resolved"})
+	h.json(w, map[string]interface{}{"data": map[string]string{"message": "Alert resolved"}}, http.StatusOK)
 }
 
-// GetAlertSummary godoc
-// @Summary Get alert summary
-// @Description Get alert statistics and summary
-// @Tags Alerts
-// @Produce json
-// @Param from_date query string true "From date (RFC3339)"
-// @Param to_date query string true "To date (RFC3339)"
-// @Success 200 {object} models.AlertSummary
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /alerts/summary [get]
-func (h *AlertHandler) GetAlertSummary(c *gin.Context) {
-	// Get organization ID from context
-	orgIDStr := c.GetString("org_id")
-	if orgIDStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+func (h *AlertHandler) GetAlertSummary(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
-		return
-	}
-
-	// Parse required date parameters
-	fromDateStr := c.Query("from_date")
-	toDateStr := c.Query("to_date")
+	query := r.URL.Query()
+	fromDateStr := query.Get("from_date")
+	toDateStr := query.Get("to_date")
 
 	if fromDateStr == "" || toDateStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Both from_date and to_date are required"})
+		h.errorJSON(w, "Both from_date and to_date are required", http.StatusBadRequest)
 		return
 	}
 
 	fromDate, err := time.Parse(time.RFC3339, fromDateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid from_date format"})
+		h.errorJSON(w, "Invalid from_date format", http.StatusBadRequest)
 		return
 	}
 
 	toDate, err := time.Parse(time.RFC3339, toDateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid to_date format"})
+		h.errorJSON(w, "Invalid to_date format", http.StatusBadRequest)
 		return
 	}
 
-	summary, err := h.service.GetAlertSummary(c.Request.Context(), orgID, fromDate, toDate)
+	summary, err := h.service.GetAlertSummary(r.Context(), orgID, fromDate, toDate)
 	if err != nil {
 		h.logger.Error("failed to get alert summary", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get alert summary"})
+		h.errorJSON(w, "Failed to get alert summary", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, summary)
+	h.json(w, summary, http.StatusOK)
 }
 
-// EscalateAlert escalates an alert to higher authorities
-func (h *AlertHandler) EscalateAlert(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Alert escalated", "alert_id": id})
+func (h *AlertHandler) EscalateAlert(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	h.json(w, map[string]string{"message": "Alert escalated", "alert_id": id}, http.StatusOK)
 }
 
-// GetAlertTrends returns alert trends over time
-func (h *AlertHandler) GetAlertTrends(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"trends": []interface{}{}})
+func (h *AlertHandler) GetAlertTrends(w http.ResponseWriter, r *http.Request) {
+	h.json(w, map[string]interface{}{"trends": []interface{}{}}, http.StatusOK)
 }
 
-// CreateTemplate creates a notification template
-func (h *AlertHandler) CreateTemplate(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{"message": "Template created"})
+func (h *AlertHandler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
+	h.json(w, map[string]string{"message": "Template created"}, http.StatusCreated)
 }
 
-// ListTemplates lists all notification templates
-func (h *AlertHandler) ListTemplates(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"templates": []interface{}{}})
+func (h *AlertHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	h.json(w, map[string]interface{}{"templates": []interface{}{}}, http.StatusOK)
 }
 
-// GetTemplate gets a template by ID
-func (h *AlertHandler) GetTemplate(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"template_id": id})
+func (h *AlertHandler) GetTemplate(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	h.json(w, map[string]string{"template_id": id}, http.StatusOK)
 }
 
-// UpdateTemplate updates a template
-func (h *AlertHandler) UpdateTemplate(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Template updated", "template_id": id})
+func (h *AlertHandler) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	h.json(w, map[string]string{"message": "Template updated", "template_id": id}, http.StatusOK)
 }
 
-// DeleteTemplate deletes a template
-func (h *AlertHandler) DeleteTemplate(c *gin.Context) {
-	id := c.Param("id")
-	c.JSON(http.StatusOK, gin.H{"message": "Template deleted", "template_id": id})
+func (h *AlertHandler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	h.json(w, map[string]string{"message": "Template deleted", "template_id": id}, http.StatusOK)
 }
-func (h *AlertHandler) GetStats(c *gin.Context) {
-	stats, err := h.service.GetStats(c.Request.Context())
+
+func (h *AlertHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
 		h.logger.Error("failed to get alert stats", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	h.json(w, stats, http.StatusOK)
+}
+
+// Helpers
+func (h *AlertHandler) json(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *AlertHandler) errorJSON(w http.ResponseWriter, message string, status int) {
+	h.json(w, map[string]string{"error": message}, status)
+}
+
+func (h *AlertHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *AlertHandler) getUserID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+		if userIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(userIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
 }

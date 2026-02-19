@@ -2,19 +2,26 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/fleet-platform/shared/pkg/security"
+	"github.com/fleet-platform/shared/pkg/cache"
+	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/web-bff/internal/client"
 	"github.com/flyfleet/web-bff/internal/config"
 	"github.com/flyfleet/web-bff/internal/handlers"
-	"github.com/flyfleet/web-bff/internal/middleware"
+	bffMiddleware "github.com/flyfleet/web-bff/internal/middleware"
+	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
@@ -24,322 +31,325 @@ func main() {
 	defer func() {
 		_ = logger.Sync()
 	}()
-	
+
 	// Load configuration
 	cfg := config.Load()
-	
+
+	// Initialize Redis Cache
+	redisCache, err := cache.NewRedisCache(cfg.RedisAddr, "", 0, logger)
+	if err != nil {
+		logger.Fatal("Failed to initialize Redis", zap.Error(err))
+	}
+	defer redisCache.Close()
+
+	// Initialize Redis Rate Limiter
+	rateLimiter := sharedMiddleware.NewRedisRateLimiter(redisCache.GetClient(), logger)
+
+	// Initialize NATS
+	nc, err := nats.Connect(cfg.NatsURL)
+	if err != nil {
+		logger.Warn("Failed to connect to NATS", zap.Error(err))
+	} else {
+		defer nc.Close()
+	}
+
 	// Initialize clients
 	authClient := client.NewAuthClient(cfg.AuthServiceURL)
-	fleetCoreClient := client.NewVehicleClient(cfg.FleetCoreServiceURL) // Reusing vehicle client for core
-	tripClient := client.NewTripClient(cfg.FleetCoreServiceURL)        // All core logic here
+	vehicleClient := client.NewVehicleClient(cfg.FleetCoreServiceURL)
+	tripClient := client.NewTripClient(cfg.FleetCoreServiceURL)
 	alertClient := client.NewAlertClient(cfg.AlertServiceURL)
-	notificationClient := client.NewNotificationClient(cfg.AlertServiceURL)
-	
 	billingClient := client.NewBillingClient(cfg.BillingServiceURL)
+	notificationClient := client.NewNotificationClient(cfg.AlertServiceURL)
 	supportClient := client.NewSupportClient(cfg.AdminSupportServiceURL)
-	
+
 	// Initialize handlers
-	mfaHandlers := handlers.NewMFAHandlers(cfg, logger)
-	assetHandlers := handlers.NewAssetHandlers(cfg, logger)
-	settingsHandlers := handlers.NewSettingsHandlers(cfg, logger)
-	integrationsHandlers := handlers.NewIntegrationsHandlers(cfg, logger)
+	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger, redisCache, authClient, vehicleClient, tripClient, alertClient, billingClient, supportClient)
 	monitoringHandlers := handlers.NewMonitoringHandlers(cfg, logger)
+	authHandlers := handlers.NewAuthHandlers(cfg, logger)
 	searchHandlers := handlers.NewSearchHandlers(cfg, logger)
 	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger, notificationClient)
-	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger, authClient, fleetCoreClient, tripClient, alertClient, billingClient, supportClient)
-	supportOrgHandlers := handlers.NewSupportOrgHandlers(cfg, logger, authClient)
-	deviceDiagnosticsHandlers := handlers.NewDeviceDiagnosticsHandler(cfg)
-	trackingHandlers := handlers.NewTrackingHandlers(cfg, logger)
-	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
-	
-	// Setup routes
-	mux := http.NewServeMux()
+	wsHandlers := handlers.NewWSHandler(nc, logger)
 
-	// Dashboard & Global Stats
-	mux.Handle("/api/v1/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(dashboardHandlers.GetGlobalStats)))
-	mux.Handle("/api/v1/admin/organizations/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(dashboardHandlers.GetOrganizationStats)))
-	mux.Handle("GET /api/v1/admin/dashboard/data", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(dashboardHandlers.GetAdminDashboardData)))
-	
+	// Setup Chi router
+	r := chi.NewRouter()
+	r.Use(chiMiddleware.Recoverer)
+	r.Use(chiMiddleware.Logger)
+	r.Use(chiMiddleware.RealIP)
+	r.Use(chiMiddleware.RequestID)
+	r.Use(bffMiddleware.TraceIDMiddleware)
+
+	// Global Rate Limiting (Pillar 2)
+	// 500 requests per minute per Org/IP
+	r.Use(sharedMiddleware.OrgRateLimit(rateLimiter, 500, time.Minute))
+
 	// Health check
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+	r.Get("/api/v1/ws", wsHandlers.HandleWS)
 
-	// Security Policy Version (for automated validation)
-	mux.HandleFunc("/health/security", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"service":              "web-bff",
-			"security_policy_hash": security.GetPolicyVersion(),
+	// Public auth routes
+	r.Post("/api/v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		// Strict rate limit for login
+		loginHandler := sharedMiddleware.FixedRateLimit(rateLimiter, 5, time.Minute, func(r *http.Request) string {
+			return "login:" + r.RemoteAddr
 		})
+		loginHandler(http.HandlerFunc(authHandlers.ProxyLogin)).ServeHTTP(w, r)
+	})
+	registerPrefixProxy(r, "/api/v1/auth", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/auth", "/api/v1/auth", nil))
+
+	// Authenticated routes
+	r.Group(func(r chi.Router) {
+		r.Use(sharedMiddleware.AuthMiddleware(cfg))
+
+		r.Get("/api/v1/dashboard/stats", dashboardHandlers.GetGlobalStats)
+		r.Get("/api/v1/admin/dashboard/data", dashboardHandlers.GetAdminDashboardData)
+
+		// Monitoring & SLA (Pillar 7)
+		r.Get("/api/v1/monitoring/sla", monitoringHandlers.GetSLAMetrics)
+		r.Get("/api/v1/monitoring/health", monitoringHandlers.GetSystemHealth)
+		r.Get("/api/v1/admin/monitoring/sla", monitoringHandlers.GetSLAMetrics)
+		r.Get("/api/v1/admin/monitoring/health", monitoringHandlers.GetSystemHealth)
+		r.Get("/api/v1/admin/monitoring/metrics", monitoringHandlers.GetSystemHealth)
+		r.Get("/api/v1/admin/monitoring/queues", monitoringHandlers.GetSystemHealth)
+		r.Get("/api/v1/admin/monitoring/logs", monitoringHandlers.GetSystemHealth)
+
+		// Search and timeline APIs used by dashboard.
+		r.Get("/api/search", searchHandlers.GlobalSearch)
+		r.Get("/api/search/facets", searchHandlers.GetSearchFacets)
+		r.Get("/api/search/suggestions", searchHandlers.GetSearchSuggestions)
+		r.Get("/api/search/recent", searchHandlers.GetRecentSearches)
+		r.Get("/api/search/saved", searchHandlers.GetSavedSearches)
+		r.Get("/api/v1/search", searchHandlers.GlobalSearch)
+		r.Get("/api/v1/search/facets", searchHandlers.GetSearchFacets)
+		r.Get("/api/v1/search/suggestions", searchHandlers.GetSearchSuggestions)
+		r.Get("/api/v1/search/recent", searchHandlers.GetRecentSearches)
+		r.Get("/api/v1/search/saved", searchHandlers.GetSavedSearches)
+		r.Get("/api/timeline", timelineHandlers.GetTimeline)
+		r.Get("/api/timeline/stats", timelineHandlers.GetTimelineStats)
+		r.Get("/api/timeline/filters", timelineHandlers.GetTimelineFilters)
+		r.Get("/api/v1/timeline", timelineHandlers.GetTimeline)
+		r.Get("/api/v1/timeline/stats", timelineHandlers.GetTimelineStats)
+		r.Get("/api/v1/timeline/filters", timelineHandlers.GetTimelineFilters)
+
+		// High-priority admin/service proxies (specific prefixes first).
+		registerPrefixProxy(r, "/api/v1/admin/governance", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/v1/admin/governance", "/api/v1/governance", nil))
+		registerPrefixProxy(r, "/api/v1/admin/dr", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/v1/admin/dr", "/api/v1/dr", rewriteDRPaths))
+		registerPrefixProxy(r, "/api/v1/admin/reports", makePrefixProxy(logger, cfg.ReportsServiceURL, "/api/v1/admin/reports", "/api/v1/reports", nil))
+		registerPrefixProxy(r, "/api/v1/admin/notifications", makePrefixProxy(logger, cfg.AlertServiceURL, "/api/v1/admin/notifications", "/api/v1/notifications", nil))
+		registerPrefixProxy(r, "/api/v1/admin/preferences", makePrefixProxy(logger, cfg.AlertServiceURL, "/api/v1/admin/preferences", "/api/v1/notifications/preferences", nil))
+		registerPrefixProxy(r, "/api/v1/admin/billing", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing", "/api/v1/billing", nil))
+		registerPrefixProxy(r, "/api/v1/admin/billing-settings", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing-settings", "/api/v1/billing/settings", nil))
+		registerPrefixProxy(r, "/api/v1/admin/billing-metrics", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing-metrics", "/api/v1/billing/metrics", nil))
+		registerPrefixProxy(r, "/api/v1/admin/settings", makePrefixProxy(logger, cfg.SettingsServiceURL, "/api/v1/admin/settings", "/settings", nil))
+		registerPrefixProxy(r, "/api/v1/settings", makePrefixProxy(logger, cfg.SettingsServiceURL, "/api/v1/settings", "/settings", nil))
+
+		// Fleet core routed admin modules.
+		registerPrefixProxy(r, "/api/v1/admin/work-orders", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/work-orders", "/api/v1/work-orders", nil))
+		registerPrefixProxy(r, "/api/v1/admin/devices", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/devices", "/api/v1/diagnostics/devices", nil))
+		registerPrefixProxy(r, "/api/v1/admin/inventory", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/inventory", "/api/v1/inventory", nil))
+		registerPrefixProxy(r, "/api/v1/admin/vendors", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/vendors", "/api/v1/vendors", nil))
+		registerPrefixProxy(r, "/api/v1/admin/inspections", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/inspections", "/api/v1/inspections", nil))
+		registerPrefixProxy(r, "/api/v1/admin/fuel", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/fuel", "/api/v1/fuel", nil))
+		registerPrefixProxy(r, "/api/v1/admin/finance", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/finance", "/api/v1/finance", nil))
+		registerPrefixProxy(r, "/api/v1/admin/revenue", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/revenue", "/api/v1/finance/revenue", nil))
+		registerPrefixProxy(r, "/api/v1/admin/fuel-logs", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/fuel-logs", "/api/v1/fuel", nil))
+		registerPrefixProxy(r, "/api/v1/admin/video", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/video", "/api/v1/video", nil))
+		registerPrefixProxy(r, "/api/v1/admin/emergency", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/emergency", "/api/v1/emergency", nil))
+		registerPrefixProxy(r, "/api/v1/routes", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/routes", "/api/v1/routes", nil))
+		registerPrefixProxy(r, "/api/v1/customer", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/customer", "/api/v1/customer", nil))
+		registerPrefixProxy(r, "/api/v1/emergency", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/emergency", "/api/v1/emergency", nil))
+
+		// Device diagnostics legacy paths.
+		registerPrefixProxy(r, "/api/devices/summary", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/summary", "/api/v1/diagnostics/summary", nil))
+		registerPrefixProxy(r, "/api/devices/status", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/status", "/api/v1/diagnostics/devices", nil))
+		registerPrefixProxy(r, "/api/devices/twins", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/twins", "/api/v1/diagnostics/twins", nil))
+		registerPrefixProxy(r, "/api/devices", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices", "/api/v1/diagnostics/devices", nil))
+		registerPrefixProxy(r, "/api/firmware/rollouts", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/firmware/rollouts", "/api/v1/diagnostics/rollouts", nil))
+		registerPrefixProxy(r, "/api/firmware", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/firmware", "/api/v1/diagnostics/firmware", nil))
+
+		// Security path harmonization.
+		registerPrefixProxy(r, "/api/mfa", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/mfa", "/api/v1/security/mfa", nil))
+		registerPrefixProxy(r, "/api/audit", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/audit", "/api/v1/admin/audit", nil))
+		registerPrefixProxy(r, "/api/security", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/security", "/api/v1/security", nil))
+		registerPrefixProxy(r, "/api/v1/security", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/security", "/api/v1/security", nil))
+		registerPrefixProxy(r, "/api/v1/rbac", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/rbac", "/api/v1/admin/rbac", nil))
+
+		// Integrations legacy prefixes.
+		registerPrefixProxy(r, "/api/integrations", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/integrations", "/api/v1/integrations", nil))
+		registerPrefixProxy(r, "/api/api-clients", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/api-clients", "/api/v1/api-clients", nil))
+		registerPrefixProxy(r, "/api/webhooks", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/webhooks", "/api/v1/webhooks", nil))
+
+		// Trip legacy and direct routes used by older pages.
+		registerPrefixProxy(r, "/api/v1/trips", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/trips", "/api/v1/trips", nil))
+
+		// Support APIs currently consumed by dashboard.
+		registerPrefixProxy(r, "/api/support", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/support", "/api/v1/support", rewriteSupportPaths))
+		registerPrefixProxy(r, "/bff/support", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/bff/support", "/api/v1/support", rewriteSupportPaths))
+
+		// Catch-all admin proxy goes last.
+		registerPrefixProxy(r, "/api/v1/admin", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/admin", "/api/v1/admin", nil))
 	})
 
-	// Security proxy routes
-	mux.HandleFunc("/api/v1/auth/login", mfaHandlers.ProxyLogin)
-	mux.HandleFunc("/api/v1/auth/profile/", mfaHandlers.ProxyProfile)
-	mux.HandleFunc("/api/v1/auth/profile", mfaHandlers.ProxyProfile)
-	mux.HandleFunc("/api/v1/admin/organizations/", mfaHandlers.ProxyOrganization)
-	mux.HandleFunc("/api/v1/admin/organizations", mfaHandlers.ProxyOrganization)
-	mux.HandleFunc("/api/v1/admin/alerts/", assetHandlers.ProxyAlerts)
-	mux.HandleFunc("/api/v1/admin/alerts", assetHandlers.ProxyAlerts)
-	mux.HandleFunc("/api/v1/admin/users/", mfaHandlers.ProxyUsers)
-	mux.HandleFunc("/api/v1/admin/users", mfaHandlers.ProxyUsers)
-	
-	// Security endpoints (RBAC Enforcement - Centralized)
-	mux.Handle("/api/mfa/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(mfaHandlers.ProxyMFA)))
-	
-	// Audit Compliance Extensions (Granular RBAC)
-	mux.Handle("/api/audit/entity-history", middleware.RBACMiddleware(sp, security.ResourceEntityHistory)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
-	mux.Handle("/api/audit/evidence-exports", middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
-	mux.Handle("/api/audit/evidence-exports/", middleware.RBACMiddleware(sp, security.ResourceEvidenceExports)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
-	mux.Handle("/api/audit/policy", middleware.RBACMiddleware(sp, security.ResourceAuditPolicy)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
-	mux.Handle("/api/audit/", middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(mfaHandlers.ProxyAudit)))
-	
-	mux.Handle("/api/v1/admin/rbac", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(mfaHandlers.ProxyRBAC)))
-
-	// Asset Management (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVehicle)))
-	mux.Handle("/api/v1/admin/devices", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest))) 
-	mux.Handle("/api/v1/admin/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest))) 
-	mux.Handle("/api/v1/admin/devices/{id}/telemetry", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/v1/admin/devices/{id}/logs", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/v1/admin/devices/{id}/commands", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/v1/admin/drivers/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyDriver)))   // Drivers share trips resource for now
-	mux.Handle("/api/v1/admin/documents/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyDocument)))
-	mux.Handle("/api/v1/admin/bulk-jobs/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyBulkJobs))) // Bulk Jobs share vehicle resource
-	mux.Handle("/api/v1/admin/trips/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
-	mux.Handle("/api/v1/admin/trips", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyTrips)))
-
-	// Maintenance Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/work-orders", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))
-	mux.Handle("/api/v1/admin/work-orders/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyWorkOrders)))
-	mux.Handle("/api/v1/admin/inventory", middleware.RBACMiddleware(sp, security.ResourceInventory)(http.HandlerFunc(assetHandlers.ProxyInventory)))
-	mux.Handle("/api/v1/admin/inventory/", middleware.RBACMiddleware(sp, security.ResourceInventory)(http.HandlerFunc(assetHandlers.ProxyInventory)))
-	mux.Handle("/api/v1/admin/maintenance-settings", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyMaintenanceSettings)))
-	mux.Handle("/api/v1/admin/maintenance-settings/", middleware.RBACMiddleware(sp, security.ResourceMaintenance)(http.HandlerFunc(assetHandlers.ProxyMaintenanceSettings)))
-
-	// Fuel Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/fuel/", middleware.RBACMiddleware(sp, security.ResourceFuel)(http.HandlerFunc(assetHandlers.ProxyFuelSettings)))
-	
-	// Governance Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/governance/requests/", middleware.RBACMiddleware(sp, security.ResourceGovernance)(http.HandlerFunc(assetHandlers.ProxyGovernanceRequests)))
-	mux.Handle("/api/v1/admin/governance/settings", middleware.RBACMiddleware(sp, security.ResourceGovernance)(http.HandlerFunc(assetHandlers.ProxyGovernanceSettings)))
-	
-	// Billing Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/billing/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBilling)))
-	mux.Handle("/api/v1/admin/billing-settings/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBillingSettings)))
-	mux.Handle("/api/v1/admin/billing-metrics/", middleware.RBACMiddleware(sp, security.ResourceBilling)(http.HandlerFunc(assetHandlers.ProxyBillingMetrics)))
-	
-	// Notification Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/notifications/", middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(assetHandlers.ProxyNotification)))
-	mux.Handle("/api/v1/admin/preferences/", middleware.RBACMiddleware(sp, security.ResourceNotificationsPreferences)(http.HandlerFunc(assetHandlers.ProxyNotificationPreferences)))
-	mux.Handle("/api/v1/admin/preferences/global", middleware.RBACMiddleware(sp, security.ResourceNotificationsPreferences)(http.HandlerFunc(assetHandlers.ProxyNotificationGlobalDefaults)))
-
-	// Reports Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/reports/", middleware.RBACMiddleware(sp, security.ResourceDocuments)(http.HandlerFunc(assetHandlers.ProxyReports)))
-	
-	// Disaster Recovery Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/dr/", middleware.RBACMiddleware(sp, security.ResourceDisasterRecovery)(http.HandlerFunc(assetHandlers.ProxyDR)))
-
-	// Global Settings Module (RBAC Enforcement)
-	mux.Handle("/api/settings/", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(settingsHandlers.ProxySettings)))
-
-	// Video Telematics Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/video/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(assetHandlers.ProxyVideo)))
-	
-	// Analytics Module (RBAC Enforcement)
-	mux.Handle("/api/v1/admin/analytics/", middleware.RBACMiddleware(sp, security.ResourceAnalytics)(http.HandlerFunc(assetHandlers.ProxyAnalytics)))
-	
-	// Security Operations Module (RBAC Enforcement + IP Firewall)
-	securityHandlers := handlers.NewSecurityHandlers(cfg, logger)
-	fm := middleware.NewFirewallManager(cfg, logger)
-	fw := middleware.IPFirewallMiddleware(fm)
-
-	mux.Handle("/api/security/ip-rules", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules))))
-	mux.Handle("/api/security/ip-rules/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyIPRules))))
-	mux.Handle("/api/security/access-reviews", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews))))
-	mux.Handle("/api/security/access-reviews/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyAccessReviews))))
-	mux.Handle("/api/security/sessions", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions))))
-	mux.Handle("/api/security/sessions/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxySessions))))
-	mux.Handle("/api/security/review-items/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyReviewItems))))
-	
-	// New Expansion Routes
-	mux.Handle("/api/security/logins", fw(middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(securityHandlers.ProxyLoginActivityLogs))))
-	mux.Handle("/api/security/logins/", fw(middleware.RBACMiddleware(sp, security.ResourceAuditLogs)(http.HandlerFunc(securityHandlers.ProxyLoginActivityLogs))))
-	mux.Handle("/api/security/alerts", fw(middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(securityHandlers.ProxyThreatAlerts))))
-	mux.Handle("/api/security/alerts/", fw(middleware.RBACMiddleware(sp, security.ResourceAlerts)(http.HandlerFunc(securityHandlers.ProxyThreatAlerts))))
-	mux.Handle("/api/security/mfa", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
-	mux.Handle("/api/security/mfa/", fw(middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(securityHandlers.ProxyMFACenter))))
-	
-	// Integrations Management Module
-	mux.Handle("/api/integrations/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(integrationsHandlers.ProxyIntegrations)))
-	mux.Handle("/api/api-clients/", middleware.RBACMiddleware(sp, security.ResourceApiClients)(http.HandlerFunc(integrationsHandlers.ProxyApiClients)))
-	mux.Handle("/api/webhooks/", middleware.RBACMiddleware(sp, security.ResourceWebhooks)(http.HandlerFunc(integrationsHandlers.ProxyWebhooks)))
-
-	// India Integration Module (RBAC Enforcement)
-	mux.Handle("/api/v1/india/fastag/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyFASTag)))
-	mux.Handle("/api/v1/india/ewaybill/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyEWayBill)))
-	mux.Handle("/api/v1/india/vahan/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyVahan)))
-	mux.Handle("/api/v1/india/sarathi/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxySarathi)))
-	mux.Handle("/api/v1/india/gst/", middleware.RBACMiddleware(sp, security.ResourceIntegrations)(http.HandlerFunc(assetHandlers.ProxyGST)))
-
-	// Tracking Module (RBAC Enforcement)
-	mux.Handle("/api/v1/tracking/telemetry/gps", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
-	mux.Handle("/api/v1/tracking/telemetry/obd", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
-	mux.Handle("/api/v1/tracking/telemetry/fuel", middleware.RBACMiddleware(sp, security.ResourceFuel)(http.HandlerFunc(trackingHandlers.ProxyTelemetry)))
-	mux.Handle("/api/v1/tracking/vehicles/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(trackingHandlers.ProxyVehicleHistory))) // Catch-all for subpaths
-
-    // Route Optimization Module (Direct proxy to fleet-core)
-    // Note: Using ResourceVehicles for now as it relates to vehicle routing, or ResourceTrips. 
-    // Going with ResourceTrips as routes are essentially planned trips.
-    mux.Handle("/api/v1/routes/", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyRouteOptimization)))
-    mux.Handle("/api/v1/routes", middleware.RBACMiddleware(sp, security.ResourceTrips)(http.HandlerFunc(assetHandlers.ProxyRouteOptimization)))
-
-	// Device Diagnostics Module
-	mux.Handle("/api/devices/summary", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/devices/status", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/devices/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyDeviceRequest)))
-	mux.Handle("/api/firmware", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
-	mux.Handle("/api/firmware/", middleware.RBACMiddleware(sp, security.ResourceVehicles)(http.HandlerFunc(deviceDiagnosticsHandlers.ProxyFirmwareRequest)))
-
-	// Monitoring Module (Mock Data - Phase 1)
-	// Using ResourceSystem for now, or fallback to ResourceOrganizations if System not available in security package
-	// TODO: Create specific ResourceMonitoring constant
-	mux.Handle("/api/v1/admin/monitoring/health", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetSystemHealth)))
-	mux.Handle("/api/v1/admin/monitoring/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetMetrics)))
-	mux.Handle("/api/v1/admin/monitoring/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetLogs)))
-	mux.Handle("/api/v1/admin/monitoring/queues", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetQueues)))
-	mux.Handle("/api/v1/admin/monitoring/sla", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(monitoringHandlers.GetSLA)))
-
-	// Global Search Module
-	mux.Handle("/api/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GlobalSearch)))
-	mux.Handle("/api/search/suggestions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSearchSuggestions)))
-	mux.Handle("/api/search/facets", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSearchFacets)))
-	mux.Handle("/api/search/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetRecentSearches)))
-	mux.Handle("/api/search/saved", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(searchHandlers.GetSavedSearches)))
-
-	// Activity Timeline Module
-	mux.Handle("/api/timeline", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimeline)))
-	mux.Handle("/api/timeline/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineStats)))
-	mux.Handle("/api/timeline/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(timelineHandlers.GetTimelineFilters)))
-
-	// FleetSupport Module (BFF Layer)
-	logger.Info("Registering Support handlers")
-	supportHandlers := handlers.NewSupportHandlers(cfg, logger)
-	mux.Handle("/bff/support/dashboard/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardStats)))
-	mux.Handle("/bff/support/dashboard/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardTrends)))
-	mux.Handle("/bff/support/dashboard/recent-activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentActivity)))
-
-	// New Support Command Center Routes
-	mux.Handle("/bff/support/auth/me", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetAuthMe)))
-	mux.Handle("/bff/support/dashboard/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetDashboardMetrics)))
-	mux.Handle("/bff/support/dashboard/top-errors", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetTopErrors)))
-	mux.Handle("/bff/support/tickets/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetRecentTickets)))
-	mux.Handle("/bff/support/tickets/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.SearchTickets)))
-	mux.Handle("/bff/support/tickets/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetTicketFilters)))
-	mux.Handle("/bff/support/tickets/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ExportTickets)))
-	mux.Handle("/bff/support/dashboard/live", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetLiveDashboard)))
-
-	mux.Handle("/bff/support/user/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserProfile)))
-
-	mux.Handle("/bff/support/user/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
-
-	// New User Console Support Routes
-	mux.Handle("/bff/support/users/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.SearchUsers)))
-	mux.Handle("/bff/support/users/{id}/profile", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserFullProfile)))
-	mux.Handle("/bff/support/users/{id}/security", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSecurity)))
-	mux.Handle("/bff/support/users/{id}/sessions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserSessions)))
-	mux.Handle("/bff/support/users/{id}/sessions/{sessionId}/revoke", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.RevokeUserSession)))
-	mux.Handle("/bff/support/users/{id}/logins", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserLoginHistory)))
-	mux.Handle("/bff/support/users/{id}/logins/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ExportUserLoginHistory)))
-	mux.Handle("/bff/support/users/{id}/roles", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserRoles)))
-	mux.Handle("/bff/support/users/{id}/permissions", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserPermissions)))
-	mux.Handle("/bff/support/users/{id}/reset-password", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ResetUserPassword)))
-	mux.Handle("/bff/support/users/{id}/unlock", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.UnlockUserAccount)))
-	mux.Handle("/bff/support/users/{id}/mfa-reset", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ResetUserMFA)))
-	mux.Handle("/bff/support/users/{id}/force-logout", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.ForceUserLogout)))
-	mux.Handle("/bff/support/users/{id}/notes", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserNotes)))
-	mux.Handle("POST /bff/support/users/{id}/notes", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.AddUserNote)))
-	mux.Handle("/bff/support/users/{id}/audit", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetUserAuditLog)))
-
-	mux.Handle("/bff/support/org/overview", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportHandlers.GetOrgOverview)))
-
-
-	// Organization Support Hub Routes
-	mux.Handle("GET /bff/support/orgs/{id}/summary", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgSummary)))
-	mux.Handle("GET /bff/support/orgs/{id}/devices/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgDeviceStats)))
-	mux.Handle("GET /bff/support/orgs/{id}/integration/health", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgIntegrationHealth)))
-	mux.Handle("GET /bff/support/orgs/{id}/fleet/locations", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgFleetLocations)))
-	mux.Handle("GET /bff/support/orgs/{id}/diagnostics/recent", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgRecentDiagnostics)))
-	mux.Handle("GET /bff/support/orgs/{id}/diagnostics/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgDiagnosticLogs)))
-	mux.Handle("GET /bff/support/orgs/{id}/alerts", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgAlerts)))
-	mux.Handle("GET /bff/support/orgs/{id}/contacts", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgContacts)))
-	mux.Handle("GET /bff/support/orgs/{id}/users", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgUsers)))
-	mux.Handle("POST /bff/support/orgs/{id}/impersonate", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.ImpersonateOrg)))
-	mux.Handle("GET /bff/support/orgs/{id}/config/diagnostics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgConfigDiagnostics)))
-	mux.Handle("GET /bff/support/orgs/{id}/activity", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgActivity)))
-	mux.Handle("GET /bff/support/orgs/{id}/config", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.GetOrgConfig)))
-	mux.Handle("GET /bff/support/orgs/{id}/devices/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.SearchOrgDevices)))
-	mux.Handle("POST /bff/support/alerts/{alertId}/acknowledge", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.AcknowledgeAlert)))
-	mux.Handle("GET /bff/support/orgs/{id}/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(supportOrgHandlers.ExportOrgData)))
-
-	// Incident Management Routes
-	incidentHandlers := handlers.NewIncidentHandlers(cfg, logger)
-	mux.Handle("GET /bff/support/incidents/metrics", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentMetrics)))
-	mux.Handle("GET /bff/support/incidents/trends", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentTrends)))
-	mux.Handle("GET /bff/support/incidents/feed", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentFeed)))
-	mux.Handle("GET /bff/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidents)))
-	mux.Handle("GET /bff/support/incidents/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidents))) // reusing same handler as metrics search
-	mux.Handle("POST /bff/support/incidents", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.CreateIncident)))
-	mux.Handle("PUT /bff/support/incidents/{id}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.UpdateIncident)))
-	mux.Handle("POST /bff/support/incidents/{id}/assign", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.AssignIncident)))
-	mux.Handle("POST /bff/support/incidents/{id}/status", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.ChangeIncidentStatus)))
-	mux.Handle("GET /bff/support/incidents/{id}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentDetail)))
-	mux.Handle("GET /bff/support/incidents/{id}/comments", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentComments)))
-	mux.Handle("POST /bff/support/incidents/{id}/comments", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.PostIncidentComment)))
-	mux.Handle("GET /bff/support/incidents/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.ExportIncidents)))
-	mux.Handle("GET /bff/support/incidents/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(incidentHandlers.GetIncidentFilters)))
-
-	// Troubleshooting Logs Routes
-	logHandlers := handlers.NewLogHandlers(cfg, logger)
-	mux.Handle("GET /bff/support/logs", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogs)))
-	mux.Handle("GET /bff/support/logs/search", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.SearchLogs)))
-	mux.Handle("GET /bff/support/logs/filters", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogFilters)))
-	mux.Handle("GET /bff/support/logs/{traceId}", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogDetail)))
-	mux.Handle("GET /bff/support/logs/export", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.ExportLogs)))
-	mux.Handle("GET /bff/support/logs/{traceId}/context", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogContext)))
-	mux.Handle("POST /bff/support/logs/{traceId}/jira", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.CreateLogJiraTicket)))
-	mux.Handle("GET /bff/support/logs/stats", middleware.RBACMiddleware(sp, security.ResourceOrganizations)(http.HandlerFunc(logHandlers.GetLogStats)))
-
-	// Server configuration
+	// Start server
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("0.0.0.0:%s", cfg.Port),
-		Handler: middleware.CORSMiddleware(mux),
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: r,
 	}
-	
-	// Run server in goroutine
+
 	go func() {
-		logger.Info("Starting Web BFF service", zap.String("port", cfg.Port))
+		logger.Info("Starting Web BFF service with Redis Scaling", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("Failed to start server", zap.Error(err))
 		}
 	}()
-	
+
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	
+
 	logger.Info("Shutting down Web BFF service...")
-	
-	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	if err := srv.Shutdown(ctx); err != nil {
 		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
-	
+
 	logger.Info("Web BFF service exited")
+}
+
+func registerPrefixProxy(r chi.Router, prefix string, handler http.HandlerFunc) {
+	r.Handle(prefix, handler)
+	if strings.HasSuffix(prefix, "/") {
+		r.Handle(prefix+"*", handler)
+		return
+	}
+	r.Handle(prefix+"/*", handler)
+}
+
+func makePrefixProxy(logger *zap.Logger, serviceBaseURL, sourcePrefix, targetPrefix string, rewrite func(string) string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, sourcePrefix) {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+
+		targetPath := targetPrefix + strings.TrimPrefix(r.URL.Path, sourcePrefix)
+		if rewrite != nil {
+			targetPath = rewrite(targetPath)
+		}
+
+		baseURL, err := url.Parse(serviceBaseURL)
+		if err != nil {
+			logger.Error("Failed to parse service URL", zap.String("service_url", serviceBaseURL), zap.Error(err))
+			http.Error(w, "Bad Gateway", http.StatusBadGateway)
+			return
+		}
+		baseURL.Path = targetPath
+		baseURL.RawQuery = r.URL.RawQuery
+
+		req, err := http.NewRequestWithContext(r.Context(), r.Method, baseURL.String(), r.Body)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		for name, values := range r.Header {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
+		}
+		propagateIdentityHeaders(req, r)
+		if traceID := bffMiddleware.GetTraceID(r.Context()); traceID != "" {
+			req.Header.Set(bffMiddleware.HeaderTraceID, traceID)
+			req.Header.Set(bffMiddleware.HeaderRequestID, traceID)
+		}
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logger.Error("Proxy upstream request failed", zap.String("target", baseURL.String()), zap.Error(err))
+			http.Error(w, "Bad Gateway", http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		for name, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(name, value)
+			}
+		}
+		if traceID := bffMiddleware.GetTraceID(r.Context()); traceID != "" {
+			w.Header().Set(bffMiddleware.HeaderTraceID, traceID)
+			w.Header().Set(bffMiddleware.HeaderRequestID, traceID)
+		}
+
+		w.WriteHeader(resp.StatusCode)
+		_, _ = io.Copy(w, resp.Body)
+	}
+}
+
+func propagateIdentityHeaders(outgoing *http.Request, incoming *http.Request) {
+	if outgoing.Header.Get("X-Organization-ID") != "" && outgoing.Header.Get("X-User-ID") != "" {
+		return
+	}
+
+	authHeader := strings.TrimSpace(incoming.Header.Get("Authorization"))
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return
+	}
+	tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+	if tokenString == "" {
+		return
+	}
+
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return
+	}
+
+	if outgoing.Header.Get("X-Organization-ID") == "" {
+		if orgID, ok := claims["org_id"].(string); ok && strings.TrimSpace(orgID) != "" {
+			outgoing.Header.Set("X-Organization-ID", orgID)
+		}
+	}
+
+	if outgoing.Header.Get("X-User-ID") == "" {
+		if userID, ok := claims["user_id"].(string); ok && strings.TrimSpace(userID) != "" {
+			outgoing.Header.Set("X-User-ID", userID)
+			return
+		}
+		if subject, ok := claims["sub"].(string); ok && strings.TrimSpace(subject) != "" {
+			outgoing.Header.Set("X-User-ID", subject)
+		}
+	}
+}
+
+func rewriteDRPaths(path string) string {
+	path = strings.Replace(path, "/restores/", "/restore-jobs/", 1)
+	path = strings.Replace(path, "/restores", "/restore-jobs", 1)
+	return path
+}
+
+func rewriteSupportPaths(path string) string {
+	if strings.HasSuffix(path, "/dashboard/stats") {
+		return strings.TrimSuffix(path, "/dashboard/stats") + "/dashboard/summary"
+	}
+	if strings.HasSuffix(path, "/incidents/feed") {
+		return strings.TrimSuffix(path, "/incidents/feed") + "/incidents"
+	}
+	if strings.HasSuffix(path, "/incidents/metrics") {
+		return strings.TrimSuffix(path, "/incidents/metrics") + "/dashboard/summary"
+	}
+	if strings.HasSuffix(path, "/incidents/trends") {
+		return strings.TrimSuffix(path, "/incidents/trends") + "/dashboard/recent-activity"
+	}
+	return path
 }

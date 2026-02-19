@@ -69,3 +69,7 @@ func Load() *Config {
 		AWSRegion:         v.GetString("aws.region"),
 	}
 }
+
+func (c *Config) GetJWTSecret() string {
+	return c.JWTSecret
+}

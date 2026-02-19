@@ -1,0 +1,3479 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Fleet Platform API",
+    "version": "1.0.0",
+    "description": "Comprehensive API documentation for Fleet Platform backend services"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Auth Service"
+    },
+    {
+      "url": "http://localhost:8081",
+      "description": "Fleet Core Service"
+    },
+    {
+      "url": "http://localhost:8082",
+      "description": "Web BFF Service"
+    },
+    {
+      "url": "http://localhost:8083",
+      "description": "Settings Service"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "User login",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "mfa_enabled": {
+                          "type": "boolean"
+                        },
+                        "verified": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "mfa_wait": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Refresh access token",
+        "operationId": "refreshToken",
+        "responses": {
+          "200": {
+            "description": "Token refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "access_token": {
+                      "type": "string"
+                    },
+                    "refresh_token": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "mfa_enabled": {
+                          "type": "boolean"
+                        },
+                        "verified": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "mfa_wait": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "User logout",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Logged out"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "User registration",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "summary": "Get user profile",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "Profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "org_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "mfa_enabled": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "theme": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user profile",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "theme": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated"
+          }
+        }
+      }
+    },
+    "/auth/mfa/setup": {
+      "post": {
+        "summary": "Setup MFA",
+        "operationId": "setupMFA",
+        "responses": {
+          "200": {
+            "description": "MFA setup initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "secret": {
+                      "type": "string"
+                    },
+                    "qr_code_url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/verify": {
+      "post": {
+        "summary": "Verify MFA",
+        "operationId": "verifyMFA",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MFA verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/mfa/disable": {
+      "post": {
+        "summary": "Disable MFA",
+        "operationId": "disableMFA",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MFA disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "summary": "Change password",
+        "operationId": "changePassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "old_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "summary": "Forgot password",
+        "operationId": "forgotPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset email sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "summary": "Reset password",
+        "operationId": "resetPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "summary": "Verify email",
+        "operationId": "verifyEmail",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "summary": "Get users",
+        "operationId": "getUsers",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "org_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "phone": {
+                        "type": "string"
+                      },
+                      "mfa_enabled": {
+                        "type": "boolean"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "verified": {
+                        "type": "boolean"
+                      },
+                      "theme": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/users/{id}": {
+      "get": {
+        "summary": "Get user by ID",
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "org_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "mfa_enabled": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "verified": {
+                      "type": "boolean"
+                    },
+                    "theme": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update user",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete user",
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted"
+          }
+        }
+      }
+    },
+    "/admin/organizations": {
+      "get": {
+        "summary": "Get organizations",
+        "operationId": "getOrganizations",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organizations retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "domain": {
+                        "type": "string"
+                      },
+                      "default_theme": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create organization",
+        "operationId": "createOrganization",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string"
+                  },
+                  "default_theme": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Organization created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "domain": {
+                      "type": "string"
+                    },
+                    "default_theme": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/organizations/{id}": {
+      "get": {
+        "summary": "Get organization by ID",
+        "operationId": "getOrganization",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "domain": {
+                      "type": "string"
+                    },
+                    "default_theme": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update organization",
+        "operationId": "updateOrganization",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string"
+                  },
+                  "default_theme": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organization updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete organization",
+        "operationId": "deleteOrganization",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization deleted"
+          }
+        }
+      }
+    },
+    "/admin/organizations/stats": {
+      "get": {
+        "summary": "Get organization stats",
+        "operationId": "getOrganizationStats",
+        "responses": {
+          "200": {
+            "description": "Stats retrieved"
+          }
+        }
+      }
+    },
+    "/admin/vehicles": {
+      "get": {
+        "summary": "Get vehicles",
+        "operationId": "getVehicles",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicles retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "org_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "license_plate": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "make": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer"
+                          },
+                          "color": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "capacity": {
+                            "type": "integer"
+                          },
+                          "fuel_type": {
+                            "type": "string"
+                          },
+                          "vin": {
+                            "type": "string"
+                          },
+                          "odometer": {
+                            "type": "integer"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "total_page": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create vehicle",
+        "operationId": "createVehicle",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "license_plate": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "make": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "capacity": {
+                    "type": "integer"
+                  },
+                  "fuel_type": {
+                    "type": "string"
+                  },
+                  "vin": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Vehicle created"
+          }
+        }
+      }
+    },
+    "/admin/vehicles/{id}": {
+      "get": {
+        "summary": "Get vehicle by ID",
+        "operationId": "getVehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicle retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "org_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "license_plate": {
+                          "type": "string"
+                        },
+                        "model": {
+                          "type": "string"
+                        },
+                        "make": {
+                          "type": "string"
+                        },
+                        "year": {
+                          "type": "integer"
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "capacity": {
+                          "type": "integer"
+                        },
+                        "fuel_type": {
+                          "type": "string"
+                        },
+                        "vin": {
+                          "type": "string"
+                        },
+                        "odometer": {
+                          "type": "integer"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "total_page": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update vehicle",
+        "operationId": "updateVehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "license_plate": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "make": {
+                    "type": "string"
+                  },
+                  "year": {
+                    "type": "integer"
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "capacity": {
+                    "type": "integer"
+                  },
+                  "fuel_type": {
+                    "type": "string"
+                  },
+                  "vin": {
+                    "type": "string"
+                  },
+                  "odometer": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vehicle updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete vehicle",
+        "operationId": "deleteVehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vehicle deleted"
+          }
+        }
+      }
+    },
+    "/admin/drivers": {
+      "get": {
+        "summary": "Get drivers",
+        "operationId": "getDrivers",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Drivers retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "org_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": "string"
+                      },
+                      "license_number": {
+                        "type": "string"
+                      },
+                      "license_expiry": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/drivers/{id}": {
+      "get": {
+        "summary": "Get driver by ID",
+        "operationId": "getDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Driver retrieved"
+          }
+        }
+      }
+    },
+    "/admin/trips": {
+      "get": {
+        "summary": "Get trips",
+        "operationId": "getTrips",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trips retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "org_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "vehicle_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "driver_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "estimated_distance_km": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "actual_distance_km": {
+                            "type": "number",
+                            "format": "float"
+                          },
+                          "start_location": {
+                            "type": "object",
+                            "properties": {
+                              "latitude": {
+                                "type": "number",
+                                "format": "float"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "format": "float"
+                              },
+                              "address": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "end_location": {
+                            "type": "object",
+                            "properties": {
+                              "latitude": {
+                                "type": "number",
+                                "format": "float"
+                              },
+                              "longitude": {
+                                "type": "number",
+                                "format": "float"
+                              },
+                              "address": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "total_page": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create trip",
+        "operationId": "createTrip",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vehicle_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "driver_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "start_location": {
+                    "type": "object",
+                    "properties": {
+                      "latitude": {
+                        "type": "number",
+                        "format": "float"
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "format": "float"
+                      },
+                      "address": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "end_location": {
+                    "type": "object",
+                    "properties": {
+                      "latitude": {
+                        "type": "number",
+                        "format": "float"
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "format": "float"
+                      },
+                      "address": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Trip created"
+          }
+        }
+      }
+    },
+    "/admin/trips/{id}": {
+      "get": {
+        "summary": "Get trip by ID",
+        "operationId": "getTrip",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trip retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update trip",
+        "operationId": "updateTrip",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "actual_distance_km": {
+                    "type": "number",
+                    "format": "float"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trip updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete trip",
+        "operationId": "deleteTrip",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trip deleted"
+          }
+        }
+      }
+    },
+    "/admin/trips/{id}/telemetry": {
+      "get": {
+        "summary": "Get trip telemetry",
+        "operationId": "getTripTelemetry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Telemetry retrieved"
+          }
+        }
+      }
+    },
+    "/admin/trips/settings": {
+      "get": {
+        "summary": "Get trip settings",
+        "operationId": "getTripSettings",
+        "responses": {
+          "200": {
+            "description": "Trip settings retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update trip settings",
+        "operationId": "updateTripSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Trip settings updated"
+          }
+        }
+      }
+    },
+    "/admin/alerts": {
+      "get": {
+        "summary": "Get alerts",
+        "operationId": "getAlerts",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alerts retrieved"
+          }
+        }
+      }
+    },
+    "/admin/alerts/{id}/acknowledge": {
+      "post": {
+        "summary": "Acknowledge alert",
+        "operationId": "acknowledgeAlert",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alert acknowledged"
+          }
+        }
+      }
+    },
+    "/admin/geofences": {
+      "get": {
+        "summary": "Get geofences",
+        "operationId": "getGeofences",
+        "responses": {
+          "200": {
+            "description": "Geofences retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create geofence",
+        "operationId": "createGeofence",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Geofence created"
+          }
+        }
+      }
+    },
+    "/admin/geofences/{id}": {
+      "delete": {
+        "summary": "Delete geofence",
+        "operationId": "deleteGeofence",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Geofence deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/stats": {
+      "get": {
+        "summary": "Get dashboard stats",
+        "operationId": "getDashboardStats",
+        "responses": {
+          "200": {
+            "description": "Stats retrieved"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/dashboard/data": {
+      "get": {
+        "summary": "Get admin dashboard data",
+        "operationId": "getAdminDashboardData",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard data retrieved"
+          }
+        }
+      }
+    },
+    "/api/timeline": {
+      "get": {
+        "summary": "Get timeline",
+        "operationId": "getTimeline",
+        "responses": {
+          "200": {
+            "description": "Timeline retrieved"
+          }
+        }
+      }
+    },
+    "/admin/documents": {
+      "get": {
+        "summary": "Get documents",
+        "operationId": "getDocuments",
+        "parameters": [
+          {
+            "name": "vehicleId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create document",
+        "operationId": "createDocument",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document created"
+          }
+        }
+      }
+    },
+    "/admin/documents/{id}": {
+      "put": {
+        "summary": "Update document",
+        "operationId": "updateDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete document",
+        "operationId": "deleteDocument",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document deleted"
+          }
+        }
+      }
+    },
+    "/admin/analytics/drivers": {
+      "get": {
+        "summary": "Get driver analytics",
+        "operationId": "getDriverAnalytics",
+        "responses": {
+          "200": {
+            "description": "Analytics retrieved"
+          }
+        }
+      }
+    },
+    "/admin/analytics/trips": {
+      "get": {
+        "summary": "Get trip analytics",
+        "operationId": "getTripAnalytics",
+        "responses": {
+          "200": {
+            "description": "Analytics retrieved"
+          }
+        }
+      }
+    },
+    "/admin/bulk-jobs": {
+      "get": {
+        "summary": "Get bulk jobs",
+        "operationId": "getBulkJobs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk jobs retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create bulk job",
+        "operationId": "createBulkJob",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bulk job created"
+          }
+        }
+      }
+    },
+    "/admin/bulk-jobs/{id}": {
+      "get": {
+        "summary": "Get bulk job by ID",
+        "operationId": "getBulkJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk job retrieved"
+          }
+        }
+      }
+    },
+    "/admin/bulk-jobs/{id}/records": {
+      "get": {
+        "summary": "Get bulk job records",
+        "operationId": "getBulkJobRecords",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Records retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/dashboard": {
+      "get": {
+        "summary": "Get MFA dashboard",
+        "operationId": "getMFADashboard",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MFA dashboard retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/adoption-trend": {
+      "get": {
+        "summary": "Get MFA adoption trend",
+        "operationId": "getMFAAdoptionTrend",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Adoption trend retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/method-distribution": {
+      "get": {
+        "summary": "Get MFA method distribution",
+        "operationId": "getMFAMethodDistribution",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Method distribution retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/events": {
+      "get": {
+        "summary": "Get MFA events",
+        "operationId": "getMFAEvents",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/failures/locations": {
+      "get": {
+        "summary": "Get MFA failure locations",
+        "operationId": "getMFAFailureLocations",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Failure locations retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/failures/users": {
+      "get": {
+        "summary": "Get MFA failure users",
+        "operationId": "getMFAFailureUsers",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Failure users retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/locked-users": {
+      "get": {
+        "summary": "Get locked users",
+        "operationId": "getLockedUsers",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Locked users retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/unlock": {
+      "post": {
+        "summary": "Unlock user",
+        "operationId": "unlockUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User unlocked"
+          }
+        }
+      }
+    },
+    "/api/mfa/reset": {
+      "post": {
+        "summary": "Reset MFA",
+        "operationId": "resetMFA",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MFA reset"
+          }
+        }
+      }
+    },
+    "/api/mfa/policy": {
+      "get": {
+        "summary": "Get MFA policy",
+        "operationId": "getMFAPolicy",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Policy retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update MFA policy",
+        "operationId": "updateMFAPolicy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated"
+          }
+        }
+      }
+    },
+    "/api/mfa/policy/history": {
+      "get": {
+        "summary": "Get MFA policy history",
+        "operationId": "getMFAPolicyHistory",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History retrieved"
+          }
+        }
+      }
+    },
+    "/api/mfa/policy/rollback": {
+      "post": {
+        "summary": "Rollback MFA policy",
+        "operationId": "rollbackMFAPolicy",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "historyId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy rolled back"
+          }
+        }
+      }
+    },
+    "/api/mfa/overrides": {
+      "get": {
+        "summary": "Get MFA org overrides",
+        "operationId": "getMFAOrgOverride",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Overrides retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update MFA org overrides",
+        "operationId": "updateMFAOrgOverride",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Overrides updated"
+          }
+        }
+      }
+    },
+    "/api/audit/logs": {
+      "get": {
+        "summary": "Get audit logs",
+        "operationId": "getAuditLogs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved"
+          }
+        }
+      }
+    },
+    "/api/audit/logs/{id}": {
+      "get": {
+        "summary": "Get audit log details",
+        "operationId": "getAuditLogDetails",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log details retrieved"
+          }
+        }
+      }
+    },
+    "/api/audit/settings": {
+      "get": {
+        "summary": "Get audit settings",
+        "operationId": "getAuditSettings",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Settings retrieved"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update audit settings",
+        "operationId": "updateAuditSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          }
+        }
+      }
+    },
+    "/api/mfa/exceptions": {
+      "get": {
+        "summary": "Get MFA exceptions",
+        "operationId": "getMFAExceptions",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exceptions retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Add MFA exception",
+        "operationId": "addMFAException",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exception added"
+          }
+        }
+      }
+    },
+    "/api/mfa/exceptions/{id}": {
+      "delete": {
+        "summary": "Delete MFA exception",
+        "operationId": "deleteMFAException",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exception deleted"
+          }
+        }
+      }
+    },
+    "/api/security/logins": {
+      "get": {
+        "summary": "Get login activity logs",
+        "operationId": "getLoginActivityLogs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs retrieved"
+          }
+        }
+      }
+    },
+    "/api/security/alerts": {
+      "get": {
+        "summary": "Get threat alerts",
+        "operationId": "getThreatAlerts",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alerts retrieved"
+          }
+        }
+      }
+    },
+    "/api/security/alerts/{id}/status": {
+      "patch": {
+        "summary": "Update threat alert status",
+        "operationId": "updateThreatAlertStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/api/security/sessions": {
+      "get": {
+        "summary": "Get security sessions",
+        "operationId": "getSecuritySessions",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions retrieved"
+          }
+        }
+      }
+    },
+    "/api/security/sessions/{sessionId}": {
+      "delete": {
+        "summary": "Revoke security session",
+        "operationId": "revokeSecuritySession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked"
+          }
+        }
+      }
+    },
+    "/api/security/ip-rules": {
+      "get": {
+        "summary": "Get IP rules",
+        "operationId": "getIPRules",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rules retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create IP rule",
+        "operationId": "createIPRule",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Rule created"
+          }
+        }
+      }
+    },
+    "/api/audit/entity-history": {
+      "get": {
+        "summary": "Get entity history",
+        "operationId": "getEntityHistory",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "History retrieved"
+          }
+        }
+      }
+    },
+    "/api/audit/evidence-exports": {
+      "get": {
+        "summary": "Get evidence exports",
+        "operationId": "getEvidenceExports",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exports retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create evidence export",
+        "operationId": "createEvidenceExport",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Export created"
+          }
+        }
+      }
+    },
+    "/api/audit/evidence-exports/{id}": {
+      "get": {
+        "summary": "Get evidence export details",
+        "operationId": "getEvidenceExportDetails",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details retrieved"
+          }
+        }
+      }
+    },
+    "/api/integrations/": {
+      "get": {
+        "summary": "Get integrations",
+        "operationId": "getIntegrations",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integrations retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create integration",
+        "operationId": "createIntegration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Integration created"
+          }
+        }
+      }
+    },
+    "/api/integrations/{id}": {
+      "put": {
+        "summary": "Update integration",
+        "operationId": "updateIntegration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Integration updated"
+          }
+        }
+      }
+    },
+    "/api/integrations/{id}/test": {
+      "post": {
+        "summary": "Test integration",
+        "operationId": "testIntegration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test completed"
+          }
+        }
+      }
+    },
+    "/api/api-clients/": {
+      "get": {
+        "summary": "Get API clients",
+        "operationId": "getApiClients",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Clients retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create API client",
+        "operationId": "createApiClient",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Client created"
+          }
+        }
+      }
+    },
+    "/api/webhooks/": {
+      "get": {
+        "summary": "Get webhooks",
+        "operationId": "getWebhooks",
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhooks retrieved"
+          }
+        }
+      }
+    },
+    "/api/integrations/logs": {
+      "get": {
+        "summary": "Get integration logs",
+        "operationId": "getIntegrationLogs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logs retrieved"
+          }
+        }
+      }
+    },
+    "/routes/requests": {
+      "get": {
+        "summary": "List optimization requests",
+        "operationId": "listOptimizationRequests",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requests retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create optimization request",
+        "operationId": "createOptimizationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Request created"
+          }
+        }
+      }
+    },
+    "/routes/requests/{id}": {
+      "get": {
+        "summary": "Get optimization request",
+        "operationId": "getOptimizationRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Request retrieved"
+          }
+        }
+      }
+    },
+    "/routes/results": {
+      "get": {
+        "summary": "List optimization results",
+        "operationId": "listOptimizationResults",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Results retrieved"
+          }
+        }
+      }
+    },
+    "/routes/results/{id}": {
+      "get": {
+        "summary": "Get optimization result",
+        "operationId": "getOptimizationResult",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result retrieved"
+          }
+        }
+      }
+    },
+    "/routes/jobs": {
+      "get": {
+        "summary": "List optimization jobs",
+        "operationId": "listOptimizationJobs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jobs retrieved"
+          }
+        }
+      }
+    },
+    "/admin/video/streams": {
+      "get": {
+        "summary": "List video streams",
+        "operationId": "listVideoStreams",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Streams retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create video stream",
+        "operationId": "createVideoStream",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stream created"
+          }
+        }
+      }
+    },
+    "/admin/video/streams/{id}": {
+      "get": {
+        "summary": "Get video stream",
+        "operationId": "getVideoStream",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stream retrieved"
+          }
+        }
+      }
+    },
+    "/admin/video/recordings": {
+      "get": {
+        "summary": "List video recordings",
+        "operationId": "listVideoRecordings",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recordings retrieved"
+          }
+        }
+      }
+    },
+    "/admin/video/analytics": {
+      "get": {
+        "summary": "Get video analytics",
+        "operationId": "getVideoAnalytics",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics retrieved"
+          }
+        }
+      }
+    },
+    "/admin/analytics/maintenance": {
+      "get": {
+        "summary": "Get predictive maintenance",
+        "operationId": "getPredictiveMaintenance",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Maintenance data retrieved"
+          }
+        }
+      }
+    },
+    "/admin/analytics/driver-behavior": {
+      "get": {
+        "summary": "Get driver behavior analytics",
+        "operationId": "getDriverBehaviorAnalytics",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Analytics retrieved"
+          }
+        }
+      }
+    },
+    "/admin/analytics/utilization": {
+      "get": {
+        "summary": "Get fleet utilization",
+        "operationId": "getFleetUtilization",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Utilization retrieved"
+          }
+        }
+      }
+    },
+    "/admin/analytics/jobs": {
+      "get": {
+        "summary": "List analytics jobs",
+        "operationId": "listAnalyticsJobs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jobs retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create analytics job",
+        "operationId": "createAnalyticsJob",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Job created"
+          }
+        }
+      }
+    },
+    "/admin/dr/backups": {
+      "get": {
+        "summary": "Get backups",
+        "operationId": "getBackups",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Backups retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Initiate backup",
+        "operationId": "initiateBackup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Backup initiated"
+          }
+        }
+      }
+    },
+    "/admin/dr/restore-jobs": {
+      "get": {
+        "summary": "Get restore jobs",
+        "operationId": "getRestoreJobs",
+        "parameters": [
+          {
+            "name": "params",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Restore jobs retrieved"
+          }
+        }
+      },
+      "post": {
+        "summary": "Initiate restore",
+        "operationId": "initiateRestore",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "backupId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "targetEnv": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Restore initiated"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

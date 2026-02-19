@@ -1,0 +1,50 @@
+name: API Contract And Clients
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/api/openapi.yaml'
+      - 'scripts/generate_api_clients.py'
+      - 'scripts/check_generated_clients_freshness.py'
+      - 'apps/dashboard-web/src/generated/api/**'
+      - 'apps/mobile/shared/generated/**'
+      - '.github/workflows/api-contract-clients.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/api/openapi.yaml'
+      - 'scripts/generate_api_clients.py'
+      - 'scripts/check_generated_clients_freshness.py'
+      - 'apps/dashboard-web/src/generated/api/**'
+      - 'apps/mobile/shared/generated/**'
+      - '.github/workflows/api-contract-clients.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  validate-contract-and-generated:
+    name: Validate OpenAPI And Generated Clients
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Validate canonical OpenAPI spec
+        run: go run github.com/getkin/kin-openapi/cmd/validate-spec@latest docs/api/openapi.yaml
+
+      - name: Check generated clients freshness
+        run: python3 scripts/check_generated_clients_freshness.py

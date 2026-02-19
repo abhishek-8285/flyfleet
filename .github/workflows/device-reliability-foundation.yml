@@ -1,0 +1,33 @@
+name: Device Reliability Foundation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/device/**'
+      - 'scripts/device_command_simulator.py'
+      - 'scripts/check_device_reliability_foundation.py'
+      - '.github/workflows/device-reliability-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/device/**'
+      - 'scripts/device_command_simulator.py'
+      - 'scripts/check_device_reliability_foundation.py'
+      - '.github/workflows/device-reliability-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  device-reliability-foundation:
+    name: Validate Device Reliability Foundation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run reliability foundation checks
+        run: python3 scripts/check_device_reliability_foundation.py

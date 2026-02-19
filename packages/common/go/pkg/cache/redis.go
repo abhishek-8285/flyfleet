@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -20,6 +21,7 @@ type RedisCacheInterface interface {
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
 	FlushAll(ctx context.Context) error
+	GetClient() *redis.Client
 	Close() error
 }
 
@@ -101,6 +103,10 @@ func (rc *RedisCache) FlushAll(ctx context.Context) error {
 	return nil
 }
 
+func (rc *RedisCache) GetClient() *redis.Client {
+	return rc.client
+}
+
 func (rc *RedisCache) Close() error {
 	if err := rc.client.Close(); err != nil {
 		rc.logger.Error("Failed to close redis connection", zap.Error(err))
@@ -109,4 +115,33 @@ func (rc *RedisCache) Close() error {
 
 	rc.logger.Info("Redis connection closed")
 	return nil
+}
+
+// FetchWithCache is a generic helper that implements the cache-aside pattern
+func FetchWithCache[T any](ctx context.Context, rc RedisCacheInterface, key string, ttl time.Duration, fetcher func() (T, error)) (T, error) {
+	var result T
+
+	// 1. Try to get from cache
+	data, err := rc.Get(ctx, key)
+	if err == nil && data != nil {
+		if err := json.Unmarshal(data, &result); err == nil {
+			return result, nil
+		}
+	}
+
+	// 2. Fetch from source (SQL/API/etc)
+	result, err = fetcher()
+	if err != nil {
+		return result, err
+	}
+
+	// 3. Store in cache (background)
+	go func() {
+		dataBytes, err := json.Marshal(result)
+		if err == nil {
+			_ = rc.Set(context.Background(), key, dataBytes, ttl)
+		}
+	}()
+
+	return result, nil
 }

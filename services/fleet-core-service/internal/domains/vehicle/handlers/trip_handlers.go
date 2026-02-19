@@ -1,16 +1,16 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/middleware"
+	"github.com/fleet-platform/shared/pkg/middleware"
+	vehMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -18,39 +18,47 @@ import (
 type TripHandlers struct {
 	service   *service.TripService
 	logger    *zap.Logger
-	validator *middleware.Validator
+	validator *vehMiddleware.Validator
 }
 
 func NewTripHandlers(service *service.TripService, logger *zap.Logger) *TripHandlers {
 	return &TripHandlers{
 		service:   service,
 		logger:    logger,
-		validator: middleware.NewValidator(),
+		validator: vehMiddleware.NewValidator(),
 	}
+}
+
+func (h *TripHandlers) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListTrips)
+	r.Post("/", h.CreateTrip)
+	r.Get("/settings", h.GetSettings)
+	r.Put("/settings", h.UpdateSettings)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetTrip)
+		r.Put("/", h.UpdateTrip)
+		r.Get("/telemetry", h.GetTelemetry)
+	})
 }
 
 // ListTrips handles GET /api/v1/trips
 func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	orgID := h.getOrgID(r)
-	
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
 	if page <= 0 {
 		page = 1
 	}
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
 	if limit <= 0 {
 		limit = 20
 	}
-	status := r.URL.Query().Get("status")
+	status := query.Get("status")
 
 	// Validate query parameters
 	if validationErrors := h.validator.ValidateListParams(page, limit, status); len(validationErrors) > 0 {
-		middleware.WriteValidationError(w, validationErrors)
+		vehMiddleware.WriteValidationError(w, validationErrors)
 		return
 	}
 
@@ -60,20 +68,19 @@ func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
 		Page:           page,
 		Limit:          limit,
 	}
-	
-	if vid := r.URL.Query().Get("vehicle_id"); vid != "" {
+
+	if vid := query.Get("vehicle_id"); vid != "" {
 		if id, err := uuid.Parse(vid); err == nil {
 			params.VehicleID = &id
 		}
 	}
-	if did := r.URL.Query().Get("driver_id"); did != "" {
+	if did := query.Get("driver_id"); did != "" {
 		if id, err := uuid.Parse(did); err == nil {
 			params.DriverID = &id
 		}
 	}
 
-	ctx := context.Background()
-	trips, total, err := h.service.ListTrips(ctx, params)
+	trips, total, err := h.service.ListTrips(r.Context(), params)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to list trips", err)
 		return
@@ -89,11 +96,6 @@ func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
 
 // CreateTrip handles POST /api/v1/trips
 func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	// Decode to map for validation
 	var rawData map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&rawData); err != nil {
@@ -103,7 +105,7 @@ func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request
 	if validationErrors := h.validator.ValidateCreateTripRequest(rawData); len(validationErrors) > 0 {
-		middleware.WriteValidationError(w, validationErrors)
+		vehMiddleware.WriteValidationError(w, validationErrors)
 		return
 	}
 
@@ -113,9 +115,7 @@ func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(reqBytes, &req)
 
 	orgID := h.getOrgID(r)
-	ctx := context.Background()
-	
-	trip, err := h.service.CreateTrip(ctx, orgID, &req)
+	trip, err := h.service.CreateTrip(r.Context(), orgID, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to create trip", err)
 		return
@@ -126,26 +126,20 @@ func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
 
 // GetTrip handles GET /api/v1/trips/:id
 func (h *TripHandlers) GetTrip(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	idStr := h.getTripID(r)
+	idStr := chi.URLParam(r, "id")
 	if idStr == "" {
 		h.writeError(w, http.StatusBadRequest, "Missing trip ID", nil)
 		return
 	}
 
-	ctx := context.Background()
 	var trip *models.Trip
 	var err error
 
 	// Try parsing as UUID first, then as trip_id string
 	if id, parseErr := uuid.Parse(idStr); parseErr == nil {
-		trip, err = h.service.GetTrip(ctx, id)
+		trip, err = h.service.GetTrip(r.Context(), id)
 	} else {
-		trip, err = h.service.GetTripByTripID(ctx, idStr)
+		trip, err = h.service.GetTripByTripID(r.Context(), idStr)
 	}
 
 	if err != nil {
@@ -158,12 +152,7 @@ func (h *TripHandlers) GetTrip(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTrip handles PUT /api/v1/trips/:id
 func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	idStr := h.getTripID(r)
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid trip ID", err)
@@ -179,7 +168,7 @@ func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request
 	if validationErrors := h.validator.ValidateUpdateTripRequest(rawData); len(validationErrors) > 0 {
-		middleware.WriteValidationError(w, validationErrors)
+		vehMiddleware.WriteValidationError(w, validationErrors)
 		return
 	}
 
@@ -188,8 +177,7 @@ func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 	reqBytes, _ := json.Marshal(rawData)
 	json.Unmarshal(reqBytes, &req)
 
-	ctx := context.Background()
-	trip, err := h.service.UpdateTrip(ctx, id, &req)
+	trip, err := h.service.UpdateTrip(r.Context(), id, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to update trip", err)
 		return
@@ -200,12 +188,7 @@ func (h *TripHandlers) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 
 // GetTelemetry handles GET /api/v1/trips/:id/telemetry
 func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	idStr := h.getTripID(r)
+	idStr := chi.URLParam(r, "id")
 	tripID, err := uuid.Parse(idStr)
 	if err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid trip ID", err)
@@ -219,12 +202,11 @@ func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 
 	// Validate telemetry params
 	if validationErrors := h.validator.ValidateTelemetryParams(limit); len(validationErrors) > 0 {
-		middleware.WriteValidationError(w, validationErrors)
+		vehMiddleware.WriteValidationError(w, validationErrors)
 		return
 	}
 
-	ctx := context.Background()
-	events, err := h.service.GetTelemetry(ctx, tripID, limit)
+	events, err := h.service.GetTelemetry(r.Context(), tripID, limit)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to get telemetry", err)
 		return
@@ -238,15 +220,8 @@ func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 
 // GetSettings handles GET /api/v1/trips/settings
 func (h *TripHandlers) GetSettings(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	orgID := h.getOrgID(r)
-	ctx := context.Background()
-	
-	settings, err := h.service.GetSettings(ctx, orgID)
+	settings, err := h.service.GetSettings(r.Context(), orgID)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to get settings", err)
 		return
@@ -257,11 +232,6 @@ func (h *TripHandlers) GetSettings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettings handles PUT /api/v1/trips/settings
 func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var settings models.TripSettings
 	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid request body", err)
@@ -271,8 +241,7 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	settings.OrganizationID = h.getOrgID(r)
 	settings.UpdatedAt = time.Now()
 
-	ctx := context.Background()
-	if err := h.service.UpdateSettings(ctx, &settings); err != nil {
+	if err := h.service.UpdateSettings(r.Context(), &settings); err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to update settings", err)
 		return
 	}
@@ -281,28 +250,15 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helpers
-func (h *TripHandlers) getTripID(r *http.Request) string {
-	id := r.PathValue("id")
-	if id != "" {
-		return id
-	}
-	// Fallback for routers that don't support PathValue (like Gin wrapper)
-	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-	for i, part := range parts {
-		if part == "trips" && i+1 < len(parts) {
-			return parts[i+1]
+func (h *TripHandlers) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
 		}
 	}
-	return ""
-}
-
-func (h *TripHandlers) getOrgID(r *http.Request) uuid.UUID {
-	orgIDStr := r.Header.Get("X-Organization-ID")
-	if orgIDStr == "" {
-		orgIDStr = "00000000-0000-0000-0000-000000000000"
-	}
-	orgID, _ := uuid.Parse(orgIDStr)
-	return orgID
+	return uuid.Nil
 }
 
 func (h *TripHandlers) writeJSON(w http.ResponseWriter, status int, data interface{}) {

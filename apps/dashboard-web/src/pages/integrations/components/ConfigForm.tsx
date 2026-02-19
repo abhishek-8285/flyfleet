@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import React, { useState } from 'react';
+import { api } from '../../../services/api';
 
 interface ConfigFormProps {
   id: string;
@@ -20,11 +21,15 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ id, onBack }) => {
 
   const handleTest = async () => {
     setIsTesting(true);
-    // Mock API call
-    setTimeout(() => {
-      setIsTesting(false);
+    setTestResult(null);
+    try {
+      await api.testIntegration(id);
       setTestResult({ success: true, msg: 'Successfully connected to LogisticsPartner API' });
-    }, 1500);
+    } catch (error: any) {
+      setTestResult({ success: false, msg: error?.message || 'Connection test failed' });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (

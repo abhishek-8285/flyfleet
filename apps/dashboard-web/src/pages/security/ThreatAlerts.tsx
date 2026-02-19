@@ -18,7 +18,7 @@ interface ThreatAlert {
   resolved_at?: string;
 }
 
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/api/v1';
 
 export default function ThreatAlerts() {
   const [alerts, setAlerts] = useState<ThreatAlert[]>([]);

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-core-service
+  namespace: flyfleet
+  labels:
+    app: fleet-core-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fleet-core-service
+  template:
+    metadata:
+      labels:
+        app: fleet-core-service
+    spec:
+      containers:
+      - name: fleet-core-service
+        image: flyfleet/fleet-core-service:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: flyfleet-config
+        - secretRef:
+            name: flyfleet-secrets
+        env:
+        - name: DB_HOST
+          value: postgres-service.flyfleet.svc.cluster.local
+        - name: REDIS_ADDR
+          value: redis-cluster.flyfleet.svc.cluster.local:6379
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-core-service
+  namespace: flyfleet
+spec:
+  selector:
+    app: fleet-core-service
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fleet-core-service-hpa
+  namespace: flyfleet
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fleet-core-service
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: fleet-core-pdb
+  namespace: flyfleet
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: fleet-core-service

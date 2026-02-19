@@ -8,88 +8,105 @@ import (
 
 	"github.com/flyfleet/reports-service/internal/models"
 	"github.com/flyfleet/reports-service/internal/service"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type ReportHandler struct {
-	svc    *service.ReportService
-	logger *zap.Logger
+	svc      *service.ReportService
+	logger   *zap.Logger
+	validate *validator.Validate
 }
 
 func NewReportHandler(svc *service.ReportService, logger *zap.Logger) *ReportHandler {
 	return &ReportHandler{
-		svc:    svc,
-		logger: logger,
+		svc:      svc,
+		logger:   logger,
+		validate: validator.New(),
 	}
 }
 
-func (h *ReportHandler) bindStrictJSON(c *gin.Context, obj any) error {
-	decoder := json.NewDecoder(c.Request.Body)
+func (h *ReportHandler) RegisterRoutes(r chi.Router) {
+	r.Post("/schedules", h.CreateReport)
+	r.Get("/schedules", h.ListReports)
+	r.Route("/schedules/{id}", func(r chi.Router) {
+		r.Get("/", h.GetReport)
+		r.Put("/", h.UpdateReport)
+		r.Post("/pause", h.PauseReport)
+		r.Post("/resume", h.ResumeReport)
+	})
+	r.Get("/executions", h.ListExecutions)
+	r.Get("/settings", h.GetSettings)
+	r.Put("/settings", h.UpdateSettings)
+}
+
+func (h *ReportHandler) decodeAndValidate(w http.ResponseWriter, r *http.Request, dest interface{}) bool {
+	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(obj); err != nil {
-		return err
+	if err := decoder.Decode(dest); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return false
 	}
-	return binding.Validator.ValidateStruct(obj)
+	if err := h.validate.Struct(dest); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
+		return false
+	}
+	return true
 }
 
-func (h *ReportHandler) CreateReport(c *gin.Context) {
+func (h *ReportHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
 	var req models.ScheduledReport
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if !h.decodeAndValidate(w, r, &req) {
 		return
 	}
 
-	// Get Organization ID from context (set by auth middleware)
-	orgIDVal, exists := c.Get("org_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID not found in context"})
-		return
-	}
-	orgID, ok := orgIDVal.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid organization ID format"})
+	// Get Organization ID and User ID from context (should be set by auth middleware)
+	orgID := h.getOrgID(r)
+	if orgID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
 		return
 	}
 	req.OrganizationID = uuid.MustParse(orgID)
 
-	// Get User ID from context (set by auth middleware)
-	userIDVal, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
-		return
-	}
-	userID, ok := userIDVal.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+	userID := h.getUserID(r)
+	if userID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "User ID not found in context", nil)
 		return
 	}
 	req.CreatedBy = uuid.MustParse(userID)
 
-	id, err := h.svc.CreateReport(c.Request.Context(), &req)
+	id, err := h.svc.CreateReport(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("Failed to create report", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create report"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to create report", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": id})
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"id": id})
 }
 
-func (h *ReportHandler) ListReports(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+func (h *ReportHandler) ListReports(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
 
-	reports, total, err := h.svc.ListReports(c.Request.Context(), page, limit)
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	reports, total, err := h.svc.ListReports(r.Context(), page, limit)
 	if err != nil {
 		h.logger.Error("Failed to list reports", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list reports"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to list reports", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":  reports,
 		"total": total,
 		"page":  page,
@@ -97,38 +114,37 @@ func (h *ReportHandler) ListReports(c *gin.Context) {
 	})
 }
 
-func (h *ReportHandler) GetReport(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *ReportHandler) GetReport(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id used"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid id used", err)
 		return
 	}
 
-	report, err := h.svc.GetReport(c.Request.Context(), id)
+	report, err := h.svc.GetReport(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get report", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get report"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to get report", err)
 		return
 	}
 	if report == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "report not found"})
+		h.writeErrorResponse(w, http.StatusNotFound, "report not found", nil)
 		return
 	}
-	c.JSON(http.StatusOK, report)
+	h.writeJSONResponse(w, http.StatusOK, report)
 }
 
-func (h *ReportHandler) UpdateReport(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id used"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid id used", err)
 		return
 	}
 
 	var req models.ScheduledReport
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if !h.decodeAndValidate(w, r, &req) {
 		return
 	}
 	req.ID = id
@@ -137,85 +153,120 @@ func (h *ReportHandler) UpdateReport(c *gin.Context) {
 	now := time.Now()
 	req.UpdatedAt = &now
 
-	if err := h.svc.UpdateReport(c.Request.Context(), &req); err != nil {
+	if err := h.svc.UpdateReport(r.Context(), &req); err != nil {
 		h.logger.Error("Failed to update report", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update report"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to update report", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
-func (h *ReportHandler) PauseReport(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *ReportHandler) PauseReport(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id used"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid id used", err)
 		return
 	}
-	if err := h.svc.PauseReport(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to pause"})
+	if err := h.svc.PauseReport(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to pause", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "paused"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "paused"})
 }
 
-func (h *ReportHandler) ResumeReport(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *ReportHandler) ResumeReport(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id used"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid id used", err)
 		return
 	}
-	if err := h.svc.ResumeReport(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resume"})
+	if err := h.svc.ResumeReport(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to resume", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "resumed"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "resumed"})
 }
 
-func (h *ReportHandler) ListExecutions(c *gin.Context) {
-	reportIDStr := c.Query("report_id")
+func (h *ReportHandler) ListExecutions(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	reportIDStr := query.Get("report_id")
 	var reportID uuid.UUID
 	if reportIDStr != "" {
 		reportID, _ = uuid.Parse(reportIDStr)
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	page, _ := strconv.Atoi(query.Get("page"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
 
-	execs, total, err := h.svc.ListExecutions(c.Request.Context(), reportID, page, limit)
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	execs, total, err := h.svc.ListExecutions(r.Context(), reportID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list executions"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to list executions", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"executions": execs,
 		"total":      total,
-		"page":       page, 
+		"page":       page,
 		"limit":      limit,
 	})
 }
 
-func (h *ReportHandler) GetSettings(c *gin.Context) {
-	s, err := h.svc.GetSettings(c.Request.Context())
+func (h *ReportHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	s, err := h.svc.GetSettings(r.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch settings"})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to fetch settings", err)
 		return
 	}
-	c.JSON(http.StatusOK, s)
+	h.writeJSONResponse(w, http.StatusOK, s)
 }
 
-func (h *ReportHandler) UpdateSettings(c *gin.Context) {
+func (h *ReportHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var req models.GlobalSettings
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed"})
+	if !h.decodeAndValidate(w, r, &req) {
 		return
 	}
-	if err := h.svc.UpdateSettings(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update settings"})
+	if err := h.svc.UpdateSettings(r.Context(), &req); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "failed to update settings", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+func (h *ReportHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *ReportHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
+}
+
+func (h *ReportHandler) getOrgID(r *http.Request) string {
+	if val := r.Context().Value("org_id"); val != nil {
+		if id, ok := val.(string); ok {
+			return id
+		}
+	}
+	return ""
+}
+
+func (h *ReportHandler) getUserID(r *http.Request) string {
+	if val := r.Context().Value("user_id"); val != nil {
+		if id, ok := val.(string); ok {
+			return id
+		}
+	}
+	return ""
 }

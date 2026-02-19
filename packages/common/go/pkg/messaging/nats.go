@@ -9,16 +9,22 @@ import (
 	"go.uber.org/zap"
 )
 
-type NATSClient struct {
-	conn   *nats.Conn
-	logger *zap.Logger
-}
-
 type MessageBroker interface {
 	Publish(subject string, data interface{}) error
 	Subscribe(subject string, handler func([]byte)) error
 	Request(subject string, data interface{}, timeout time.Duration) ([]byte, error)
+	
+	// JetStream capabilities
+	PublishJS(subject string, data interface{}) error
+	JetStream() (nats.JetStreamContext, error)
+	
 	Close() error
+}
+
+type NATSClient struct {
+	conn       *nats.Conn
+	js         nats.JetStreamContext
+	logger     *zap.Logger
 }
 
 func NewNATSClient(url string, logger *zap.Logger) (MessageBroker, error) {
@@ -39,12 +45,45 @@ func NewNATSClient(url string, logger *zap.Logger) (MessageBroker, error) {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
-	logger.Info("Connected to NATS", zap.String("url", url))
+	js, err := conn.JetStream()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create JetStream context: %w", err)
+	}
+
+	logger.Info("Connected to NATS with JetStream", zap.String("url", url))
 
 	return &NATSClient{
 		conn:   conn,
+		js:     js,
 		logger: logger,
 	}, nil
+}
+
+func (nc *NATSClient) PublishJS(subject string, data interface{}) error {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	if _, err := nc.js.Publish(subject, payload); err != nil {
+		nc.logger.Error("Failed to publish JetStream message",
+			zap.String("subject", subject),
+			zap.Error(err))
+		return err
+	}
+
+	nc.logger.Debug("JetStream message published",
+		zap.String("subject", subject),
+		zap.Int("payload_size", len(payload)))
+
+	return nil
+}
+
+func (nc *NATSClient) JetStream() (nats.JetStreamContext, error) {
+	if nc.js == nil {
+		return nil, fmt.Errorf("jetstream context not initialized")
+	}
+	return nc.js, nil
 }
 
 func (nc *NATSClient) Publish(subject string, data interface{}) error {

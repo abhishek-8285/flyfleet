@@ -1,0 +1,29 @@
+{
+  "schema_version": "v1",
+  "heartbeat_seconds": 45,
+  "ring_buffer_minutes": 10,
+  "gps": {
+    "active_interval_seconds": 1,
+    "idle_interval_seconds": 30
+  },
+  "ai": {
+    "enabled": true,
+    "frame_sample_stride": 6,
+    "severity_thresholds": {
+      "warn_min": 0.6,
+      "critical_min": 0.85
+    }
+  },
+  "retention": {
+    "critical_clip_days": 14,
+    "min_storage_reserve_mb": 512,
+    "legal_hold": false
+  },
+  "feature_flags": {
+    "camera_enabled": true,
+    "audio_event_checks_enabled": false,
+    "ai_enabled": true,
+    "can_bus_enabled": true,
+    "driver_lockout_enabled": true
+  }
+}

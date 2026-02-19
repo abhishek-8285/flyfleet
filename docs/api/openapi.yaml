@@ -291,6 +291,531 @@ paths:
               schema:
                 $ref: '#/components/schemas/DashboardMetrics'
 
+  /devices/summary:
+    get:
+      summary: Get device diagnostics summary
+      description: Retrieve organization-level diagnostics counters for managed devices.
+      tags: [Devices]
+      parameters:
+        - name: org_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Optional organization identifier for super-admin contexts.
+      responses:
+        '200':
+          description: Diagnostics summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_devices:
+                    type: integer
+                  online_devices:
+                    type: integer
+                  offline_devices:
+                    type: integer
+                  low_battery:
+                    type: integer
+                  weak_signal:
+                    type: integer
+                  system_errors:
+                    type: integer
+                  new_devices_week:
+                    type: integer
+
+  /devices/twins:
+    get:
+      summary: List device twins
+      description: Retrieve desired/reported state snapshots for device digital twins.
+      tags: [Devices]
+      parameters:
+        - $ref: '#/components/parameters/pageSize'
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Device twins list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  twins:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        device_id:
+                          type: string
+                          format: uuid
+                        desired_state:
+                          type: object
+                          additionalProperties: true
+                        reported_state:
+                          type: object
+                          additionalProperties: true
+                        desired_updated_at:
+                          type: string
+                          format: date-time
+                        reported_updated_at:
+                          type: string
+                          format: date-time
+
+  /firmware/rollouts:
+    get:
+      summary: List firmware rollouts
+      description: Retrieve firmware rollout jobs for the current organization.
+      tags: [Devices, Firmware]
+      parameters:
+        - $ref: '#/components/parameters/pageSize'
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Firmware rollouts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rollouts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        firmware_id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        target_group:
+                          type: string
+                        status:
+                          type: string
+                          enum: [scheduled, in_progress, paused, completed, cancelled]
+                        total_devices:
+                          type: integer
+                        completed_devices:
+                          type: integer
+                        failed_devices:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+                        started_at:
+                          type: string
+                          format: date-time
+                        completed_at:
+                          type: string
+                          format: date-time
+    post:
+      summary: Create firmware rollout
+      description: Create a new firmware rollout job for a target device group.
+      tags: [Devices, Firmware]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firmware_id, name, target_group, total_devices]
+              properties:
+                firmware_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                target_group:
+                  type: string
+                total_devices:
+                  type: integer
+                  minimum: 1
+      responses:
+        '201':
+          description: Rollout created
+
+  /firmware/rollouts/{id}/status:
+    patch:
+      summary: Transition firmware rollout status
+      description: Transition rollout lifecycle state with server-side transition validation.
+      tags: [Devices, Firmware]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [scheduled, in_progress, paused, completed, cancelled]
+                reason:
+                  type: string
+                  description: Optional operator reason for this transition, recorded in rollout events.
+      responses:
+        '200':
+          description: Rollout status updated
+        '400':
+          description: Invalid status transition
+        '404':
+          description: Rollout not found
+
+  /firmware/rollouts/{id}:
+    get:
+      summary: Get firmware rollout by ID
+      description: Retrieve a single rollout record for the current organization.
+      tags: [Devices, Firmware]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rollout details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  firmware_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [scheduled, in_progress, paused, completed, cancelled]
+        '404':
+          description: Rollout not found
+
+  /firmware/rollouts/{id}/events:
+    get:
+      summary: List rollout events
+      description: Retrieve rollout audit and lifecycle events for a single rollout.
+      tags: [Devices, Firmware]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: event_type
+          in: query
+          description: |
+            Optional rollout event filter. Short aliases (`note`, `transition`, `created`)
+            are accepted and normalized to canonical values.
+          schema:
+            type: string
+            enum:
+              - note
+              - transition
+              - created
+              - rollout.note
+              - rollout.transition
+              - rollout.created
+      responses:
+        '200':
+          description: Rollout events list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    rollout_id:
+                      type: string
+                      format: uuid
+                    event_type:
+                      type: string
+                      enum: [rollout.note, rollout.transition, rollout.created]
+                    from_status:
+                      type: string
+                    to_status:
+                      type: string
+                    message:
+                      type: string
+                    actor_user_id:
+                      type: string
+                      format: uuid
+                    metadata:
+                      type: object
+                      additionalProperties: true
+                    created_at:
+                      type: string
+                      format: date-time
+        '400':
+          description: Invalid request (e.g., invalid event_type)
+    post:
+      summary: Add rollout note event
+      description: Append an operator note to rollout audit history.
+      tags: [Devices, Firmware]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                metadata:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '201':
+          description: Rollout note created
+        '400':
+          description: Invalid request
+
+  /settings/export:
+    get:
+      summary: Export settings snapshot
+      description: Returns a full snapshot of platform settings for backup/audit workflows.
+      tags: [Settings]
+      responses:
+        '200':
+          description: Settings snapshot payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsExport'
+
+  /settings/audit:
+    get:
+      summary: List settings audit logs
+      description: Lists settings audit entries with optional entity/action filters.
+      tags: [Settings]
+      parameters:
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLog'
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '400':
+          description: Invalid query parameters
+
+  /settings/import:
+    post:
+      summary: Import settings snapshot
+      description: Upserts settings payload into current platform configuration.
+      tags: [Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsImportRequest'
+      responses:
+        '200':
+          description: Import result summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsImportResult'
+        '400':
+          description: Validation error
+
+  /finance/expenses/reports:
+    get:
+      summary: List expense reports
+      tags: [Finance]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Expense reports list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExpenseReport'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /finance/expenses/policies:
+    get:
+      summary: List expense policies
+      tags: [Finance]
+      responses:
+        '200':
+          description: Expense policies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExpensePolicy'
+    put:
+      summary: Upsert expense policy
+      tags: [Finance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpensePolicy'
+      responses:
+        '200':
+          description: Policy saved
+
+  /finance/revenue/forecast:
+    get:
+      summary: Get revenue forecast by route
+      tags: [Finance, Analytics]
+      parameters:
+        - name: route_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revenue forecast
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  forecast:
+                    $ref: '#/components/schemas/RevenueForecast'
+
+  /finance/revenue/experiments:
+    get:
+      summary: List revenue experiments
+      tags: [Finance, Analytics]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Revenue experiments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ABTestExperiment'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -673,3 +1198,301 @@ components:
           type: integer
         total_pages:
           type: integer
+
+    PlatformSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        system_name:
+          type: string
+        support_email:
+          type: string
+          format: email
+        default_timezone:
+          type: string
+        default_currency:
+          type: string
+        default_language:
+          type: string
+        white_label_enabled:
+          type: boolean
+        smtp_config_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    FeatureFlag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        description:
+          type: string
+        scope:
+          type: string
+        enabled:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        created_by:
+          type: string
+          format: uuid
+
+    LocalizationSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        language_code:
+          type: string
+        is_active:
+          type: boolean
+        is_default:
+          type: boolean
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        channel:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        updated_by:
+          type: string
+          format: uuid
+
+    NotificationChannel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        channel_type:
+          type: string
+        provider:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+
+    SystemLimit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        api_rate_limit:
+          type: integer
+          minimum: 0
+        burst_limit:
+          type: integer
+        audit_retention:
+          type: string
+        activity_retention:
+          type: string
+
+    SettingsExport:
+      type: object
+      properties:
+        platform_settings:
+          $ref: '#/components/schemas/PlatformSettings'
+        feature_flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureFlag'
+        localization_settings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizationSettings'
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        notification_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+        system_limits:
+          $ref: '#/components/schemas/SystemLimit'
+        exported_at:
+          type: string
+          format: date-time
+
+    SettingsImportRequest:
+      type: object
+      properties:
+        platform_settings:
+          $ref: '#/components/schemas/PlatformSettings'
+        feature_flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureFlag'
+        localization_settings:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizationSettings'
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        notification_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationChannel'
+        system_limits:
+          $ref: '#/components/schemas/SystemLimit'
+        replace_existing:
+          type: boolean
+
+    SettingsImportResult:
+      type: object
+      properties:
+        platform_updated:
+          type: boolean
+        feature_flags_created:
+          type: integer
+        feature_flags_updated:
+          type: integer
+        feature_flags_deleted:
+          type: integer
+        localization_upserted:
+          type: integer
+        templates_created:
+          type: integer
+        templates_updated:
+          type: integer
+        channels_upserted:
+          type: integer
+        system_limits_updated:
+          type: boolean
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+          nullable: true
+        action:
+          type: string
+        actor_id:
+          type: string
+          format: uuid
+        actor_ip:
+          type: string
+        changes:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    ExpensePolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        limit_amount:
+          type: number
+        currency:
+          type: string
+        requires_approval:
+          type: boolean
+        receipt_required:
+          type: boolean
+        description:
+          type: string
+
+    ExpenseReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        submitter_id:
+          type: string
+          format: uuid
+        total_amount:
+          type: number
+        currency:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    RevenueForecast:
+      type: object
+      properties:
+        route_id:
+          type: string
+        predicted_demand:
+          type: number
+        current_demand:
+          type: number
+        suggested_price:
+          type: number
+        base_price:
+          type: number
+        confidence_pct:
+          type: number
+
+    ABTestExperiment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        variants:
+          type: array
+          items:
+            type: string
+        metrics:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time

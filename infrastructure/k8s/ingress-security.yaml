@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flyfleet-ingress
+  namespace: flyfleet
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Web Application Firewall
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine On
+      SecConnReadStateLimit 50
+    # Rate Limiting & DDoS protection
+    nginx.ingress.kubernetes.io/limit-connections: "20"
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+spec:
+  tls:
+  - hosts:
+    - api.flyfleet.io
+    - dashboard.flyfleet.io
+    secretName: flyfleet-tls-secret
+  rules:
+  - host: api.flyfleet.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-bff-service
+            port:
+              number: 8081
+  - host: dashboard.flyfleet.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dashboard-web-service
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flyfleet-db-secret
+  namespace: flyfleet
+type: Opaque
+data:
+  # Base64 encoded placeholders - User should update these
+  username: dGhlLXVzZXJuYW1lCg==
+  password: dGhlLXBhc3N3b3JkCg==

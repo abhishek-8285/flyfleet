@@ -1,102 +1,125 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 // AnalyticsHandler handles HTTP requests for analytics operations
 type AnalyticsHandler struct {
 	service service.AnalyticsService
+	logger  *zap.Logger
 }
 
 // NewAnalyticsHandler creates a new instance of AnalyticsHandler
-func NewAnalyticsHandler(service service.AnalyticsService) *AnalyticsHandler {
+func NewAnalyticsHandler(service service.AnalyticsService, logger *zap.Logger) *AnalyticsHandler {
 	return &AnalyticsHandler{
 		service: service,
+		logger:  logger,
 	}
 }
 
-// RegisterRoutes registers the analytics routes with the provided router group
-func (h *AnalyticsHandler) RegisterRoutes(rg *gin.RouterGroup) {
-	analytics := rg.Group("/analytics")
-	{
-		// Predictive Models
-		analytics.POST("/predictive-models", h.CreatePredictiveModel)
-		analytics.GET("/predictive-models/:id", h.GetPredictiveModel)
-		analytics.PUT("/predictive-models/:id", h.UpdatePredictiveModel)
-		analytics.DELETE("/predictive-models/:id", h.DeletePredictiveModel)
-		analytics.GET("/predictive-models", h.ListPredictiveModels)
-		analytics.GET("/predictive-models/version", h.GetPredictiveModelByVersion)
+// RegisterRoutes registers the analytics routes
+func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
+	// Predictive Models
+	r.Route("/predictive-models", func(r chi.Router) {
+		r.Post("/", h.CreatePredictiveModel)
+		r.Get("/", h.ListPredictiveModels)
+		r.Get("/version", h.GetPredictiveModelByVersion)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetPredictiveModel)
+			r.Put("/", h.UpdatePredictiveModel)
+			r.Delete("/", h.DeletePredictiveModel)
+		})
+	})
 
-		// Prediction Results
-		analytics.POST("/predictions", h.CreatePredictionResult)
-		analytics.GET("/predictions/:id", h.GetPredictionResult)
-		analytics.GET("/predictions/model/:modelId", h.GetPredictionResultsByModel)
-		analytics.GET("/predictions/org", h.GetPredictionResultsByOrg)
-		analytics.GET("/predictions", h.ListPredictionResults)
+	// Prediction Results
+	r.Route("/predictions", func(r chi.Router) {
+		r.Post("/", h.CreatePredictionResult)
+		r.Get("/", h.ListPredictionResults)
+		r.Get("/org", h.GetPredictionResultsByOrg)
+		r.Get("/{id}", h.GetPredictionResult)
+		r.Get("/model/{modelId}", h.GetPredictionResultsByModel)
+	})
 
-		// Analytics Jobs
-		analytics.POST("/jobs", h.CreateAnalyticsJob)
-		analytics.GET("/jobs/:id", h.GetAnalyticsJob)
-		analytics.PUT("/jobs/:id", h.UpdateAnalyticsJob)
-		analytics.DELETE("/jobs/:id", h.DeleteAnalyticsJob)
-		analytics.GET("/jobs", h.ListAnalyticsJobs)
+	// Analytics Jobs
+	r.Route("/jobs", func(r chi.Router) {
+		r.Post("/", h.CreateAnalyticsJob)
+		r.Get("/", h.ListAnalyticsJobs)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetAnalyticsJob)
+			r.Put("/", h.UpdateAnalyticsJob)
+			r.Delete("/", h.DeleteAnalyticsJob)
+		})
+	})
 
-		// Fleet Analytics
-		analytics.POST("/fleet", h.CreateFleetAnalytics)
-		analytics.GET("/fleet/:id", h.GetFleetAnalytics)
-		analytics.GET("/fleet/period", h.GetFleetAnalyticsByPeriod)
-		analytics.PUT("/fleet/:id", h.UpdateFleetAnalytics)
-		analytics.DELETE("/fleet/:id", h.DeleteFleetAnalytics)
-		analytics.GET("/fleet", h.ListFleetAnalytics)
+	// Fleet Analytics
+	r.Route("/fleet", func(r chi.Router) {
+		r.Post("/", h.CreateFleetAnalytics)
+		r.Get("/", h.ListFleetAnalytics)
+		r.Get("/period", h.GetFleetAnalyticsByPeriod)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetFleetAnalytics)
+			r.Put("/", h.UpdateFleetAnalytics)
+			r.Delete("/", h.DeleteFleetAnalytics)
+		})
+	})
 
-		// Driver Behavior
-		analytics.POST("/driver-behavior", h.CreateDriverBehaviorAnalytics)
-		analytics.GET("/driver-behavior/:id", h.GetDriverBehaviorAnalytics)
-		analytics.GET("/driver-behavior/driver", h.GetDriverBehaviorAnalyticsByDriver)
-		analytics.GET("/driver-behavior/org", h.GetDriverBehaviorAnalyticsByOrg)
-		analytics.PUT("/driver-behavior/:id", h.UpdateDriverBehaviorAnalytics)
-		analytics.DELETE("/driver-behavior/:id", h.DeleteDriverBehaviorAnalytics)
-		analytics.GET("/driver-behavior", h.ListDriverBehaviorAnalytics)
+	// Driver Behavior
+	r.Route("/driver-behavior", func(r chi.Router) {
+		r.Post("/", h.CreateDriverBehaviorAnalytics)
+		r.Get("/", h.ListDriverBehaviorAnalytics)
+		r.Get("/driver", h.GetDriverBehaviorAnalyticsByDriver)
+		r.Get("/org", h.GetDriverBehaviorAnalyticsByOrg)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetDriverBehaviorAnalytics)
+			r.Put("/", h.UpdateDriverBehaviorAnalytics)
+			r.Delete("/", h.DeleteDriverBehaviorAnalytics)
+		})
+	})
 
-		// Predictive Maintenance
-		analytics.POST("/predictive-maintenance", h.CreatePredictiveMaintenanceAnalytics)
-		analytics.GET("/predictive-maintenance/:id", h.GetPredictiveMaintenanceAnalytics)
-		analytics.GET("/predictive-maintenance/vehicle", h.GetPredictiveMaintenanceAnalyticsByVehicle)
-		analytics.PUT("/predictive-maintenance/:id", h.UpdatePredictiveMaintenanceAnalytics)
-		analytics.DELETE("/predictive-maintenance/:id", h.DeletePredictiveMaintenanceAnalytics)
-		analytics.GET("/predictive-maintenance", h.ListPredictiveMaintenanceAnalytics)
+	// Predictive Maintenance
+	r.Route("/predictive-maintenance", func(r chi.Router) {
+		r.Post("/", h.CreatePredictiveMaintenanceAnalytics)
+		r.Get("/", h.ListPredictiveMaintenanceAnalytics)
+		r.Get("/vehicle", h.GetPredictiveMaintenanceAnalyticsByVehicle)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetPredictiveMaintenanceAnalytics)
+			r.Put("/", h.UpdatePredictiveMaintenanceAnalytics)
+			r.Delete("/", h.DeletePredictiveMaintenanceAnalytics)
+		})
+	})
 
+	// Legacy/Placeholder endpoints
+	r.Get("/vehicle-analytics", h.GetVehicleAnalytics)
+	r.Get("/driver-analytics", h.GetDriverAnalytics)
+	r.Get("/trip-analytics", h.GetTripAnalytics)
+	r.Get("/forecast-analytics", h.GetForecastAnalytics)
 
-		// Legacy/Placeholder endpoints
-		analytics.GET("/vehicle-analytics", h.GetVehicleAnalytics)
-		analytics.GET("/driver-analytics", h.GetDriverAnalytics)
-		analytics.GET("/trip-analytics", h.GetTripAnalytics)
-		analytics.GET("/forecast-analytics", h.GetForecastAnalytics)
-
-		// Health Check
-		analytics.GET("/health", h.HealthCheck)
-	}
+	// Health Check
+	r.Get("/health", h.HealthCheck)
 }
 
 // CreatePredictiveModel handles the creation of a new predictive model
-func (h *AnalyticsHandler) CreatePredictiveModel(c *gin.Context) {
+func (h *AnalyticsHandler) CreatePredictiveModel(w http.ResponseWriter, r *http.Request) {
 	var model models.PredictiveModel
-	if err := c.ShouldBindJSON(&model); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&model); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validatePredictiveModel(&model); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -105,96 +128,97 @@ func (h *AnalyticsHandler) CreatePredictiveModel(c *gin.Context) {
 	model.CreatedAt = time.Now()
 	model.UpdatedAt = time.Now()
 
-	if err := h.service.CreatePredictiveModel(c.Request.Context(), &model); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreatePredictiveModel(r.Context(), &model); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, model)
+	h.writeJSONResponse(w, http.StatusCreated, model)
 }
 
 // GetPredictiveModel handles retrieving a predictive model by ID
-func (h *AnalyticsHandler) GetPredictiveModel(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetPredictiveModel(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	model, err := h.service.GetPredictiveModel(c.Request.Context(), id)
+	model, err := h.service.GetPredictiveModel(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, model)
+	h.writeJSONResponse(w, http.StatusOK, model)
 }
 
 // GetPredictiveModelByVersion handles retrieving a predictive model by name and version
-func (h *AnalyticsHandler) GetPredictiveModelByVersion(c *gin.Context) {
-	name := c.Query("name")
-	version := c.Query("version")
+func (h *AnalyticsHandler) GetPredictiveModelByVersion(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	version := r.URL.Query().Get("version")
 
 	if name == "" || version == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Name and version are required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Name and version are required", nil)
 		return
 	}
 
-	model, err := h.service.GetPredictiveModelByVersion(c.Request.Context(), name, version)
+	model, err := h.service.GetPredictiveModelByVersion(r.Context(), name, version)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, model)
+	h.writeJSONResponse(w, http.StatusOK, model)
 }
 
 // UpdatePredictiveModel handles updating an existing predictive model
-func (h *AnalyticsHandler) UpdatePredictiveModel(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate updates
 	if err := validatePredictiveModelUpdates(updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdatePredictiveModel(c.Request.Context(), id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdatePredictiveModel(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeletePredictiveModel handles deleting a predictive model
-func (h *AnalyticsHandler) DeletePredictiveModel(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeletePredictiveModel(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeletePredictiveModel(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListPredictiveModels handles listing predictive models with filtering
-func (h *AnalyticsHandler) ListPredictiveModels(c *gin.Context) {
-	modelType := parseStringParam(c.Query("type"))
-	status := parseStringParam(c.Query("status"))
+func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	modelType := parseStringParam(query.Get("type"))
+	status := parseStringParam(query.Get("status"))
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	models, totalCount, err := h.service.ListPredictiveModels(c.Request.Context(), modelType, status, limit, offset)
+	models, totalCount, err := h.service.ListPredictiveModels(r.Context(), modelType, status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        models,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -203,16 +227,16 @@ func (h *AnalyticsHandler) ListPredictiveModels(c *gin.Context) {
 }
 
 // CreatePredictionResult handles creating a new prediction result
-func (h *AnalyticsHandler) CreatePredictionResult(c *gin.Context) {
+func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http.Request) {
 	var result models.PredictionResult
-	if err := c.ShouldBindJSON(&result); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validatePredictionResult(&result); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -222,40 +246,40 @@ func (h *AnalyticsHandler) CreatePredictionResult(c *gin.Context) {
 	result.UpdatedAt = time.Now()
 	result.PredictedAt = time.Now()
 
-	if err := h.service.CreatePredictionResult(c.Request.Context(), &result); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreatePredictionResult(r.Context(), &result); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, result)
+	h.writeJSONResponse(w, http.StatusCreated, result)
 }
 
 // GetPredictionResult handles retrieving a prediction result by ID
-func (h *AnalyticsHandler) GetPredictionResult(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetPredictionResult(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	result, err := h.service.GetPredictionResult(c.Request.Context(), id)
+	result, err := h.service.GetPredictionResult(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
 // GetPredictionResultsByModel handles retrieving prediction results by model ID
-func (h *AnalyticsHandler) GetPredictionResultsByModel(c *gin.Context) {
-	modelID := c.Param("modelId")
+func (h *AnalyticsHandler) GetPredictionResultsByModel(w http.ResponseWriter, r *http.Request) {
+	modelID := chi.URLParam(r, "modelId")
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(r.URL.Query())
 
-	results, totalCount, err := h.service.GetPredictionResultsByModel(c.Request.Context(), modelID, limit, offset)
+	results, totalCount, err := h.service.GetPredictionResultsByModel(r.Context(), modelID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        results,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -264,23 +288,27 @@ func (h *AnalyticsHandler) GetPredictionResultsByModel(c *gin.Context) {
 }
 
 // GetPredictionResultsByOrg handles retrieving prediction results by organization
-func (h *AnalyticsHandler) GetPredictionResultsByOrg(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) GetPredictionResultsByOrg(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(r.URL.Query())
 
-	results, totalCount, err := h.service.GetPredictionResultsByOrg(c.Request.Context(), orgID, limit, offset)
+	results, totalCount, err := h.service.GetPredictionResultsByOrg(r.Context(), orgID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        results,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -289,26 +317,31 @@ func (h *AnalyticsHandler) GetPredictionResultsByOrg(c *gin.Context) {
 }
 
 // ListPredictionResults handles listing prediction results with filtering
-func (h *AnalyticsHandler) ListPredictionResults(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
-	modelID := parseStringParam(c.Query("modelId"))
-	anomalyDetected := parseBoolParam(c.Query("anomalyDetected"))
+	modelID := parseStringParam(query.Get("modelId"))
+	anomalyDetected := parseBoolParam(query.Get("anomalyDetected"))
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	results, totalCount, err := h.service.ListPredictionResults(c.Request.Context(), orgID, modelID, anomalyDetected, limit, offset)
+	results, totalCount, err := h.service.ListPredictionResults(r.Context(), orgID, modelID, anomalyDetected, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        results,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -317,16 +350,16 @@ func (h *AnalyticsHandler) ListPredictionResults(c *gin.Context) {
 }
 
 // CreateAnalyticsJob handles creating a new analytics job
-func (h *AnalyticsHandler) CreateAnalyticsJob(c *gin.Context) {
+func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	var job models.AnalyticsJob
-	if err := c.ShouldBindJSON(&job); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validateAnalyticsJob(&job); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -335,84 +368,89 @@ func (h *AnalyticsHandler) CreateAnalyticsJob(c *gin.Context) {
 	job.CreatedAt = time.Now()
 	job.UpdatedAt = time.Now()
 
-	if err := h.service.CreateAnalyticsJob(c.Request.Context(), &job); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateAnalyticsJob(r.Context(), &job); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, job)
+	h.writeJSONResponse(w, http.StatusCreated, job)
 }
 
 // GetAnalyticsJob handles retrieving an analytics job by ID
-func (h *AnalyticsHandler) GetAnalyticsJob(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetAnalyticsJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	job, err := h.service.GetAnalyticsJob(c.Request.Context(), id)
+	job, err := h.service.GetAnalyticsJob(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, job)
+	h.writeJSONResponse(w, http.StatusOK, job)
 }
 
 // UpdateAnalyticsJob handles updating an existing analytics job
-func (h *AnalyticsHandler) UpdateAnalyticsJob(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate updates
 	if err := validateAnalyticsJobUpdates(updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateAnalyticsJob(c.Request.Context(), id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateAnalyticsJob(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteAnalyticsJob handles deleting an analytics job
-func (h *AnalyticsHandler) DeleteAnalyticsJob(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) DeleteAnalyticsJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteAnalyticsJob(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteAnalyticsJob(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListAnalyticsJobs handles listing analytics jobs with filtering
-func (h *AnalyticsHandler) ListAnalyticsJobs(c *gin.Context) {
-	jobType := parseStringParam(c.Query("jobType"))
-	status := parseStringParam(c.Query("status"))
+func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	jobType := parseStringParam(query.Get("jobType"))
+	status := parseStringParam(query.Get("status"))
 
-	orgIDStr := c.Query("orgId")
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	jobs, totalCount, err := h.service.ListAnalyticsJobs(c.Request.Context(), jobType, status, orgID, limit, offset)
+	jobs, totalCount, err := h.service.ListAnalyticsJobs(r.Context(), jobType, status, orgID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        jobs,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -421,16 +459,16 @@ func (h *AnalyticsHandler) ListAnalyticsJobs(c *gin.Context) {
 }
 
 // CreateFleetAnalytics handles creating new fleet analytics
-func (h *AnalyticsHandler) CreateFleetAnalytics(c *gin.Context) {
+func (h *AnalyticsHandler) CreateFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	var analytics models.FleetAnalytics
-	if err := c.ShouldBindJSON(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validateFleetAnalytics(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -440,134 +478,144 @@ func (h *AnalyticsHandler) CreateFleetAnalytics(c *gin.Context) {
 	analytics.UpdatedAt = time.Now()
 	analytics.GeneratedAt = time.Now()
 
-	if err := h.service.CreateFleetAnalytics(c.Request.Context(), &analytics); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateFleetAnalytics(r.Context(), &analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, analytics)
+	h.writeJSONResponse(w, http.StatusCreated, analytics)
 }
 
 // GetFleetAnalytics handles retrieving fleet analytics by ID
-func (h *AnalyticsHandler) GetFleetAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetFleetAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	analytics, err := h.service.GetFleetAnalytics(c.Request.Context(), id)
+	analytics, err := h.service.GetFleetAnalytics(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // GetFleetAnalyticsByPeriod handles retrieving fleet analytics by organization and date period
-func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
-	startDateStr := c.Query("startDate")
-	endDateStr := c.Query("endDate")
+	startDateStr := query.Get("startDate")
+	endDateStr := query.Get("endDate")
 
 	startDate, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start date format, expected YYYY-MM-DD"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid start date format, expected YYYY-MM-DD", err)
 		return
 	}
 
 	endDate, err := time.Parse("2006-01-02", endDateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end date format, expected YYYY-MM-DD"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid end date format, expected YYYY-MM-DD", err)
 		return
 	}
 
-	analytics, err := h.service.GetFleetAnalyticsByPeriod(c.Request.Context(), orgID, startDate, endDate)
+	analytics, err := h.service.GetFleetAnalyticsByPeriod(r.Context(), orgID, startDate, endDate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // UpdateFleetAnalytics handles updating existing fleet analytics
-func (h *AnalyticsHandler) UpdateFleetAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) UpdateFleetAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate updates
 	if err := validateFleetAnalyticsUpdates(updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateFleetAnalytics(c.Request.Context(), id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateFleetAnalytics(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteFleetAnalytics handles deleting fleet analytics
-func (h *AnalyticsHandler) DeleteFleetAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) DeleteFleetAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteFleetAnalytics(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteFleetAnalytics(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListFleetAnalytics handles listing fleet analytics with filtering
-func (h *AnalyticsHandler) ListFleetAnalytics(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) ListFleetAnalytics(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
 	var startDate, endDate *time.Time
 
-	if startDateStr := c.Query("startDate"); startDateStr != "" {
+	if startDateStr := query.Get("startDate"); startDateStr != "" {
 		date, err := time.Parse("2006-01-02", startDateStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start date format, expected YYYY-MM-DD"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid start date format, expected YYYY-MM-DD", err)
 			return
 		}
 		startDate = &date
 	}
 
-	if endDateStr := c.Query("endDate"); endDateStr != "" {
+	if endDateStr := query.Get("endDate"); endDateStr != "" {
 		date, err := time.Parse("2006-01-02", endDateStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end date format, expected YYYY-MM-DD"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid end date format, expected YYYY-MM-DD", err)
 			return
 		}
 		endDate = &date
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	analytics, totalCount, err := h.service.ListFleetAnalytics(c.Request.Context(), orgID, startDate, endDate, limit, offset)
+	analytics, totalCount, err := h.service.ListFleetAnalytics(r.Context(), orgID, startDate, endDate, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        analytics,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -576,16 +624,16 @@ func (h *AnalyticsHandler) ListFleetAnalytics(c *gin.Context) {
 }
 
 // CreateDriverBehaviorAnalytics handles creating new driver behavior analytics
-func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(c *gin.Context) {
+func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	var analytics models.DriverBehaviorAnalytics
-	if err := c.ShouldBindJSON(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validateDriverBehaviorAnalytics(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -595,45 +643,45 @@ func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(c *gin.Context) {
 	analytics.UpdatedAt = time.Now()
 	analytics.GeneratedAt = time.Now()
 
-	if err := h.service.CreateDriverBehaviorAnalytics(c.Request.Context(), &analytics); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateDriverBehaviorAnalytics(r.Context(), &analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, analytics)
+	h.writeJSONResponse(w, http.StatusCreated, analytics)
 }
 
 // GetDriverBehaviorAnalytics handles retrieving driver behavior analytics by ID
-func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	analytics, err := h.service.GetDriverBehaviorAnalytics(c.Request.Context(), id)
+	analytics, err := h.service.GetDriverBehaviorAnalytics(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // GetDriverBehaviorAnalyticsByDriver handles retrieving driver behavior analytics by driver ID
-func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(c *gin.Context) {
-	driverIDStr := c.Query("driverId")
+func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := r.URL.Query().Get("driverId")
 	driverID, err := uuid.Parse(driverIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
 		return
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(c.Request.Context(), driverID, limit, offset)
+	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(r.Context(), driverID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        analytics,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -642,23 +690,27 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(c *gin.Context) {
 }
 
 // GetDriverBehaviorAnalyticsByOrg handles retrieving driver behavior analytics by organization
-func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByOrg(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByOrg(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByOrg(c.Request.Context(), orgID, limit, offset)
+	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByOrg(r.Context(), orgID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        analytics,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -667,97 +719,110 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByOrg(c *gin.Context) {
 }
 
 // UpdateDriverBehaviorAnalytics handles updating existing driver behavior analytics
-func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate updates
 	if err := validateDriverBehaviorAnalyticsUpdates(updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateDriverBehaviorAnalytics(c.Request.Context(), id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateDriverBehaviorAnalytics(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteDriverBehaviorAnalytics handles deleting driver behavior analytics
-func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteDriverBehaviorAnalytics(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteDriverBehaviorAnalytics(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListDriverBehaviorAnalytics handles listing driver behavior analytics with filtering
-func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
 	var periodStart, periodEnd *time.Time
 
-	if periodStartStr := c.Query("periodStart"); periodStartStr != "" {
+	if periodStartStr := query.Get("periodStart"); periodStartStr != "" {
 		date, err := time.Parse("2006-01-02", periodStartStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid period start date format, expected YYYY-MM-DD"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid period start date format, expected YYYY-MM-DD", err)
 			return
 		}
 		periodStart = &date
 	}
 
-	if periodEndStr := c.Query("periodEnd"); periodEndStr != "" {
+	if periodEndStr := query.Get("periodEnd"); periodEndStr != "" {
 		date, err := time.Parse("2006-01-02", periodEndStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid period end date format, expected YYYY-MM-DD"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid period end date format, expected YYYY-MM-DD", err)
 			return
 		}
 		periodEnd = &date
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(c.Request.Context(), orgID, periodStart, periodEnd, limit, offset)
+	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), orgID, periodStart, periodEnd, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":        analytics,
-		"total_count": totalCount,
-		"limit":       limit,
-		"offset":      offset,
+	page := offset/limit + 1
+	totalPages := (totalCount + limit - 1) / limit
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data": analytics,
+		"meta": map[string]interface{}{
+			"total":       totalCount,
+			"page":        page,
+			"limit":       limit,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
 	})
 }
 
 // CreatePredictiveMaintenanceAnalytics handles creating new predictive maintenance analytics
-func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(c *gin.Context) {
+func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	var analytics models.PredictiveMaintenanceAnalytics
-	if err := c.ShouldBindJSON(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate required fields
 	if err := validatePredictiveMaintenanceAnalytics(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -767,45 +832,45 @@ func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(c *gin.Context) 
 	analytics.UpdatedAt = time.Now()
 	analytics.GeneratedAt = time.Now()
 
-	if err := h.service.CreatePredictiveMaintenanceAnalytics(c.Request.Context(), &analytics); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreatePredictiveMaintenanceAnalytics(r.Context(), &analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, analytics)
+	h.writeJSONResponse(w, http.StatusCreated, analytics)
 }
 
 // GetPredictiveMaintenanceAnalytics handles retrieving predictive maintenance analytics by ID
-func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(c.Request.Context(), id)
+	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // GetPredictiveMaintenanceAnalyticsByVehicle handles retrieving predictive maintenance analytics by vehicle ID
-func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(c *gin.Context) {
-	vehicleIDStr := c.Query("vehicleId")
+func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicleId")
 	vehicleID, err := uuid.Parse(vehicleIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
 		return
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(c.Request.Context(), vehicleID, limit, offset)
+	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        analytics,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -814,85 +879,98 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(c *gin.Con
 }
 
 // UpdatePredictiveMaintenanceAnalytics handles updating existing predictive maintenance analytics
-func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate updates
 	if err := validatePredictiveMaintenanceAnalyticsUpdates(updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdatePredictiveMaintenanceAnalytics(c.Request.Context(), id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeletePredictiveMaintenanceAnalytics handles deleting predictive maintenance analytics
-func (h *AnalyticsHandler) DeletePredictiveMaintenanceAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *AnalyticsHandler) DeletePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeletePredictiveMaintenanceAnalytics(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListPredictiveMaintenanceAnalytics handles listing predictive maintenance analytics with filtering
-func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(c *gin.Context) {
-	orgIDStr := c.Query("orgId")
+func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		orgID = h.getOrgID(r)
+	}
+
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
 	var vehicleID *uuid.UUID
 
-	if vehicleIDStr := c.Query("vehicleId"); vehicleIDStr != "" {
+	if vehicleIDStr := query.Get("vehicleId"); vehicleIDStr != "" {
 		parsedUUID, err := uuid.Parse(vehicleIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle ID"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
 			return
 		}
 		vehicleID = &parsedUUID
 	}
 
-	limit, offset := parsePaginationParams(c.Request.URL.Query())
+	limit, offset := parsePaginationParams(query)
 
-	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(c.Request.Context(), orgID, vehicleID, limit, offset)
+	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), orgID, vehicleID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":        analytics,
-		"total_count": totalCount,
-		"limit":       limit,
-		"offset":      offset,
+	page := offset/limit + 1
+	totalPages := (totalCount + limit - 1) / limit
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data": analytics,
+		"meta": map[string]interface{}{
+			"total":       totalCount,
+			"page":        page,
+			"limit":       limit,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
 	})
 }
 
 // HealthCheck handles health check requests
-func (h *AnalyticsHandler) HealthCheck(c *gin.Context) {
-	if err := h.service.HealthCheck(c.Request.Context()); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service unavailable"})
+func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	if err := h.service.HealthCheck(r.Context()); err != nil {
+		h.writeErrorResponse(w, http.StatusServiceUnavailable, "Service unavailable", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
 // Validation functions
@@ -1079,30 +1157,56 @@ func parsePaginationParams(values map[string][]string) (int, int) {
 	return limit, offset
 }
 
-func (h *AnalyticsHandler) GetVehicleAnalytics(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *AnalyticsHandler) GetVehicleAnalytics(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Vehicle analytics endpoint",
 		"data":    []interface{}{},
 	})
 }
 
-func (h *AnalyticsHandler) GetDriverAnalytics(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *AnalyticsHandler) GetDriverAnalytics(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Driver analytics endpoint",
 		"data":    []interface{}{},
 	})
 }
 
-func (h *AnalyticsHandler) GetTripAnalytics(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *AnalyticsHandler) GetTripAnalytics(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Trip analytics endpoint",
 		"data":    []interface{}{},
 	})
 }
 
-func (h *AnalyticsHandler) GetForecastAnalytics(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func (h *AnalyticsHandler) GetForecastAnalytics(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Forecast analytics endpoint",
 		"data":    []interface{}{},
 	})
+}
+
+func (h *AnalyticsHandler) writeJSONResponse(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			h.logger.Error("Failed to encode JSON response", zap.Error(err))
+		}
+	}
+}
+
+func (h *AnalyticsHandler) writeErrorResponse(w http.ResponseWriter, status int, message string, err error) {
+	resp := map[string]string{"error": message}
+	if err != nil && status >= 500 {
+		h.logger.Error(message, zap.Error(err))
+	}
+	h.writeJSONResponse(w, status, resp)
+}
+
+func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		return uuid.Nil
+	}
+	return orgID
 }

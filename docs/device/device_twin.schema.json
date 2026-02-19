@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.local/schemas/device-twin.schema.json",
+  "title": "Device Twin",
+  "type": "object",
+  "required": ["device_id", "desired_state", "reported_state", "last_seen", "drift_status"],
+  "properties": {
+    "device_id": {"type": "string", "minLength": 1},
+    "desired_state": {"type": "object"},
+    "reported_state": {"type": "object"},
+    "last_seen": {"type": "string", "format": "date-time"},
+    "drift_status": {"type": "string", "enum": ["in_sync", "drifted", "unknown"]},
+    "drift_reason": {"type": "string"}
+  },
+  "additionalProperties": false
+}

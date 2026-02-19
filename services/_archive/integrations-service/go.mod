@@ -2,7 +2,7 @@ module github.com/flyfleet/integrations-service
 
 go 1.25.7
 
-replace github.com/fleet-platform/shared => /home/abhishek/Desktop/flyfleet/packages/common/go
+replace github.com/fleet-platform/shared => ../../packages/common/go
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5

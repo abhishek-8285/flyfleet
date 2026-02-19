@@ -1,0 +1,35 @@
+name: Firmware OTA Foundation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/firmware/**'
+      - 'firmware/releases/**'
+      - 'scripts/firmware_ota_validator.py'
+      - 'scripts/check_firmware_ota_foundation.py'
+      - '.github/workflows/firmware-ota-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/firmware/**'
+      - 'firmware/releases/**'
+      - 'scripts/firmware_ota_validator.py'
+      - 'scripts/check_firmware_ota_foundation.py'
+      - '.github/workflows/firmware-ota-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  firmware-ota-foundation:
+    name: Validate Firmware OTA Foundation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run OTA foundation checks
+        run: python3 scripts/check_firmware_ota_foundation.py

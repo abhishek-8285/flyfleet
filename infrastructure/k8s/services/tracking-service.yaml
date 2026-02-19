@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracking-service
+  namespace: flyfleet
+  labels:
+    app: tracking-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tracking-service
+  template:
+    metadata:
+      labels:
+        app: tracking-service
+    spec:
+      containers:
+      - name: tracking-service
+        image: flyfleet/tracking-service:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: flyfleet-config
+        - secretRef:
+            name: flyfleet-secrets
+        env:
+        - name: NATS_URL
+          value: nats://nats-headless.flyfleet.svc.cluster.local:4222
+        - name: DB_HOST
+          value: timescaledb-service.flyfleet.svc.cluster.local
+        - name: DB_NAME
+          value: "telemetry"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 20
+          periodSeconds: 40
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "1000m"
+          limits:
+            memory: "1Gi"
+            cpu: "2000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracking-service
+  namespace: flyfleet
+spec:
+  selector:
+    app: tracking-service
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tracking-service-hpa
+  namespace: flyfleet
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tracking-service
+  minReplicas: 3
+  maxReplicas: 15
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 65
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: tracking-pdb
+  namespace: flyfleet
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: tracking-service

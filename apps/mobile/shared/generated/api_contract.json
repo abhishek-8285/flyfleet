@@ -1,0 +1,619 @@
+{
+  "operation_count": 27,
+  "operations": [
+    {
+      "method": "GET",
+      "operationId": "get_analytics_dashboard",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "org_id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "period",
+          "required": true,
+          "schema": {
+            "enum": [
+              "today",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ],
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/analytics/dashboard",
+      "summary": "Get dashboard analytics",
+      "tags": [
+        "Analytics"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_auth_login",
+      "parameters": [],
+      "path": "/auth/login",
+      "summary": "User login",
+      "tags": [
+        "Authentication"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_devices_summary",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "org_id",
+          "required": false,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/devices/summary",
+      "summary": "Get device diagnostics summary",
+      "tags": [
+        "Devices"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_devices_twins",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/devices/twins",
+      "summary": "List device twins",
+      "tags": [
+        "Devices"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_drivers",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "enum": [
+              "active",
+              "inactive",
+              "suspended"
+            ],
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/drivers",
+      "summary": "List drivers",
+      "tags": [
+        "Drivers"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_finance_expenses_policies",
+      "parameters": [],
+      "path": "/finance/expenses/policies",
+      "summary": "List expense policies",
+      "tags": [
+        "Finance"
+      ]
+    },
+    {
+      "method": "PUT",
+      "operationId": "put_finance_expenses_policies",
+      "parameters": [],
+      "path": "/finance/expenses/policies",
+      "summary": "Upsert expense policy",
+      "tags": [
+        "Finance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_finance_expenses_reports",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/finance/expenses/reports",
+      "summary": "List expense reports",
+      "tags": [
+        "Finance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_finance_revenue_experiments",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 20,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/finance/revenue/experiments",
+      "summary": "List revenue experiments",
+      "tags": [
+        "Finance",
+        "Analytics"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_finance_revenue_forecast",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "route_id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/finance/revenue/forecast",
+      "summary": "Get revenue forecast by route",
+      "tags": [
+        "Finance",
+        "Analytics"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_firmware_rollouts",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/firmware/rollouts",
+      "summary": "List firmware rollouts",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_firmware_rollouts",
+      "parameters": [],
+      "path": "/firmware/rollouts",
+      "summary": "Create firmware rollout",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_firmware_rollouts_id",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/firmware/rollouts/{id}",
+      "summary": "Get firmware rollout by ID",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_firmware_rollouts_id_events",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "event_type",
+          "required": false,
+          "schema": {
+            "enum": [
+              "note",
+              "transition",
+              "created",
+              "rollout.note",
+              "rollout.transition",
+              "rollout.created"
+            ],
+            "type": "string"
+          }
+        },
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/firmware/rollouts/{id}/events",
+      "summary": "List rollout events",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_firmware_rollouts_id_events",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/firmware/rollouts/{id}/events",
+      "summary": "Add rollout note event",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "operationId": "patch_firmware_rollouts_id_status",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/firmware/rollouts/{id}/status",
+      "summary": "Transition firmware rollout status",
+      "tags": [
+        "Devices",
+        "Firmware"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_maintenance_schedules",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "enum": [
+              "scheduled",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ],
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "vehicle_id",
+          "required": false,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/maintenance/schedules",
+      "summary": "List maintenance schedules",
+      "tags": [
+        "Maintenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_maintenance_schedules",
+      "parameters": [],
+      "path": "/maintenance/schedules",
+      "summary": "Create maintenance schedule",
+      "tags": [
+        "Maintenance"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_settings_audit",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "action",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "entity_type",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "schema": {
+            "default": 50,
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "query",
+          "name": "offset",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "type": "integer"
+          }
+        }
+      ],
+      "path": "/settings/audit",
+      "summary": "List settings audit logs",
+      "tags": [
+        "Settings"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_settings_export",
+      "parameters": [],
+      "path": "/settings/export",
+      "summary": "Export settings snapshot",
+      "tags": [
+        "Settings"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_settings_import",
+      "parameters": [],
+      "path": "/settings/import",
+      "summary": "Import settings snapshot",
+      "tags": [
+        "Settings"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_tracking_vehicles_id_location",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "timestamp",
+          "required": false,
+          "schema": {
+            "format": "date-time",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/tracking/vehicles/{id}/location",
+      "summary": "Get vehicle location",
+      "tags": [
+        "Tracking"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_trips",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "driver_id",
+          "required": false,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "schema": {
+            "enum": [
+              "requested",
+              "assigned",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ],
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "vehicle_id",
+          "required": false,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/trips",
+      "summary": "List trips",
+      "tags": [
+        "Trips"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_trips",
+      "parameters": [],
+      "path": "/trips",
+      "summary": "Create trip",
+      "tags": [
+        "Trips"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_vehicles",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "license_plate",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/vehicles",
+      "summary": "List vehicles",
+      "tags": [
+        "Vehicles"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_vehicles",
+      "parameters": [],
+      "path": "/vehicles",
+      "summary": "Create vehicle",
+      "tags": [
+        "Vehicles"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_vehicles_id",
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "format": "uuid",
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/vehicles/{id}",
+      "summary": "Get vehicle details",
+      "tags": [
+        "Vehicles"
+      ]
+    }
+  ],
+  "source": "docs/api/openapi.yaml",
+  "spec_sha256": "46031f8702230e4a23a54d59a03a4b71c977bc5000b2c92dfc08331e709d4abd",
+  "spec_version": "1.0.0"
+}

@@ -46,7 +46,13 @@ bin/
 *.out
 vendor/
 *.log
-*.md
+*.cover
+*.prof
+services/*/*-service
+services/*/web-bff
+services/*/auth-service
+services/*/vehicle-service
+services/*/fleet-core-service
 
 # Editors
 .vscode/
@@ -57,6 +63,8 @@ vendor/
 
 # Docker
 docker-compose.override.yml
+backups/**/*.gz
+uploads/
 
 # OS Generated
 Thumbs.db

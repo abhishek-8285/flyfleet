@@ -1,115 +1,123 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
-	"gopkg.in/go-playground/validator.v9"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/trip/service"
 )
 
 type TripHandler struct {
-	service *service.TripService
-	logger  *zap.Logger
+	service  *service.TripService
+	logger   *zap.Logger
+	validate *validator.Validate
 }
 
 func NewTripHandler(service *service.TripService, logger *zap.Logger) *TripHandler {
 	return &TripHandler{
-		service: service,
-		logger:  logger,
+		service:  service,
+		logger:   logger,
+		validate: validator.New(),
 	}
 }
 
+func (h *TripHandler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListTrips)
+	r.Post("/", h.CreateTrip)
+	r.Get("/stats", h.GetTripStats)
+	r.Get("/stats/drivers", h.GetDriverStats)
+	r.Get("/stats/trips", h.GetTripStats)
+
+	// Offer Routes
+	r.Get("/offers", h.GetDriverOffers)
+	r.Post("/offers/{id}/respond", h.RespondToOffer)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetTrip)
+		r.Put("/", h.UpdateTrip)
+		r.Delete("/", h.DeleteTrip)
+		r.Post("/start", h.StartTrip)
+		r.Post("/pause", h.PauseTrip)
+		r.Post("/resume", h.ResumeTrip)
+		r.Post("/complete", h.CompleteTrip)
+		r.Post("/cancel", h.CancelTrip)
+		r.Post("/events", h.AddEvent)
+		r.Post("/pod", h.SubmitPOD)
+		r.Post("/offer", h.OfferTrip)
+		r.Get("/optimize-route", h.OptimizeRoute)
+	})
+}
+
 // CreateTrip godoc
-// @Summary Create a new trip
-// @Description Create a new trip with planned route and waypoints
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param trip body models.CreateTripRequest true "Trip creation request"
-// @Success 201 {object} models.Trip
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips [post]
-func (h *TripHandler) CreateTrip(c *gin.Context) {
+func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTripRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Validate request
-	if err := validate.Struct(req); err != nil {
+	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
 		return
 	}
 
-	// Get org_id from context (would come from auth middleware)
-	orgID := c.GetString("org_id")
+	orgID := h.getOrgID(r)
 	if orgID == "" {
 		orgID = "550e8400-e29b-41d4-a716-446655440002" // fallback for testing
 	}
 
-	trip, err := h.service.Create(c.Request.Context(), orgID, &req)
+	trip, err := h.service.Create(r.Context(), orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to create trip", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, trip)
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": trip})
 }
 
 // GetTrip godoc
-// @Summary Get trip by ID
-// @Description Retrieve a trip by its ID
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Success 200 {object} models.Trip
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id} [get]
-func (h *TripHandler) GetTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
-	trip, err := h.service.Get(c.Request.Context(), id)
+	trip, err := h.service.Get(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get trip", zap.String("trip_id", id), zap.Error(err))
-		c.JSON(http.StatusNotFound, gin.H{"error": "trip not found"})
+		h.writeErrorResponse(w, http.StatusNotFound, "trip not found", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": trip})
 }
 
 // ListTrips godoc
-// @Summary List trips
-// @Description List trips with filtering and pagination
-// @Tags trips
-// @Produce json
-// @Param status query string false "Trip status filter"
-// @Param vehicle_id query string false "Vehicle ID filter"
-// @Param driver_id query string false "Driver ID filter"
-// @Param date_from query string false "Start date (YYYY-MM-DD)"
-// @Param date_to query string false "End date (YYYY-MM-DD)"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
-// @Success 200 {object} map[string]interface{}
-// @Failure 500 {object} map[string]string
-// @Router /trips [get]
-func (h *TripHandler) ListTrips(c *gin.Context) {
-	var filter models.TripListFilter
-	if err := c.ShouldBindQuery(&filter); err != nil {
-		h.logger.Error("invalid query parameters", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	filter := models.TripListFilter{
+		Status:    query.Get("status"),
+		VehicleID: query.Get("vehicle_id"),
+		DriverID:  query.Get("driver_id"),
+		DateFrom:  query.Get("date_from"),
+		DateTo:    query.Get("date_to"),
+		OrderBy:   query.Get("order_by"),
+		OrderDir:  query.Get("order_dir"),
+	}
+
+	if pageStr := query.Get("page"); pageStr != "" {
+		filter.Page, _ = strconv.Atoi(pageStr)
+	}
+	if pageSizeStr := query.Get("page_size"); pageSizeStr != "" {
+		filter.PageSize, _ = strconv.Atoi(pageSizeStr)
 	}
 
 	if filter.PageSize < 1 {
@@ -119,363 +127,245 @@ func (h *TripHandler) ListTrips(c *gin.Context) {
 		filter.Page = 1
 	}
 
-	trips, totalCount, err := h.service.List(c.Request.Context(), filter)
+	trips, totalCount, err := h.service.List(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("failed to list trips", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":       trips,
-		"total":      totalCount,
-		"page":       filter.Page,
-		"page_size":  filter.PageSize,
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":        trips,
+		"total":       totalCount,
+		"page":        filter.Page,
+		"page_size":   filter.PageSize,
 		"total_pages": (totalCount + filter.PageSize - 1) / filter.PageSize,
 	})
 }
 
 // UpdateTrip godoc
-// @Summary Update trip
-// @Description Update an existing trip (only for planned trips)
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param trip body models.UpdateTripRequest true "Trip update request"
-// @Success 200 {object} models.Trip
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id} [put]
-func (h *TripHandler) UpdateTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) UpdateTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
 	var req models.UpdateTripRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	trip, err := h.service.Update(c.Request.Context(), id, &req)
+	trip, err := h.service.Update(r.Context(), id, &req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": trip})
 }
 
 // DeleteTrip godoc
-// @Summary Delete trip
-// @Description Delete a planned trip
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Success 204
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id} [delete]
-func (h *TripHandler) DeleteTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) DeleteTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
-	if err := h.service.Delete(c.Request.Context(), id); err != nil {
+	if err := h.service.Delete(r.Context(), id); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // StartTrip godoc
-// @Summary Start trip
-// @Description Start a planned or paused trip
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param request body models.StartTripRequest true "Start trip request"
-// @Success 200 {object} models.Trip
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/start [post]
-func (h *TripHandler) StartTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
 	var req models.StartTripRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Get driver_id from context (would come from auth middleware)
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "550e8400-e29b-41d4-a716-446655440001" // fallback for testing
 	}
 
-	trip, err := h.service.Start(c.Request.Context(), id, driverID, &req)
+	trip, err := h.service.Start(r.Context(), id, driverID, &req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, trip)
 }
 
 // PauseTrip godoc
-// @Summary Pause trip
-// @Description Pause an in-progress trip
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Success 200 {object} models.Trip
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/pause [post]
-func (h *TripHandler) PauseTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) PauseTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
-	// Get driver_id from context
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "default-driver"
 	}
 
-	trip, err := h.service.Pause(c.Request.Context(), id, driverID)
+	trip, err := h.service.Pause(r.Context(), id, driverID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, trip)
 }
 
 // ResumeTrip godoc
-// @Summary Resume trip
-// @Description Resume a paused trip
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Success 200 {object} models.Trip
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/resume [post]
-func (h *TripHandler) ResumeTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) ResumeTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
-	// Get driver_id from context
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "default-driver"
 	}
 
-	trip, err := h.service.Resume(c.Request.Context(), id, driverID)
+	trip, err := h.service.Resume(r.Context(), id, driverID)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, trip)
 }
 
 // CompleteTrip godoc
-// @Summary Complete trip
-// @Description Complete an in-progress trip
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param request body models.CompleteTripRequest true "Complete trip request"
-// @Success 200 {object} models.Trip
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/complete [post]
-func (h *TripHandler) CompleteTrip(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
 	var req models.CompleteTripRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Get driver_id from context
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "default-driver"
 	}
 
-	trip, err := h.service.Complete(c.Request.Context(), id, driverID, &req)
+	trip, err := h.service.Complete(r.Context(), id, driverID, &req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, trip)
+	h.writeJSONResponse(w, http.StatusOK, trip)
 }
 
 // CancelTrip godoc
-// @Summary Cancel trip
-// @Description Cancel a trip
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param reason query string true "Cancellation reason"
-// @Success 204
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/cancel [post]
-func (h *TripHandler) CancelTrip(c *gin.Context) {
-	id := c.Param("id")
-	reason := c.Query("reason")
+func (h *TripHandler) CancelTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	reason := r.URL.Query().Get("reason")
 	
 	if reason == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "reason is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "reason is required", nil)
 		return
 	}
 
-	if err := h.service.Cancel(c.Request.Context(), id, reason); err != nil {
+	if err := h.service.Cancel(r.Context(), id, reason); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // AddEvent godoc
-// @Summary Add trip event
-// @Description Add an event to a trip
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param event body models.AddEventRequest true "Add event request"
-// @Success 204
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/events [post]
-func (h *TripHandler) AddEvent(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
 	var req models.AddEventRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Get driver_id from context
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "default-driver"
 	}
 
-	if err := h.service.AddEvent(c.Request.Context(), id, driverID, &req); err != nil {
+	if err := h.service.AddEvent(r.Context(), id, driverID, &req); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // SubmitPOD godoc
-// @Summary Submit proof of delivery
-// @Description Submit proof of delivery for a completed trip
-// @Tags trips
-// @Accept json
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param pod body models.SubmitPODRequest true "Submit POD request"
-// @Success 204
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/pod [post]
-func (h *TripHandler) SubmitPOD(c *gin.Context) {
-	id := c.Param("id")
+func (h *TripHandler) SubmitPOD(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 	
 	var req models.SubmitPODRequest
-	if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Get driver_id from context
-	driverID := c.GetString("driver_id")
+	driverID := h.getDriverID(r)
 	if driverID == "" {
 		driverID = "default-driver"
 	}
 
-	if err := h.service.SubmitPOD(c.Request.Context(), id, driverID, &req); err != nil {
+	if err := h.service.SubmitPOD(r.Context(), id, driverID, &req); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, status, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // OptimizeRoute godoc
-// @Summary Optimize trip route
-// @Description Get optimized route options for a trip
-// @Tags trips
-// @Produce json
-// @Param id path string true "Trip ID"
-// @Param avoid_tolls query bool false "Avoid toll roads"
-// @Param traffic_aware query bool false "Consider traffic conditions"
-// @Success 200 {object} models.RouteOptimizationResult
-// @Failure 404 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /trips/{id}/optimize-route [get]
-func (h *TripHandler) OptimizeRoute(c *gin.Context) {
-	// id := c.Param("id") // Not used in mock implementation
-	
+func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
 	// This would integrate with OSRM or Google Maps API
-	// For now, returning mock data
 	result := &models.RouteOptimizationResult{
 		Routes: []models.OptimizedRoute{
 			{
@@ -492,74 +382,95 @@ func (h *TripHandler) OptimizeRoute(c *gin.Context) {
 		},
 	}
 
-	c.JSON(http.StatusOK, result)
+	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
 // GetDriverStats godoc
-// @Summary Get driver statistics
-// @Description Get performance metrics for drivers
-// @Tags analytics
-// @Produce json
-// @Success 200 {object} []map[string]interface{}
-// @Failure 500 {object} map[string]string
-// @Router /stats/drivers [get]
-func (h *TripHandler) GetDriverStats(c *gin.Context) {
-	orgID := c.GetString("org_id")
+func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	if orgID == "" {
 		orgID = "default-org"
 	}
 
-	stats, err := h.service.GetDriverStats(c.Request.Context(), orgID)
+	stats, err := h.service.GetDriverStats(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("failed to get driver stats", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
 // GetTripStats godoc
-// @Summary Get trip statistics
-// @Description Get daily trip counts and trends
-// @Tags analytics
-// @Produce json
-// @Success 200 {object} []map[string]interface{}
-// @Failure 500 {object} map[string]string
-// @Router /stats/trips [get]
-func (h *TripHandler) GetTripStats(c *gin.Context) {
-	orgID := c.GetString("org_id")
+func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	if orgID == "" {
 		orgID = "default-org"
 	}
 
-	stats, err := h.service.GetTripStats(c.Request.Context(), orgID)
+	stats, err := h.service.GetTripStats(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("failed to get trip stats", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
-func (h *TripHandler) GetStats(c *gin.Context) {
-	stats, err := h.service.GetStats(c.Request.Context())
+func (h *TripHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
 		h.logger.Error("failed to get trip stats", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, stats)
+	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
-// Global validator instance
-var validate *validator.Validate
+// Helper methods
 
-func init() {
-	validate = validator.New()
-	
-	// Register custom validators if needed
-	// validate.RegisterValidation("custom_rule", customValidationFunc)
+func (h *TripHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", zap.Error(err))
+	}
+}
+
+func (h *TripHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	resp := map[string]interface{}{
+		"error": message,
+	}
+	if err != nil && statusCode == http.StatusInternalServerError {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, statusCode, resp)
+}
+
+func (h *TripHandler) getOrgID(r *http.Request) string {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			return orgIDStr
+		}
+	}
+	return ""
+}
+
+func (h *TripHandler) getDriverID(r *http.Request) string {
+	// Driver ID might be in UserIDKey if it's a driver user
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+		if userIDStr, ok := val.(string); ok {
+			return userIDStr
+		}
+	}
+	// Or explicitly in a "driver_id" context if middleware sets it
+	if val := r.Context().Value("driver_id"); val != nil {
+		if driverIDStr, ok := val.(string); ok {
+			return driverIDStr
+		}
+	}
+	return ""
 }

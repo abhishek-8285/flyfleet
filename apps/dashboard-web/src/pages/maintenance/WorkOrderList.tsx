@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../services/apiClient';
 
 // Types
 interface WorkOrder {
@@ -14,6 +15,11 @@ interface WorkOrder {
   scheduled_date?: string;
   estimated_cost: number;
   actual_cost: number;
+  approval_status: 'NOT_REQUIRED' | 'PENDING_MANAGER' | 'PENDING_FLEET_HEAD' | 'PENDING_FINANCE' | 'APPROVED' | 'REJECTED';
+  vendor_id?: string;
+  vendor?: {
+    name: string;
+  };
   created_at: string;
   vehicle?: {
     make: string;
@@ -39,6 +45,15 @@ const statusColors: Record<string, string> = {
   IN_PROGRESS: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
   ON_HOLD: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
   COMPLETED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+};
+
+const approvalStatusColors: Record<string, string> = {
+  NOT_REQUIRED: 'bg-gray-500/10 text-gray-400 border-transparent',
+  PENDING_MANAGER: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  PENDING_FLEET_HEAD: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  PENDING_FINANCE: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  APPROVED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  REJECTED: 'bg-red-500/20 text-red-400 border-red-500/30',
 };
 
 const priorityColors: Record<string, string> = {
@@ -70,19 +85,16 @@ const WorkOrderList: React.FC = () => {
   const fetchWorkOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('page', filter.page.toString());
-      params.set('page_size', filter.pageSize.toString());
-      if (filter.search) params.set('search', filter.search);
-      filter.status.forEach(s => params.append('status', s));
-      filter.priority.forEach(p => params.append('priority', p));
-
-      const response = await fetch(`/api/v1/admin/work-orders?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setWorkOrders(data.work_orders || []);
-        setTotal(data.total || 0);
-      }
+      const params: Record<string, any> = {
+        page: filter.page,
+        page_size: filter.pageSize,
+      };
+      if (filter.search) params.search = filter.search;
+      if (filter.status.length) params.status = filter.status;
+      if (filter.priority.length) params.priority = filter.priority;
+      const data = await apiClient.get('/admin/work-orders', { params }) as any;
+      setWorkOrders(data.work_orders || data.data || []);
+      setTotal(data.total || 0);
     } catch (error) {
       console.error('Failed to fetch work orders:', error);
     } finally {
@@ -92,16 +104,13 @@ const WorkOrderList: React.FC = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/admin/work-orders/stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats({
-          activeWorkOrders: data.active_work_orders || 0,
-          avgResolutionTime: data.avg_resolution_time_hours || 0,
-          slaBreachesMTD: data.sla_breaches_mtd || 0,
-          lowStockAlerts: data.low_stock_alerts || 0,
-        });
-      }
+      const data = await apiClient.get('/admin/work-orders/stats') as any;
+      setStats({
+        activeWorkOrders: data.active_work_orders || 0,
+        avgResolutionTime: data.avg_resolution_time_hours || 0,
+        slaBreachesMTD: data.sla_breaches_mtd || 0,
+        lowStockAlerts: data.low_stock_alerts || 0,
+      });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     }
@@ -199,11 +208,10 @@ const WorkOrderList: React.FC = () => {
             <button
               key={status}
               onClick={() => handleStatusFilter(status)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
-                filter.status.includes(status)
-                  ? statusColors[status]
-                  : 'bg-surface-dark border-border-color text-text-muted hover:border-primary/50'
-              }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${filter.status.includes(status)
+                ? statusColors[status]
+                : 'bg-surface-dark border-border-color text-text-muted hover:border-primary/50'
+                }`}
             >
               {status.replace('_', ' ')}
             </button>
@@ -232,6 +240,7 @@ const WorkOrderList: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Priority</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Approval</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Scheduled</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">Assignee</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">Actions</th>
@@ -265,6 +274,11 @@ const WorkOrderList: React.FC = () => {
                     <td className="px-4 py-4">
                       <span className={`px-2 py-1 text-xs font-medium rounded border ${statusColors[wo.status]}`}>
                         {wo.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`px-2 py-1 text-xs font-medium rounded border ${approvalStatusColors[wo.approval_status]}`}>
+                        {wo.approval_status.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-text-muted">

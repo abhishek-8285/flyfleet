@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -43,7 +44,8 @@ func (s *service) CreateReport(ctx context.Context, req CreateReportRequest) (*R
 	// Simulate background processing
 	go func() {
 		time.Sleep(2 * time.Second)
-		s.repo.UpdateStatus(context.Background(), report.ID, ReportStatusCompleted, "https://example.com/report.pdf")
+		fileURL := fmt.Sprintf("/api/v1/reports/%s/download", report.ID.String())
+		s.repo.UpdateStatus(context.Background(), report.ID, ReportStatusCompleted, fileURL)
 	}()
 
 	return report, nil

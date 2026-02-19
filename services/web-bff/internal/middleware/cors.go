@@ -40,13 +40,13 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-ID, X-Organization-ID")
-		
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Admin-ID, X-Organization-ID, X-Trace-ID, X-Request-ID")
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }

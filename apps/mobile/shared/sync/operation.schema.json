@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.local/schemas/mobile-sync-operation.schema.json",
+  "title": "Mobile Sync Operation",
+  "type": "object",
+  "required": [
+    "op_id",
+    "entity_type",
+    "entity_id",
+    "action",
+    "payload",
+    "dedupe_key",
+    "created_at",
+    "next_retry_at",
+    "retry_count",
+    "status"
+  ],
+  "properties": {
+    "op_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["trip", "work_order", "incident", "command", "inventory", "note"]
+    },
+    "entity_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action": {
+      "type": "string",
+      "enum": ["create", "update", "cancel", "acknowledge", "complete"]
+    },
+    "payload": {
+      "type": "object"
+    },
+    "dedupe_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "next_retry_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in_flight", "applied", "conflict", "dead_letter"]
+    },
+    "last_error": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,11 @@
 package main
 
+// @title Fleet Platform Auth Service API
+// @version 1.0
+// @description API for authentication, user management, and security
+// @host localhost:8080
+// @BasePath /
+
 import (
 	"context"
 	"fmt"
@@ -17,6 +23,9 @@ import (
 	"github.com/flyfleet/auth-service/internal/middleware"
 	"github.com/flyfleet/auth-service/internal/repository"
 	"github.com/flyfleet/auth-service/internal/service"
+
+	// _ "github.com/flyfleet/auth-service/docs"
+	// httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 )
 
@@ -49,6 +58,9 @@ func main() {
 		// continue anyway, don't crash info
 	}
 	
+	// Initialize CSRF protection
+	csrfStore := middleware.NewCSRFStore(logger)
+
 	// Initialize handlers
 	authHandlers := handlers.NewAuthHandlers(authService, logger)
 	adminHandlers := handlers.NewAdminHandlers(authService, logger)
@@ -56,14 +68,14 @@ func main() {
 	securityHandlers := handlers.NewSecurityHandlers(authService, logger)
 	auditHandlers := handlers.NewAuditHandlers(authService)
 	rbacHandlers := handlers.NewRBACOperationsHandlers(authService, logger)
-	
+
 	// Setup routes
 	router := setupRoutes(authService, authHandlers, adminHandlers, securityHandlers, rbacHandlers, auditHandlers, monitoringHandler, cfg, logger)
 	
 	// ... (rest of main unchanged) ...
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", cfg.Port),
-		Handler: middleware.CORSMiddleware(router),
+		Handler: middleware.SecurityHeadersMiddleware(middleware.CORSMiddleware(middleware.CSRFMiddleware(csrfStore)(router))),
 	}
 	
 	// Run server in goroutine
@@ -100,11 +112,15 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	
 	// Security Middleware & Policy Centralization
 	limiter := middleware.NewRateLimiter(10, 1*time.Minute, logger)
+	authLimiter := middleware.NewAuthRateLimiter(5, 15*time.Minute, logger) // 5 attempts per 15 minutes for auth endpoints
 	sp := &security.EnvSecretProvider{Key: cfg.JWTSecret}
 
 	// Health check endpoint
 	router.HandleFunc("/health", monitor.HealthCheck)
 	
+	// Swagger documentation
+	// router.Handle("/swagger/", httpSwagger.WrapHandler)
+
 	// Monitoring endpoints
 	router.HandleFunc("/metrics/all", monitor.GetAllMetrics)
 
@@ -122,8 +138,8 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	})
 	
 	// Enterprise Auth endpoints
-	router.HandleFunc("/api/v1/auth/login", limiter.Limit(auth.Login))
-	router.HandleFunc("/api/v1/auth/register", limiter.Limit(auth.Register))
+	router.HandleFunc("/api/v1/auth/login", authLimiter.LimitLogin(auth.Login))  // Enhanced auth rate limiting
+	router.HandleFunc("/api/v1/auth/register", limiter.Limit(auth.Register))  // Standard rate limiting for registration
 	router.HandleFunc("/api/v1/user/theme", auth.UpdateTheme)
 	router.HandleFunc("/api/v1/auth/refresh-token", auth.RefreshToken)
 	
@@ -201,8 +217,17 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 
 	// Sessions
 	router.HandleFunc("/api/v1/security/sessions", extHandlers.ListSessions)
-	router.HandleFunc("/api/v1/security/sessions/revoke", extHandlers.RevokeSession)
-	router.HandleFunc("/api/v1/security/sessions/revoke-all", extHandlers.RevokeAllSessions)
+	router.HandleFunc("DELETE /api/v1/security/sessions/{id}", extHandlers.RevokeSession)
+	router.HandleFunc("DELETE /api/v1/security/sessions/revoke-all", extHandlers.RevokeAllSessions)
+
+	// Security Configuration & Metrics
+	router.HandleFunc("/api/v1/security/metrics", extHandlers.GetSecurityMetrics)
+	router.HandleFunc("/api/v1/security/posture-score", extHandlers.GetSecurityPostureScore)
+	router.HandleFunc("/api/v1/security/events", extHandlers.ListSecurityEvents)
+	router.HandleFunc("/api/v1/security/compliance", extHandlers.GetSecurityComplianceReport)
+	router.HandleFunc("/api/v1/security/vulnerabilities", extHandlers.GetVulnerabilityReport)
+	router.HandleFunc("/api/v1/security/settings", extHandlers.GetSecuritySettings)
+	router.HandleFunc("/api/v1/security/settings/update", extHandlers.ManageSecuritySettings)
 
 
 	// Admin Portal Endpoints (Standardized and Centralized)
@@ -247,12 +272,7 @@ func setupRoutes(authService *service.AuthService, auth *handlers.AuthHandlers, 
 	router.Handle("/api/v1/admin/documents", adminChain(middleware.RBACMiddleware(sp, security.ResourceDocuments)(middleware.OrgScopeMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			// Check if vehicle_id is present for List
-			if r.URL.Query().Get("vehicle_id") != "" {
-				admin.ListDocuments(w, r)
-			} else {
-				http.Error(w, "Missing vehicle_id", http.StatusBadRequest)
-			}
+			admin.ListDocuments(w, r)
 		case http.MethodPost:
 			admin.CreateDocument(w, r)
 		default:

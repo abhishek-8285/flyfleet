@@ -9,6 +9,7 @@ import (
 type GPSTelemetry struct {
 	Time        time.Time `json:"time" validate:"required"`
 	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
 	Latitude    float64   `json:"latitude" validate:"required"`
 	Longitude   float64   `json:"longitude" validate:"required"`
 	Altitude    *float64  `json:"altitude,omitempty"`
@@ -25,6 +26,7 @@ type GPSTelemetry struct {
 type OBDTelemetry struct {
 	Time        time.Time `json:"time" validate:"required"`
 	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
 	RPM         *int      `json:"rpm,omitempty"`
 	CoolantTemp *float64  `json:"coolant_temp,omitempty"`
 	EngineLoad  *float64  `json:"engine_load,omitempty"`
@@ -36,8 +38,9 @@ type OBDTelemetry struct {
 }
 
 type FuelTelemetry struct {
-	Time       time.Time `json:"time" validate:"required"`
-	VehicleID  uuid.UUID `json:"vehicle_id" validate:"required"`
+	Time        time.Time `json:"time" validate:"required"`
+	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
 	LevelPercent *float64 `json:"level_percent,omitempty"`
 	LevelLiters  *float64 `json:"level_liters,omitempty"`
 	RefuelEvent  *bool    `json:"refuel_event,omitempty"`
@@ -58,6 +61,7 @@ type TelemetryBatch struct {
 type GeofenceEvent struct {
 	ID          uuid.UUID `json:"id"`
 	VehicleID   uuid.UUID `json:"vehicle_id"`
+	OrgID       uuid.UUID `json:"org_id"`
 	GeofenceID  uuid.UUID `json:"geofence_id"`
 	EventType   string    `json:"event_type"` // ENTRY, EXIT, DWELL
 	Latitude    float64   `json:"latitude"`
@@ -69,6 +73,7 @@ type GeofenceEvent struct {
 type DeviceHeartbeat struct {
 	DeviceID    string    `json:"device_id"`
 	VehicleID   uuid.UUID `json:"vehicle_id"`
+	OrgID       uuid.UUID `json:"org_id"`
 	Status      string    `json:"status"` // ONLINE, OFFLINE, ERROR
 	LastSeen    time.Time `json:"last_seen"`
 	Battery     *int      `json:"battery_level,omitempty"`

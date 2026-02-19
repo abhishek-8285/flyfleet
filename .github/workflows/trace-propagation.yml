@@ -1,0 +1,35 @@
+name: Trace Propagation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/dashboard-web/src/index.tsx'
+      - 'apps/dashboard-web/src/services/**'
+      - 'apps/dashboard-web/src/utils/trace*.ts'
+      - 'services/web-bff/cmd/main.go'
+      - 'services/web-bff/internal/middleware/**'
+      - 'scripts/check_trace_propagation.py'
+      - '.github/workflows/trace-propagation.yml'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/dashboard-web/src/index.tsx'
+      - 'apps/dashboard-web/src/services/**'
+      - 'apps/dashboard-web/src/utils/trace*.ts'
+      - 'services/web-bff/cmd/main.go'
+      - 'services/web-bff/internal/middleware/**'
+      - 'scripts/check_trace_propagation.py'
+      - '.github/workflows/trace-propagation.yml'
+
+jobs:
+  trace-check:
+    name: Validate Trace Propagation Wiring
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run trace wiring checks
+        run: python3 scripts/check_trace_propagation.py

@@ -46,6 +46,10 @@ type Alert struct {
 	Message         string            `json:"message" db:"message"`
 	Details         map[string]interface{} `json:"details" db:"details"` // Rule-specific data
 	Status          string            `json:"status" db:"status"` // new, acknowledged, resolved, escalated
+	DedupKey        string            `json:"dedup_key" db:"dedup_key"`
+	EscalationLevel int               `json:"escalation_level" db:"escalation_level"`
+	LastEscalatedAt *time.Time        `json:"last_escalated_at" db:"last_escalated_at"`
+	SLADeadline     *time.Time        `json:"sla_deadline" db:"sla_deadline"`
 	Acknowledged    bool              `json:"acknowledged" db:"-"` // Calculated field for frontend
 	AcknowledgedBy  *uuid.UUID        `json:"acknowledged_by" db:"acknowledged_by"`
 	AcknowledgedAt  *time.Time        `json:"acknowledged_at" db:"acknowledged_at"`

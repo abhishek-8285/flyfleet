@@ -13,10 +13,10 @@ import (
 )
 
 type SupportHandlers struct {
-	cfg              *config.Config
-	logger           *zap.Logger
-	incidents        map[string]map[string]interface{}
-	mu               sync.RWMutex
+	cfg               *config.Config
+	logger            *zap.Logger
+	incidents         map[string]map[string]interface{}
+	mu                sync.RWMutex
 	supportServiceURL string
 }
 
@@ -155,10 +155,9 @@ func (h *SupportHandlers) sendMockDashboardStats(w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(stats)
 }
 
-
 func (h *SupportHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Support dashboard recent activity request")
-	
+
 	// Proxy to support service
 	proxyURL := fmt.Sprintf("%s/api/v1/support/dashboard/recent-activity", h.supportServiceURL)
 	resp, err := http.Get(proxyURL)
@@ -179,26 +178,49 @@ func (h *SupportHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Reque
 func (h *SupportHandlers) sendMockRecentActivity(w http.ResponseWriter) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	// Use actual incidents data instead of hardcoded mock data
 	activity := make([]map[string]interface{}, 0, len(h.incidents))
 	for _, incident := range h.incidents {
 		// Only include tickets that are not RESOLVED for recent activity
 		if incident["status"] != "RESOLVED" {
+			lastUpdated := "recently"
+			if createdAt, ok := incident["created_at"].(string); ok {
+				lastUpdated = humanizeAge(createdAt, time.Now().UTC())
+			}
 			activity = append(activity, map[string]interface{}{
 				"id":           incident["id"],
 				"subject":      incident["subject"],
 				"reporter":     incident["organization"],
 				"priority":     incident["priority"],
 				"assigned_to":  incident["assigned_to"],
-				"last_updated": "10 mins ago", // TODO: Calculate real timestamp
+				"last_updated": lastUpdated,
 				"status":       incident["status"],
 			})
 		}
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(activity)
+}
+
+func humanizeAge(createdAt string, now time.Time) string {
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", createdAt, time.UTC)
+	if err != nil {
+		return "recently"
+	}
+
+	diff := now.Sub(t)
+	if diff < time.Minute {
+		return "just now"
+	}
+	if diff < time.Hour {
+		return fmt.Sprintf("%d mins ago", int(diff.Minutes()))
+	}
+	if diff < 24*time.Hour {
+		return fmt.Sprintf("%d hours ago", int(diff.Hours()))
+	}
+	return fmt.Sprintf("%d days ago", int(diff.Hours()/24))
 }
 
 // --- User Console APIs ---
@@ -207,14 +229,14 @@ func (h *SupportHandlers) GetUserProfile(w http.ResponseWriter, r *http.Request)
 	h.logger.Info("Support user profile request")
 	// Mock Data
 	profile := map[string]interface{}{
-		"id":          "USR-882910",
-		"name":        "Sarah Jenkins",
-		"email":       "sarah.j@fleetcorp.com",
-		"role":        "Regional Manager",
-		"region":      "EMEA",
-		"status":      "Active (Verified)",
+		"id":           "USR-882910",
+		"name":         "Sarah Jenkins",
+		"email":        "sarah.j@fleetcorp.com",
+		"role":         "Regional Manager",
+		"region":       "EMEA",
+		"status":       "Active (Verified)",
 		"member_since": "Feb 12, 2021",
-		"mfa_status":  "Enforced",
+		"mfa_status":   "Enforced",
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(profile)
@@ -243,13 +265,13 @@ func (h *SupportHandlers) GetOrgOverview(w http.ResponseWriter, r *http.Request)
 	h.logger.Info("Support org overview request")
 	// Mock Data
 	org := map[string]interface{}{
-		"name":           "Acme Logistics Inc.",
-		"plan":           "Enterprise Gold",
-		"renewal":        "Nov 15, 2024",
-		"total_devices":  2450,
-		"online_devices": 2100,
+		"name":            "Acme Logistics Inc.",
+		"plan":            "Enterprise Gold",
+		"renewal":         "Nov 15, 2024",
+		"total_devices":   2450,
+		"online_devices":  2100,
 		"offline_devices": 350,
-		"api_health":     98.5,
+		"api_health":      98.5,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(org)
@@ -259,7 +281,7 @@ func (h *SupportHandlers) GetOrgOverview(w http.ResponseWriter, r *http.Request)
 
 func (h *SupportHandlers) GetIncidents(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Support incidents request")
-	
+
 	// Proxy to support service
 	proxyURL := fmt.Sprintf("%s/api/v1/support/incidents", h.supportServiceURL)
 	resp, err := http.Get(proxyURL)
@@ -420,12 +442,12 @@ func (h *SupportHandlers) GetAuthMe(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("Support auth me request")
 	// Mock Data for the current support agent
 	profile := map[string]interface{}{
-		"id":        "1476a987-76ad-4963-b64a-01a71eb739ca",
-		"email":     "alex.morgan@fleet.com",
-		"name":      "Alex Morgan",
-		"role":      "Support Lead",
-		"avatar":    "https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4",
-		"status":    "Active",
+		"id":         "1476a987-76ad-4963-b64a-01a71eb739ca",
+		"email":      "alex.morgan@fleet.com",
+		"name":       "Alex Morgan",
+		"role":       "Support Lead",
+		"avatar":     "https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4",
+		"status":     "Active",
 		"last_login": time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -807,8 +829,8 @@ func (h *SupportHandlers) GetUserAuditLog(w http.ResponseWriter, r *http.Request
 	h.logger.Info("Getting user audit log", zap.String("userId", userId))
 	logs := []map[string]interface{}{
 		{
-			"action": "LOGIN",
-			"time":   time.Now().Format(time.RFC3339),
+			"action":  "LOGIN",
+			"time":    time.Now().Format(time.RFC3339),
 			"details": "Successful login from Chrome 118",
 		},
 	}

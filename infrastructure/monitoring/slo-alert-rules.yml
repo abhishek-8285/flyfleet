@@ -1,0 +1,134 @@
+groups:
+  - name: flyfleet-slo-auth
+    rules:
+      - alert: FlyFleetAuthAvailabilityWarning
+        expr: |
+          100 * (
+            sum(rate(auth_login_requests_total{status="success"}[1h])) /
+            clamp_min(sum(rate(auth_login_requests_total[1h])), 1)
+          ) < 99.95
+        for: 15m
+        labels:
+          severity: warning
+          service: auth
+          slo: authentication-availability
+        annotations:
+          summary: Auth availability below warning threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+      - alert: FlyFleetAuthAvailabilityCritical
+        expr: |
+          100 * (
+            sum(rate(auth_login_requests_total{status="success"}[30m])) /
+            clamp_min(sum(rate(auth_login_requests_total[30m])), 1)
+          ) < 99.9
+        for: 10m
+        labels:
+          severity: critical
+          service: auth
+          slo: authentication-availability
+        annotations:
+          summary: Auth availability below critical threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+
+  - name: flyfleet-slo-api
+    rules:
+      - alert: FlyFleetCriticalAPILatencyWarning
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{
+              route=~"/api/v1/auth/login|/api/v1/trips.*|/api/v1/admin/work-orders.*|/api/v1/commands.*"
+            }[30m])) by (le)
+          ) > 0.35
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+          slo: critical-api-latency
+        annotations:
+          summary: Critical API p95 latency above warning threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+      - alert: FlyFleetCriticalAPILatencyCritical
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket{
+              route=~"/api/v1/auth/login|/api/v1/trips.*|/api/v1/admin/work-orders.*|/api/v1/commands.*"
+            }[15m])) by (le)
+          ) > 0.45
+        for: 8m
+        labels:
+          severity: critical
+          service: api
+          slo: critical-api-latency
+        annotations:
+          summary: Critical API p95 latency above critical threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+
+  - name: flyfleet-slo-device-and-mobile
+    rules:
+      - alert: FlyFleetTelemetryFreshnessCritical
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(device_telemetry_freshness_seconds_bucket[10m])) by (le)
+          ) > 20
+        for: 10m
+        labels:
+          severity: critical
+          service: tracking
+          slo: telemetry-freshness
+        annotations:
+          summary: Telemetry freshness p95 above critical threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+      - alert: FlyFleetCommandReliabilityCritical
+        expr: |
+          (
+            100 * (
+              sum(rate(device_command_events_total{result="success"}[30m])) /
+              clamp_min(sum(rate(device_command_events_total{result=~"success|failed|timeout"}[30m])), 1)
+            ) < 99.5
+          )
+          or
+          (
+            histogram_quantile(
+              0.95,
+              sum(rate(device_command_ack_latency_seconds_bucket[30m])) by (le)
+            ) > 8
+          )
+        for: 10m
+        labels:
+          severity: critical
+          service: gateway
+          slo: command-reliability
+        annotations:
+          summary: Command reliability below SLO or ack latency above threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+      - alert: FlyFleetMobileSyncReliabilityCritical
+        expr: |
+          100 * (
+            sum(rate(mobile_sync_operations_total{result="applied"}[30m])) /
+            clamp_min(sum(rate(mobile_sync_operations_total{result=~"applied|failed"}[30m])), 1)
+          ) < 99.0
+        for: 10m
+        labels:
+          severity: critical
+          service: mobile
+          slo: mobile-sync-reliability
+        annotations:
+          summary: Mobile sync apply success below critical threshold
+          runbook_url: docs/operations/SLO_OPERATIONS.md
+      - alert: FlyFleetOTASuccessCritical
+        expr: |
+          100 * (
+            sum(rate(ota_update_attempts_total{result="success"}[2h])) /
+            clamp_min(sum(rate(ota_update_attempts_total{result=~"success|failed|rolled_back"}[2h])), 1)
+          ) < 98.0
+        for: 5m
+        labels:
+          severity: critical
+          service: firmware
+          slo: ota-success-rate
+        annotations:
+          summary: OTA success rate below critical threshold; rollout should auto-pause
+          runbook_url: docs/operations/SLO_OPERATIONS.md

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Settings {
     schedule_enabled: boolean;
@@ -23,27 +24,25 @@ const DRTestSettingsView: React.FC = () => {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/v1/admin/dr/tests/settings')
-            .then(res => res.json())
+        apiClient.get('/admin/dr/tests/settings')
             .then(data => {
                 if (data.data) setSettings(data.data);
             })
+            .catch(() => setError('Failed to load settings.'))
             .finally(() => setLoading(false));
     }, []);
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            await fetch('/api/v1/admin/dr/tests/settings', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
-            });
+            await apiClient.put('/admin/dr/tests/settings', settings);
             alert('Settings saved successfully');
         } catch (error) {
             console.error('Failed to save settings:', error);
+            alert('Failed to save settings');
         } finally {
             setSaving(false);
         }
@@ -62,6 +61,9 @@ const DRTestSettingsView: React.FC = () => {
 
     if (loading) {
         return <div className="flex items-center justify-center h-full bg-[#0a0a0f] text-white">Loading...</div>;
+    }
+    if (error) {
+        return <div className="flex items-center justify-center h-full bg-[#0a0a0f] text-red-400">{error}</div>;
     }
 
     return (

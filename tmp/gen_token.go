@@ -2,14 +2,19 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func main() {
-	secret := []byte("your-jwt-secret-key-here")
-	
+	secret := []byte(os.Getenv("JWT_SECRET"))
+	if len(secret) == 0 {
+		secret = []byte("your-jwt-secret-key-here") // fallback for development only
+		fmt.Println("WARNING: Using default secret. Set JWT_SECRET environment variable for production.")
+	}
+
 	claims := jwt.MapClaims{
 		"user_id": "00000000-0000-0000-0000-000000000001",
 		"org_id":  "00000000-0000-0000-0000-000000000001",

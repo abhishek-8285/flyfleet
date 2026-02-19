@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
 
 // MockAnalyticsService is a mock implementation of service.AnalyticsService
@@ -68,19 +69,24 @@ func (m *MockAnalyticsService) UpdatePredictiveMaintenanceAnalytics(ctx context.
 func (m *MockAnalyticsService) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string) error { return nil }
 func (m *MockAnalyticsService) ListPredictiveMaintenanceAnalytics(ctx context.Context, orgID uuid.UUID, vehicleID *uuid.UUID, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) { return nil, 0, nil }
 
-func TestHealthCheck(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+func (m *MockAnalyticsService) GetVehicleAnalytics(w http.ResponseWriter, r *http.Request) {}
+func (m *MockAnalyticsService) GetDriverAnalytics(w http.ResponseWriter, r *http.Request) {}
+func (m *MockAnalyticsService) GetTripAnalytics(w http.ResponseWriter, r *http.Request) {}
+func (m *MockAnalyticsService) GetForecastAnalytics(w http.ResponseWriter, r *http.Request) {}
 
+func TestHealthCheck(t *testing.T) {
+	logger := zap.NewNop()
 	mockService := new(MockAnalyticsService)
-	handler := NewAnalyticsHandler(mockService)
+	handler := NewAnalyticsHandler(mockService, logger)
 
 	mockService.On("HealthCheck", mock.Anything).Return(nil)
 
+	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request, _ = http.NewRequest("GET", "/health", nil)
 
-	handler.HealthCheck(c)
+	r := chi.NewRouter()
+	r.Get("/health", handler.HealthCheck)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.JSONEq(t, `{"status":"healthy"}`, w.Body.String())

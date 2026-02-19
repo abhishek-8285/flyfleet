@@ -60,47 +60,46 @@ func (h *SecurityHandlers) ProxyMFACenter(w http.ResponseWriter, r *http.Request
 
 func (h *SecurityHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
-	
+
 	// Handle both exact match and subpath match
-	targetPath := path
-	if strings.HasPrefix(path, sourcePrefix) {
-		suffix := strings.TrimPrefix(path, sourcePrefix)
-		targetPath = targetPrefix + suffix
-	} else {
+	if !strings.HasPrefix(path, sourcePrefix) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
-	
+
 	targetURL, err := url.Parse(h.cfg.AuthServiceURL)
 	if err != nil {
 		h.logger.Error("Failed to parse auth service URL", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
+
+	suffix := strings.TrimPrefix(path, sourcePrefix)
+	targetPath := targetPrefix + suffix
+
 	targetURL.Path = targetPath
 	targetURL.RawQuery = r.URL.RawQuery
-	
-	h.logger.Info("Proxying security request", 
+
+	h.logger.Info("Proxying security request",
 		zap.String("method", r.Method),
 		zap.String("source", path),
 		zap.String("target", targetURL.String()),
 	)
-	
+
 	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
 	if err != nil {
 		h.logger.Error("Failed to create request", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Copy headers
 	for name, values := range r.Header {
 		for _, value := range values {
 			req.Header.Add(name, value)
 		}
 	}
-	
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -109,14 +108,14 @@ func (h *SecurityHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, s
 		return
 	}
 	defer resp.Body.Close()
-	
+
 	// Copy response headers
 	for name, values := range resp.Header {
 		for _, value := range values {
 			w.Header().Add(name, value)
 		}
 	}
-	
+
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 }

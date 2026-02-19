@@ -7,9 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -29,93 +30,101 @@ func NewVehicleHandlers(service *service.VehicleService, logger *zap.Logger) *Ve
 	}
 }
 
+func (h *VehicleHandlers) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListVehicles)
+	r.Post("/", h.CreateVehicle)
+	r.Get("/stats", h.GetStats)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetVehicle)
+		r.Put("/", h.UpdateVehicle)
+		r.Delete("/", h.DeleteVehicle)
+		r.Post("/assign-driver", h.AssignDriver)
+	})
+}
+
 // CreateVehicle godoc
-func (h *VehicleHandlers) CreateVehicle(c *gin.Context) {
+func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateVehicleRequest
-	if err := h.decodeAndValidate(c.Request.Body, &req); err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	// Get Organization ID from context (set by auth middleware)
-	orgIDVal, exists := c.Get("org_id")
-	if !exists {
-		h.writeErrorResponse(c, http.StatusUnauthorized, "Organization ID not found in context", nil)
-		return
-	}
-	orgIDStr, ok := orgIDVal.(string)
-	if !ok {
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Invalid organization ID format", nil)
-		return
-	}
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid organization ID format", err)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
 		return
 	}
 
-	vehicle, err := h.service.CreateVehicle(c.Request.Context(), &req, orgID)
+	vehicle, err := h.service.CreateVehicle(r.Context(), &req, orgID)
 	if err != nil {
 		h.logger.Error("failed to create vehicle", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to create vehicle", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create vehicle", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusCreated, vehicle)
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": vehicle})
 }
 
 // GetVehicle godoc
-func (h *VehicleHandlers) GetVehicle(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	vehicleID, err := uuid.Parse(idStr)
 	if err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid vehicle ID format", err)
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
 		return
 	}
 
-	vehicle, err := h.service.GetVehicle(c.Request.Context(), vehicleID)
+	vehicle, err := h.service.GetVehicle(r.Context(), vehicleID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
-			h.writeErrorResponse(c, http.StatusNotFound, "Vehicle not found", nil)
+			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
 			return
 		}
 		h.logger.Error("failed to get vehicle", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to get vehicle", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get vehicle", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusOK, vehicle)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": vehicle})
 }
 
 // ListVehicles godoc
-func (h *VehicleHandlers) ListVehicles(c *gin.Context) {
-	orgIDStr := c.Query("org_id")
+func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("org_id")
 	var orgID uuid.UUID
 	if orgIDStr != "" {
 		var err error
 		orgID, err = uuid.Parse(orgIDStr)
 		if err != nil {
-			h.writeErrorResponse(c, http.StatusBadRequest, "Invalid org_id format", err)
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid org_id format", err)
 			return
 		}
 	} else {
-		orgID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
+		// Fallback to context if not in query
+		orgID = h.getOrgID(r)
 	}
 
-	page, _ := strconv.Atoi(c.Query("page"))
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	
-	if page <= 0 { page = 1 }
-	if limit <= 0 || limit > 100 { limit = 20 }
+	page, _ := strconv.Atoi(query.Get("page"))
+	limit, _ := strconv.Atoi(query.Get("limit"))
 
-	vehicles, total, err := h.service.ListVehicles(c.Request.Context(), orgID, page, limit)
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	vehicles, total, err := h.service.ListVehicles(r.Context(), orgID, page, limit)
 	if err != nil {
 		h.logger.Error("failed to list vehicles", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to list vehicles", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list vehicles", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusOK, models.VehicleListResponse{
+	h.writeJSONResponse(w, http.StatusOK, models.VehicleListResponse{
 		Vehicles: vehicles,
 		Total:    total,
 		Page:     page,
@@ -124,90 +133,90 @@ func (h *VehicleHandlers) ListVehicles(c *gin.Context) {
 }
 
 // UpdateVehicle godoc
-func (h *VehicleHandlers) UpdateVehicle(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *VehicleHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	vehicleID, err := uuid.Parse(idStr)
 	if err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid vehicle ID format", err)
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
 		return
 	}
 
 	var req models.UpdateVehicleRequest
-	if err := h.decodeAndValidate(c.Request.Body, &req); err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	vehicle, err := h.service.UpdateVehicle(c.Request.Context(), vehicleID, &req)
+	vehicle, err := h.service.UpdateVehicle(r.Context(), vehicleID, &req)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
-			h.writeErrorResponse(c, http.StatusNotFound, "Vehicle not found", nil)
+			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
 			return
 		}
 		h.logger.Error("failed to update vehicle", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to update vehicle", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update vehicle", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusOK, vehicle)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": vehicle})
 }
 
 // DeleteVehicle godoc
-func (h *VehicleHandlers) DeleteVehicle(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *VehicleHandlers) DeleteVehicle(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	vehicleID, err := uuid.Parse(idStr)
 	if err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid vehicle ID format", err)
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
 		return
 	}
 
-	err = h.service.DeleteVehicle(c.Request.Context(), vehicleID)
+	err = h.service.DeleteVehicle(r.Context(), vehicleID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
-			h.writeErrorResponse(c, http.StatusNotFound, "Vehicle not found", nil)
+			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
 			return
 		}
 		h.logger.Error("failed to delete vehicle", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to delete vehicle", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete vehicle", err)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // AssignDriver godoc
-func (h *VehicleHandlers) AssignDriver(c *gin.Context) {
-	vehicleID, err := uuid.Parse(c.Param("id"))
+func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid vehicle ID format", err)
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
 		return
 	}
 
 	var req models.AssignDriverRequest
-	if err := h.decodeAndValidate(c.Request.Body, &req); err != nil {
-		h.writeErrorResponse(c, http.StatusBadRequest, "Invalid request body", err)
+	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	vehicle, err := h.service.AssignDriver(c.Request.Context(), vehicleID, req.DriverID)
+	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, req.DriverID)
 	if err != nil {
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to assign driver", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to assign driver", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusOK, vehicle)
+	h.writeJSONResponse(w, http.StatusOK, vehicle)
 }
 
 // GetStats godoc
-func (h *VehicleHandlers) GetStats(c *gin.Context) {
-	stats, err := h.service.GetStats(c.Request.Context())
+func (h *VehicleHandlers) GetStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
 		h.logger.Error("failed to get vehicle stats", zap.Error(err))
-		h.writeErrorResponse(c, http.StatusInternalServerError, "Failed to get vehicle stats", err)
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get vehicle stats", err)
 		return
 	}
 
-	h.writeJSONResponse(c, http.StatusOK, stats)
+	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
 func (h *VehicleHandlers) decodeAndValidate(body io.ReadCloser, dest interface{}) error {
@@ -219,10 +228,23 @@ func (h *VehicleHandlers) decodeAndValidate(body io.ReadCloser, dest interface{}
 	return h.validate.Struct(dest)
 }
 
-func (h *VehicleHandlers) writeJSONResponse(c *gin.Context, statusCode int, data interface{}) {
-	c.JSON(statusCode, data)
+func (h *VehicleHandlers) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
 }
 
-func (h *VehicleHandlers) writeErrorResponse(c *gin.Context, statusCode int, message string, err error) {
-	c.JSON(statusCode, gin.H{"error": message})
+func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
+}
+
+func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
 }

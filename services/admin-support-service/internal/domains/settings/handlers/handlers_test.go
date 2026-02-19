@@ -10,7 +10,7 @@ import (
 
 	"github.com/flyfleet/admin-support-service/internal/domains/settings/models"
 	"github.com/flyfleet/admin-support-service/internal/domains/settings/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -65,13 +65,11 @@ func TestUpdatePlatformSettings_Integration(t *testing.T) {
 	svc := service.NewSettingsService(repo, logger)
 	h := NewSettingsHandlers(svc, logger)
 
-	// Router with Gin
-	r := gin.New()
-	api := r.Group("/settings")
-	{
-		h.RegisterRoutes(api)
-	}
-	handler := r
+	// Router with Chi
+	r := chi.NewRouter()
+	r.Route("/settings", func(r chi.Router) {
+		h.RegisterRoutes(r)
+	})
 
 	// User ID
 	userID := uuid.New()
@@ -92,7 +90,7 @@ func TestUpdatePlatformSettings_Integration(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// Execute
-	handler.ServeHTTP(rr, req)
+	r.ServeHTTP(rr, req)
 
 	// Assert Response
 	if rr.Code != http.StatusOK {

@@ -1,0 +1,51 @@
+name: Vehicle Device Foundation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/mobile/vehicle-device/**'
+      - 'docs/device/VEHICLE_DEVICE_FOUNDATION.md'
+      - 'docs/device/VEHICLE_DEVICE_BUILD.md'
+      - 'scripts/check_vehicle_device_foundation.py'
+      - 'scripts/run_vehicle_device_tests.sh'
+      - '.github/workflows/vehicle-device-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/mobile/vehicle-device/**'
+      - 'docs/device/VEHICLE_DEVICE_FOUNDATION.md'
+      - 'docs/device/VEHICLE_DEVICE_BUILD.md'
+      - 'scripts/check_vehicle_device_foundation.py'
+      - 'scripts/run_vehicle_device_tests.sh'
+      - '.github/workflows/vehicle-device-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  vehicle-device-foundation:
+    name: Validate Vehicle Device Foundation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run vehicle-device foundation checks
+        run: python3 scripts/check_vehicle_device_foundation.py
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Run vehicle-device unit tests
+        run: bash scripts/run_vehicle_device_tests.sh

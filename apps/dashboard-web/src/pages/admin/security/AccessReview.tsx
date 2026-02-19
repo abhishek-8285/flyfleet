@@ -10,10 +10,13 @@ import {
 import React, { useEffect, useState } from 'react';
 import SecurityFooter from '../../../components/SecurityFooter';
 import SecuritySidebar from '../../../components/SecuritySidebar';
+import apiClient from '../../../services/apiClient';
 
 const AccessReview: React.FC = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReviews();
@@ -21,13 +24,14 @@ const AccessReview: React.FC = () => {
 
   const fetchReviews = async () => {
     try {
-      // Mocking for high-fidelity demonstration
-      setReviews([
-        { id: 'rev_1', user: 'Abhishek', email: 'admin@flyfleet.com', roles: ['Super Admin', 'Org Admin'], lastReview: '3 months ago', status: 'pending', risk: 'high' },
-        { id: 'rev_2', user: 'John Doe', email: 'driver_alpha@flyfleet.com', roles: ['Driver'], lastReview: '1 month ago', status: 'certified', risk: 'low' },
-        { id: 'rev_3', user: 'Sarah Connor', email: 'manager@flyfleet.com', roles: ['Org Admin'], lastReview: '6 months ago', status: 'overdue', risk: 'medium' },
-      ]);
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.get('/security/access-reviews', { params: query ? { search: query } : undefined }) as any;
+      const data = response?.data ?? response;
+      const items = data?.items || data?.data || data?.reviews || [];
+      setReviews(Array.isArray(items) ? items : []);
     } catch (error) {
+       setError('Failed to load access reviews.');
        setReviews([]);
     } finally {
       setLoading(false);
@@ -41,6 +45,41 @@ const AccessReview: React.FC = () => {
       default: return <span className="flex items-center gap-1 text-amber-400 font-bold text-[10px] uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20"><ClockIcon className="w-3 h-3"/> Pending</span>;
     }
   };
+
+  const formatLastReview = (value?: string) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} mins ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return diffDays < 30 ? `${diffDays} days ago` : date.toLocaleDateString();
+  };
+
+  const normalizedReviews = reviews.map((review) => ({
+    id: review.id || review.review_id || review.user_id,
+    user: review.user || review.user_name || review.subject_name || 'Unknown',
+    email: review.email || review.user_email || review.subject_email || '',
+    roles: review.roles || review.role_names || review.access_roles || [],
+    lastReview: review.lastReview || review.last_reviewed_at || review.last_review_at || review.updated_at,
+    status: review.status || review.review_status || 'pending',
+    risk: review.risk || review.risk_level || 'unknown'
+  }));
+
+  const totals = normalizedReviews.reduce(
+    (acc, review) => {
+      acc.total += 1;
+      if (review.status === 'certified') acc.certified += 1;
+      if (review.status === 'revoked') acc.revoked += 1;
+      return acc;
+    },
+    { total: 0, certified: 0, revoked: 0 }
+  );
+  const completion = totals.total ? Math.round((totals.certified / totals.total) * 100) : 0;
 
   return (
     <div className="flex h-screen bg-[#0b1117] text-slate-200 overflow-hidden font-inter">
@@ -60,7 +99,10 @@ const AccessReview: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
-             <button className="flex items-center gap-2 px-4 py-2 border border-white/10 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold transition-all">
+             <button
+                onClick={fetchReviews}
+                className="flex items-center gap-2 px-4 py-2 border border-white/10 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold transition-all"
+             >
                 <ArrowPathIcon className="w-5 h-5" />
                 INITIATE BULK REVIEW
              </button>
@@ -73,16 +115,16 @@ const AccessReview: React.FC = () => {
            {/* Certification Progress */}
            <div className="grid grid-cols-4 gap-6">
               {[
-                { label: 'Total items', value: '482', color: 'text-white' },
-                { label: 'Certified', value: '312', color: 'text-emerald-400' },
-                { label: 'Revoked', value: '14', color: 'text-red-400' },
-                { label: 'Completion', value: '64%', color: 'text-primary' },
+                { label: 'Total items', value: totals.total.toString(), color: 'text-white' },
+                { label: 'Certified', value: totals.certified.toString(), color: 'text-emerald-400' },
+                { label: 'Revoked', value: totals.revoked.toString(), color: 'text-red-400' },
+                { label: 'Completion', value: `${completion}%`, color: 'text-primary' },
               ].map((stat, i) => (
                 <div key={i} className="glass-card p-4 rounded-xl">
                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{stat.label}</p>
                    <p className={`text-2xl font-black mt-1 ${stat.color}`}>{stat.value}</p>
                    <div className="mt-3 h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-current opacity-20" style={{width: i === 3 ? '64%' : '100%'}} />
+                      <div className="h-full bg-current opacity-20" style={{width: i === 3 ? `${completion}%` : '100%'}} />
                    </div>
                 </div>
               ))}
@@ -99,10 +141,15 @@ const AccessReview: React.FC = () => {
                       <input 
                          type="text" 
                          placeholder="Filter reviewer or subject..."
+                         value={query}
+                         onChange={(e) => setQuery(e.target.value)}
                          className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
                       />
                    </div>
-                   <button className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors">
+                   <button
+                      onClick={fetchReviews}
+                      className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                   >
                       <FunnelIcon className="w-4 h-4" /> FILTERS
                    </button>
                 </div>
@@ -123,7 +170,19 @@ const AccessReview: React.FC = () => {
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-white/5">
-                      {reviews.map((r) => (
+                      {loading ? (
+                         <tr>
+                            <td colSpan={5} className="px-6 py-6 text-sm text-slate-500">Loading reviews...</td>
+                         </tr>
+                      ) : error ? (
+                         <tr>
+                            <td colSpan={5} className="px-6 py-6 text-sm text-red-400">{error}</td>
+                         </tr>
+                      ) : normalizedReviews.length === 0 ? (
+                         <tr>
+                            <td colSpan={5} className="px-6 py-6 text-sm text-slate-500">No access reviews found.</td>
+                         </tr>
+                      ) : normalizedReviews.map((r) => (
                          <tr key={r.id} className="hover:bg-white/[0.02] transition-colors group">
                             <td className="px-6 py-4">
                                <div className="flex items-center gap-3">
@@ -138,7 +197,7 @@ const AccessReview: React.FC = () => {
                             </td>
                             <td className="px-6 py-4">
                                <div className="flex flex-wrap gap-1.5">
-                                  {r.roles.map((role: string) => (
+                                  {(r.roles || []).map((role: string) => (
                                      <span key={role} className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-medium border border-white/5">
                                         {role}
                                      </span>
@@ -146,7 +205,7 @@ const AccessReview: React.FC = () => {
                                </div>
                             </td>
                             <td className="px-6 py-4">
-                               <span className="text-xs text-slate-400">{r.lastReview}</span>
+                               <span className="text-xs text-slate-400">{formatLastReview(r.lastReview)}</span>
                             </td>
                             <td className="px-6 py-4">
                                {getStatusBadge(r.status)}

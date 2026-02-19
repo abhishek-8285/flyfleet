@@ -168,10 +168,10 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 
 	// 3. Seed Default Organization
 	orgID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
-	org, err := s.repo.GetOrganizationByID(ctx, orgID)
+	_, err := s.repo.GetOrganizationByID(ctx, orgID)
 	if err != nil {
 		s.logger.Info("Creating default organization...")
-		org = &models.Organization{
+		org := &models.Organization{
 			ID:           orgID,
 			Name:         "FlyFleet Global",
 			Domain:       "test.com",
@@ -185,14 +185,20 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 
 	// 4. Seed Super Admin User
 	adminEmail := "admin@flyfleet.com"
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), 12)
+	if err != nil {
+		s.logger.Error("Failed to hash default admin password", zap.Error(err))
+		return fmt.Errorf("failed to hash admin password: %w", err)
+	}
+	
 	admin, err := s.repo.GetUserByEmail(ctx, adminEmail)
 	if err != nil || admin == nil {
 		s.logger.Info("Creating default admin user...")
+		adminName := "Admin User"
 		admin = &models.User{
 			ID:           uuid.New(),
 			Email:        adminEmail,
-			Name:         "Admin User",
+			Name:         &adminName,
 			PasswordHash: string(hashedPassword),
 			Status:       "active",
 			Verified:     true,
@@ -204,7 +210,7 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 			if err := s.repo.AddUserToOrganization(ctx, admin.ID, orgID, "super_admin"); err != nil {
 				s.logger.Error("Failed to link admin to organization", zap.Error(err))
 			}
-			
+
 			// Assign Role
 			superAdminRole, _ := s.repo.GetRoleByName(ctx, uuid.Nil, "Super Admin")
 			if superAdminRole != nil {
@@ -213,13 +219,16 @@ func (s *AuthService) EnsureSeedData(ctx context.Context) error {
 				}
 				// Also update the primary RoleID on the user struct
 				admin.RoleID = &superAdminRole.ID
-				s.repo.UpdateUser(ctx, admin)
+				// Update user with new role ID
+				if err := s.repo.UpdateUser(ctx, admin); err != nil {
+					s.logger.Error("Failed to update admin role", zap.Error(err))
+				}
 			}
 		}
 	} else if admin.PasswordHash == "hash" {
 		s.logger.Info("Updating default admin user password...")
 		admin.PasswordHash = string(hashedPassword)
-		if err := s.repo.UpdateUser(ctx, admin); err != nil {
+		if err := s.repo.UpdateUserPassword(ctx, admin); err != nil {
 			s.logger.Error("Failed to update admin password", zap.Error(err))
 		}
 	}

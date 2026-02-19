@@ -38,9 +38,12 @@ export const DeviceDetail: React.FC = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [diagProgress, setDiagProgress] = useState(72);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = useCallback(async () => {
         try {
+            setLoading(true);
+            setError(null);
             const [telRes, logRes] = await Promise.all([
                 apiClient.get(`/admin/devices/${id}/telemetry`),
                 apiClient.get(`/admin/devices/${id}/logs`)
@@ -49,6 +52,9 @@ export const DeviceDetail: React.FC = () => {
             setLogs(logRes || []);
         } catch (error) {
             console.error('Failed to fetch device details:', error);
+            setError('Failed to load device details.');
+            setTelemetry(null);
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -78,6 +84,13 @@ export const DeviceDetail: React.FC = () => {
                     <div className="w-12 h-12 border-4 border-[#137fec] border-t-transparent rounded-full animate-spin"></div>
                     <span className="text-[#92adc9] font-mono">ESTABLISHING SECURE HANDSHAKE...</span>
                 </div>
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="flex h-full items-center justify-center bg-[#0b1219]">
+                <div className="text-red-400">{error}</div>
             </div>
         );
     }

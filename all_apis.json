@@ -1,0 +1,3208 @@
+{
+  "apis": [
+    {
+      "name": "getAdminDashboardData",
+      "endpoint": "/api/v1/admin/dashboard/data",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "last_updated": "datetime",
+          "risk_overview": {
+            "sla_compliance": "number (0-100)",
+            "integration_failures": "integer",
+            "payment_failures": "integer",
+            "security_score": "number (0-100)"
+          },
+          "uptime_trend": [
+            "integer"
+          ],
+          "critical_indicators": {
+            "open_incidents": "integer",
+            "devices_offline": "integer",
+            "system_health": "number (0-100)",
+            "billing_risk": "number",
+            "total_devices": "integer",
+            "integration_failures": "integer"
+          },
+          "operational_metrics": {
+            "active_orgs": "integer",
+            "active_fleet": "integer",
+            "connected_devices": "integer",
+            "active_users_today": "integer",
+            "total_orgs": "integer",
+            "total_vehicles": "integer",
+            "vehicles_offline": "integer"
+          },
+          "pending_approvals": "integer",
+          "recent_activity": [
+            {
+              "type": "string",
+              "message": "string",
+              "timestamp": "datetime"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "getOrganizations",
+      "endpoint": "/api/v1/admin/organizations",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "name": "string",
+            "domain": "string",
+            "status": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 10,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "createOrganization",
+      "endpoint": "/api/v1/admin/organizations",
+      "method": "POST",
+      "request": {
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "domain": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "getOrganizationStats",
+      "endpoint": "/api/v1/admin/organizations/stats",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "total_orgs": 10,
+          "active_orgs": 8
+        }
+      }
+    },
+    {
+      "name": "getOrganization",
+      "endpoint": "/api/v1/admin/organizations/{id}",
+      "method": "GET",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "domain": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "updateOrganization",
+      "endpoint": "/api/v1/admin/organizations/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "string",
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "domain": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "deleteOrganization",
+      "endpoint": "/api/v1/admin/organizations/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getUsers",
+      "endpoint": "/api/v1/admin/users",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer (default: 1)",
+          "limit": "integer (default: 20, max: 100)",
+          "status": "string (active|inactive|pending)",
+          "role": "string (admin|driver|manager|viewer)",
+          "search": "string (searches first_name, last_name, email)",
+          "org_id": "uuid (admin only, else JWT org_id)",
+          "sort_by": "string (optional)",
+          "sort_order": "string (asc|desc)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "email": "string",
+            "first_name": "string|null",
+            "last_name": "string|null",
+            "role": "string (admin|driver|manager|viewer)",
+            "status": "string (active|inactive|pending)",
+            "org_id": "uuid",
+            "created_at": "datetime",
+            "last_login_at": "datetime|null",
+            "phone": "string|null",
+            "mfa_enabled": "boolean",
+            "verified": "boolean",
+            "theme": "string"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getAlerts",
+      "description": "Get operational/fleet alerts (vehicle health, utilization, etc.)",
+      "endpoint": "/api/v1/alerts",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "rule_id": "uuid",
+            "type": "string",
+            "severity": "string",
+            "status": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "acknowledgeAlert",
+      "endpoint": "/api/v1/alerts/{id}/acknowledge",
+      "method": "POST",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "data": {
+          "message": "string"
+        }
+      }
+    },
+    {
+      "name": "getDriverBehaviorAnalytics",
+      "endpoint": "/api/v1/analytics/driver-behavior",
+      "method": "GET",
+      "request": {
+        "params": {
+          "driver_id": "uuid (optional)",
+          "period": "string (7d|30d|90d)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "driver_id": "uuid",
+            "driver_name": "string",
+            "overall_score": "number (0-100)",
+            "hard_braking_count": "integer",
+            "rapid_acceleration_count": "integer",
+            "speeding_incidents": "integer",
+            "idle_time_minutes": "integer",
+            "total_trips": "integer",
+            "total_distance_km": "number",
+            "trend": "string (improving|stable|declining)"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getDriverStats",
+      "endpoint": "/api/v1/analytics/drivers",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "first_name": "string",
+            "last_name": "string",
+            "email": "string",
+            "status": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "listAnalyticsJobs",
+      "endpoint": "/api/v1/analytics/jobs",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)",
+          "type": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "type": "string (maintenance_prediction|driver_behavior|utilization|fuel_analysis)",
+            "status": "string (queued|running|completed|failed)",
+            "progress": "number (0-100)",
+            "created_by": "string",
+            "created_at": "datetime",
+            "completed_at": "datetime|null",
+            "result_url": "string|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createAnalyticsJob",
+      "endpoint": "/api/v1/analytics/jobs",
+      "method": "POST",
+      "request": {
+        "type": "string (maintenance_prediction|driver_behavior|utilization|fuel_analysis)",
+        "parameters": "object",
+        "schedule": "string (optional, cron expression)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "type": "string",
+          "status": "queued",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getPredictiveMaintenance",
+      "endpoint": "/api/v1/analytics/maintenance",
+      "method": "GET",
+      "request": {
+        "params": {
+          "vehicle_id": "uuid (optional)",
+          "severity": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "vehicle_id": "uuid",
+            "vehicle_name": "string",
+            "component": "string (engine|brakes|tires|battery|transmission)",
+            "predicted_failure_date": "date",
+            "confidence": "number (0-1)",
+            "severity": "string (low|medium|high|critical)",
+            "recommended_action": "string",
+            "estimated_cost": "number",
+            "last_service_date": "date|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getTripStats",
+      "endpoint": "/api/v1/analytics/trips",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "driver_id": "uuid",
+            "status": "string",
+            "title": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "getFleetUtilization",
+      "endpoint": "/api/v1/analytics/utilization",
+      "method": "GET",
+      "request": {
+        "params": {
+          "period": "string (7d|30d|90d)",
+          "org_id": "uuid (optional)"
+        }
+      },
+      "response": {
+        "data": {
+          "utilization_rate": "number (0-100)",
+          "active_vehicles": "integer",
+          "total_vehicles": "integer",
+          "avg_daily_distance_km": "number",
+          "avg_daily_hours": "number",
+          "idle_percentage": "number (0-100)",
+          "trend": [
+            {
+              "date": "date",
+              "utilization": "number",
+              "active_count": "integer"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "getApiClients",
+      "endpoint": "/api/v1/api-clients/",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "name": "string",
+            "client_id": "string",
+            "status": "string (active|revoked)",
+            "scopes": [
+              "string"
+            ],
+            "rate_limit": "integer",
+            "last_used_at": "datetime|null",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createApiClient",
+      "endpoint": "/api/v1/api-clients/",
+      "method": "POST",
+      "request": {
+        "name": "string",
+        "scopes": [
+          "string"
+        ],
+        "rate_limit": "integer (optional)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "client_id": "string",
+          "client_secret": "string (shown once)",
+          "scopes": [
+            "string"
+          ],
+          "rate_limit": "integer",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getEntityHistory",
+      "endpoint": "/api/v1/audit/entity-history",
+      "method": "GET",
+      "request": {
+        "params": {
+          "type": "string (user|vehicle|driver|trip)",
+          "id": "uuid"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "action": "string",
+            "actor_id": "uuid",
+            "actor_email": "string",
+            "changes": "object",
+            "timestamp": "datetime",
+            "ip_address": "string"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createEvidenceExport",
+      "endpoint": "/api/v1/audit/evidence-exports",
+      "method": "POST",
+      "request": {
+        "org_id": "uuid",
+        "module": "string",
+        "date_range_start": "datetime",
+        "date_range_end": "datetime",
+        "format": "string (json|csv|pdf)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "status": "pending",
+          "module": "string",
+          "format": "string",
+          "requested_by": "uuid",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getEvidenceExports",
+      "endpoint": "/api/v1/audit/evidence-exports",
+      "method": "GET",
+      "request": {
+        "params": {
+          "org_id": "uuid"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "status": "string (pending|processing|completed|failed)",
+            "module": "string",
+            "format": "string",
+            "file_url": "string|null",
+            "file_size_bytes": "integer|null",
+            "requested_by": "uuid",
+            "created_at": "datetime",
+            "completed_at": "datetime|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getEvidenceExportDetails",
+      "endpoint": "/api/v1/audit/evidence-exports/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "status": "string",
+          "module": "string",
+          "format": "string",
+          "date_range_start": "datetime",
+          "date_range_end": "datetime",
+          "file_url": "string|null",
+          "file_size_bytes": "integer|null",
+          "record_count": "integer",
+          "requested_by": "uuid",
+          "created_at": "datetime",
+          "completed_at": "datetime|null"
+        }
+      }
+    },
+    {
+      "name": "getAuditLogs",
+      "endpoint": "/api/v1/audit/logs",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "action": "string",
+            "user_id": "uuid",
+            "timestamp": "datetime",
+            "resource": "string"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getAuditLogDetails",
+      "endpoint": "/api/v1/audit/logs/{id}",
+      "method": "GET",
+      "request": {
+        "id": "string",
+        "org_id": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "action": "string",
+          "user_id": "uuid",
+          "timestamp": "datetime",
+          "resource": "string"
+        }
+      }
+    },
+    {
+      "name": "getAuditPolicy",
+      "endpoint": "/api/v1/audit/policy",
+      "method": "GET",
+      "request": {
+        "params": {
+          "org_id": "uuid"
+        }
+      },
+      "response": {
+        "data": {
+          "org_id": "uuid",
+          "retention_days": "integer",
+          "log_level": "string (minimal|standard|verbose)",
+          "enabled_modules": [
+            "string"
+          ],
+          "immutable_logs": "boolean",
+          "encryption_enabled": "boolean",
+          "alert_on_critical": "boolean",
+          "updated_at": "datetime",
+          "updated_by": "string"
+        }
+      }
+    },
+    {
+      "name": "updateAuditPolicy",
+      "endpoint": "/api/v1/audit/policy",
+      "method": "PUT",
+      "request": {
+        "retention_days": "integer (optional)",
+        "log_level": "string (optional)",
+        "enabled_modules": [
+          "string"
+        ],
+        "immutable_logs": "boolean (optional)"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getAuditSettings",
+      "endpoint": "/api/v1/audit/settings",
+      "method": "GET",
+      "request": {
+        "params": {
+          "org_id": "uuid"
+        }
+      },
+      "response": {
+        "data": {
+          "org_id": "uuid",
+          "retention_days": "integer",
+          "log_level": "string (minimal|standard|verbose)",
+          "enabled_modules": [
+            "string"
+          ],
+          "alert_on_critical": "boolean",
+          "export_format": "string (json|csv)",
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "updateAuditSettings",
+      "endpoint": "/api/v1/audit/settings",
+      "method": "PUT",
+      "request": {
+        "retention_days": "integer (optional)",
+        "log_level": "string (optional)",
+        "enabled_modules": [
+          "string"
+        ],
+        "alert_on_critical": "boolean (optional)"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "login",
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "request": {
+        "email": "string",
+        "password": "string"
+      },
+      "response": {
+        "token": "string",
+        "user": {
+          "id": "uuid",
+          "email": "string",
+          "name": "string",
+          "role": "string",
+          "org_id": "uuid"
+        }
+      }
+    },
+    {
+      "name": "logout",
+      "endpoint": "/api/v1/auth/logout",
+      "method": "POST",
+      "request": {},
+      "response": {
+        "success": true
+      }
+    },
+    {
+      "name": "refreshToken",
+      "endpoint": "/api/v1/auth/refresh",
+      "method": "POST",
+      "request": {
+        "refresh_token": "string"
+      },
+      "response": {
+        "data": {
+          "access_token": "string",
+          "refresh_token": "string",
+          "token_type": "bearer",
+          "expires_in": "integer (seconds)"
+        }
+      }
+    },
+    {
+      "name": "getBulkJobs",
+      "endpoint": "/api/v1/bulk-jobs",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "type": "string (import|export|update|delete)",
+            "status": "string (pending|processing|completed|failed)",
+            "total_records": "integer",
+            "processed_records": "integer",
+            "failed_records": "integer",
+            "created_by": "string",
+            "created_at": "datetime",
+            "completed_at": "datetime|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createBulkJob",
+      "endpoint": "/api/v1/bulk-jobs",
+      "method": "POST",
+      "request": {
+        "type": "string",
+        "file_url": "string",
+        "options": "object"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "type": "string",
+          "status": "pending",
+          "total_records": "integer",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getBulkJob",
+      "endpoint": "/api/v1/bulk-jobs/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "type": "string",
+          "status": "string",
+          "total_records": "integer",
+          "processed_records": "integer",
+          "failed_records": "integer",
+          "error_log": [
+            "string"
+          ],
+          "created_by": "string",
+          "created_at": "datetime",
+          "completed_at": "datetime|null"
+        }
+      }
+    },
+    {
+      "name": "getBulkJobRecords",
+      "endpoint": "/api/v1/bulk-jobs/{id}/records",
+      "method": "GET",
+      "request": {
+        "id": "uuid",
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "row_number": "integer",
+            "status": "string (success|failed|skipped)",
+            "error": "string|null",
+            "data": "object"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getStatistics",
+      "endpoint": "/api/v1/dashboard/stats",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "total_vehicles": "integer",
+          "active_vehicles": "integer",
+          "total_drivers": "integer",
+          "active_trips": "integer",
+          "total_distance_today": "number",
+          "fuel_consumed_today": "number",
+          "alerts_count": "integer"
+        }
+      }
+    },
+    {
+      "name": "getDocuments",
+      "endpoint": "/api/v1/documents",
+      "method": "GET",
+      "request": {
+        "vehicle_id": "uuid (optional)",
+        "type": "string (optional: insurance|registration|inspection|permit|other)",
+        "status": "string (optional: active|expired|pending_review)",
+        "expiring_within_days": "integer (optional)",
+        "page": "integer (default: 1)",
+        "limit": "integer (default: 20, max: 100)"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "org_id": "uuid",
+            "type": "string",
+            "title": "string",
+            "doc_number": "string",
+            "file_name": "string",
+            "file_size_bytes": 0,
+            "mime_type": "string",
+            "status": "string",
+            "issued_date": "date",
+            "expiry_date": "date",
+            "reminder_days": 30,
+            "uploaded_by": "email",
+            "uploaded_at": "timestamp",
+            "metadata": {},
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20
+        }
+      }
+    },
+    {
+      "name": "createDocument",
+      "endpoint": "/api/v1/documents",
+      "method": "POST",
+      "request": {
+        "vehicle_id": "uuid",
+        "type": "string",
+        "title": "string",
+        "doc_number": "string",
+        "file_name": "string",
+        "file_size_bytes": 0,
+        "mime_type": "string",
+        "issued_date": "date",
+        "expiry_date": "date",
+        "reminder_days": 30,
+        "metadata": {}
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "org_id": "uuid",
+          "type": "string",
+          "title": "string",
+          "doc_number": "string",
+          "file_name": "string",
+          "file_size_bytes": 0,
+          "mime_type": "string",
+          "status": "string",
+          "issued_date": "date",
+          "expiry_date": "date",
+          "reminder_days": 30,
+          "uploaded_by": "email",
+          "uploaded_at": "timestamp",
+          "metadata": {},
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      }
+    },
+    {
+      "name": "updateDocument",
+      "endpoint": "/api/v1/documents/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "string",
+        "type": "string",
+        "title": "string",
+        "doc_number": "string",
+        "file_name": "string",
+        "file_size_bytes": 0,
+        "mime_type": "string",
+        "issued_date": "date",
+        "expiry_date": "date",
+        "reminder_days": 30,
+        "status": "string",
+        "metadata": {}
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "org_id": "uuid",
+          "type": "string",
+          "title": "string",
+          "doc_number": "string",
+          "file_name": "string",
+          "file_size_bytes": 0,
+          "mime_type": "string",
+          "status": "string",
+          "issued_date": "date",
+          "expiry_date": "date",
+          "reminder_days": 30,
+          "uploaded_by": "email",
+          "uploaded_at": "timestamp",
+          "metadata": {},
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      }
+    },
+    {
+      "name": "deleteDocument",
+      "endpoint": "/api/v1/documents/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "initiateBackup",
+      "endpoint": "/api/v1/dr/backups",
+      "method": "POST",
+      "request": {
+        "type": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "type": "string",
+          "status": "string",
+          "size_bytes": "integer",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getBackups",
+      "endpoint": "/api/v1/dr/backups",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "type": "string",
+            "status": "string",
+            "size_bytes": "integer",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 10,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "initiateRestore",
+      "endpoint": "/api/v1/dr/restore-jobs",
+      "method": "POST",
+      "request": {
+        "backupId": "string",
+        "targetEnv": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "backup_id": "uuid",
+          "status": "string",
+          "target_env": "string",
+          "started_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getRestoreJobs",
+      "endpoint": "/api/v1/dr/restore-jobs",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "backup_id": "uuid",
+            "status": "string",
+            "target_env": "string",
+            "started_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 10,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "getDrivers",
+      "endpoint": "/api/v1/drivers",
+      "method": "GET",
+      "request": {
+        "params": {
+          "status": "string (active|inactive|suspended|resigned)",
+          "vehicle_id": "uuid",
+          "name": "string",
+          "page": "integer",
+          "limit": "integer (max 100, alias: page_size deprecated)",
+          "order_by": "string (created_at|full_name|rating|total_trips|behavior_score|status)",
+          "order_dir": "string (asc|desc)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "org_id": "uuid",
+            "first_name": "string",
+            "last_name": "string",
+            "full_name": "string",
+            "email": "string",
+            "phone": "string",
+            "license_number": "string",
+            "license_type": "string",
+            "status": "string",
+            "current_vehicle_id": "uuid|null",
+            "rating": "number",
+            "total_trips": "integer",
+            "behavior_score": "integer",
+            "created_at": "datetime",
+            "updated_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "createDriver",
+      "endpoint": "/api/v1/drivers",
+      "method": "POST",
+      "request": {
+        "first_name": "string (required)",
+        "last_name": "string (required)",
+        "email": "string (required, unique)",
+        "phone": "string (required, E.164)",
+        "license_number": "string (required, unique)",
+        "license_type": "string (LMV|HMV|Transport)",
+        "license_expiry": "datetime (required, must be future)",
+        "license_authority": "string (required)",
+        "date_of_birth": "datetime (required)",
+        "address": {
+          "street": "string",
+          "city": "string",
+          "state": "string",
+          "pincode": "string",
+          "country": "string"
+        },
+        "emergency_contact": {
+          "name": "string",
+          "phone": "string",
+          "relationship": "string"
+        },
+        "experience_years": "integer",
+        "metadata": "object"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "org_id": "uuid",
+          "first_name": "string",
+          "last_name": "string",
+          "full_name": "string",
+          "email": "string",
+          "phone": "string",
+          "license_number": "string",
+          "license_type": "string",
+          "status": "active",
+          "behavior_score": 100,
+          "created_at": "datetime",
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getDriver",
+      "endpoint": "/api/v1/drivers/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "org_id": "uuid",
+          "first_name": "string",
+          "last_name": "string",
+          "full_name": "string",
+          "email": "string",
+          "phone": "string",
+          "license_number": "string",
+          "license_type": "string",
+          "license_expiry": "datetime",
+          "license_authority": "string",
+          "date_of_birth": "datetime",
+          "address": {
+            "street": "string",
+            "city": "string",
+            "state": "string",
+            "pincode": "string",
+            "country": "string"
+          },
+          "emergency_contact": {
+            "name": "string",
+            "phone": "string",
+            "relationship": "string"
+          },
+          "status": "string",
+          "current_vehicle_id": "uuid|null",
+          "current_trip_id": "uuid|null",
+          "joining_date": "datetime",
+          "resignation_date": "datetime|null",
+          "experience_years": "integer",
+          "rating": "number",
+          "total_trips": "integer",
+          "total_distance_km": "number",
+          "total_hours_driven": "number",
+          "behavior_score": "integer",
+          "metadata": "object",
+          "created_at": "datetime",
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "updateDriver",
+      "endpoint": "/api/v1/drivers/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "uuid (path)",
+        "first_name": "string (optional)",
+        "last_name": "string (optional)",
+        "email": "string (optional, unique)",
+        "phone": "string (optional, E.164)",
+        "license_number": "string (optional)",
+        "license_type": "string (optional)",
+        "license_expiry": "datetime (optional, must be future)",
+        "license_authority": "string (optional)",
+        "date_of_birth": "datetime (optional)",
+        "address": "object (optional)",
+        "emergency_contact": "object (optional)",
+        "experience_years": "integer (optional)",
+        "metadata": "object (optional)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "org_id": "uuid",
+          "first_name": "string",
+          "last_name": "string",
+          "full_name": "string",
+          "email": "string",
+          "status": "string",
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "deleteDriver",
+      "endpoint": "/api/v1/drivers/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "uuid (path)"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content. Returns 409 Conflict if driver has active vehicle assignment or trip."
+      }
+    },
+    {
+      "name": "getGeofences",
+      "endpoint": "/api/v1/geofences",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "org_id": "uuid",
+            "name": "string",
+            "type": "string",
+            "center": {
+              "lat": 0,
+              "lng": 0
+            },
+            "radius": 0,
+            "coordinates": [
+              {
+                "lat": 0,
+                "lng": 0
+              }
+            ],
+            "entry_alert": true,
+            "exit_alert": true,
+            "speed_limit": 0,
+            "vehicles": [
+              "uuid"
+            ],
+            "metadata": {},
+            "active": true,
+            "created_by": "uuid",
+            "created_at": "timestamp",
+            "updated_at": "timestamp"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "createGeofence",
+      "endpoint": "/api/v1/geofences",
+      "method": "POST",
+      "request": {
+        "name": "string",
+        "type": "string",
+        "center": {
+          "lat": 0,
+          "lng": 0
+        },
+        "radius": 0,
+        "coordinates": [
+          {
+            "lat": 0,
+            "lng": 0
+          }
+        ],
+        "entry_alert": true,
+        "exit_alert": true,
+        "speed_limit": 0,
+        "vehicles": [
+          "uuid"
+        ],
+        "metadata": {}
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "org_id": "uuid",
+          "name": "string",
+          "type": "string",
+          "center": {
+            "lat": 0,
+            "lng": 0
+          },
+          "radius": 0,
+          "coordinates": [
+            {
+              "lat": 0,
+              "lng": 0
+            }
+          ],
+          "entry_alert": true,
+          "exit_alert": true,
+          "speed_limit": 0,
+          "vehicles": [
+            "uuid"
+          ],
+          "metadata": {},
+          "active": true,
+          "created_by": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      }
+    },
+    {
+      "name": "updateGeofence",
+      "endpoint": "/api/v1/geofences/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "string",
+        "name": "string",
+        "type": "string",
+        "center": {
+          "lat": 0,
+          "lng": 0
+        },
+        "radius": 0,
+        "coordinates": [
+          {
+            "lat": 0,
+            "lng": 0
+          }
+        ],
+        "entry_alert": true,
+        "exit_alert": true,
+        "speed_limit": 0,
+        "vehicles": [
+          "uuid"
+        ],
+        "metadata": {},
+        "active": true
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "org_id": "uuid",
+          "name": "string",
+          "type": "string",
+          "center": {
+            "lat": 0,
+            "lng": 0
+          },
+          "radius": 0,
+          "coordinates": [
+            {
+              "lat": 0,
+              "lng": 0
+            }
+          ],
+          "entry_alert": true,
+          "exit_alert": true,
+          "speed_limit": 0,
+          "vehicles": [
+            "uuid"
+          ],
+          "metadata": {},
+          "active": true,
+          "created_by": "uuid",
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      }
+    },
+    {
+      "name": "deleteGeofence",
+      "endpoint": "/api/v1/geofences/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getIntegrations",
+      "endpoint": "/api/v1/integrations/",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "name": "string",
+            "type": "string (erp|crm|maps|fuel|toll|weather)",
+            "status": "string (active|inactive|error)",
+            "provider": "string",
+            "last_sync_at": "datetime|null",
+            "error_count": "integer",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createIntegration",
+      "endpoint": "/api/v1/integrations/",
+      "method": "POST",
+      "request": {
+        "name": "string",
+        "type": "string",
+        "provider": "string",
+        "config": "object",
+        "credentials": "object"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "type": "string",
+          "status": "active",
+          "provider": "string",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getIntegrationLogs",
+      "endpoint": "/api/v1/integrations/logs",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "integration_id": "uuid (optional)",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "integration_id": "uuid",
+            "integration_name": "string",
+            "direction": "string (inbound|outbound)",
+            "status": "string (success|failed)",
+            "request_url": "string",
+            "response_code": "integer",
+            "latency_ms": "integer",
+            "error": "string|null",
+            "timestamp": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "updateIntegration",
+      "endpoint": "/api/v1/integrations/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "uuid",
+        "name": "string (optional)",
+        "config": "object (optional)",
+        "credentials": "object (optional)",
+        "status": "string (optional)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "name": "string",
+          "type": "string",
+          "status": "string",
+          "provider": "string",
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "testIntegration",
+      "endpoint": "/api/v1/integrations/{id}/test",
+      "method": "POST",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "integration_id": "uuid",
+          "status": "string (success|failed)",
+          "latency_ms": "integer",
+          "error": "string|null",
+          "tested_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getMFAAdoptionTrend",
+      "endpoint": "/api/v1/mfa/adoption-trend",
+      "method": "GET",
+      "request": {
+        "params": {
+          "days": "integer (default: 30)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "date": "date",
+            "enabled_count": "integer",
+            "total_users": "integer",
+            "rate": "number"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getMFADashboard",
+      "endpoint": "/api/v1/mfa/dashboard",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "total_users": "integer",
+          "mfa_enabled_users": "integer",
+          "adoption_rate": "number (0-100)",
+          "method_distribution": {
+            "totp": "integer",
+            "sms": "integer",
+            "email": "integer"
+          },
+          "recent_failures": "integer",
+          "locked_accounts": "integer"
+        }
+      }
+    },
+    {
+      "name": "getMFAEvents",
+      "endpoint": "/api/v1/mfa/events",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "type": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "user_id": "uuid",
+            "user_email": "string",
+            "event_type": "string (setup|verify|failed|disabled)",
+            "method": "string",
+            "ip_address": "string",
+            "timestamp": "datetime",
+            "success": "boolean"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getMFAExceptions",
+      "endpoint": "/api/v1/mfa/exceptions",
+      "method": "GET",
+      "request": {
+        "params": {
+          "org_id": "uuid (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "user_id": "uuid",
+            "user_email": "string",
+            "reason": "string",
+            "granted_by": "string",
+            "expires_at": "datetime|null",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "addMFAException",
+      "endpoint": "/api/v1/mfa/exceptions",
+      "method": "POST",
+      "request": {
+        "user_id": "uuid",
+        "reason": "string",
+        "expires_at": "datetime (optional)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "user_id": "uuid",
+          "reason": "string",
+          "granted_by": "string",
+          "expires_at": "datetime|null",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "deleteMFAException",
+      "endpoint": "/api/v1/mfa/exceptions/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getMFAFailureLocations",
+      "endpoint": "/api/v1/mfa/failures/locations",
+      "method": "GET",
+      "request": {
+        "params": {
+          "days": "integer (default: 7)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "location": "string",
+            "country_code": "string",
+            "failure_count": "integer",
+            "latitude": "number",
+            "longitude": "number"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getMFAFailureUsers",
+      "endpoint": "/api/v1/mfa/failures/users",
+      "method": "GET",
+      "request": {
+        "params": {
+          "limit": "integer (default: 10)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "user_id": "uuid",
+            "email": "string",
+            "failure_count": "integer",
+            "last_failure": "datetime",
+            "is_locked": "boolean"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getLockedUsers",
+      "endpoint": "/api/v1/mfa/locked-users",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": [
+          {
+            "user_id": "uuid",
+            "email": "string",
+            "locked_at": "datetime",
+            "locked_until": "datetime",
+            "reason": "string",
+            "failed_attempts": "integer"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getMFAMethodDistribution",
+      "endpoint": "/api/v1/mfa/method-distribution",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": [
+          {
+            "method": "string (totp|sms|email)",
+            "count": "integer",
+            "percentage": "number"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getMFAOrgOverride",
+      "endpoint": "/api/v1/mfa/overrides",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "org_id": "uuid",
+          "enforcement": "string|null",
+          "allowed_methods": [
+            "string"
+          ],
+          "custom_lockout_threshold": "integer|null",
+          "is_overridden": "boolean"
+        }
+      }
+    },
+    {
+      "name": "updateMFAOrgOverride",
+      "endpoint": "/api/v1/mfa/overrides",
+      "method": "PUT",
+      "request": {
+        "enforcement": "string (optional)",
+        "allowed_methods": [
+          "string"
+        ],
+        "custom_lockout_threshold": "integer (optional)"
+      },
+      "response": {
+        "data": {
+          "org_id": "uuid",
+          "enforcement": "string",
+          "allowed_methods": [
+            "string"
+          ],
+          "custom_lockout_threshold": "integer|null",
+          "is_overridden": true,
+          "updated_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getMFAPolicy",
+      "endpoint": "/api/v1/mfa/policy",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "enforcement": "string (required|optional|disabled)",
+          "allowed_methods": [
+            "totp",
+            "sms",
+            "email"
+          ],
+          "grace_period_days": "integer",
+          "lockout_threshold": "integer",
+          "lockout_duration_minutes": "integer",
+          "remember_device_days": "integer",
+          "updated_at": "datetime",
+          "updated_by": "string"
+        }
+      }
+    },
+    {
+      "name": "updateMFAPolicy",
+      "endpoint": "/api/v1/mfa/policy",
+      "method": "PUT",
+      "request": {
+        "enforcement": "string (optional)",
+        "allowed_methods": [
+          "string"
+        ],
+        "grace_period_days": "integer (optional)",
+        "lockout_threshold": "integer (optional)",
+        "lockout_duration_minutes": "integer (optional)"
+      },
+      "response": {
+        "data": {
+          "enforcement": "string",
+          "allowed_methods": [
+            "string"
+          ],
+          "grace_period_days": "integer",
+          "lockout_threshold": "integer",
+          "lockout_duration_minutes": "integer",
+          "updated_at": "datetime",
+          "updated_by": "string"
+        }
+      }
+    },
+    {
+      "name": "getMFAPolicyHistory",
+      "endpoint": "/api/v1/mfa/policy/history",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "changed_by": "string",
+            "changed_at": "datetime",
+            "changes": "object",
+            "previous_values": "object"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "rollbackMFAPolicy",
+      "endpoint": "/api/v1/mfa/policy/rollback",
+      "method": "POST",
+      "request": {
+        "version_id": "uuid"
+      },
+      "response": {
+        "data": {
+          "enforcement": "string",
+          "allowed_methods": [
+            "string"
+          ],
+          "grace_period_days": "integer",
+          "lockout_threshold": "integer",
+          "updated_at": "datetime",
+          "rolled_back_to": "uuid"
+        }
+      }
+    },
+    {
+      "name": "resetMFA",
+      "endpoint": "/api/v1/mfa/reset",
+      "method": "POST",
+      "request": {
+        "user_id": "uuid"
+      },
+      "response": {
+        "success": true,
+        "message": "MFA reset successfully"
+      }
+    },
+    {
+      "name": "unlockUser",
+      "endpoint": "/api/v1/mfa/unlock",
+      "method": "POST",
+      "request": {
+        "user_id": "uuid"
+      },
+      "response": {
+        "success": true,
+        "message": "User unlocked successfully"
+      }
+    },
+    {
+      "name": "listOptimizationJobs",
+      "endpoint": "/api/v1/routes/jobs",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "request_id": "uuid",
+            "status": "string (queued|running|completed|failed)",
+            "progress": "number (0-100)",
+            "started_at": "datetime|null",
+            "completed_at": "datetime|null",
+            "error": "string|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createOptimizationRequest",
+      "endpoint": "/api/v1/routes/requests",
+      "method": "POST",
+      "request": {
+        "vehicle_ids": [
+          "uuid"
+        ],
+        "waypoints": [
+          {
+            "latitude": "number",
+            "longitude": "number",
+            "name": "string"
+          }
+        ],
+        "constraints": {
+          "max_distance_km": "number",
+          "max_duration_hours": "number",
+          "avoid_tolls": "boolean"
+        }
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "status": "pending",
+          "vehicle_count": "integer",
+          "waypoint_count": "integer",
+          "created_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "listOptimizationRequests",
+      "endpoint": "/api/v1/routes/requests",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "status": "string",
+            "vehicle_count": "integer",
+            "waypoint_count": "integer",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getOptimizationRequest",
+      "endpoint": "/api/v1/routes/requests/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "status": "string (pending|processing|completed|failed)",
+          "vehicle_ids": [
+            "uuid"
+          ],
+          "waypoints": [
+            {
+              "latitude": "number",
+              "longitude": "number",
+              "name": "string"
+            }
+          ],
+          "constraints": "object",
+          "created_at": "datetime",
+          "completed_at": "datetime|null"
+        }
+      }
+    },
+    {
+      "name": "listOptimizationResults",
+      "endpoint": "/api/v1/routes/results",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "request_id": "uuid",
+            "status": "string",
+            "total_distance_km": "number",
+            "total_savings_km": "number",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getOptimizationResult",
+      "endpoint": "/api/v1/routes/results/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "request_id": "uuid",
+          "status": "string",
+          "routes": [
+            {
+              "vehicle_id": "uuid",
+              "waypoints": [
+                {
+                  "latitude": "number",
+                  "longitude": "number",
+                  "sequence": "integer"
+                }
+              ],
+              "total_distance_km": "number",
+              "total_duration_hours": "number",
+              "fuel_estimate_liters": "number"
+            }
+          ],
+          "total_distance_km": "number",
+          "total_savings_km": "number",
+          "optimization_time_ms": "integer"
+        }
+      }
+    },
+    {
+      "name": "getThreatAlerts",
+      "description": "Get security/threat alerts (intrusion detection, suspicious login, etc.)",
+      "endpoint": "/api/v1/security/alerts",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "rule_id": "uuid",
+            "type": "string",
+            "severity": "string",
+            "status": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "updateThreatAlertStatus",
+      "endpoint": "/api/v1/security/alerts/{id}/status",
+      "method": "PATCH",
+      "request": {
+        "id": "string",
+        "status": "string"
+      },
+      "response": {
+        "data": {
+          "message": "string"
+        }
+      }
+    },
+    {
+      "name": "getIPRules",
+      "endpoint": "/api/v1/security/ip-rules",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "rule_type": "string (allow|deny)",
+            "ip_address": "string",
+            "cidr": "string|null",
+            "description": "string",
+            "created_by": "string",
+            "created_at": "datetime",
+            "is_active": "boolean"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createIPRule",
+      "endpoint": "/api/v1/security/ip-rules",
+      "method": "POST",
+      "request": {
+        "rule_type": "string (allow|deny)",
+        "ip_address": "string",
+        "cidr": "string (optional)",
+        "description": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "rule_type": "string",
+          "ip_address": "string",
+          "cidr": "string|null",
+          "description": "string",
+          "created_by": "string",
+          "created_at": "datetime",
+          "is_active": true
+        }
+      }
+    },
+    {
+      "name": "getLoginActivityLogs",
+      "endpoint": "/api/v1/security/logins",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "user_id": "uuid (optional)",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "user_id": "uuid",
+            "user_email": "string",
+            "ip_address": "string",
+            "user_agent": "string",
+            "status": "string (success|failed|blocked)",
+            "failure_reason": "string|null",
+            "location": "string",
+            "timestamp": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getSessions",
+      "endpoint": "/api/v1/security/sessions",
+      "method": "GET",
+      "request": {
+        "params": {
+          "org_id": "uuid",
+          "page": "integer (default: 1)",
+          "page_size": "integer (default: 10)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "user_id": "uuid",
+            "token": "string (masked)",
+            "created_at": "datetime",
+            "expires_at": "datetime",
+            "is_active": "boolean",
+            "client_ip": "string",
+            "user_agent": "string"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "revokeSecuritySession",
+      "endpoint": "/api/v1/security/sessions/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getTimeline",
+      "endpoint": "/api/v1/timeline",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "type": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "type": "string (trip_started|alert|maintenance|driver_assigned)",
+            "title": "string",
+            "description": "string",
+            "timestamp": "datetime",
+            "entity_id": "uuid",
+            "entity_type": "string",
+            "severity": "string (info|warning|critical)"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getTrips",
+      "endpoint": "/api/v1/trips",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "driver_id": "uuid",
+            "status": "string",
+            "title": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "createTrip",
+      "endpoint": "/api/v1/trips",
+      "method": "POST",
+      "request": {
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "driver_id": "uuid",
+          "status": "string",
+          "title": "string"
+        }
+      }
+    },
+    {
+      "name": "getTripSettings",
+      "endpoint": "/api/v1/trips/settings",
+      "method": "GET",
+      "request": {},
+      "response": {
+        "data": {
+          "auto_start_enabled": "boolean",
+          "idle_threshold_minutes": "integer",
+          "speed_limit_kph": "integer|null",
+          "geofence_alerts_enabled": "boolean",
+          "maintenance_reminder_days": "integer",
+          "driver_break_reminder_minutes": "integer",
+          "fuel_efficiency_alerts": "boolean",
+          "hard_braking_threshold": "number (0.0-1.0)",
+          "rapid_acceleration_threshold": "number (0.0-1.0)",
+          "night_driving_restricted": "boolean",
+          "night_driving_start": "string (HH:MM)",
+          "night_driving_end": "string (HH:MM)"
+        },
+        "meta": {
+          "version": "string",
+          "last_modified": "datetime|null",
+          "modified_by": "string|null"
+        }
+      }
+    },
+    {
+      "name": "updateTripSettings",
+      "endpoint": "/api/v1/trips/settings",
+      "method": "PUT",
+      "request": {
+        "settings": {
+          "auto_start_enabled": "boolean (optional)",
+          "idle_threshold_minutes": "integer (optional)",
+          "speed_limit_kph": "integer|null (optional, 1-300)",
+          "geofence_alerts_enabled": "boolean (optional)",
+          "maintenance_reminder_days": "integer (optional)",
+          "driver_break_reminder_minutes": "integer (optional)",
+          "fuel_efficiency_alerts": "boolean (optional)",
+          "hard_braking_threshold": "number (optional, 0.0-1.0)",
+          "rapid_acceleration_threshold": "number (optional, 0.0-1.0)",
+          "night_driving_restricted": "boolean (optional)",
+          "night_driving_start": "string (optional, HH:MM)",
+          "night_driving_end": "string (optional, HH:MM)"
+        }
+      },
+      "response": {
+        "data": {
+          "auto_start_enabled": "boolean",
+          "idle_threshold_minutes": "integer",
+          "speed_limit_kph": "integer|null",
+          "geofence_alerts_enabled": "boolean",
+          "maintenance_reminder_days": "integer",
+          "driver_break_reminder_minutes": "integer",
+          "fuel_efficiency_alerts": "boolean",
+          "hard_braking_threshold": "number (0.0-1.0)",
+          "rapid_acceleration_threshold": "number (0.0-1.0)",
+          "night_driving_restricted": "boolean",
+          "night_driving_start": "string (HH:MM)",
+          "night_driving_end": "string (HH:MM)"
+        },
+        "meta": {
+          "version": "string",
+          "last_modified": "datetime",
+          "modified_by": "string"
+        }
+      }
+    },
+    {
+      "name": "getTrip",
+      "endpoint": "/api/v1/trips/{id}",
+      "method": "GET",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "driver_id": "uuid",
+          "status": "string",
+          "title": "string"
+        }
+      }
+    },
+    {
+      "name": "updateTrip",
+      "endpoint": "/api/v1/trips/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "string",
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "driver_id": "uuid",
+          "status": "string",
+          "title": "string"
+        }
+      }
+    },
+    {
+      "name": "deleteTrip",
+      "endpoint": "/api/v1/trips/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getTripTelemetry",
+      "endpoint": "/api/v1/trips/{id}/telemetry",
+      "method": "GET",
+      "request": {
+        "id": "uuid",
+        "params": {
+          "aggregation": "string (raw|hourly|daily, default: raw)",
+          "limit": "integer (max 1000, default: 1000)",
+          "start_time": "ISO8601 (optional, default: trip start)",
+          "end_time": "ISO8601 (optional, default: trip end)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "timestamp": "datetime",
+            "latitude": "number",
+            "longitude": "number",
+            "speed_kph": "number",
+            "heading": "integer",
+            "odometer_km": "number",
+            "fuel_level_percent": "integer",
+            "engine_temp_celsius": "integer",
+            "alerts": [
+              "string"
+            ]
+          }
+        ],
+        "meta": {
+          "trip_id": "uuid",
+          "vehicle_id": "uuid",
+          "start_time": "datetime",
+          "end_time": "datetime|null",
+          "total_points": "integer",
+          "aggregation": "string"
+        }
+      }
+    },
+    {
+      "name": "getVehicles",
+      "endpoint": "/api/v1/vehicles",
+      "method": "GET",
+      "request": {
+        "params": "any"
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "registration_number": "string",
+            "model": "string",
+            "make": "string",
+            "status": "string"
+          }
+        ],
+        "meta": {
+          "total": 0,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1,
+          "has_next": false,
+          "has_prev": false
+        }
+      }
+    },
+    {
+      "name": "createVehicle",
+      "endpoint": "/api/v1/vehicles",
+      "method": "POST",
+      "request": {
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "registration_number": "string",
+          "model": "string",
+          "make": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "getVehicle",
+      "endpoint": "/api/v1/vehicles/{id}",
+      "method": "GET",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "registration_number": "string",
+          "model": "string",
+          "make": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "updateVehicle",
+      "endpoint": "/api/v1/vehicles/{id}",
+      "method": "PUT",
+      "request": {
+        "id": "string",
+        "data": "any"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "registration_number": "string",
+          "model": "string",
+          "make": "string",
+          "status": "string"
+        }
+      }
+    },
+    {
+      "name": "deleteVehicle",
+      "endpoint": "/api/v1/vehicles/{id}",
+      "method": "DELETE",
+      "request": {
+        "id": "string"
+      },
+      "response": {
+        "status": 204,
+        "description": "No Content"
+      }
+    },
+    {
+      "name": "getVideoAnalytics",
+      "endpoint": "/api/v1/video/analytics",
+      "method": "GET",
+      "request": {
+        "params": {
+          "vehicle_id": "uuid (optional)",
+          "period": "string (7d|30d|90d)"
+        }
+      },
+      "response": {
+        "data": {
+          "total_streams": "integer",
+          "active_streams": "integer",
+          "total_recordings": "integer",
+          "total_storage_gb": "number",
+          "avg_stream_duration_minutes": "number",
+          "incidents_detected": "integer",
+          "trend": [
+            {
+              "date": "date",
+              "streams": "integer",
+              "recordings": "integer",
+              "incidents": "integer"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "listVideoRecordings",
+      "endpoint": "/api/v1/video/recordings",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "vehicle_id": "uuid (optional)",
+          "date": "date (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "camera_id": "string",
+            "start_time": "datetime",
+            "end_time": "datetime",
+            "duration_seconds": "integer",
+            "file_size_bytes": "integer",
+            "download_url": "string",
+            "thumbnail_url": "string|null"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "createVideoStream",
+      "endpoint": "/api/v1/video/streams",
+      "method": "POST",
+      "request": {
+        "vehicle_id": "uuid",
+        "camera_id": "string",
+        "stream_type": "string (live|recorded)"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "camera_id": "string",
+          "stream_url": "string",
+          "status": "active",
+          "started_at": "datetime",
+          "expires_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "listVideoStreams",
+      "endpoint": "/api/v1/video/streams",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer",
+          "vehicle_id": "uuid (optional)",
+          "status": "string (optional)"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "camera_id": "string",
+            "status": "string (active|expired|error)",
+            "started_at": "datetime",
+            "expires_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "getVideoStream",
+      "endpoint": "/api/v1/video/streams/{id}",
+      "method": "GET",
+      "request": {
+        "id": "uuid"
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "vehicle_id": "uuid",
+          "camera_id": "string",
+          "stream_url": "string",
+          "status": "string (active|expired|error)",
+          "started_at": "datetime",
+          "expires_at": "datetime"
+        }
+      }
+    },
+    {
+      "name": "getWebhooks",
+      "endpoint": "/api/v1/webhooks/",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "url": "string",
+            "events": [
+              "string"
+            ],
+            "status": "string (active|inactive|failing)",
+            "secret": "string (masked)",
+            "failure_count": "integer",
+            "last_triggered_at": "datetime|null",
+            "created_at": "datetime"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "ingestGPS",
+      "endpoint": "/api/v1/device/telemetry/gps",
+      "method": "POST",
+      "request": {
+        "device_id": "string",
+        "timestamp": "integer",
+        "latitude": "number",
+        "longitude": "number",
+        "altitude": "number",
+        "speed": "number",
+        "heading": "number",
+        "accuracy": "number",
+        "ignition": "boolean",
+        "odometer": "number",
+        "battery_level": "integer",
+        "satellites": "integer",
+        "hdop": "number",
+        "raw_data": "object"
+      },
+      "response": {
+        "status": "accepted",
+        "vehicle_id": "uuid",
+        "timestamp": "integer"
+      }
+    },
+    {
+      "name": "ingestOBD",
+      "endpoint": "/api/v1/device/telemetry/obd",
+      "method": "POST",
+      "request": {
+        "device_id": "string",
+        "timestamp": "integer",
+        "engine_rpm": "integer",
+        "coolant_temp": "integer",
+        "fuel_level": "integer",
+        "throttle_position": "integer",
+        "engine_load": "integer",
+        "intake_temp": "integer",
+        "maf": "number",
+        "dtc_codes": [
+          "string"
+        ],
+        "vin": "string",
+        "raw_data": "object"
+      },
+      "response": {
+        "status": "accepted"
+      }
+    },
+    {
+      "name": "getVehicleHistory",
+      "endpoint": "/api/v1/vehicles/{id}/history",
+      "method": "GET",
+      "request": {
+        "id": "uuid",
+        "params": {
+          "start": "datetime",
+          "end": "datetime"
+        }
+      },
+      "response": {
+        "vehicle_id": "uuid",
+        "start": "timestamp",
+        "end": "timestamp",
+        "points": [
+          {
+            "timestamp": "integer",
+            "latitude": "number",
+            "longitude": "number",
+            "speed": "number",
+            "heading": "number",
+            "ignition": "boolean",
+            "odometer": "number"
+          }
+        ],
+        "count": "integer"
+      }
+    },
+    {
+      "name": "listPredictiveModels",
+      "endpoint": "/api/v1/predictive-models",
+      "method": "GET",
+      "request": {
+        "params": {
+          "type": "string",
+          "status": "string",
+          "limit": "integer",
+          "offset": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "name": "string",
+            "version": "string",
+            "type": "string",
+            "status": "string",
+            "accuracy": "number"
+          }
+        ],
+        "total_count": "integer",
+        "limit": "integer",
+        "offset": "integer"
+      }
+    },
+    {
+      "name": "listPredictionResults",
+      "endpoint": "/api/v1/predictions",
+      "method": "GET",
+      "request": {
+        "params": {
+          "orgId": "uuid",
+          "modelId": "string",
+          "anomalyDetected": "boolean",
+          "limit": "integer",
+          "offset": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "model_id": "string",
+            "vehicle_id": "uuid",
+            "prediction_type": "string",
+            "predicted_value": "any",
+            "confidence": "number",
+            "anomaly_detected": "boolean"
+          }
+        ],
+        "total_count": "integer",
+        "limit": "integer",
+        "offset": "integer"
+      }
+    },
+    {
+      "name": "listDriverBehaviorAnalytics",
+      "endpoint": "/api/v1/driver-behavior",
+      "method": "GET",
+      "request": {
+        "params": {
+          "orgId": "uuid",
+          "periodStart": "date",
+          "periodEnd": "date",
+          "limit": "integer",
+          "offset": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "driver_id": "uuid",
+            "safety_score": "number",
+            "harsh_events_count": "integer",
+            "overspeeding_duration": "integer",
+            "efficiency_score": "number"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "listPredictiveMaintenance",
+      "endpoint": "/api/v1/predictive-maintenance",
+      "method": "GET",
+      "request": {
+        "params": {
+          "vehicleId": "uuid",
+          "limit": "integer",
+          "offset": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "vehicle_id": "uuid",
+            "component_status": "object",
+            "estimated_failure_date": "datetime",
+            "maintenance_recommendation": "string",
+            "urgency_level": "string"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer",
+          "total_pages": "integer",
+          "has_next": "boolean",
+          "has_prev": "boolean"
+        }
+      }
+    },
+    {
+      "name": "fleetWebSocket",
+      "description": "Real-time WebSocket stream for telemetry and alerts",
+      "endpoint": "/api/v1/ws",
+      "method": "GET",
+      "request": {
+        "description": "Upgrade connection to WebSocket"
+      },
+      "response": {
+        "description": "Binary/Text stream of fleet events"
+      }
+    },
+    {
+      "name": "getWorkOrders",
+      "endpoint": "/api/v1/maintenance/work-orders",
+      "method": "GET",
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "status": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createWorkOrder",
+      "endpoint": "/api/v1/maintenance/work-orders",
+      "method": "POST",
+      "response": {
+        "id": "uuid"
+      }
+    },
+    {
+      "name": "getFuelTransactions",
+      "endpoint": "/api/v1/finance/fuel",
+      "method": "GET",
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "amount": "number"
+          }
+        ]
+      }
+    },
+    {
+      "name": "predictDemand",
+      "endpoint": "/api/v1/demand/predict",
+      "method": "POST",
+      "response": {
+        "predicted_demand": "number"
+      }
+    },
+    {
+      "name": "triggerSOS",
+      "endpoint": "/api/v1/emergency/sos",
+      "method": "POST",
+      "response": {
+        "incident_id": "uuid"
+      }
+    },
+    {
+      "name": "syncERP",
+      "endpoint": "/api/v1/integrations/sync",
+      "method": "POST",
+      "response": {
+        "job_id": "uuid"
+      }
+    },
+    {
+      "name": "createInvoice",
+      "endpoint": "/api/v1/billing/invoices",
+      "method": "POST",
+      "request": {
+        "customer_name": "string",
+        "customer_email": "string",
+        "due_date": "datetime",
+        "currency": "string",
+        "items": [
+          {
+            "description": "string",
+            "quantity": "integer",
+            "unit_price": "number"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "id": "uuid",
+          "invoice_number": "string",
+          "status": "string",
+          "total_amount": "number"
+        }
+      }
+    },
+    {
+      "name": "listInvoices",
+      "endpoint": "/api/v1/billing/invoices",
+      "method": "GET",
+      "request": {
+        "params": {
+          "page": "integer",
+          "limit": "integer"
+        }
+      },
+      "response": {
+        "data": [
+          {
+            "id": "uuid",
+            "invoice_number": "string",
+            "status": "string",
+            "total_amount": "number"
+          }
+        ],
+        "meta": {
+          "total": "integer",
+          "page": "integer",
+          "limit": "integer"
+        }
+      }
+    }
+  ]
+}

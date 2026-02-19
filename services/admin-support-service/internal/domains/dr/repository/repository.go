@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -25,6 +26,24 @@ type DrRepository interface {
 	ListStoragePools(ctx context.Context) ([]*models.StoragePool, error)
 	CreateBackupVerification(ctx context.Context, verification *models.BackupVerification) error
 	GetBackupVerification(ctx context.Context, backupID uuid.UUID) (*models.BackupVerification, error)
+
+	CreateDRTest(ctx context.Context, test *models.DRTest) error
+	ListDRTests(ctx context.Context, limit, offset int) ([]*models.DRTest, int, error)
+	GetDRTest(ctx context.Context, id uuid.UUID) (*models.DRTest, error)
+	UpdateDRTestStatus(ctx context.Context, id uuid.UUID, status string, progress int, completedAt *time.Time) error
+	AbortDRTest(ctx context.Context, id uuid.UUID) error
+
+	CreateDRTestStep(ctx context.Context, step *models.DRTestStep) error
+	UpdateDRTestStepStatus(ctx context.Context, stepID uuid.UUID, status string, startedAt, completedAt *time.Time) error
+	MarkPendingDRTestStepsSkipped(ctx context.Context, testID uuid.UUID) error
+	ListDRTestSteps(ctx context.Context, testID uuid.UUID) ([]*models.DRTestStep, error)
+
+	CreateDRTestLog(ctx context.Context, log *models.DRTestLog) error
+	ListDRTestLogs(ctx context.Context, testID uuid.UUID, limit int) ([]*models.DRTestLog, error)
+
+	GetDRTestMetrics(ctx context.Context) (*models.DRTestMetrics, error)
+	GetDRTestSettings(ctx context.Context) (*models.DRTestSettings, error)
+	UpsertDRTestSettings(ctx context.Context, settings *models.DRTestSettings) error
 }
 
 type drRepository struct {
@@ -41,7 +60,7 @@ func (r *drRepository) CreateBackup(ctx context.Context, backup *models.Backup) 
 		INSERT INTO backups (id, type, status, s3_key, size_bytes, created_by, created_at, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id`
-	
+
 	if backup.CreatedAt.IsZero() {
 		backup.CreatedAt = time.Now()
 	}
@@ -83,7 +102,7 @@ func (r *drRepository) ListBackups(ctx context.Context, limit, offset int) ([]*m
 		FROM backups
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
-	
+
 	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, 0, err
@@ -115,7 +134,7 @@ func (r *drRepository) CreateRestoreJob(ctx context.Context, job *models.Restore
 		INSERT INTO restore_jobs (id, backup_id, status, target_environment, started_at, performed_by, logs)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`
-	
+
 	if job.StartedAt.IsZero() {
 		job.StartedAt = time.Now()
 	}
@@ -235,4 +254,262 @@ func (r *drRepository) GetBackupVerification(ctx context.Context, backupID uuid.
 		return nil, err
 	}
 	return &v, nil
+}
+
+func (r *drRepository) CreateDRTest(ctx context.Context, test *models.DRTest) error {
+	query := `
+		INSERT INTO dr_tests (
+			id, test_id, name, description, test_type, target_env, status, progress_percent,
+			initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8,
+			$9, $10, $11, $12, $13, $14, $15
+		)`
+	_, err := r.db.Exec(ctx, query,
+		test.ID, test.TestID, test.Name, test.Description, test.TestType, test.TargetEnv, test.Status, test.ProgressPercent,
+		test.InitiatedBy, test.SuccessCriteria, test.ScheduledAt, test.StartedAt, test.CompletedAt, test.CreatedAt, test.UpdatedAt,
+	)
+	return err
+}
+
+func (r *drRepository) ListDRTests(ctx context.Context, limit, offset int) ([]*models.DRTest, int, error) {
+	countQuery := `SELECT COUNT(*) FROM dr_tests`
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `
+		SELECT id, test_id, name, description, test_type, target_env, status, progress_percent,
+		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+		FROM dr_tests
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
+	rows, err := r.db.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var tests []*models.DRTest
+	for rows.Next() {
+		var t models.DRTest
+		if err := rows.Scan(
+			&t.ID, &t.TestID, &t.Name, &t.Description, &t.TestType, &t.TargetEnv, &t.Status, &t.ProgressPercent,
+			&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		tests = append(tests, &t)
+	}
+	return tests, total, nil
+}
+
+func (r *drRepository) GetDRTest(ctx context.Context, id uuid.UUID) (*models.DRTest, error) {
+	query := `
+		SELECT id, test_id, name, description, test_type, target_env, status, progress_percent,
+		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+		FROM dr_tests WHERE id = $1`
+	var t models.DRTest
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&t.ID, &t.TestID, &t.Name, &t.Description, &t.TestType, &t.TargetEnv, &t.Status, &t.ProgressPercent,
+		&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *drRepository) UpdateDRTestStatus(ctx context.Context, id uuid.UUID, status string, progress int, completedAt *time.Time) error {
+	query := `
+		UPDATE dr_tests
+		SET status = $1, progress_percent = $2, completed_at = COALESCE($3, completed_at), updated_at = NOW()
+		WHERE id = $4`
+	_, err := r.db.Exec(ctx, query, status, progress, completedAt, id)
+	return err
+}
+
+func (r *drRepository) AbortDRTest(ctx context.Context, id uuid.UUID) error {
+	now := time.Now()
+	query := `
+		UPDATE dr_tests
+		SET status = 'ABORTED', completed_at = $1, updated_at = NOW()
+		WHERE id = $2 AND status IN ('SCHEDULED', 'RUNNING')`
+	_, err := r.db.Exec(ctx, query, now, id)
+	return err
+}
+
+func (r *drRepository) CreateDRTestStep(ctx context.Context, step *models.DRTestStep) error {
+	query := `
+		INSERT INTO dr_test_steps (id, test_id, step_order, step_name, status, started_at, completed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.db.Exec(ctx, query, step.ID, step.TestID, step.StepOrder, step.StepName, step.Status, step.StartedAt, step.CompletedAt)
+	return err
+}
+
+func (r *drRepository) UpdateDRTestStepStatus(ctx context.Context, stepID uuid.UUID, status string, startedAt, completedAt *time.Time) error {
+	query := `
+		UPDATE dr_test_steps
+		SET status = $1, started_at = COALESCE($2, started_at), completed_at = COALESCE($3, completed_at)
+		WHERE id = $4`
+	_, err := r.db.Exec(ctx, query, status, startedAt, completedAt, stepID)
+	return err
+}
+
+func (r *drRepository) MarkPendingDRTestStepsSkipped(ctx context.Context, testID uuid.UUID) error {
+	query := `
+		UPDATE dr_test_steps
+		SET status = 'SKIPPED', completed_at = NOW()
+		WHERE test_id = $1 AND status IN ('PENDING', 'RUNNING')`
+	_, err := r.db.Exec(ctx, query, testID)
+	return err
+}
+
+func (r *drRepository) ListDRTestSteps(ctx context.Context, testID uuid.UUID) ([]*models.DRTestStep, error) {
+	query := `
+		SELECT id, test_id, step_order, step_name, status, started_at, completed_at
+		FROM dr_test_steps
+		WHERE test_id = $1
+		ORDER BY step_order ASC`
+	rows, err := r.db.Query(ctx, query, testID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var steps []*models.DRTestStep
+	for rows.Next() {
+		var s models.DRTestStep
+		if err := rows.Scan(&s.ID, &s.TestID, &s.StepOrder, &s.StepName, &s.Status, &s.StartedAt, &s.CompletedAt); err != nil {
+			return nil, err
+		}
+		steps = append(steps, &s)
+	}
+	return steps, nil
+}
+
+func (r *drRepository) CreateDRTestLog(ctx context.Context, log *models.DRTestLog) error {
+	query := `INSERT INTO dr_test_logs (id, test_id, ts, level, message) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.db.Exec(ctx, query, log.ID, log.TestID, log.Timestamp, log.Level, log.Message)
+	return err
+}
+
+func (r *drRepository) ListDRTestLogs(ctx context.Context, testID uuid.UUID, limit int) ([]*models.DRTestLog, error) {
+	query := `
+		SELECT id, test_id, ts, level, message
+		FROM dr_test_logs
+		WHERE test_id = $1
+		ORDER BY ts DESC
+		LIMIT $2`
+	rows, err := r.db.Query(ctx, query, testID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []*models.DRTestLog
+	for rows.Next() {
+		var l models.DRTestLog
+		if err := rows.Scan(&l.ID, &l.TestID, &l.Timestamp, &l.Level, &l.Message); err != nil {
+			return nil, err
+		}
+		logs = append(logs, &l)
+	}
+
+	// Reverse to chronological order for UI readability.
+	for i, j := 0, len(logs)-1; i < j; i, j = i+1, j-1 {
+		logs[i], logs[j] = logs[j], logs[i]
+	}
+	return logs, nil
+}
+
+func (r *drRepository) GetDRTestMetrics(ctx context.Context) (*models.DRTestMetrics, error) {
+	var total int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM dr_tests`).Scan(&total); err != nil {
+		return nil, err
+	}
+
+	var passed int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM dr_tests WHERE status = 'PASSED'`).Scan(&passed); err != nil {
+		return nil, err
+	}
+
+	var avgSeconds *float64
+	if err := r.db.QueryRow(ctx, `
+		SELECT AVG(EXTRACT(EPOCH FROM (completed_at - started_at)))
+		FROM dr_tests
+		WHERE status IN ('PASSED', 'FAILED', 'ABORTED') AND started_at IS NOT NULL AND completed_at IS NOT NULL`).Scan(&avgSeconds); err != nil {
+		return nil, err
+	}
+
+	var nextScheduled *time.Time
+	if err := r.db.QueryRow(ctx, `
+		SELECT MIN(scheduled_at)
+		FROM dr_tests
+		WHERE status = 'SCHEDULED' AND scheduled_at IS NOT NULL`).Scan(&nextScheduled); err != nil {
+		return nil, err
+	}
+
+	successRate := 0.0
+	if total > 0 {
+		successRate = (float64(passed) / float64(total)) * 100
+	}
+
+	avgRecovery := "—"
+	if avgSeconds != nil {
+		avgRecovery = fmt.Sprintf("%.0fs", *avgSeconds)
+	}
+
+	return &models.DRTestMetrics{
+		TotalTests:      total,
+		SuccessRate:     successRate,
+		AvgRecoveryTime: avgRecovery,
+		NextScheduled:   nextScheduled,
+	}, nil
+}
+
+func (r *drRepository) GetDRTestSettings(ctx context.Context) (*models.DRTestSettings, error) {
+	query := `
+		SELECT schedule_enabled, frequency, schedule_day, schedule_time, intensity, notification_emails
+		FROM dr_test_settings
+		WHERE id = TRUE`
+	var s models.DRTestSettings
+	var emailsRaw []byte
+	if err := r.db.QueryRow(ctx, query).Scan(
+		&s.ScheduleEnabled, &s.Frequency, &s.ScheduleDay, &s.ScheduleTime, &s.Intensity, &emailsRaw,
+	); err != nil {
+		return nil, err
+	}
+	if len(emailsRaw) > 0 {
+		if err := json.Unmarshal(emailsRaw, &s.NotificationEmails); err != nil {
+			return nil, err
+		}
+	}
+	if s.NotificationEmails == nil {
+		s.NotificationEmails = []string{}
+	}
+	return &s, nil
+}
+
+func (r *drRepository) UpsertDRTestSettings(ctx context.Context, settings *models.DRTestSettings) error {
+	emailsJSON, err := json.Marshal(settings.NotificationEmails)
+	if err != nil {
+		return err
+	}
+	query := `
+		INSERT INTO dr_test_settings (id, schedule_enabled, frequency, schedule_day, schedule_time, intensity, notification_emails, updated_at)
+		VALUES (TRUE, $1, $2, $3, $4, $5, $6::jsonb, NOW())
+		ON CONFLICT (id) DO UPDATE SET
+			schedule_enabled = EXCLUDED.schedule_enabled,
+			frequency = EXCLUDED.frequency,
+			schedule_day = EXCLUDED.schedule_day,
+			schedule_time = EXCLUDED.schedule_time,
+			intensity = EXCLUDED.intensity,
+			notification_emails = EXCLUDED.notification_emails,
+			updated_at = NOW()`
+	_, err = r.db.Exec(ctx, query,
+		settings.ScheduleEnabled, settings.Frequency, settings.ScheduleDay, settings.ScheduleTime, settings.Intensity, string(emailsJSON),
+	)
+	return err
 }

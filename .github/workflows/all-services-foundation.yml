@@ -1,0 +1,32 @@
+name: All Services Foundation
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "services/**"
+      - "docker-compose.yml"
+      - "scripts/check_all_services_foundation.py"
+      - ".github/workflows/all-services-foundation.yml"
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "services/**"
+      - "docker-compose.yml"
+      - "scripts/check_all_services_foundation.py"
+      - ".github/workflows/all-services-foundation.yml"
+
+jobs:
+  all-services-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run all-services foundation checks
+        run: python3 scripts/check_all_services_foundation.py

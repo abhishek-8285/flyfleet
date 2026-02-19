@@ -244,3 +244,28 @@ type OptimizedRoute struct {
 type TripStats struct {
 	ActiveTrips int `json:"active_trips"`
 }
+
+// ProofOfDelivery represents a POD document stored in the separate proof_of_delivery table
+type ProofOfDelivery struct {
+	ID          string                 `json:"id" db:"id"`
+	TripID      string                 `json:"trip_id" db:"trip_id"`
+	Type        string                 `json:"type" db:"type"`
+	URL         string                 `json:"url" db:"url"`
+	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
+	UploadedBy  string                 `json:"uploaded_by" db:"uploaded_by"`
+	Verified    bool                   `json:"verified" db:"verified"`
+	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+}
+
+// TripOffer represents a trip assignment offer to a driver
+type TripOffer struct {
+	ID              string     `json:"id" db:"id"`
+	TripID          string     `json:"trip_id" db:"trip_id"`
+	DriverID        string     `json:"driver_id" db:"driver_id"`
+	Status          string     `json:"status" db:"status"` // OFFERED, ACCEPTED, REJECTED, EXPIRED
+	RejectionReason string     `json:"rejection_reason" db:"rejection_reason"`
+	ExpiresAt       *time.Time `json:"expires_at" db:"expires_at"`
+	RespondedAt     *time.Time `json:"responded_at" db:"responded_at"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+}

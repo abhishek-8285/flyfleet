@@ -30,7 +30,7 @@ const SearchPage = () => {
       setLoading(true);
       try {
         const queryParams = new URLSearchParams({ q: searchTerm });
-        const response = await fetch(`http://localhost:8081/api/search?${queryParams}`);
+        const response = await fetch(`/api/v1/search?${queryParams}`);
         const data = await response.json();
         if (data.data) {
           setResults(data.data);
@@ -54,7 +54,7 @@ const SearchPage = () => {
   useEffect(() => {
     const fetchFacets = async () => {
       try {
-        const response = await fetch('http://localhost:8081/api/search/facets');
+        const response = await fetch('/api/v1/search/facets');
         const data = await response.json();
         setFacets(data);
       } catch (error) {

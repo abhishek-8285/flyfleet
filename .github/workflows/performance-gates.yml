@@ -1,0 +1,103 @@
+name: Performance Gates
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/dashboard-web/**'
+      - 'services/web-bff/**'
+      - 'scripts/check_web_bundle_budget.py'
+      - 'scripts/check_api_latency_smoke.sh'
+      - '.github/workflows/performance-gates.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/dashboard-web/**'
+      - 'services/web-bff/**'
+      - 'scripts/check_web_bundle_budget.py'
+      - 'scripts/check_api_latency_smoke.sh'
+      - '.github/workflows/performance-gates.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  web-bundle-budget:
+    name: Web Bundle Budget
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dashboard web
+        run: npm run build --workspace @flyfleet/dashboard-web
+
+      - name: Validate bundle budget
+        run: python3 scripts/check_web_bundle_budget.py
+
+  api-latency-smoke:
+    name: API Latency Smoke
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+
+      - name: Build web-bff
+        run: cd services/web-bff && go build -o /tmp/web-bff-run ./cmd/main.go
+
+      - name: Start web-bff
+        run: |
+          PORT=8081 \
+          REDIS_ADDR=localhost:6379 \
+          NATS_URL=nats://localhost:4222 \
+          JWT_SECRET=dummy-ci-secret \
+          AUTH_SERVICE_URL=http://localhost:18080 \
+          FLEET_CORE_SERVICE_URL=http://localhost:18084 \
+          ALERT_SERVICE_URL=http://localhost:18085 \
+          ADMIN_SUPPORT_SERVICE_URL=http://localhost:18086 \
+          BILLING_SERVICE_URL=http://localhost:18087 \
+          TRACKING_SERVICE_URL=http://localhost:18082 \
+          REPORTS_SERVICE_URL=http://localhost:18083 \
+          SETTINGS_SERVICE_URL=http://localhost:18091 \
+          INTEGRATIONS_SERVICE_URL=http://localhost:18090 \
+          ANALYTICS_SERVICE_URL=http://localhost:18089 \
+          /tmp/web-bff-run > /tmp/web-bff-ci.log 2>&1 &
+
+          for i in {1..30}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/health || true)
+            if [ "$code" = "200" ]; then
+              echo "web-bff ready"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "web-bff failed to start"
+          cat /tmp/web-bff-ci.log || true
+          exit 1
+
+      - name: Run latency smoke gate
+        run: bash scripts/check_api_latency_smoke.sh http://localhost:8081 800

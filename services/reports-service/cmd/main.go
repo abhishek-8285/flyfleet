@@ -2,27 +2,26 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"os"
 
-	"github.com/flyfleet/reports-service/internal/client"
 	"github.com/flyfleet/reports-service/internal/handlers"
 	"github.com/flyfleet/reports-service/internal/queue"
 	"github.com/flyfleet/reports-service/internal/repository"
 	"github.com/flyfleet/reports-service/internal/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
 func main() {
-	// 1. Logger
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	// 2. Database
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = ""
+		dbURL = "postgres://postgres:postgres@localhost:5432/flyfleet?sslmode=disable"
 	}
 
 	config, err := pgxpool.ParseConfig(dbURL)
@@ -36,70 +35,43 @@ func main() {
 	}
 	defer pool.Close()
 
-	// 3. Repository
 	repo := repository.NewPostgresRepository(pool)
 
-	// 4. Queue & Worker
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
-		redisAddr = "" // Default for local dev
+		redisAddr = "localhost:6379"
 	}
-	
-	notifServiceURL := os.Getenv("NOTIFICATION_SERVICE_URL")
-	if notifServiceURL == "" {
-		notifServiceURL = "http://localhost:8080" // Default for local dev (adjust if needed)
-	}
-	notifClient := client.NewNotificationClient(notifServiceURL, logger)
 
 	queueClient := queue.NewQueueClient(redisAddr)
 	defer queueClient.Close()
 
-	workerServer := queue.NewWorkerServer(redisAddr, repo, notifClient, logger)
-	
-	// Start Worker in background
-	go func() {
-		logger.Info("Starting Worker Server")
-		if err := workerServer.Run(); err != nil {
-			logger.Fatal("Worker Server failed", zap.Error(err))
-		}
-	}()
-
-	// 5. Service & Handlers
 	svc := service.NewReportService(repo, queueClient, logger)
 	h := handlers.NewReportHandler(svc, logger)
 
-	// 4. Router
-	r := gin.Default()
-	
-	// Middleware
-	r.Use(func(c *gin.Context) {
-		logger.Info("Request", zap.String("method", c.Request.Method), zap.String("path", c.Request.URL.Path))
-		c.Next()
+	r := chi.NewRouter()
+	r.Use(chiMiddleware.Logger)
+	r.Use(chiMiddleware.Recoverer)
+
+	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
 	})
 
-	api := r.Group("/api/v1/reports")
-	{
-		api.POST("/schedules", h.CreateReport)
-		api.GET("/schedules", h.ListReports)
-		api.GET("/schedules/:id", h.GetReport)
-		api.PUT("/schedules/:id", h.UpdateReport)
-		api.POST("/schedules/:id/pause", h.PauseReport)
-		api.POST("/schedules/:id/resume", h.ResumeReport)
-		
-		api.GET("/executions", h.ListExecutions)
-		
-		api.GET("/settings", h.GetSettings)
-		api.PUT("/settings", h.UpdateSettings)
-	}
+	r.Route("/api/v1/reports", func(r chi.Router) {
+		h.RegisterRoutes(r)
+	})
 
-	// 5. Start
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8083"
 	}
-	
+
 	logger.Info("Starting Reports Service", zap.String("port", port))
-	if err := r.Run(":" + port); err != nil {
+	srv := &http.Server{
+		Addr:    ":" + port,
+		Handler: r,
+	}
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Fatal("Failed to start server", zap.Error(err))
 	}
 }

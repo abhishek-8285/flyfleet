@@ -8,22 +8,26 @@ import (
 )
 
 type Config struct {
-	Port                        string
-	AuthServiceURL              string
-	FleetCoreServiceURL         string
-	AlertServiceURL             string
-	AdminSupportServiceURL      string
-	BillingServiceURL           string
-	TrackingServiceURL          string
+	Port                   string
+	AuthServiceURL         string
+	FleetCoreServiceURL    string
+	AlertServiceURL        string
+	AdminSupportServiceURL string
+	BillingServiceURL      string
+	TrackingServiceURL     string
+	SettingsServiceURL     string
+	AnalyticsServiceURL    string
 
 	// Legacy/Backlog Service URLs (for V2 compatibility if needed)
-	ReportsServiceURL           string
-	DRServiceURL                string
-	IntegrationsServiceURL      string
-	IndiaIntegrationServiceURL  string
+	ReportsServiceURL          string
+	DRServiceURL               string
+	IntegrationsServiceURL     string
+	IndiaIntegrationServiceURL string
 
-	JWTSecret                   string
-	LogLevel                    string
+	JWTSecret string
+	NatsURL   string
+	RedisAddr string
+	LogLevel  string
 }
 
 func Load() *Config {
@@ -40,11 +44,15 @@ func Load() *Config {
 	v.SetDefault("services.admin_support_url", "http://admin-support-service:8086")
 	v.SetDefault("services.billing_url", "http://billing-service:8087")
 	v.SetDefault("services.tracking_url", "http://tracking-service:8082")
+	v.SetDefault("services.settings_url", "http://settings-service:8091")
+	v.SetDefault("services.analytics_url", "http://analytics-service:8089")
 	v.SetDefault("services.reports_url", "http://reports-service:8083")
 	v.SetDefault("services.dr_url", "http://admin-support-service:8086")
 	v.SetDefault("services.integrations_url", "http://fleet-core-service:8084")
 
 	v.SetDefault("services.india_integration_url", "http://india-integration-service:8088")
+	v.SetDefault("services.nats_url", "nats://nats:4222")
+	v.SetDefault("redis.addr", "redis:6379")
 
 	// Config file setup
 	v.SetConfigName("config")
@@ -74,6 +82,8 @@ func Load() *Config {
 	v.BindEnv("services.admin_support_url", "ADMIN_SUPPORT_SERVICE_URL")
 	v.BindEnv("services.billing_url", "BILLING_SERVICE_URL")
 	v.BindEnv("services.tracking_url", "TRACKING_SERVICE_URL")
+	v.BindEnv("services.settings_url", "SETTINGS_SERVICE_URL")
+	v.BindEnv("services.analytics_url", "ANALYTICS_SERVICE_URL")
 	v.BindEnv("services.reports_url", "REPORTS_SERVICE_URL")
 	v.BindEnv("services.india_integration_url", "INDIA_INTEGRATION_SERVICE_URL")
 	v.BindEnv("services.dr_url", "DR_SERVICE_URL")
@@ -81,6 +91,8 @@ func Load() *Config {
 	v.BindEnv("security.jwt_secret", "JWT_SECRET")
 	v.BindEnv("server.port", "PORT")
 	v.BindEnv("server.log_level", "LOG_LEVEL")
+	v.BindEnv("services.nats_url", "NATS_URL")
+	v.BindEnv("redis.addr", "REDIS_ADDR")
 
 	return &Config{
 		Port:                   v.GetString("server.port"),
@@ -90,6 +102,8 @@ func Load() *Config {
 		AdminSupportServiceURL: v.GetString("services.admin_support_url"),
 		BillingServiceURL:      v.GetString("services.billing_url"),
 		TrackingServiceURL:     v.GetString("services.tracking_url"),
+		SettingsServiceURL:     v.GetString("services.settings_url"),
+		AnalyticsServiceURL:    v.GetString("services.analytics_url"),
 
 		ReportsServiceURL:      v.GetString("services.reports_url"),
 		DRServiceURL:           v.GetString("services.dr_url"),
@@ -97,7 +111,13 @@ func Load() *Config {
 
 		IndiaIntegrationServiceURL: v.GetString("services.india_integration_url"),
 
-		JWTSecret:              v.GetString("security.jwt_secret"),
-		LogLevel:               v.GetString("server.log_level"),
+		JWTSecret: v.GetString("security.jwt_secret"),
+		NatsURL:   v.GetString("services.nats_url"),
+		RedisAddr: v.GetString("redis.addr"),
+		LogLevel:  v.GetString("server.log_level"),
 	}
+}
+
+func (c *Config) GetJWTSecret() string {
+	return c.JWTSecret
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface DRTest {
     id: string;
@@ -40,16 +41,22 @@ const DRTestDetailView: React.FC = () => {
     const [steps, setSteps] = useState<Step[]>([]);
     const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
         try {
-            const res = await fetch(`/api/v1/admin/dr/tests/${id}`);
-            const data = await res.json();
-            setTest(data.data);
-            setSteps(data.steps || []);
-            setLogs(data.logs || []);
+            setLoading(true);
+            setError(null);
+            const data = await apiClient.get(`/admin/dr/tests/${id}`) as any;
+            setTest(data.data || data.test || data);
+            setSteps(data.steps || data.data?.steps || []);
+            setLogs(data.logs || data.data?.logs || []);
         } catch (error) {
             console.error('Failed to fetch DR test:', error);
+            setError('Failed to load DR test.');
+            setTest(null);
+            setSteps([]);
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -64,10 +71,11 @@ const DRTestDetailView: React.FC = () => {
     const handleAbort = async () => {
         if (!window.confirm('Are you sure you want to abort this test?')) return;
         try {
-            await fetch(`/api/v1/admin/dr/tests/${id}/abort`, { method: 'POST' });
+            await apiClient.post(`/admin/dr/tests/${id}/abort`);
             fetchData();
         } catch (error) {
             console.error('Failed to abort test:', error);
+            alert('Failed to abort test');
         }
     };
 
@@ -93,6 +101,10 @@ const DRTestDetailView: React.FC = () => {
 
     if (loading) {
         return <div className="flex items-center justify-center h-full bg-[#0a0a0f] text-white">Loading...</div>;
+    }
+
+    if (error) {
+        return <div className="flex items-center justify-center h-full bg-[#0a0a0f] text-red-400">{error}</div>;
     }
 
     if (!test) {

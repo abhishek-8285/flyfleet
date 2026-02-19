@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -24,78 +25,75 @@ func NewVideoHandler(service service.VideoService) *VideoHandler {
 }
 
 // CreateVideoStream handles POST /api/v1/video/streams
-func (h *VideoHandler) CreateVideoStream(c *gin.Context) {
+func (h *VideoHandler) CreateVideoStream(w http.ResponseWriter, r *http.Request) {
 	var stream models.VideoStream
-	if err := c.ShouldBindJSON(&stream); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&stream); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateVideoStream(ctx, &stream); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create video stream", "details": err.Error()})
+	if err := h.service.CreateVideoStream(r.Context(), &stream); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video stream", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, stream)
+	h.writeJSONResponse(w, http.StatusCreated, stream)
 }
 
 // GetVideoStream handles GET /api/v1/video/streams/:id
-func (h *VideoHandler) GetVideoStream(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) GetVideoStream(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	stream, err := h.service.GetVideoStream(ctx, id)
+	stream, err := h.service.GetVideoStream(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video stream not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, stream)
+	h.writeJSONResponse(w, http.StatusOK, stream)
 }
 
 // UpdateVideoStream handles PUT /api/v1/video/streams/:id
-func (h *VideoHandler) UpdateVideoStream(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) UpdateVideoStream(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateVideoStream(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update video stream", "details": err.Error()})
+	if err := h.service.UpdateVideoStream(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update video stream", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video stream updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video stream updated"})
 }
 
 // DeleteVideoStream handles DELETE /api/v1/video/streams/:id
-func (h *VideoHandler) DeleteVideoStream(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) DeleteVideoStream(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteVideoStream(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete video stream", "details": err.Error()})
+	if err := h.service.DeleteVideoStream(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete video stream", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video stream deleted"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video stream deleted"})
 }
 
 // ListVideoStreams handles GET /api/v1/video/streams
-func (h *VideoHandler) ListVideoStreams(c *gin.Context) {
-	vehicleIDStr := c.Query("vehicle_id")
-	status := c.Query("status")
+func (h *VideoHandler) ListVideoStreams(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vehicleIDStr := query.Get("vehicle_id")
+	status := query.Get("status")
 
 	var vehicleID *uuid.UUID
 	if vehicleIDStr != "" {
 		id, err := uuid.Parse(vehicleIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle_id", "details": err.Error()})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle_id", err)
 			return
 		}
 		vehicleID = &id
@@ -106,8 +104,8 @@ func (h *VideoHandler) ListVideoStreams(c *gin.Context) {
 		statusPtr = &status
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit := 10 // default
 	if limitStr != "" {
@@ -123,14 +121,13 @@ func (h *VideoHandler) ListVideoStreams(c *gin.Context) {
 		}
 	}
 
-	ctx := c.Request.Context()
-	streams, totalCount, err := h.service.ListVideoStreams(ctx, vehicleID, statusPtr, limit, offset)
+	streams, totalCount, err := h.service.ListVideoStreams(r.Context(), vehicleID, statusPtr, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list video streams", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list video streams", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"streams":        streams,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -140,74 +137,71 @@ func (h *VideoHandler) ListVideoStreams(c *gin.Context) {
 }
 
 // CreateVideoRecording handles POST /api/v1/video/recordings
-func (h *VideoHandler) CreateVideoRecording(c *gin.Context) {
+func (h *VideoHandler) CreateVideoRecording(w http.ResponseWriter, r *http.Request) {
 	var recording models.VideoRecording
-	if err := c.ShouldBindJSON(&recording); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&recording); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateVideoRecording(ctx, &recording); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create video recording", "details": err.Error()})
+	if err := h.service.CreateVideoRecording(r.Context(), &recording); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video recording", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, recording)
+	h.writeJSONResponse(w, http.StatusCreated, recording)
 }
 
 // GetVideoRecording handles GET /api/v1/video/recordings/:id
-func (h *VideoHandler) GetVideoRecording(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) GetVideoRecording(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	recording, err := h.service.GetVideoRecording(ctx, id)
+	recording, err := h.service.GetVideoRecording(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video recording not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, recording)
+	h.writeJSONResponse(w, http.StatusOK, recording)
 }
 
 // UpdateVideoRecording handles PUT /api/v1/video/recordings/:id
-func (h *VideoHandler) UpdateVideoRecording(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) UpdateVideoRecording(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateVideoRecording(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update video recording", "details": err.Error()})
+	if err := h.service.UpdateVideoRecording(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update video recording", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video recording updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video recording updated"})
 }
 
 // DeleteVideoRecording handles DELETE /api/v1/video/recordings/:id
-func (h *VideoHandler) DeleteVideoRecording(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) DeleteVideoRecording(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteVideoRecording(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete video recording", "details": err.Error()})
+	if err := h.service.DeleteVideoRecording(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete video recording", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video recording deleted"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video recording deleted"})
 }
 
 // ListVideoRecordings handles GET /api/v1/video/recordings
-func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
-	streamIDStr := c.Query("stream_id")
-	vehicleIDStr := c.Query("vehicle_id")
-	startTimeStr := c.Query("start_time")
-	endTimeStr := c.Query("end_time")
+func (h *VideoHandler) ListVideoRecordings(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	streamIDStr := query.Get("stream_id")
+	vehicleIDStr := query.Get("vehicle_id")
+	startTimeStr := query.Get("start_time")
+	endTimeStr := query.Get("end_time")
 
 	var streamID *string
 	if streamIDStr != "" {
@@ -218,7 +212,7 @@ func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
 	if vehicleIDStr != "" {
 		id, err := uuid.Parse(vehicleIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle_id", "details": err.Error()})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle_id", err)
 			return
 		}
 		vehicleID = &id
@@ -228,7 +222,7 @@ func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
 	if startTimeStr != "" {
 		t, err := time.Parse(time.RFC3339, startTimeStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_time format, use RFC3339", "details": err.Error()})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid start_time format, use RFC3339", err)
 			return
 		}
 		startTime = &t
@@ -238,14 +232,14 @@ func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
 	if endTimeStr != "" {
 		t, err := time.Parse(time.RFC3339, endTimeStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_time format, use RFC3339", "details": err.Error()})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid end_time format, use RFC3339", err)
 			return
 		}
 		endTime = &t
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit := 10 // default
 	if limitStr != "" {
@@ -261,14 +255,13 @@ func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
 		}
 	}
 
-	ctx := c.Request.Context()
-	recordings, totalCount, err := h.service.ListVideoRecordings(ctx, streamID, vehicleID, startTime, endTime, limit, offset)
+	recordings, totalCount, err := h.service.ListVideoRecordings(r.Context(), streamID, vehicleID, startTime, endTime, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list video recordings", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list video recordings", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"recordings":     recordings,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -278,60 +271,58 @@ func (h *VideoHandler) ListVideoRecordings(c *gin.Context) {
 }
 
 // CreateVideoAnalytics handles POST /api/v1/video/analytics
-func (h *VideoHandler) CreateVideoAnalytics(c *gin.Context) {
+func (h *VideoHandler) CreateVideoAnalytics(w http.ResponseWriter, r *http.Request) {
 	var analytics models.VideoAnalytics
-	if err := c.ShouldBindJSON(&analytics); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateVideoAnalytics(ctx, &analytics); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create video analytics", "details": err.Error()})
+	if err := h.service.CreateVideoAnalytics(r.Context(), &analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video analytics", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, analytics)
+	h.writeJSONResponse(w, http.StatusCreated, analytics)
 }
 
 // GetVideoAnalytics handles GET /api/v1/video/analytics/:id
-func (h *VideoHandler) GetVideoAnalytics(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) GetVideoAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	analytics, err := h.service.GetVideoAnalytics(ctx, id)
+	analytics, err := h.service.GetVideoAnalytics(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video analytics not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // GetVideoAnalyticsByRecordingID handles GET /api/v1/video/analytics/recording/:recording_id
-func (h *VideoHandler) GetVideoAnalyticsByRecordingID(c *gin.Context) {
-	recordingID := c.Param("recording_id")
+func (h *VideoHandler) GetVideoAnalyticsByRecordingID(w http.ResponseWriter, r *http.Request) {
+	recordingID := chi.URLParam(r, "recording_id")
 
-	ctx := c.Request.Context()
-	analytics, err := h.service.GetVideoAnalyticsByRecordingID(ctx, recordingID)
+	analytics, err := h.service.GetVideoAnalyticsByRecordingID(r.Context(), recordingID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video analytics not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // ListVideoAnalytics handles GET /api/v1/video/analytics
-func (h *VideoHandler) ListVideoAnalytics(c *gin.Context) {
-	recordingID := c.Query("recording_id")
+func (h *VideoHandler) ListVideoAnalytics(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	recordingID := query.Get("recording_id")
 	if recordingID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "recording_id query parameter is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "recording_id query parameter is required", nil)
 		return
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit := 10 // default
 	if limitStr != "" {
@@ -347,14 +338,13 @@ func (h *VideoHandler) ListVideoAnalytics(c *gin.Context) {
 		}
 	}
 
-	ctx := c.Request.Context()
-	analytics, totalCount, err := h.service.ListVideoAnalytics(ctx, recordingID, limit, offset)
+	analytics, totalCount, err := h.service.ListVideoAnalytics(r.Context(), recordingID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list video analytics", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list video analytics", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"analytics":      analytics,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -364,84 +354,81 @@ func (h *VideoHandler) ListVideoAnalytics(c *gin.Context) {
 }
 
 // CreateRetentionPolicy handles POST /api/v1/video/retention/policies
-func (h *VideoHandler) CreateRetentionPolicy(c *gin.Context) {
+func (h *VideoHandler) CreateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
 	var policy models.VideoRetentionPolicy
-	if err := c.ShouldBindJSON(&policy); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateRetentionPolicy(ctx, &policy); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create retention policy", "details": err.Error()})
+	if err := h.service.CreateRetentionPolicy(r.Context(), &policy); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create retention policy", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, policy)
+	h.writeJSONResponse(w, http.StatusCreated, policy)
 }
 
 // GetRetentionPolicy handles GET /api/v1/video/retention/policies/:id
-func (h *VideoHandler) GetRetentionPolicy(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) GetRetentionPolicy(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	policy, err := h.service.GetRetentionPolicy(ctx, id)
+	policy, err := h.service.GetRetentionPolicy(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Retention policy not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, policy)
+	h.writeJSONResponse(w, http.StatusOK, policy)
 }
 
 // UpdateRetentionPolicy handles PUT /api/v1/video/retention/policies/:id
-func (h *VideoHandler) UpdateRetentionPolicy(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateRetentionPolicy(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update retention policy", "details": err.Error()})
+	if err := h.service.UpdateRetentionPolicy(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update retention policy", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Retention policy updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Retention policy updated"})
 }
 
 // DeleteRetentionPolicy handles DELETE /api/v1/video/retention/policies/:id
-func (h *VideoHandler) DeleteRetentionPolicy(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteRetentionPolicy(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete retention policy", "details": err.Error()})
+	if err := h.service.DeleteRetentionPolicy(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete retention policy", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Retention policy deleted"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Retention policy deleted"})
 }
 
 // ListRetentionPolicies handles GET /api/v1/video/retention/policies
-func (h *VideoHandler) ListRetentionPolicies(c *gin.Context) {
-	orgIDStr := c.Query("organization_id")
+func (h *VideoHandler) ListRetentionPolicies(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("organization_id")
 	if orgIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "organization_id query parameter is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "organization_id query parameter is required", nil)
 		return
 	}
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization_id", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization_id", err)
 		return
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit := 10 // default
 	if limitStr != "" {
@@ -457,14 +444,13 @@ func (h *VideoHandler) ListRetentionPolicies(c *gin.Context) {
 		}
 	}
 
-	ctx := c.Request.Context()
-	policies, totalCount, err := h.service.ListRetentionPolicies(ctx, orgID, limit, offset)
+	policies, totalCount, err := h.service.ListRetentionPolicies(r.Context(), orgID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list retention policies", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list retention policies", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"policies":       policies,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -474,92 +460,88 @@ func (h *VideoHandler) ListRetentionPolicies(c *gin.Context) {
 }
 
 // CreateVideoThumbnail handles POST /api/v1/video/thumbnails
-func (h *VideoHandler) CreateVideoThumbnail(c *gin.Context) {
+func (h *VideoHandler) CreateVideoThumbnail(w http.ResponseWriter, r *http.Request) {
 	var thumbnail models.VideoThumbnail
-	if err := c.ShouldBindJSON(&thumbnail); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&thumbnail); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateVideoThumbnail(ctx, &thumbnail); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create video thumbnail", "details": err.Error()})
+	if err := h.service.CreateVideoThumbnail(r.Context(), &thumbnail); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video thumbnail", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, thumbnail)
+	h.writeJSONResponse(w, http.StatusCreated, thumbnail)
 }
 
 // GetVideoThumbnail handles GET /api/v1/video/thumbnails/:id
-func (h *VideoHandler) GetVideoThumbnail(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) GetVideoThumbnail(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	thumbnail, err := h.service.GetVideoThumbnail(ctx, id)
+	thumbnail, err := h.service.GetVideoThumbnail(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video thumbnail not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video thumbnail not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, thumbnail)
+	h.writeJSONResponse(w, http.StatusOK, thumbnail)
 }
 
 // GetThumbnailsByRecordingID handles GET /api/v1/video/thumbnails/recording/:recording_id
-func (h *VideoHandler) GetThumbnailsByRecordingID(c *gin.Context) {
-	recordingID := c.Param("recording_id")
+func (h *VideoHandler) GetThumbnailsByRecordingID(w http.ResponseWriter, r *http.Request) {
+	recordingID := chi.URLParam(r, "recording_id")
 
-	ctx := c.Request.Context()
-	thumbnails, err := h.service.GetThumbnailsByRecordingID(ctx, recordingID)
+	thumbnails, err := h.service.GetThumbnailsByRecordingID(r.Context(), recordingID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Video thumbnails not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Video thumbnails not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, thumbnails)
+	h.writeJSONResponse(w, http.StatusOK, thumbnails)
 }
 
 // UpdateVideoThumbnail handles PUT /api/v1/video/thumbnails/:id
-func (h *VideoHandler) UpdateVideoThumbnail(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) UpdateVideoThumbnail(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateVideoThumbnail(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update video thumbnail", "details": err.Error()})
+	if err := h.service.UpdateVideoThumbnail(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update video thumbnail", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video thumbnail updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video thumbnail updated"})
 }
 
 // DeleteVideoThumbnail handles DELETE /api/v1/video/thumbnails/:id
-func (h *VideoHandler) DeleteVideoThumbnail(c *gin.Context) {
-	id := c.Param("id")
+func (h *VideoHandler) DeleteVideoThumbnail(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteVideoThumbnail(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete video thumbnail", "details": err.Error()})
+	if err := h.service.DeleteVideoThumbnail(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete video thumbnail", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Video thumbnail deleted"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Video thumbnail deleted"})
 }
 
 // ListVideoThumbnails handles GET /api/v1/video/thumbnails
-func (h *VideoHandler) ListVideoThumbnails(c *gin.Context) {
-	recordingID := c.Query("recording_id")
+func (h *VideoHandler) ListVideoThumbnails(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	recordingID := query.Get("recording_id")
 	if recordingID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "recording_id query parameter is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "recording_id query parameter is required", nil)
 		return
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit := 10 // default
 	if limitStr != "" {
@@ -575,14 +557,13 @@ func (h *VideoHandler) ListVideoThumbnails(c *gin.Context) {
 		}
 	}
 
-	ctx := c.Request.Context()
-	thumbnails, totalCount, err := h.service.ListVideoThumbnails(ctx, recordingID, limit, offset)
+	thumbnails, totalCount, err := h.service.ListVideoThumbnails(r.Context(), recordingID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list video thumbnails", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list video thumbnails", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"thumbnails":     thumbnails,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -592,45 +573,63 @@ func (h *VideoHandler) ListVideoThumbnails(c *gin.Context) {
 }
 
 // RegisterRoutes registers all video API routes
-func (h *VideoHandler) RegisterRoutes(router *gin.Engine) {
-	v1 := router.Group("/api/v1")
-	{
-		video := v1.Group("/video")
-		{
-			// Streams
-			video.POST("/streams", h.CreateVideoStream)
-			video.GET("/streams/:id", h.GetVideoStream)
-			video.PUT("/streams/:id", h.UpdateVideoStream)
-			video.DELETE("/streams/:id", h.DeleteVideoStream)
-			video.GET("/streams", h.ListVideoStreams)
+func (h *VideoHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/streams", func(r chi.Router) {
+		r.Post("/", h.CreateVideoStream)
+		r.Get("/", h.ListVideoStreams)
+		r.Get("/{id}", h.GetVideoStream)
+		r.Put("/{id}", h.UpdateVideoStream)
+		r.Delete("/{id}", h.DeleteVideoStream)
+	})
 
-			// Recordings
-			video.POST("/recordings", h.CreateVideoRecording)
-			video.GET("/recordings/:id", h.GetVideoRecording)
-			video.PUT("/recordings/:id", h.UpdateVideoRecording)
-			video.DELETE("/recordings/:id", h.DeleteVideoRecording)
-			video.GET("/recordings", h.ListVideoRecordings)
+	r.Route("/recordings", func(r chi.Router) {
+		r.Post("/", h.CreateVideoRecording)
+		r.Get("/", h.ListVideoRecordings)
+		r.Get("/{id}", h.GetVideoRecording)
+		r.Put("/{id}", h.UpdateVideoRecording)
+		r.Delete("/{id}", h.DeleteVideoRecording)
+	})
 
-			// Analytics
-			video.POST("/analytics", h.CreateVideoAnalytics)
-			video.GET("/analytics/:id", h.GetVideoAnalytics)
-			video.GET("/analytics/recording/:recording_id", h.GetVideoAnalyticsByRecordingID)
-			video.GET("/analytics", h.ListVideoAnalytics)
+	r.Route("/analytics", func(r chi.Router) {
+		r.Post("/", h.CreateVideoAnalytics)
+		r.Get("/", h.ListVideoAnalytics)
+		r.Get("/{id}", h.GetVideoAnalytics)
+		r.Get("/recording/{recording_id}", h.GetVideoAnalyticsByRecordingID)
+	})
 
-			// Thumbnails
-			video.POST("/thumbnails", h.CreateVideoThumbnail)
-			video.GET("/thumbnails/:id", h.GetVideoThumbnail)
-			video.PUT("/thumbnails/:id", h.UpdateVideoThumbnail)
-			video.DELETE("/thumbnails/:id", h.DeleteVideoThumbnail)
-			video.GET("/thumbnails/recording/:recording_id", h.GetThumbnailsByRecordingID)
-			video.GET("/thumbnails", h.ListVideoThumbnails)
+	r.Route("/thumbnails", func(r chi.Router) {
+		r.Post("/", h.CreateVideoThumbnail)
+		r.Get("/", h.ListVideoThumbnails)
+		r.Get("/{id}", h.GetVideoThumbnail)
+		r.Put("/{id}", h.UpdateVideoThumbnail)
+		r.Delete("/{id}", h.DeleteVideoThumbnail)
+		r.Get("/recording/{recording_id}", h.GetThumbnailsByRecordingID)
+	})
 
-			// Retention Policies
-			video.POST("/retention/policies", h.CreateRetentionPolicy)
-			video.GET("/retention/policies/:id", h.GetRetentionPolicy)
-			video.PUT("/retention/policies/:id", h.UpdateRetentionPolicy)
-			video.DELETE("/retention/policies/:id", h.DeleteRetentionPolicy)
-			video.GET("/retention/policies", h.ListRetentionPolicies)
+	r.Route("/retention/policies", func(r chi.Router) {
+		r.Post("/", h.CreateRetentionPolicy)
+		r.Get("/", h.ListRetentionPolicies)
+		r.Get("/{id}", h.GetRetentionPolicy)
+		r.Put("/{id}", h.UpdateRetentionPolicy)
+		r.Delete("/{id}", h.DeleteRetentionPolicy)
+	})
+}
+
+func (h *VideoHandler) writeJSONResponse(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if data != nil {
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			// Basic logging if encoding fails
+			http.Error(w, "Failed to encode JSON", http.StatusInternalServerError)
 		}
 	}
+}
+
+func (h *VideoHandler) writeErrorResponse(w http.ResponseWriter, status int, message string, err error) {
+	resp := map[string]interface{}{"error": message}
+	if err != nil {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, status, resp)
 }

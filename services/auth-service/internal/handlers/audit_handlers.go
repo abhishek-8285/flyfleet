@@ -52,10 +52,18 @@ func (h *AuditHandlers) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	totalPages := (total + size - 1) / size
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"logs":  logs,
-		"total": total,
+		"data": logs,
+		"meta": map[string]any{
+			"total":       total,
+			"page":        page,
+			"limit":       size,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
 	})
 }
 
@@ -77,7 +85,7 @@ func (h *AuditHandlers) GetAuditLogByID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(log)
+	json.NewEncoder(w).Encode(map[string]any{"data": log})
 }
 
 func (h *AuditHandlers) GetAuditSettings(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +137,21 @@ func (h *AuditHandlers) ListEntityHistory(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(history)
+	if history == nil {
+		history = []models.EntityAuditHistory{}
+	}
+	length := len(history)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": history,
+		"meta": map[string]any{
+			"total":       length,
+			"page":        1,
+			"limit":       length,
+			"total_pages": 1,
+			"has_next":    false,
+			"has_prev":    false,
+		},
+	})
 }
 
 func (h *AuditHandlers) CreateEvidenceExport(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +199,21 @@ func (h *AuditHandlers) ListEvidenceExports(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(exports)
+	if exports == nil {
+		exports = []models.EvidenceExport{}
+	}
+	length := len(exports)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": exports,
+		"meta": map[string]any{
+			"total":       length,
+			"page":        1,
+			"limit":       length,
+			"total_pages": 1,
+			"has_next":    false,
+			"has_prev":    false,
+		},
+	})
 }
 
 func (h *AuditHandlers) GetEvidenceExport(w http.ResponseWriter, r *http.Request) {

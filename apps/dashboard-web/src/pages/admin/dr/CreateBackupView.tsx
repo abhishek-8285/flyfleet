@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 const CreateBackupView: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         backup_type: 'FULL',
         location: '',
@@ -24,28 +26,20 @@ const CreateBackupView: React.FC = () => {
         }
 
         setLoading(true);
+        setError(null);
         try {
-            const res = await fetch('/api/v1/admin/dr/backups', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    backup_type: formData.backup_type,
-                    location: formData.location,
-                    retention_days: Number(formData.retention_days),
-                    remarks: formData.remarks,
-                    initiated_by: formData.initiated_by
-                })
+            await apiClient.post('/admin/dr/backups', {
+                backup_type: formData.backup_type,
+                location: formData.location,
+                retention_days: Number(formData.retention_days),
+                remarks: formData.remarks,
+                initiated_by: formData.initiated_by
             });
-
-            if (res.ok) {
-                navigate('/admin/dr');
-            } else {
-                const err = await res.json();
-                alert(`Error: ${err.error || 'Failed to start backup'}`);
-            }
+            navigate('/admin/dr');
         } catch (err) {
             console.error(err);
-            alert("Network error");
+            setError('Failed to start backup');
+            alert("Failed to start backup");
         } finally {
             setLoading(false);
         }
@@ -200,6 +194,13 @@ const CreateBackupView: React.FC = () => {
                             </div>
                         </div>
                     </section>
+
+                    {error && (
+                        <div className="flex items-start gap-3 p-4 bg-danger/10 border border-danger/20 rounded-lg text-danger text-xs">
+                            <span className="material-symbols-outlined text-[18px]">error</span>
+                            <span>{error}</span>
+                        </div>
+                    )}
 
                     <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
                         <span className="material-symbols-outlined text-primary text-[20px]">info</span>

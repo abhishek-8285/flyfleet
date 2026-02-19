@@ -54,6 +54,36 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 	return err
 }
 
+// GetByEmail retrieves a driver by email address
+func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
+	query := `SELECT id, org_id, first_name, last_name, full_name, email, status, created_at
+	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
+	var driver models.Driver
+	err := r.db.QueryRow(ctx, query, email).Scan(
+		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
+		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &driver, nil
+}
+
+// GetByLicenseNumber retrieves a driver by license number
+func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
+	query := `SELECT id, org_id, first_name, last_name, full_name, email, license_number, status, created_at
+	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
+	var driver models.Driver
+	err := r.db.QueryRow(ctx, query, licenseNumber).Scan(
+		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
+		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &driver, nil
+}
+
 // GetByID retrieves a driver by its ID
 func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	query := `

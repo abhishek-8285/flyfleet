@@ -16,6 +16,7 @@ const LoginActivityLogs: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isLive, setIsLive] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLogs();
@@ -28,13 +29,19 @@ const LoginActivityLogs: React.FC = () => {
 
   const fetchLogs = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await api.getLoginActivityLogs({ 
         status: filter === 'ALL' ? undefined : filter,
         size: 50 
       });
-      setLogs(response.events || []);
+      const data = (response as any)?.data ?? response;
+      const items = data?.events || data?.items || data?.logs || data || [];
+      setLogs(Array.isArray(items) ? items : []);
     } catch (error) {
       console.error('Failed to fetch logs', error);
+      setError('Failed to fetch logs.');
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -144,6 +151,12 @@ const LoginActivityLogs: React.FC = () => {
                       Decrypting security logs...
                     </td>
                   </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-20 text-center text-red-400">
+                      {error}
+                    </td>
+                  </tr>
                 ) : logs.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-20 text-center text-slate-500">
@@ -154,41 +167,41 @@ const LoginActivityLogs: React.FC = () => {
                   logs.map((log) => (
                     <tr key={log.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-white">{format(new Date(log.created_at), 'MMM dd, HH:mm:ss')}</div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.id.slice(0, 8)}</div>
+                        <div className="text-sm font-medium text-white">{format(new Date(log.created_at || log.timestamp || Date.now()), 'MMM dd, HH:mm:ss')}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{(log.id || '').slice(0, 8)}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-blue-600/40 flex items-center justify-center text-xs font-bold text-white border border-white/10 uppercase">
-                            {log.email.charAt(0)}
+                            {(log.email || log.user_email || 'U').charAt(0)}
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-white">{log.email}</span>
+                            <span className="text-sm font-medium text-white">{log.email || log.user_email || 'Unknown user'}</span>
                             <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Enterprise User</span>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-slate-300">
-                           {log.device?.toLowerCase().includes('mobile') ? <DevicePhoneMobileIcon className="w-4 h-4 text-slate-500" /> : <ComputerDesktopIcon className="w-4 h-4 text-slate-500" />}
-                           <span className="text-sm">{log.browser}</span>
+                           {(log.device || '').toLowerCase().includes('mobile') ? <DevicePhoneMobileIcon className="w-4 h-4 text-slate-500" /> : <ComputerDesktopIcon className="w-4 h-4 text-slate-500" />}
+                           <span className="text-sm">{log.browser || log.user_agent || 'Unknown'}</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">{log.device}</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">{log.device || log.device_name || '—'}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-slate-300">
                           <MapPinIcon className="w-4 h-4 text-primary" />
-                          <span className="text-sm">{log.location}</span>
+                          <span className="text-sm">{log.location || log.geo || 'Unknown'}</span>
                         </div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.ip_address}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.ip_address || log.ip || '—'}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${getStatusColor(log.status)}`}>
-                          {log.status}
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${getStatusColor(log.status || 'UNKNOWN')}`}>
+                          {log.status || 'UNKNOWN'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        {getRiskBadge(log.risk_level)}
+                        {getRiskBadge(log.risk_level || log.risk || 'low')}
                       </td>
                     </tr>
                   ))

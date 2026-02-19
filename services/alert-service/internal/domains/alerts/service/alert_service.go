@@ -9,9 +9,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/alert-service/internal/domains/alerts/models"
-	"github.com/flyfleet/alert-service/internal/providers"
 	"github.com/flyfleet/alert-service/internal/domains/alerts/repository"
 	"github.com/flyfleet/alert-service/internal/domains/alerts/rule_engine"
+	"github.com/flyfleet/alert-service/internal/providers"
 )
 
 type AlertService struct {
@@ -233,18 +233,45 @@ func (s *AlertService) DisableRule(ctx context.Context, id string) error {
 
 // CreateAlert creates a new alert instance
 func (s *AlertService) CreateAlert(ctx context.Context, alert *models.Alert) error {
+	// 1. Generate DedupKey if missing
+	if alert.DedupKey == "" && alert.RuleID != "" {
+		if alert.VehicleID != nil {
+			alert.DedupKey = fmt.Sprintf("%s:%s", alert.RuleID, alert.VehicleID.String())
+		} else if alert.DriverID != nil {
+			alert.DedupKey = fmt.Sprintf("%s:%s", alert.RuleID, alert.DriverID.String())
+		} else {
+			alert.DedupKey = fmt.Sprintf("%s:global", alert.RuleID)
+		}
+	}
+
+	// 2. Calculate SLA Deadline based on severity
+	if alert.SLADeadline == nil {
+		var duration time.Duration
+		switch alert.Severity {
+		case models.SeverityCritical:
+			duration = 15 * time.Minute
+		case models.SeverityWarning:
+			duration = 1 * time.Hour
+		default:
+			duration = 4 * time.Hour
+		}
+		deadline := alert.Timestamp.Add(duration)
+		alert.SLADeadline = &deadline
+	}
+
+	// 3. Persist alert
 	if err := s.repo.CreateAlert(ctx, alert); err != nil {
 		s.logger.Error("failed to create alert", zap.Error(err))
 		return fmt.Errorf("failed to create alert: %w", err)
 	}
 
-	// Send notifications for the alert
+	// 4. Send notifications for the alert
 	if err := s.sendAlertNotifications(alert); err != nil {
 		s.logger.Error("failed to send alert notifications", zap.Error(err))
 		// Don't fail the alert creation if notifications fail
 	}
 
-	s.logger.Info("alert created", zap.String("alert_id", alert.ID))
+	s.logger.Info("alert created", zap.String("alert_id", alert.ID), zap.String("dedup_key", alert.DedupKey))
 	return nil
 }
 

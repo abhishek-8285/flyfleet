@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/models"
@@ -20,15 +21,22 @@ type Repository interface {
 	UpdateDeviceHealth(ctx context.Context, deviceID uuid.UUID, battery, signal *int, firmware *string) error
 
 	// Telemetry
-	
+
 	GetLatestTelemetry(ctx context.Context, deviceID uuid.UUID) (*models.DeviceTelemetry, error)
 	ListTelemetry(ctx context.Context, deviceID uuid.UUID, limit, offset int) ([]*models.DeviceTelemetry, error)
 	CreateTelemetry(ctx context.Context, t *models.DeviceTelemetry) error
 
 	// Commands
 	ListCommands(ctx context.Context, deviceID uuid.UUID, limit, offset int) ([]*models.DeviceCommand, error)
+	GetCommand(ctx context.Context, commandID uuid.UUID) (*models.DeviceCommand, error)
 	CreateCommand(ctx context.Context, cmd *models.DeviceCommand) error
 	UpdateCommandStatus(ctx context.Context, id uuid.UUID, status string, result map[string]interface{}, errorMsg *string) error
+
+	// Device twins
+	ListDeviceTwins(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.DeviceTwin, error)
+	GetDeviceTwin(ctx context.Context, deviceID, orgID uuid.UUID) (*models.DeviceTwin, error)
+	UpsertDesiredState(ctx context.Context, deviceID, orgID uuid.UUID, desiredState map[string]interface{}, lastCommandID *uuid.UUID, lastCommandStatus *string) error
+	UpsertReportedState(ctx context.Context, deviceID, orgID uuid.UUID, reportedState map[string]interface{}, lastSeen *time.Time) error
 
 	// Firmware
 	ListFirmware(ctx context.Context, limit, offset int) ([]*models.FirmwarePackage, error)
@@ -37,8 +45,12 @@ type Repository interface {
 
 	// Rollouts
 	ListRollouts(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.FirmwareRollout, error)
+	GetRollout(ctx context.Context, rolloutID uuid.UUID) (*models.FirmwareRollout, error)
 	CreateRollout(ctx context.Context, r *models.FirmwareRollout) error
 	UpdateRolloutProgress(ctx context.Context, id uuid.UUID, completed, failed int, status string) error
+	UpdateRolloutStatus(ctx context.Context, id uuid.UUID, status string) error
+	ListRolloutEvents(ctx context.Context, rolloutID, orgID uuid.UUID, eventType string, limit, offset int) ([]*models.FirmwareRolloutEvent, error)
+	CreateRolloutEvent(ctx context.Context, event *models.FirmwareRolloutEvent) error
 
 	// Logs
 	ListDiagnosticsLogs(ctx context.Context, deviceID uuid.UUID, limit, offset int) ([]*models.DiagnosticsLog, error)
@@ -110,7 +122,7 @@ func (r *postgresRepository) ListDevices(ctx context.Context, orgID uuid.UUID, s
 		args = append(args, status)
 	}
 
-	query += ` ORDER BY created_at DESC LIMIT $` + string(rune('0'+len(args)+1)) + ` OFFSET $` + string(rune('0'+len(args)+2))
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -173,7 +185,7 @@ func (r *postgresRepository) CreateTelemetry(ctx context.Context, t *models.Devi
 func (r *postgresRepository) GetLatestTelemetry(ctx context.Context, deviceID uuid.UUID) (*models.DeviceTelemetry, error) {
 	var t models.DeviceTelemetry
 	var payloadJSON []byte
-	err := r.db.QueryRowContext(ctx, 
+	err := r.db.QueryRowContext(ctx,
 		`SELECT id, device_id, org_id, payload, packet_type, raw_hex, timestamp 
 		FROM device_telemetry 
 		WHERE device_id = $1 
@@ -214,6 +226,23 @@ func (r *postgresRepository) ListCommands(ctx context.Context, deviceID uuid.UUI
 	return results, nil
 }
 
+func (r *postgresRepository) GetCommand(ctx context.Context, commandID uuid.UUID) (*models.DeviceCommand, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, device_id, org_id, command, category, params, status, result, error_message, created_by, sent_at, executed_at, created_at
+		FROM device_commands
+		WHERE id = $1
+	`, commandID)
+
+	c := &models.DeviceCommand{}
+	var paramsJSON, resultJSON []byte
+	if err := row.Scan(&c.ID, &c.DeviceID, &c.OrgID, &c.Command, &c.Category, &paramsJSON, &c.Status, &resultJSON, &c.ErrorMessage, &c.CreatedBy, &c.SentAt, &c.ExecutedAt, &c.CreatedAt); err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(paramsJSON, &c.Params)
+	_ = json.Unmarshal(resultJSON, &c.Result)
+	return c, nil
+}
+
 func (r *postgresRepository) CreateCommand(ctx context.Context, cmd *models.DeviceCommand) error {
 	paramsJSON, _ := json.Marshal(cmd.Params)
 	return r.db.QueryRowContext(ctx, `INSERT INTO device_commands (id, device_id, org_id, command, category, params, status, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING created_at`, cmd.ID, cmd.DeviceID, cmd.OrgID, cmd.Command, cmd.Category, paramsJSON, cmd.Status, cmd.CreatedBy).Scan(&cmd.CreatedAt)
@@ -221,8 +250,87 @@ func (r *postgresRepository) CreateCommand(ctx context.Context, cmd *models.Devi
 
 func (r *postgresRepository) UpdateCommandStatus(ctx context.Context, id uuid.UUID, status string, result map[string]interface{}, errorMsg *string) error {
 	resultJSON, _ := json.Marshal(result)
-	executedAt := time.Now()
-	_, err := r.db.ExecContext(ctx, `UPDATE device_commands SET status = $2, result = $3, error_message = $4, executed_at = $5 WHERE id = $1`, id, status, resultJSON, errorMsg, executedAt)
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE device_commands
+		SET status = $2,
+		    result = $3,
+		    error_message = $4,
+		    sent_at = CASE
+		        WHEN $2 IN ('delivered', 'acked', 'applied', 'failed', 'timed_out') THEN COALESCE(sent_at, NOW())
+		        ELSE sent_at
+		    END,
+		    executed_at = CASE
+		        WHEN $2 IN ('applied', 'failed', 'timed_out') THEN NOW()
+		        ELSE executed_at
+		    END
+		WHERE id = $1
+	`, id, status, resultJSON, errorMsg)
+	return err
+}
+
+func (r *postgresRepository) ListDeviceTwins(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.DeviceTwin, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT device_id, org_id, desired_state, reported_state, last_seen, drift_status, drift_reason, last_command_id, last_command_status, created_at, updated_at
+		FROM device_twins
+		WHERE org_id = $1
+		ORDER BY updated_at DESC
+		LIMIT $2 OFFSET $3
+	`, orgID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var twins []*models.DeviceTwin
+	for rows.Next() {
+		twin, err := scanDeviceTwin(rows)
+		if err != nil {
+			return nil, err
+		}
+		twins = append(twins, twin)
+	}
+	return twins, nil
+}
+
+func (r *postgresRepository) GetDeviceTwin(ctx context.Context, deviceID, orgID uuid.UUID) (*models.DeviceTwin, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT device_id, org_id, desired_state, reported_state, last_seen, drift_status, drift_reason, last_command_id, last_command_status, created_at, updated_at
+		FROM device_twins
+		WHERE device_id = $1 AND org_id = $2
+	`, deviceID, orgID)
+	return scanDeviceTwinRow(row)
+}
+
+func (r *postgresRepository) UpsertDesiredState(ctx context.Context, deviceID, orgID uuid.UUID, desiredState map[string]interface{}, lastCommandID *uuid.UUID, lastCommandStatus *string) error {
+	desiredJSON, _ := json.Marshal(desiredState)
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO device_twins (device_id, org_id, desired_state, drift_status, drift_reason, last_command_id, last_command_status, created_at, updated_at)
+		VALUES ($1, $2, $3::jsonb, 'unknown', NULL, $4, $5, NOW(), NOW())
+		ON CONFLICT (device_id) DO UPDATE SET
+			org_id = EXCLUDED.org_id,
+			desired_state = EXCLUDED.desired_state,
+			drift_status = 'unknown',
+			drift_reason = NULL,
+			last_command_id = EXCLUDED.last_command_id,
+			last_command_status = EXCLUDED.last_command_status,
+			updated_at = NOW()
+	`, deviceID, orgID, string(desiredJSON), lastCommandID, lastCommandStatus)
+	return err
+}
+
+func (r *postgresRepository) UpsertReportedState(ctx context.Context, deviceID, orgID uuid.UUID, reportedState map[string]interface{}, lastSeen *time.Time) error {
+	reportedJSON, _ := json.Marshal(reportedState)
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO device_twins (device_id, org_id, reported_state, last_seen, drift_status, drift_reason, created_at, updated_at)
+		VALUES ($1, $2, $3::jsonb, COALESCE($4, NOW()), 'unknown', NULL, NOW(), NOW())
+		ON CONFLICT (device_id) DO UPDATE SET
+			org_id = EXCLUDED.org_id,
+			reported_state = EXCLUDED.reported_state,
+			last_seen = COALESCE(EXCLUDED.last_seen, device_twins.last_seen),
+			drift_status = 'unknown',
+			drift_reason = NULL,
+			updated_at = NOW()
+	`, deviceID, orgID, string(reportedJSON), lastSeen)
 	return err
 }
 
@@ -283,9 +391,105 @@ func (r *postgresRepository) CreateRollout(ctx context.Context, ro *models.Firmw
 	return r.db.QueryRowContext(ctx, `INSERT INTO firmware_rollouts (id, firmware_id, org_id, name, device_group, target_filter, total_devices, status, rollout_strategy, max_concurrent, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING created_at`, ro.ID, ro.FirmwareID, ro.OrgID, ro.Name, ro.DeviceGroup, filterJSON, ro.TotalDevices, ro.Status, ro.RolloutStrategy, ro.MaxConcurrent, ro.CreatedBy).Scan(&ro.CreatedAt)
 }
 
+func (r *postgresRepository) GetRollout(ctx context.Context, rolloutID uuid.UUID) (*models.FirmwareRollout, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, firmware_id, org_id, name, device_group, target_filter, total_devices, completed_devices, failed_devices, status, rollout_strategy, max_concurrent, created_by, started_at, completed_at, created_at
+		FROM firmware_rollouts
+		WHERE id = $1
+	`, rolloutID)
+
+	ro := &models.FirmwareRollout{}
+	var filterJSON []byte
+	if err := row.Scan(&ro.ID, &ro.FirmwareID, &ro.OrgID, &ro.Name, &ro.DeviceGroup, &filterJSON, &ro.TotalDevices, &ro.CompletedDevices, &ro.FailedDevices, &ro.Status, &ro.RolloutStrategy, &ro.MaxConcurrent, &ro.CreatedBy, &ro.StartedAt, &ro.CompletedAt, &ro.CreatedAt); err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(filterJSON, &ro.TargetFilter)
+	return ro, nil
+}
+
 func (r *postgresRepository) UpdateRolloutProgress(ctx context.Context, id uuid.UUID, completed, failed int, status string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE firmware_rollouts SET completed_devices = $2, failed_devices = $3, status = $4 WHERE id = $1`, id, completed, failed, status)
 	return err
+}
+
+func (r *postgresRepository) UpdateRolloutStatus(ctx context.Context, id uuid.UUID, status string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE firmware_rollouts
+		SET status = $2,
+		    started_at = CASE
+		        WHEN $3 = 'in_progress' THEN COALESCE(started_at, NOW())
+		        ELSE started_at
+		    END,
+		    completed_at = CASE
+		        WHEN $3 IN ('completed', 'cancelled') THEN NOW()
+		        ELSE completed_at
+		    END
+		WHERE id = $1
+	`, id, status, status)
+	return err
+}
+
+func (r *postgresRepository) ListRolloutEvents(ctx context.Context, rolloutID, orgID uuid.UUID, eventType string, limit, offset int) ([]*models.FirmwareRolloutEvent, error) {
+	query := `
+		SELECT id, rollout_id, org_id, event_type, from_status, to_status, actor_user_id, message, metadata, created_at
+		FROM firmware_rollout_events
+		WHERE rollout_id = $1 AND org_id = $2`
+	args := []interface{}{rolloutID, orgID}
+	if eventType != "" {
+		query += fmt.Sprintf(" AND event_type = $%d", len(args)+1)
+		args = append(args, eventType)
+	}
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []*models.FirmwareRolloutEvent
+	for rows.Next() {
+		event := &models.FirmwareRolloutEvent{}
+		var metadataJSON []byte
+		if err := rows.Scan(
+			&event.ID,
+			&event.RolloutID,
+			&event.OrgID,
+			&event.EventType,
+			&event.FromStatus,
+			&event.ToStatus,
+			&event.ActorUserID,
+			&event.Message,
+			&metadataJSON,
+			&event.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		_ = json.Unmarshal(metadataJSON, &event.Metadata)
+		events = append(events, event)
+	}
+	return events, nil
+}
+
+func (r *postgresRepository) CreateRolloutEvent(ctx context.Context, event *models.FirmwareRolloutEvent) error {
+	metadataJSON, _ := json.Marshal(event.Metadata)
+	return r.db.QueryRowContext(ctx, `
+		INSERT INTO firmware_rollout_events
+			(id, rollout_id, org_id, event_type, from_status, to_status, actor_user_id, message, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING created_at
+	`,
+		event.ID,
+		event.RolloutID,
+		event.OrgID,
+		event.EventType,
+		event.FromStatus,
+		event.ToStatus,
+		event.ActorUserID,
+		event.Message,
+		metadataJSON,
+	).Scan(&event.CreatedAt)
 }
 
 // Diagnostics logs implementations
@@ -314,6 +518,42 @@ func (r *postgresRepository) CreateDiagnosticsLog(ctx context.Context, log *mode
 	metaJSON, _ := json.Marshal(log.Metadata)
 	_, err := r.db.ExecContext(ctx, `INSERT INTO device_diagnostics_logs (id, device_id, org_id, log_type, source, message, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)`, log.ID, log.DeviceID, log.OrgID, log.LogType, log.Source, log.Message, metaJSON)
 	return err
+}
+
+func scanDeviceTwin(rows *sql.Rows) (*models.DeviceTwin, error) {
+	twin := &models.DeviceTwin{}
+	var desiredJSON, reportedJSON []byte
+	if err := rows.Scan(
+		&twin.DeviceID, &twin.OrgID, &desiredJSON, &reportedJSON, &twin.LastSeen, &twin.DriftStatus,
+		&twin.DriftReason, &twin.LastCommandID, &twin.LastCommandStatus, &twin.CreatedAt, &twin.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	if len(desiredJSON) > 0 {
+		_ = json.Unmarshal(desiredJSON, &twin.DesiredState)
+	}
+	if len(reportedJSON) > 0 {
+		_ = json.Unmarshal(reportedJSON, &twin.ReportedState)
+	}
+	return twin, nil
+}
+
+func scanDeviceTwinRow(row *sql.Row) (*models.DeviceTwin, error) {
+	twin := &models.DeviceTwin{}
+	var desiredJSON, reportedJSON []byte
+	if err := row.Scan(
+		&twin.DeviceID, &twin.OrgID, &desiredJSON, &reportedJSON, &twin.LastSeen, &twin.DriftStatus,
+		&twin.DriftReason, &twin.LastCommandID, &twin.LastCommandStatus, &twin.CreatedAt, &twin.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	if len(desiredJSON) > 0 {
+		_ = json.Unmarshal(desiredJSON, &twin.DesiredState)
+	}
+	if len(reportedJSON) > 0 {
+		_ = json.Unmarshal(reportedJSON, &twin.ReportedState)
+	}
+	return twin, nil
 }
 
 // Suppress unused import warning

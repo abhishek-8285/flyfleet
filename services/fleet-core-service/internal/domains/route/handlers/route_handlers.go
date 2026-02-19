@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -25,108 +27,133 @@ func NewRouteOptimizationHandler(svc service.RouteOptimizationService, logger *z
 	}
 }
 
-// CreateOptimizationRequest handles POST /api/v1/route-optimization/requests
-func (h *RouteOptimizationHandler) CreateOptimizationRequest(c *gin.Context) {
+// RegisterRoutes registers all route optimization API routes
+func (h *RouteOptimizationHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/requests", func(r chi.Router) {
+		r.Post("/", h.CreateOptimizationRequest)
+		r.Get("/", h.ListOptimizationRequests)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetOptimizationRequest)
+			r.Put("/", h.UpdateOptimizationRequest)
+			r.Delete("/", h.DeleteOptimizationRequest)
+		})
+	})
+
+	r.Route("/results", func(r chi.Router) {
+		r.Get("/", h.ListOptimizationResults)
+		r.Get("/{id}", h.GetOptimizationResult)
+		r.Get("/request/{request_id}", h.GetOptimizationResultByRequestID)
+	})
+
+	r.Route("/jobs", func(r chi.Router) {
+		r.Post("/", h.SubmitOptimizationJob)
+		r.Get("/", h.ListOptimizationJobs)
+		r.Get("/{id}", h.GetOptimizationJob)
+	})
+}
+
+// CreateOptimizationRequest handles POST /api/v1/routes/requests
+func (h *RouteOptimizationHandler) CreateOptimizationRequest(w http.ResponseWriter, r *http.Request) {
 	var request models.RouteOptimizationRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateOptimizationRequest(ctx, &request); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create optimization request", "details": err.Error()})
+	if err := h.service.CreateOptimizationRequest(r.Context(), &request); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create optimization request", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, request)
+	h.writeJSONResponse(w, http.StatusCreated, request)
 }
 
-// GetOptimizationRequest handles GET /api/v1/route-optimization/requests/:id
-func (h *RouteOptimizationHandler) GetOptimizationRequest(c *gin.Context) {
-	id := c.Param("id")
+// GetOptimizationRequest handles GET /api/v1/routes/requests/{id}
+func (h *RouteOptimizationHandler) GetOptimizationRequest(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	request, err := h.service.GetOptimizationRequest(ctx, id)
+	request, err := h.service.GetOptimizationRequest(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Optimization request not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Optimization request not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, request)
+	h.writeJSONResponse(w, http.StatusOK, request)
 }
 
-// UpdateOptimizationRequest handles PUT /api/v1/route-optimization/requests/:id
-func (h *RouteOptimizationHandler) UpdateOptimizationRequest(c *gin.Context) {
-	id := c.Param("id")
+// UpdateOptimizationRequest handles PUT /api/v1/routes/requests/{id}
+func (h *RouteOptimizationHandler) UpdateOptimizationRequest(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateOptimizationRequest(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update optimization request", "details": err.Error()})
+	if err := h.service.UpdateOptimizationRequest(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update optimization request", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Optimization request updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Optimization request updated"})
 }
 
-// DeleteOptimizationRequest handles DELETE /api/v1/route-optimization/requests/:id
-func (h *RouteOptimizationHandler) DeleteOptimizationRequest(c *gin.Context) {
-	id := c.Param("id")
+// DeleteOptimizationRequest handles DELETE /api/v1/routes/requests/{id}
+func (h *RouteOptimizationHandler) DeleteOptimizationRequest(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteOptimizationRequest(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete optimization request", "details": err.Error()})
+	if err := h.service.DeleteOptimizationRequest(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete optimization request", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Optimization request deleted"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success", "message": "Optimization request deleted"})
 }
 
-// ListOptimizationRequests handles GET /api/v1/route-optimization/requests
-func (h *RouteOptimizationHandler) ListOptimizationRequests(c *gin.Context) {
-	orgIDStr := c.Query("org_id")
+// ListOptimizationRequests handles GET /api/v1/routes/requests
+func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("org_id")
+	var orgID uuid.UUID
+	var err error
+
 	if orgIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "org_id query parameter is required"})
-		return
+		orgID = h.getOrgID(r)
+	} else {
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid org_id", err)
+			return
+		}
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid org_id", "details": err.Error()})
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "org_id query parameter or context is required", nil)
 		return
 	}
-
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
 
 	limit := 10 // default
-	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+	if lStr := query.Get("limit"); lStr != "" {
+		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
 
 	offset := 0 // default
-	if offsetStr != "" {
-		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+	if oStr := query.Get("offset"); oStr != "" {
+		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
 			offset = o
 		}
 	}
 
-	ctx := c.Request.Context()
-	requests, totalCount, err := h.service.ListOptimizationRequests(ctx, orgID, limit, offset)
+	requests, totalCount, err := h.service.ListOptimizationRequests(r.Context(), orgID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list optimization requests", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list optimization requests", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"requests":       requests,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -135,67 +162,62 @@ func (h *RouteOptimizationHandler) ListOptimizationRequests(c *gin.Context) {
 	})
 }
 
-// GetOptimizationResult handles GET /api/v1/route-optimization/results/:id
-func (h *RouteOptimizationHandler) GetOptimizationResult(c *gin.Context) {
-	id := c.Param("id")
+// GetOptimizationResult handles GET /api/v1/routes/results/{id}
+func (h *RouteOptimizationHandler) GetOptimizationResult(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	result, err := h.service.GetOptimizationResult(ctx, id)
+	result, err := h.service.GetOptimizationResult(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Optimization result not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
-// GetOptimizationResultByRequestID handles GET /api/v1/route-optimization/results/request/:request_id
-func (h *RouteOptimizationHandler) GetOptimizationResultByRequestID(c *gin.Context) {
-	requestID := c.Param("request_id")
+// GetOptimizationResultByRequestID handles GET /api/v1/routes/results/request/{request_id}
+func (h *RouteOptimizationHandler) GetOptimizationResultByRequestID(w http.ResponseWriter, r *http.Request) {
+	requestID := chi.URLParam(r, "request_id")
 
-	ctx := c.Request.Context()
-	result, err := h.service.GetOptimizationResultByRequestID(ctx, requestID)
+	result, err := h.service.GetOptimizationResultByRequestID(r.Context(), requestID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Optimization result not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, result)
+	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
-// ListOptimizationResults handles GET /api/v1/route-optimization/results
-func (h *RouteOptimizationHandler) ListOptimizationResults(c *gin.Context) {
-	requestID := c.Query("request_id")
+// ListOptimizationResults handles GET /api/v1/routes/results
+func (h *RouteOptimizationHandler) ListOptimizationResults(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	requestID := query.Get("request_id")
 	if requestID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "request_id query parameter is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "request_id query parameter is required", nil)
 		return
 	}
-
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
 
 	limit := 10 // default
-	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+	if lStr := query.Get("limit"); lStr != "" {
+		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
 
 	offset := 0 // default
-	if offsetStr != "" {
-		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+	if oStr := query.Get("offset"); oStr != "" {
+		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
 			offset = o
 		}
 	}
 
-	ctx := c.Request.Context()
-	results, totalCount, err := h.service.ListOptimizationResults(ctx, requestID, limit, offset)
+	results, totalCount, err := h.service.ListOptimizationResults(r.Context(), requestID, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list optimization results", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list optimization results", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"results":        results,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -204,79 +226,74 @@ func (h *RouteOptimizationHandler) ListOptimizationResults(c *gin.Context) {
 	})
 }
 
-// SubmitOptimizationJob handles POST /api/v1/route-optimization/jobs
-func (h *RouteOptimizationHandler) SubmitOptimizationJob(c *gin.Context) {
+// SubmitOptimizationJob handles POST /api/v1/routes/jobs
+func (h *RouteOptimizationHandler) SubmitOptimizationJob(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		RequestID string `json:"request_id" binding:"required"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON or missing request_id", "details": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON or missing request_id", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.SubmitOptimizationJob(ctx, req.RequestID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit optimization job", "details": err.Error()})
+	if err := h.service.SubmitOptimizationJob(r.Context(), req.RequestID); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to submit optimization job", err)
 		return
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{
+	h.writeJSONResponse(w, http.StatusAccepted, map[string]string{
 		"status":     "accepted",
 		"message":    "Optimization job submitted successfully",
 		"request_id": req.RequestID,
 	})
 }
 
-// GetOptimizationJob handles GET /api/v1/route-optimization/jobs/:id
-func (h *RouteOptimizationHandler) GetOptimizationJob(c *gin.Context) {
-	id := c.Param("id")
+// GetOptimizationJob handles GET /api/v1/routes/jobs/{id}
+func (h *RouteOptimizationHandler) GetOptimizationJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	job, err := h.service.GetOptimizationJob(ctx, id)
+	job, err := h.service.GetOptimizationJob(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Optimization job not found", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Optimization job not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, job)
+	h.writeJSONResponse(w, http.StatusOK, job)
 }
 
-// ListOptimizationJobs handles GET /api/v1/route-optimization/jobs
-func (h *RouteOptimizationHandler) ListOptimizationJobs(c *gin.Context) {
-	requestID := c.Query("request_id")
-	status := c.Query("status") // optional filter
+// ListOptimizationJobs handles GET /api/v1/routes/jobs
+func (h *RouteOptimizationHandler) ListOptimizationJobs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	requestID := query.Get("request_id")
+	status := query.Get("status") // optional filter
 
 	if requestID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "request_id query parameter is required"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "request_id query parameter is required", nil)
 		return
 	}
 
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
-
 	limit := 10 // default
-	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+	if lStr := query.Get("limit"); lStr != "" {
+		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
 
 	offset := 0 // default
-	if offsetStr != "" {
-		if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+	if oStr := query.Get("offset"); oStr != "" {
+		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
 			offset = o
 		}
 	}
 
-	ctx := c.Request.Context()
-	jobs, totalCount, err := h.service.ListOptimizationJobs(ctx, requestID, status, limit, offset)
+	jobs, totalCount, err := h.service.ListOptimizationJobs(r.Context(), requestID, status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list optimization jobs", "details": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list optimization jobs", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"jobs":           jobs,
 		"total_count":    totalCount,
 		"limit":          limit,
@@ -285,28 +302,36 @@ func (h *RouteOptimizationHandler) ListOptimizationJobs(c *gin.Context) {
 	})
 }
 
-// RegisterRoutes registers all route optimization API routes
-func (h *RouteOptimizationHandler) RegisterRoutes(router *gin.Engine) {
-	v1 := router.Group("/api/v1")
-	{
-		optimization := v1.Group("/routes")
-		{
-			// Requests
-			optimization.POST("/requests", h.CreateOptimizationRequest)
-			optimization.GET("/requests/:id", h.GetOptimizationRequest)
-			optimization.PUT("/requests/:id", h.UpdateOptimizationRequest)
-			optimization.DELETE("/requests/:id", h.DeleteOptimizationRequest)
-			optimization.GET("/requests", h.ListOptimizationRequests)
+// Helper methods
 
-			// Results
-			optimization.GET("/results/:id", h.GetOptimizationResult)
-			optimization.GET("/results/request/:request_id", h.GetOptimizationResultByRequestID)
-			optimization.GET("/results", h.ListOptimizationResults)
+func (h *RouteOptimizationHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", zap.Error(err))
+	}
+}
 
-			// Jobs
-			optimization.POST("/jobs", h.SubmitOptimizationJob)
-			optimization.GET("/jobs/:id", h.GetOptimizationJob)
-			optimization.GET("/jobs", h.ListOptimizationJobs)
+func (h *RouteOptimizationHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	resp := map[string]interface{}{
+		"error": message,
+	}
+	if err != nil {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, statusCode, resp)
+}
+
+func (h *RouteOptimizationHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+		if id, ok := val.(uuid.UUID); ok {
+			return id
 		}
 	}
+	return uuid.Nil
 }

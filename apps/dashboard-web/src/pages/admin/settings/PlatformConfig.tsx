@@ -22,17 +22,30 @@ const PlatformConfig: React.FC = () => {
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSettings();
     }, []);
 
     const fetchSettings = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/platform');
-            setSettings(response.data);
+            const response = await apiClient.get('/settings/platform') as any;
+            const data = response?.data ?? response;
+            if (data) {
+                setSettings((prev) => ({
+                    system_name: data.system_name || prev.system_name,
+                    support_email: data.support_email || prev.support_email,
+                    default_timezone: data.default_timezone || prev.default_timezone,
+                    default_currency: data.default_currency || prev.default_currency,
+                    default_language: data.default_language || prev.default_language,
+                    white_label_enabled: Boolean(data.white_label_enabled)
+                }));
+            }
         } catch (error) {
             console.error('Failed to fetch platform settings', error);
+            setError('Failed to load platform configuration');
         } finally {
             setLoading(false);
         }
@@ -79,6 +92,11 @@ const PlatformConfig: React.FC = () => {
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {error && (
+                    <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        {error}
+                    </div>
+                )}
                 <div className="max-w-5xl mx-auto space-y-6">
                     <div className="bg-[#16202a] rounded-xl border border-[#233648] overflow-hidden">
                         <div className="p-4 border-b border-[#233648] bg-[#111a22]/50 flex justify-between items-center">

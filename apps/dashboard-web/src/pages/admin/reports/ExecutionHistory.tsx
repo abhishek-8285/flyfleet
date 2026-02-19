@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Execution {
     id: string;
@@ -15,18 +16,26 @@ const ExecutionHistory: React.FC = () => {
     const navigate = useNavigate();
     const [executions, setExecutions] = useState<Execution[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadExecutions = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await apiClient.get('/admin/reports/executions', {
+                params: { page: 1, limit: 100 },
+            }) as any;
+            setExecutions(data?.executions || []);
+        } catch (err: any) {
+            console.error('Failed to fetch executions', err);
+            setError(err?.message || 'Failed to load execution history');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        fetch('/api/v1/admin/reports/executions')
-            .then(res => res.json())
-            .then(data => {
-                setExecutions(data.executions || []);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Failed to fetch executions", err);
-                setLoading(false);
-            });
+        void loadExecutions();
     }, []);
 
     const formatDuration = (seconds?: number) => {
@@ -48,6 +57,9 @@ const ExecutionHistory: React.FC = () => {
                         </nav>
                         <h2 className="text-white text-lg font-bold leading-tight">Report Execution History</h2>
                     </div>
+                    <button onClick={() => void loadExecutions()} className="text-text-muted hover:text-white transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">refresh</span>
+                    </button>
                 </header>
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
@@ -70,6 +82,8 @@ const ExecutionHistory: React.FC = () => {
                                 <tbody className="text-sm">
                                     {loading ? (
                                         <tr><td colSpan={5} className="px-4 py-4 text-center text-text-muted">Loading...</td></tr>
+                                    ) : error ? (
+                                        <tr><td colSpan={5} className="px-4 py-4 text-center text-danger">{error}</td></tr>
                                     ) : executions.map((exec) => (
                                         <tr key={exec.id} className="border-b border-border-color hover:bg-surface-darker/50">
                                             <td className="px-4 py-4 text-white font-mono text-xs">{exec.id.substring(0, 8)}...</td>

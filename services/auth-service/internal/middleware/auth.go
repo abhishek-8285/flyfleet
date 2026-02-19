@@ -11,13 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
-// AuthMiddleware validates the JWT token and injects the user_id into the context
+// AuthMiddleware validates the JWT token and injects identity claims into context.
 // Unlike RBACMiddleware, it does NOT enforce specific resource permissions.
 func AuthMiddleware(sp security.SecretProvider) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			jwtSecret := sp.GetJWTSecret()
-			
+
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				http.Error(w, "Missing authorization header", http.StatusUnauthorized)
@@ -31,13 +31,14 @@ func AuthMiddleware(sp security.SecretProvider) func(http.Handler) http.Handler 
 			}
 
 			tokenString := parts[1]
-			
-			// Temporary bypass for local verification
-			if tokenString == "fake-token" {
-				next.ServeHTTP(w, r)
-				return
-			}
-			
+
+			// Remove temporary bypass for local verification - this is a security vulnerability
+			// The following lines were commented out but should be completely removed
+			// if tokenString == "fake-token" {
+			// 	next.ServeHTTP(w, r)
+			// 	return
+			// }
+
 			// Verify token signature and claims
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -57,17 +58,34 @@ func AuthMiddleware(sp security.SecretProvider) func(http.Handler) http.Handler 
 				return
 			}
 
-			// Inject user_id into context
-			if userIDStr, ok := claims["user_id"].(string); ok {
-				if uid, err := uuid.Parse(userIDStr); err == nil {
-					// Use a typed context key in production, but string "user_id" matches other middleware usage here
-					ctx := context.WithValue(r.Context(), "user_id", uid)
-					next.ServeHTTP(w, r.WithContext(ctx))
-					return
+			// Accept canonical `sub` and legacy `user_id` claims.
+			userIDStr, _ := claims["sub"].(string)
+			if userIDStr == "" {
+				userIDStr, _ = claims["user_id"].(string)
+			}
+			if userIDStr == "" {
+				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+				return
+			}
+
+			uid, err := uuid.Parse(userIDStr)
+			if err != nil {
+				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), "user_id", uid)
+
+			if orgIDStr, ok := claims["org_id"].(string); ok {
+				if orgID, err := uuid.Parse(orgIDStr); err == nil {
+					ctx = context.WithValue(ctx, "org_id", orgID)
 				}
 			}
-			
-			http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+			if role, ok := claims["role"].(string); ok && role != "" {
+				ctx = context.WithValue(ctx, "role", role)
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

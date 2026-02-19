@@ -4,39 +4,44 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/flyfleet/auth-service/internal/models"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // User operations
 // User operations
 func (r *postgresRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	query := `SELECT id, email, password_hash, name, COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, verified, COALESCE(theme, ''), created_at, updated_at FROM users WHERE email = $1`
+	query := `SELECT id, org_id, email, password_hash, first_name, last_name, name, role, phone, mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, last_login_at, verified, COALESCE(theme, ''), created_at, updated_at 
+			  FROM users WHERE email = $1 AND deleted_at IS NULL`
 	var user models.User
 	err := r.db.QueryRow(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Phone,
-		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.OrgID, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName, &user.Name, &user.Role, &user.Phone,
+		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.LastLoginAt, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err // Returns pgx.ErrNoRows if not found
+		return nil, err
 	}
 	return &user, nil
 }
 
 func (r *postgresRepository) CreateUser(ctx context.Context, user *models.User) error {
-	query := `INSERT INTO users (id, email, password_hash, name, phone, status, theme, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Exec(ctx, query, user.ID, user.Email, user.PasswordHash, user.Name, user.Phone, user.Status, user.Theme, time.Now(), time.Now())
+	query := `INSERT INTO users (id, org_id, email, password_hash, first_name, last_name, name, role, phone, status, theme, created_at, updated_at) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`
+	_, err := r.db.Exec(ctx, query, user.ID, user.OrgID, user.Email, user.PasswordHash, user.FirstName, user.LastName, user.Name, user.Role, user.Phone, user.Status, user.Theme)
 	return err
 }
 
 func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	query := `SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, verified, COALESCE(theme, 'light'), created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, org_id, email, password_hash, first_name, last_name, name, role, phone, mfa_enabled, COALESCE(mfa_secret, ''), status, role_id, failed_logins, locked_until, last_login_at, verified, COALESCE(theme, 'light'), created_at, updated_at 
+			  FROM users WHERE id = $1 AND deleted_at IS NULL`
 	var user models.User
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.Phone,
-		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.OrgID, &user.Email, &user.PasswordHash, &user.FirstName, &user.LastName, &user.Name, &user.Role, &user.Phone,
+		&user.MFAEnabled, &user.MFASecret, &user.Status, &user.RoleID, &user.FailedLogins, &user.LockedUntil, &user.LastLoginAt, &user.Verified, &user.Theme, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -45,8 +50,21 @@ func (r *postgresRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*mo
 }
 
 func (r *postgresRepository) UpdateUser(ctx context.Context, user *models.User) error {
-	query := `UPDATE users SET email=$1, name=$2, phone=$3, status=$4, theme=$5, password_hash=$6, verified=$7, failed_logins=$8, updated_at=NOW() WHERE id=$9`
-	_, err := r.db.Exec(ctx, query, user.Email, user.Name, user.Phone, user.Status, user.Theme, user.PasswordHash, user.Verified, user.FailedLogins, user.ID)
+	// Only update non-sensitive fields to prevent accidental password changes
+	query := `UPDATE users SET email=$1, first_name=$2, last_name=$3, name=$4, role=$5, phone=$6, status=$7, theme=$8, verified=$9, failed_logins=$10, updated_at=NOW() WHERE id=$11`
+	_, err := r.db.Exec(ctx, query, user.Email, user.FirstName, user.LastName, user.Name, user.Role, user.Phone, user.Status, user.Theme, user.Verified, user.FailedLogins, user.ID)
+	return err
+}
+
+func (r *postgresRepository) UpdateUserPassword(ctx context.Context, user *models.User) error {
+	query := `UPDATE users SET password_hash=$1, updated_at=NOW() WHERE id=$2`
+	_, err := r.db.Exec(ctx, query, user.PasswordHash, user.ID)
+	return err
+}
+
+func (r *postgresRepository) UpdateUserVerified(ctx context.Context, userID uuid.UUID, verified bool) error {
+	query := `UPDATE users SET verified=$1, updated_at=NOW() WHERE id=$2`
+	_, err := r.db.Exec(ctx, query, verified, userID)
 	return err
 }
 
@@ -58,8 +76,14 @@ func (r *postgresRepository) UpdateTheme(ctx context.Context, userID uuid.UUID, 
 
 // MFA operations
 func (r *postgresRepository) SaveMFACode(ctx context.Context, mfa *models.MFACode) error {
-	query := `INSERT INTO mfa_codes (user_id, code, method, expires_at) VALUES ($1, $2, $3, $4)`
-	_, err := r.db.Exec(ctx, query, mfa.UserID, mfa.Code, mfa.Method, mfa.ExpiresAt)
+	// Hash the MFA code before storing it
+	hashedCode, err := bcrypt.GenerateFromPassword([]byte(mfa.Code), 12)
+	if err != nil {
+		return fmt.Errorf("failed to hash MFA code: %w", err)
+	}
+
+	query := `INSERT INTO mfa_codes (id, user_id, code_hash, method, expires_at, created_at) VALUES ($1, $2, $3, $4, $5, $6)`
+	_, err = r.db.Exec(ctx, query, mfa.ID, mfa.UserID, string(hashedCode), mfa.Method, mfa.ExpiresAt, mfa.CreatedAt)
 	return err
 }
 // ... existing MFA code ...
@@ -199,14 +223,31 @@ func (r *postgresRepository) GetUserRoleInOrg(ctx context.Context, userID, orgID
 }
 
 func (r *postgresRepository) GetMFACode(ctx context.Context, userID uuid.UUID, code string) (*models.MFACode, error) {
-	query := `SELECT id, user_id, code, method, expires_at FROM mfa_codes WHERE user_id = $1 AND code = $2 AND expires_at > NOW()`
-	row := r.db.QueryRow(ctx, query, userID, code)
-	var mfa models.MFACode
-	err := row.Scan(&mfa.ID, &mfa.UserID, &mfa.Code, &mfa.Method, &mfa.ExpiresAt)
+	query := `SELECT id, user_id, code_hash, method, expires_at FROM mfa_codes WHERE user_id = $1 AND expires_at > NOW()`
+	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	return &mfa, nil
+	defer rows.Close()
+
+	// Iterate through all codes for the user and check each one
+	for rows.Next() {
+		var mfa models.MFACode
+		var codeHash string
+		err := rows.Scan(&mfa.ID, &mfa.UserID, &codeHash, &mfa.Method, &mfa.ExpiresAt)
+		if err != nil {
+			continue // Skip invalid records
+		}
+
+		// Verify the provided code against the stored hash
+		if err := bcrypt.CompareHashAndPassword([]byte(codeHash), []byte(code)); err == nil {
+			// For security, we don't expose the hash in the response
+			return &mfa, nil
+		}
+	}
+
+	// No matching code found
+	return nil, nil
 }
 
 func (r *postgresRepository) DeleteMFACode(ctx context.Context, id uuid.UUID) error {
@@ -245,7 +286,7 @@ func (r *postgresRepository) DeleteTokensByUserID(ctx context.Context, userID uu
 }
 
 func (r *postgresRepository) GetTokensByUserID(ctx context.Context, userID uuid.UUID) ([]models.AuthToken, error) {
-	query := `SELECT id, user_id, access_token, refresh_token, expires_at FROM auth_tokens WHERE user_id = $1 AND expires_at > NOW()`
+	query := `SELECT id, user_id, access_token, refresh_token, ip_address, user_agent, last_active, is_active, expires_at, created_at FROM auth_tokens WHERE user_id = $1 AND expires_at > NOW()`
 	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -255,12 +296,36 @@ func (r *postgresRepository) GetTokensByUserID(ctx context.Context, userID uuid.
 	var tokens []models.AuthToken
 	for rows.Next() {
 		var t models.AuthToken
-		if err := rows.Scan(&t.ID, &t.UserID, &t.AccessToken, &t.RefreshToken, &t.ExpiresAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.AccessToken, &t.RefreshToken, &t.IPAddress, &t.UserAgent, &t.LastActive, &t.IsActive, &t.ExpiresAt, &t.CreatedAt); err != nil {
 			return nil, err
 		}
 		tokens = append(tokens, t)
 	}
 	return tokens, nil
+}
+
+func (r *postgresRepository) GetTokenByAccessToken(ctx context.Context, accessToken string) (*models.AuthToken, error) {
+	query := `SELECT id, user_id, access_token, refresh_token, ip_address, user_agent, last_active, is_active, expires_at, created_at FROM auth_tokens WHERE access_token = $1 AND expires_at > NOW()`
+	var t models.AuthToken
+	err := r.db.QueryRow(ctx, query, accessToken).Scan(
+		&t.ID, &t.UserID, &t.AccessToken, &t.RefreshToken, &t.IPAddress, &t.UserAgent, &t.LastActive, &t.IsActive, &t.ExpiresAt, &t.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (r *postgresRepository) UpdateTokenLastActive(ctx context.Context, accessToken string) error {
+	query := `UPDATE auth_tokens SET last_active = NOW() WHERE access_token = $1 AND expires_at > NOW()`
+	_, err := r.db.Exec(ctx, query, accessToken)
+	return err
+}
+
+func (r *postgresRepository) CleanupExpiredTokens(ctx context.Context) error {
+	query := `DELETE FROM auth_tokens WHERE expires_at < NOW()`
+	_, err := r.db.Exec(ctx, query)
+	return err
 }
 
 // Organization operations
@@ -402,31 +467,68 @@ func (r *postgresRepository) ListOrganizations(ctx context.Context, page, size i
 	return orgs, total, nil
 }
 
-func (r *postgresRepository) ListUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.User, int, error) {
-	offset := (page - 1) * size
+func (r *postgresRepository) ListUsers(ctx context.Context, filter models.UserFilter) ([]models.User, int, error) {
+	offset := (filter.Page - 1) * filter.Limit
 
-	// Get total count (scoped to org)
+	// Base query
+	query := `
+		SELECT id, org_id, email, first_name, last_name, name, role, phone, status, role_id, verified, theme, created_at, updated_at
+		FROM users
+		WHERE deleted_at IS NULL`
+	countQuery := `SELECT COUNT(*) FROM users WHERE deleted_at IS NULL`
+
+	args := []any{}
+	placeholder := 1
+
+	if filter.OrgID != uuid.Nil {
+		query += fmt.Sprintf(" AND org_id = $%d", placeholder)
+		countQuery += fmt.Sprintf(" AND org_id = $%d", placeholder)
+		args = append(args, filter.OrgID)
+		placeholder++
+	}
+
+	if filter.Role != "" {
+		query += fmt.Sprintf(" AND role = $%d", placeholder)
+		countQuery += fmt.Sprintf(" AND role = $%d", placeholder)
+		args = append(args, filter.Role)
+		placeholder++
+	}
+
+	if filter.Status != "" {
+		query += fmt.Sprintf(" AND status = $%d", placeholder)
+		countQuery += fmt.Sprintf(" AND status = $%d", placeholder)
+		args = append(args, filter.Status)
+		placeholder++
+	}
+
+	if filter.Search != "" {
+		searchQuery := "%" + filter.Search + "%"
+		query += fmt.Sprintf(" AND (email ILIKE $%d OR first_name ILIKE $%d OR last_name ILIKE $%d OR name ILIKE $%d)", placeholder, placeholder, placeholder, placeholder)
+		countQuery += fmt.Sprintf(" AND (email ILIKE $%d OR first_name ILIKE $%d OR last_name ILIKE $%d OR name ILIKE $%d)", placeholder, placeholder, placeholder, placeholder)
+		args = append(args, searchQuery)
+		placeholder++
+	}
+
+	// Total count
 	var total int
-	countQuery := `
-		SELECT COUNT(u.id) 
-		FROM users u
-		JOIN user_organizations uo ON u.id = uo.user_id
-		WHERE uo.org_id = $1 AND u.is_deleted = FALSE`
-	
-	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	// Get data
-	query := `
-		SELECT u.id, u.email, u.name, u.phone, u.status, u.role_id, u.verified, u.theme, u.created_at, u.updated_at
-		FROM users u
-		JOIN user_organizations uo ON u.id = uo.user_id
-		WHERE uo.org_id = $1 AND u.is_deleted = FALSE
-		ORDER BY u.created_at DESC
-		LIMIT $2 OFFSET $3`
+	// Ordering and Pagination
+	sortBy := "created_at"
+	if filter.SortBy != "" {
+		sortBy = filter.SortBy // Caution: sanitize if this comes from user, here we'll assume it's validated in service
+	}
+	sortOrder := "DESC"
+	if filter.SortOrder == "ASC" {
+		sortOrder = "ASC"
+	}
 
-	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	query += fmt.Sprintf(" ORDER BY %s %s LIMIT $%d OFFSET $%d", sortBy, sortOrder, placeholder, placeholder+1)
+	args = append(args, filter.Limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -435,11 +537,15 @@ func (r *postgresRepository) ListUsers(ctx context.Context, orgID uuid.UUID, pag
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Phone, &u.Status, &u.RoleID, &u.Verified, &u.Theme, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		err := rows.Scan(
+			&u.ID, &u.OrgID, &u.Email, &u.FirstName, &u.LastName, &u.Name, &u.Role, &u.Phone, &u.Status, &u.RoleID, &u.Verified, &u.Theme, &u.CreatedAt, &u.UpdatedAt,
+		)
+		if err != nil {
 			return nil, 0, err
 		}
 		users = append(users, u)
 	}
+
 	return users, total, nil
 }
 
@@ -578,24 +684,47 @@ func (r *postgresRepository) SoftDeleteDevice(ctx context.Context, id uuid.UUID)
 
 // Documents
 func (r *postgresRepository) CreateDocument(ctx context.Context, d *models.Document) error {
-	query := `INSERT INTO documents (id, vehicle_id, type, doc_number, issue_date, expiry_date, file_url, status, metadata, created_at, updated_at) 
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-	_, err := r.db.Exec(ctx, query, d.ID, d.VehicleID, d.Type, d.DocNumber, d.IssueDate, d.ExpiryDate, d.FileURL, d.Status, d.Metadata, d.CreatedAt, d.UpdatedAt)
+	query := `INSERT INTO documents (id, vehicle_id, org_id, type, title, doc_number, file_name, file_size_bytes, mime_type, storage_path, status, issue_date, expiry_date, reminder_days, uploaded_by, metadata, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`
+	_, err := r.db.Exec(ctx, query, d.ID, d.VehicleID, d.OrgID, d.Type, d.Title, d.DocNumber, d.FileName, d.FileSizeBytes, d.MimeType, d.StoragePath, d.Status, d.IssueDate, d.ExpiryDate, d.ReminderDays, d.UploadedBy, d.Metadata, d.CreatedAt, d.UpdatedAt)
 	return err
 }
 
 func (r *postgresRepository) GetDocumentByID(ctx context.Context, id uuid.UUID) (*models.Document, error) {
 	var d models.Document
-	query := `SELECT id, vehicle_id, type, doc_number, issue_date, expiry_date, file_url, status, metadata, created_at, updated_at 
-			  FROM documents WHERE id = $1`
-	err := r.db.QueryRow(ctx, query, id).Scan(&d.ID, &d.VehicleID, &d.Type, &d.DocNumber, &d.IssueDate, &d.ExpiryDate, &d.FileURL, &d.Status, &d.Metadata, &d.CreatedAt, &d.UpdatedAt)
+	var uploadedByUUID *uuid.UUID
+	query := `SELECT d.id, d.vehicle_id, d.org_id, d.type, COALESCE(d.title, d.doc_number) as title, d.doc_number,
+	                 COALESCE(d.file_name, '') as file_name, COALESCE(d.file_size_bytes, 0) as file_size_bytes,
+	                 COALESCE(d.mime_type, 'application/octet-stream') as mime_type,
+	                 d.status, d.issue_date, d.expiry_date, COALESCE(d.reminder_days, 30) as reminder_days,
+	                 d.uploaded_by, COALESCE(u.email, '') as uploader_email,
+	                 d.metadata, d.created_at, d.updated_at
+			  FROM documents d
+			  LEFT JOIN users u ON d.uploaded_by = u.id
+			  WHERE d.id = $1 AND d.deleted_at IS NULL`
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&d.ID, &d.VehicleID, &d.OrgID, &d.Type, &d.Title, &d.DocNumber,
+		&d.FileName, &d.FileSizeBytes, &d.MimeType,
+		&d.Status, &d.IssueDate, &d.ExpiryDate, &d.ReminderDays,
+		&uploadedByUUID, &d.UploadedBy,
+		&d.Metadata, &d.CreatedAt, &d.UpdatedAt,
+	)
 	if err != nil { return nil, err }
+	d.UploadedAt = d.CreatedAt
 	return &d, nil
 }
 
 func (r *postgresRepository) ListDocumentsByVehicleID(ctx context.Context, vehicleID uuid.UUID) ([]models.Document, error) {
-	query := `SELECT id, vehicle_id, type, doc_number, issue_date, expiry_date, file_url, status, metadata, created_at, updated_at 
-			  FROM documents WHERE vehicle_id = $1 ORDER BY expiry_date ASC`
+	query := `SELECT d.id, d.vehicle_id, d.org_id, d.type, COALESCE(d.title, d.doc_number) as title, d.doc_number,
+	                 COALESCE(d.file_name, '') as file_name, COALESCE(d.file_size_bytes, 0) as file_size_bytes,
+	                 COALESCE(d.mime_type, 'application/octet-stream') as mime_type,
+	                 d.status, d.issue_date, d.expiry_date, COALESCE(d.reminder_days, 30) as reminder_days,
+	                 COALESCE(u.email, '') as uploader_email,
+	                 d.metadata, d.created_at, d.updated_at
+			  FROM documents d
+			  LEFT JOIN users u ON d.uploaded_by = u.id
+			  WHERE d.vehicle_id = $1 AND d.deleted_at IS NULL
+			  ORDER BY d.expiry_date ASC`
 	rows, err := r.db.Query(ctx, query, vehicleID)
 	if err != nil { return nil, err }
 	defer rows.Close()
@@ -603,20 +732,93 @@ func (r *postgresRepository) ListDocumentsByVehicleID(ctx context.Context, vehic
 	var docs []models.Document
 	for rows.Next() {
 		var d models.Document
-		if err := rows.Scan(&d.ID, &d.VehicleID, &d.Type, &d.DocNumber, &d.IssueDate, &d.ExpiryDate, &d.FileURL, &d.Status, &d.Metadata, &d.CreatedAt, &d.UpdatedAt); err != nil { return nil, err }
+		if err := rows.Scan(
+			&d.ID, &d.VehicleID, &d.OrgID, &d.Type, &d.Title, &d.DocNumber,
+			&d.FileName, &d.FileSizeBytes, &d.MimeType,
+			&d.Status, &d.IssueDate, &d.ExpiryDate, &d.ReminderDays,
+			&d.UploadedBy,
+			&d.Metadata, &d.CreatedAt, &d.UpdatedAt,
+		); err != nil { return nil, err }
+		d.UploadedAt = d.CreatedAt
 		docs = append(docs, d)
 	}
 	return docs, nil
 }
 
+func (r *postgresRepository) ListDocuments(ctx context.Context, orgID uuid.UUID, filter *models.DocumentFilter) ([]models.Document, int, error) {
+	baseQuery := `SELECT d.id, d.vehicle_id, d.org_id, d.type, COALESCE(d.title, d.doc_number) as title, d.doc_number,
+	                     COALESCE(d.file_name, '') as file_name, COALESCE(d.file_size_bytes, 0) as file_size_bytes,
+	                     COALESCE(d.mime_type, 'application/octet-stream') as mime_type,
+	                     d.status, d.issue_date, d.expiry_date, COALESCE(d.reminder_days, 30) as reminder_days,
+	                     COALESCE(u.email, '') as uploader_email,
+	                     d.metadata, d.created_at, d.updated_at,
+	                     COUNT(*) OVER() as total
+	              FROM documents d
+	              LEFT JOIN users u ON d.uploaded_by = u.id
+	              WHERE d.org_id = $1 AND d.deleted_at IS NULL`
+
+	args := []interface{}{orgID}
+	argCount := 2
+
+	if filter.VehicleID != nil {
+		baseQuery += fmt.Sprintf(" AND d.vehicle_id = $%d", argCount)
+		args = append(args, *filter.VehicleID)
+		argCount++
+	}
+	if filter.Type != "" {
+		baseQuery += fmt.Sprintf(" AND d.type = $%d", argCount)
+		args = append(args, filter.Type)
+		argCount++
+	}
+	if filter.Status != "" {
+		baseQuery += fmt.Sprintf(" AND d.status = $%d", argCount)
+		args = append(args, filter.Status)
+		argCount++
+	}
+	if filter.ExpiringWithinDays > 0 {
+		baseQuery += fmt.Sprintf(" AND d.expiry_date <= NOW() + ($%d || ' days')::INTERVAL", argCount)
+		args = append(args, strconv.Itoa(filter.ExpiringWithinDays))
+		argCount++
+	}
+
+	baseQuery += " ORDER BY d.created_at DESC"
+	baseQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argCount, argCount+1)
+	args = append(args, filter.Limit, (filter.Page-1)*filter.Limit)
+
+	rows, err := r.db.Query(ctx, baseQuery, args...)
+	if err != nil { return nil, 0, err }
+	defer rows.Close()
+
+	var docs []models.Document
+	var total int
+
+	for rows.Next() {
+		var d models.Document
+		var tempTotal int
+		if err := rows.Scan(
+			&d.ID, &d.VehicleID, &d.OrgID, &d.Type, &d.Title, &d.DocNumber,
+			&d.FileName, &d.FileSizeBytes, &d.MimeType,
+			&d.Status, &d.IssueDate, &d.ExpiryDate, &d.ReminderDays,
+			&d.UploadedBy,
+			&d.Metadata, &d.CreatedAt, &d.UpdatedAt,
+			&tempTotal,
+		); err != nil { return nil, 0, err }
+		d.UploadedAt = d.CreatedAt
+		if total == 0 { total = tempTotal }
+		docs = append(docs, d)
+	}
+
+	return docs, total, nil
+}
+
 func (r *postgresRepository) UpdateDocument(ctx context.Context, d *models.Document) error {
-	query := `UPDATE documents SET type=$1, doc_number=$2, issue_date=$3, expiry_date=$4, file_url=$5, status=$6, metadata=$7, updated_at=NOW() WHERE id=$8`
-	_, err := r.db.Exec(ctx, query, d.Type, d.DocNumber, d.IssueDate, d.ExpiryDate, d.FileURL, d.Status, d.Metadata, d.ID)
+	query := `UPDATE documents SET type=$1, title=$2, doc_number=$3, file_name=$4, file_size_bytes=$5, mime_type=$6, issue_date=$7, expiry_date=$8, reminder_days=$9, status=$10, metadata=$11, updated_at=NOW() WHERE id=$12 AND deleted_at IS NULL`
+	_, err := r.db.Exec(ctx, query, d.Type, d.Title, d.DocNumber, d.FileName, d.FileSizeBytes, d.MimeType, d.IssueDate, d.ExpiryDate, d.ReminderDays, d.Status, d.Metadata, d.ID)
 	return err
 }
 
 func (r *postgresRepository) DeleteDocument(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `DELETE FROM documents WHERE id = $1`, id)
+	_, err := r.db.Exec(ctx, `UPDATE documents SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
 	return err
 }
 // Security Suite Implementation
@@ -746,12 +948,23 @@ func (r *postgresRepository) GetTopFailureUsers(ctx context.Context, orgID uuid.
 	return users, nil
 }
 
-func (r *postgresRepository) GetLockedUsers(ctx context.Context, orgID uuid.UUID) ([]models.User, error) {
+func (r *postgresRepository) GetLockedUsers(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.User, int, error) {
+	offset := (page - 1) * limit
+	
+	countQuery := `SELECT COUNT(*) FROM users u JOIN user_organizations uo ON u.id = uo.user_id 
+				   WHERE uo.org_id = $1 AND u.locked_until > NOW()`
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
 	query := `SELECT u.id, u.email, u.name, u.status, u.locked_until 
 			  FROM users u JOIN user_organizations uo ON u.id = uo.user_id 
-			  WHERE uo.org_id = $1 AND u.locked_until > NOW()`
-	rows, err := r.db.Query(ctx, query, orgID)
-	if err != nil { return nil, err }
+			  WHERE uo.org_id = $1 AND u.locked_until > NOW()
+			  LIMIT $2 OFFSET $3`
+	
+	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	if err != nil { return nil, 0, err }
 	defer rows.Close()
 
 	var users []models.User
@@ -760,7 +973,7 @@ func (r *postgresRepository) GetLockedUsers(ctx context.Context, orgID uuid.UUID
 		rows.Scan(&u.ID, &u.Email, &u.Name, &u.Status, &u.LockedUntil)
 		users = append(users, u)
 	}
-	return users, nil
+	return users, total, nil
 }
 
 func (r *postgresRepository) UnlockUser(ctx context.Context, userID uuid.UUID) error {
@@ -931,10 +1144,18 @@ func (r *postgresRepository) GetMFAExceptionByID(ctx context.Context, id uuid.UU
 	return &e, nil
 }
 
-func (r *postgresRepository) GetMFAExceptions(ctx context.Context, orgID uuid.UUID) ([]models.MFAException, error) {
-	query := `SELECT id, user_id, org_id, reason, granted_by, expires_at, created_at FROM mfa_exceptions WHERE org_id = $1`
-	rows, err := r.db.Query(ctx, query, orgID)
-	if err != nil { return nil, err }
+func (r *postgresRepository) GetMFAExceptions(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.MFAException, int, error) {
+	offset := (page - 1) * limit
+
+	countQuery := `SELECT COUNT(*) FROM mfa_exceptions WHERE org_id = $1`
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	query := `SELECT id, user_id, org_id, reason, granted_by, expires_at, created_at FROM mfa_exceptions WHERE org_id = $1 LIMIT $2 OFFSET $3`
+	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	if err != nil { return nil, 0, err }
 	defer rows.Close()
 
 	var excs []models.MFAException
@@ -943,7 +1164,7 @@ func (r *postgresRepository) GetMFAExceptions(ctx context.Context, orgID uuid.UU
 		rows.Scan(&e.ID, &e.UserID, &e.OrgID, &e.Reason, &e.GrantedBy, &e.ExpiresAt, &e.CreatedAt)
 		excs = append(excs, e)
 	}
-	return excs, nil
+	return excs, total, nil
 }
 
 func (r *postgresRepository) DeleteMFAException(ctx context.Context, id uuid.UUID) error {
@@ -1238,8 +1459,8 @@ func (r *postgresRepository) UpdateAuditPolicy(ctx context.Context, p *models.Au
 
 func (r *postgresRepository) GetSystemStats(ctx context.Context) (*models.SystemStats, error) {
 	var stats models.SystemStats
-	
-	// Complex aggregations 
+
+	// Complex aggregations
 	query := `
 		SELECT
 			(SELECT COUNT(*) FROM users WHERE is_deleted = FALSE),
@@ -1250,7 +1471,7 @@ func (r *postgresRepository) GetSystemStats(ctx context.Context) (*models.System
 			(SELECT COUNT(*) FROM organizations WHERE status = 'inactive' AND is_deleted = FALSE),
 			(SELECT COUNT(*) FROM drivers WHERE deleted_at IS NULL)
 	`
-	
+
 	err := r.db.QueryRow(ctx, query).Scan(
 		&stats.TotalUsers,
 		&stats.ActiveUsers,
@@ -1265,4 +1486,224 @@ func (r *postgresRepository) GetSystemStats(ctx context.Context) (*models.System
 	}
 
 	return &stats, nil
+}
+
+// Security Configuration Methods
+
+func (r *postgresRepository) GetSecuritySettings(ctx context.Context, orgID uuid.UUID) (*models.SecuritySettings, error) {
+	var settings models.SecuritySettings
+	query := `SELECT id, org_id, session_timeout_minutes, max_concurrent_sessions, enable_mfa, mfa_required_for_admins, enable_ip_whitelist, enable_brute_force_protection, brute_force_threshold, brute_force_lockout_mins, enable_security_questions, enable_device_trust, enable_risk_based_auth, require_encrypted_traffic, enable_audit_logging, enable_anomaly_detection, created_at, updated_at FROM security_settings WHERE org_id = $1`
+	err := r.db.QueryRow(ctx, query, orgID).Scan(
+		&settings.ID, &settings.OrgID, &settings.SessionTimeoutMinutes,
+		&settings.MaxConcurrentSessions, &settings.EnableMFA, &settings.MFARequiredForAdmins,
+		&settings.EnableIPWhitelist, &settings.EnableBruteForceProtection, &settings.BruteForceThreshold,
+		&settings.BruteForceLockoutMins, &settings.EnableSecurityQuestions, &settings.EnableDeviceTrust,
+		&settings.EnableRiskBasedAuth, &settings.RequireEncryptedTraffic, &settings.EnableAuditLogging,
+		&settings.EnableAnomalyDetection, &settings.CreatedAt, &settings.UpdatedAt,
+	)
+	if err != nil {
+		// If not found, return default settings
+		return &models.SecuritySettings{
+			ID:                      uuid.New(),
+			OrgID:                   orgID,
+			SessionTimeoutMinutes:   120, // 2 hours
+			MaxConcurrentSessions:   5,
+			EnableMFA:               false,
+			MFARequiredForAdmins:    true,
+			EnableIPWhitelist:       false,
+			EnableBruteForceProtection: true,
+			BruteForceThreshold:     5,
+			BruteForceLockoutMins:   15,
+			EnableSecurityQuestions: false,
+			EnableDeviceTrust:       false,
+			EnableRiskBasedAuth:     false,
+			RequireEncryptedTraffic: true,
+			EnableAuditLogging:      true,
+			EnableAnomalyDetection:  false,
+			PasswordComplexity: models.PasswordComplexity{
+				MinLength:           8,
+				RequireUppercase:    true,
+				RequireLowercase:    true,
+				RequireNumbers:      true,
+				RequireSpecialChars: true,
+				MaxAgeDays:          90,
+				ReuseHistoryLimit:   5,
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}, nil
+	}
+	return &settings, nil
+}
+
+func (r *postgresRepository) UpdateSecuritySettings(ctx context.Context, settings *models.SecuritySettings) error {
+	query := `INSERT INTO security_settings (id, org_id, session_timeout_minutes, max_concurrent_sessions, enable_mfa, mfa_required_for_admins, enable_ip_whitelist, enable_brute_force_protection, brute_force_threshold, brute_force_lockout_mins, enable_security_questions, enable_device_trust, enable_risk_based_auth, require_encrypted_traffic, enable_audit_logging, enable_anomaly_detection, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+			  ON CONFLICT (org_id) DO UPDATE SET
+			  session_timeout_minutes = $3, max_concurrent_sessions = $4, enable_mfa = $5, mfa_required_for_admins = $6, enable_ip_whitelist = $7, enable_brute_force_protection = $8, brute_force_threshold = $9, brute_force_lockout_mins = $10, enable_security_questions = $11, enable_device_trust = $12, enable_risk_based_auth = $13, require_encrypted_traffic = $14, enable_audit_logging = $15, enable_anomaly_detection = $16, updated_at = $18`
+	_, err := r.db.Exec(ctx, query, settings.ID, settings.OrgID, settings.SessionTimeoutMinutes,
+		settings.MaxConcurrentSessions, settings.EnableMFA, settings.MFARequiredForAdmins,
+		settings.EnableIPWhitelist, settings.EnableBruteForceProtection, settings.BruteForceThreshold,
+		settings.BruteForceLockoutMins, settings.EnableSecurityQuestions, settings.EnableDeviceTrust,
+		settings.EnableRiskBasedAuth, settings.RequireEncryptedTraffic, settings.EnableAuditLogging,
+		settings.EnableAnomalyDetection, settings.CreatedAt, settings.UpdatedAt)
+	return err
+}
+
+func (r *postgresRepository) GetSecurityMetrics(ctx context.Context, orgID uuid.UUID) (*models.SecurityMetrics, error) {
+	var totalUsers, mfaUsers, failedLogins24h, totalLogins24h, accountLockouts, suspiciousEvents int
+
+	// Get counts
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE org_id = $1", orgID).Scan(&totalUsers)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE org_id = $1 AND mfa_enabled = true", orgID).Scan(&mfaUsers)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM login_events WHERE org_id = $1 AND status = 'failed' AND created_at > NOW() - INTERVAL '24 hours'", orgID).Scan(&failedLogins24h)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM login_events WHERE org_id = $1 AND created_at > NOW() - INTERVAL '24 hours'", orgID).Scan(&totalLogins24h)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM security_events WHERE org_id = $1 AND event_type LIKE '%LOCK%' AND created_at > NOW() - INTERVAL '24 hours'", orgID).Scan(&accountLockouts)
+	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM security_events WHERE org_id = $1 AND event_type IN ('BRUTE_FORCE', 'SUSPICIOUS_LOGIN', 'UNAUTHORIZED_ACCESS') AND created_at > NOW() - INTERVAL '24 hours'", orgID).Scan(&suspiciousEvents)
+
+	mfaRate := 0.0
+	if totalUsers > 0 {
+		mfaRate = float64(mfaUsers) / float64(totalUsers)
+	}
+
+	failedLoginRate := 0.0
+	if totalLogins24h > 0 {
+		failedLoginRate = float64(failedLogins24h) / float64(totalLogins24h)
+	}
+
+	// Calculate compliance score based on various factors
+	complianceScore := 85.0 // Default score
+
+	// Adjust based on MFA adoption
+	if mfaRate > 0.8 {
+		complianceScore += 10
+	} else if mfaRate > 0.5 {
+		complianceScore += 5
+	}
+
+	// Adjust based on failed login rate
+	if failedLoginRate < 0.05 {
+		complianceScore += 5
+	} else if failedLoginRate < 0.1 {
+		complianceScore += 2
+	} else {
+		complianceScore -= 5
+	}
+
+	// Security posture score calculation
+	securityPostureScore := (mfaRate * 30) + ((1 - failedLoginRate) * 20) + (complianceScore * 0.5)
+
+	return &models.SecurityMetrics{
+		OrgID:                    orgID,
+		MFARate:                  mfaRate,
+		PasswordStrengthAvg:      0.7, // Placeholder - would need to analyze password hashes
+		FailedLoginRate:          failedLoginRate,
+		AccountLockoutEvents:     accountLockouts,
+		SuspiciousActivityEvents: suspiciousEvents,
+		ComplianceScore:          complianceScore,
+		SecurityPostureScore:     securityPostureScore,
+		LastUpdated:              time.Now(),
+	}, nil
+}
+
+func (r *postgresRepository) GetVulnerabilityReport(ctx context.Context, orgID uuid.UUID) (*models.VulnerabilityReport, error) {
+	// This would typically integrate with external vulnerability scanners
+	// For now, we'll return a sample report based on known security issues
+
+	report := &models.VulnerabilityReport{
+		OrgID:      orgID,
+		ReportDate: time.Now(),
+		Summary: models.VulnerabilitySummary{
+			Critical: 0,
+			High:     0,
+			Medium:   0,
+			Low:      0,
+			Total:    0,
+			Resolved: 0,
+			Open:     0,
+		},
+		Recommendations: []string{
+			"Implement regular security assessments",
+			"Monitor for new vulnerabilities",
+			"Apply security patches promptly",
+		},
+	}
+
+	// In a real implementation, this would query vulnerability data from various sources
+	// For now, we'll return an empty report with recommendations
+
+	return report, nil
+}
+
+func (r *postgresRepository) GetComplianceReport(ctx context.Context, orgID uuid.UUID, reportType string, startDate, endDate time.Time) (*models.ComplianceReport, error) {
+	report := &models.ComplianceReport{
+		OrgID:      orgID,
+		ReportType: reportType,
+		ReportDate: time.Now(),
+		Summary: models.ComplianceSummary{
+			TotalRequirements: 0,
+			Compliant:       0,
+			NonCompliant:    0,
+			NotApplicable:   0,
+			CompliancePercentage: 0,
+		},
+		Requirements:    []models.ComplianceRequirement{},
+		Findings:        []models.ComplianceFinding{},
+		Recommendations: []string{},
+	}
+
+	// In a real implementation, this would generate compliance reports based on the specific standard
+	// For now, we'll return a basic template
+
+	return report, nil
+}
+
+func (r *postgresRepository) ListSecurityEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.SecurityEvent, int, error) {
+	offset := (page - 1) * size
+
+	// Get total count
+	var total int
+	countQuery := `SELECT COUNT(*) FROM security_events WHERE org_id = $1`
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Build query with filters
+	baseQuery := `SELECT id, user_id, event_type, ip_address, user_agent, metadata, created_at
+			  FROM security_events WHERE org_id = $1`
+	
+	args := []interface{}{orgID}
+	argNum := 2
+	
+	// Add filters
+	if eventType, ok := filters["type"].(string); ok && eventType != "" {
+		baseQuery += fmt.Sprintf(" AND event_type = $%d", argNum)
+		args = append(args, eventType)
+		argNum++
+	}
+	
+	if severity, ok := filters["severity"].(string); ok && severity != "" {
+		baseQuery += fmt.Sprintf(" AND severity = $%d", argNum)
+		args = append(args, severity)
+		argNum++
+	}
+
+	baseQuery += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argNum, argNum+1)
+	args = append(args, size, offset)
+
+	rows, err := r.db.Query(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var events []models.SecurityEvent
+	for rows.Next() {
+		var e models.SecurityEvent
+		if err := rows.Scan(&e.ID, &e.UserID, &e.EventType, &e.IPAddress, &e.UserAgent, &e.Metadata, &e.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		events = append(events, e)
+	}
+	return events, total, nil
 }

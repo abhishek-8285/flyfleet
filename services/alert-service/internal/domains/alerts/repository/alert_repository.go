@@ -245,8 +245,9 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 	query := `
 		INSERT INTO alerts (
 			id, org_id, rule_id, type, severity, vehicle_id, driver_id,
-			location, timestamp, details, status, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+			location, timestamp, details, status, dedup_key, 
+			escalation_level, sla_deadline, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -259,7 +260,8 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 	err := r.db.QueryRow(ctx, query,
 		id, alert.OrgID, alert.RuleID, alert.Type, alert.Severity,
 		alert.VehicleID, alert.DriverID, locationJSON, alert.Timestamp,
-		detailsJSON, alert.Status, now, now,
+		detailsJSON, alert.Status, alert.DedupKey, 
+		alert.EscalationLevel, alert.SLADeadline, now, now,
 	).Scan(&alert.ID, &alert.CreatedAt, &alert.UpdatedAt)
 
 	return err
@@ -269,9 +271,10 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 func (r *AlertRepository) GetAlertByID(ctx context.Context, id string) (*models.Alert, error) {
 	query := `
 		SELECT id, org_id, rule_id, type, severity, vehicle_id, driver_id,
-		       location, timestamp, details, status, acknowledged_by,
-		       acknowledged_at, resolved_by, resolved_at, escalated_to,
-		       notes, created_at, updated_at
+		       location, timestamp, details, status, dedup_key, 
+		       escalation_level, last_escalated_at, sla_deadline, 
+		       acknowledged_by, acknowledged_at, resolved_by, resolved_at, 
+		       escalated_to, notes, created_at, updated_at
 		FROM alerts WHERE id = $1`
 
 	var alert models.Alert
@@ -280,7 +283,9 @@ func (r *AlertRepository) GetAlertByID(ctx context.Context, id string) (*models.
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&alert.ID, &alert.OrgID, &alert.RuleID, &alert.Type, &alert.Severity,
 		&alert.VehicleID, &alert.DriverID, &locationJSON, &alert.Timestamp,
-		&detailsJSON, &alert.Status, &alert.AcknowledgedBy, &alert.AcknowledgedAt,
+		&detailsJSON, &alert.Status, &alert.DedupKey,
+		&alert.EscalationLevel, &alert.LastEscalatedAt, &alert.SLADeadline,
+		&alert.AcknowledgedBy, &alert.AcknowledgedAt,
 		&alert.ResolvedBy, &alert.ResolvedAt, &escalatedToJSON, &alert.Notes,
 		&alert.CreatedAt, &alert.UpdatedAt,
 	)

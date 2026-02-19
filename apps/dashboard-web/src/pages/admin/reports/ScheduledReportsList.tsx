@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface ScheduledReport {
   id: string;
@@ -15,19 +16,38 @@ const ScheduledReportsList: React.FC = () => {
     const navigate = useNavigate();
     const [reports, setReports] = useState<ScheduledReport[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadReports = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await apiClient.get('/admin/reports/schedules', {
+                params: { page: 1, limit: 100 },
+            }) as any;
+            setReports(data?.data || []);
+        } catch (err: any) {
+            console.error('Failed to fetch reports', err);
+            setError(err?.message || 'Failed to load schedules');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        fetch('/api/v1/admin/reports/schedules')
-            .then(res => res.json())
-            .then(data => {
-                setReports(data.data || []);
-                setLoading(false);
-            })
-            .catch(err => {
-                console.error("Failed to fetch reports", err);
-                setLoading(false);
-            });
+        void loadReports();
     }, []);
+
+    const toggleReportStatus = async (report: ScheduledReport) => {
+        const action = report.status === 'ACTIVE' ? 'pause' : 'resume';
+        try {
+            await apiClient.post(`/admin/reports/schedules/${report.id}/${action}`);
+            await loadReports();
+        } catch (err: any) {
+            console.error(`Failed to ${action} report`, err);
+            setError(err?.message || `Failed to ${action} schedule`);
+        }
+    };
 
     const getStatusClass = (status: string) => {
         if (status === 'ACTIVE') return 'bg-success/10 text-success border-success/20';
@@ -66,7 +86,7 @@ const ScheduledReportsList: React.FC = () => {
                                 <span className="text-xs font-medium text-text-muted">Showing {reports.length} schedules</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                <button onClick={() => void loadReports()} className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
                                     <span className="material-symbols-outlined text-[18px]">refresh</span>
                                 </button>
                             </div>
@@ -86,6 +106,8 @@ const ScheduledReportsList: React.FC = () => {
                                 <tbody className="text-sm">
                                     {loading ? (
                                         <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">Loading...</td></tr>
+                                    ) : error ? (
+                                        <tr><td colSpan={6} className="px-6 py-8 text-center text-danger">{error}</td></tr>
                                     ) : reports.map((row) => (
                                         <tr key={row.id} className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer" onClick={() => navigate(`/admin/reports/${row.id}`)}>
                                             <td className="px-6 py-4 font-medium text-white">{row.name}</td>
@@ -107,8 +129,8 @@ const ScheduledReportsList: React.FC = () => {
                                                     <button onClick={(e) => { e.stopPropagation(); navigate('/admin/reports/history'); }} className="text-text-muted hover:text-primary transition-colors">
                                                         <span className="material-symbols-outlined text-[18px]">history</span>
                                                     </button>
-                                                    <button className="text-text-muted hover:text-white transition-colors">
-                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    <button onClick={(e) => { e.stopPropagation(); void toggleReportStatus(row); }} className="text-text-muted hover:text-white transition-colors text-xs px-2 py-1 border border-border-color rounded">
+                                                        {row.status === 'ACTIVE' ? 'Pause' : 'Resume'}
                                                     </button>
                                                 </div>
                                             </td>

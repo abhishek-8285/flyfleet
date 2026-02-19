@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Log {
     id: string;
@@ -26,16 +27,21 @@ const OperationDetail: React.FC = () => {
     const [restore, setRestore] = useState<RestoreDetail | null>(null);
     const [logs, setLogs] = useState<Log[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
         if (!id) return;
         try {
-            const res = await fetch(`/api/v1/admin/dr/restores/${id}`);
-            const data = await res.json();
-            setRestore(data.data);
+            setLoading(true);
+            setError(null);
+            const data = await apiClient.get(`/admin/dr/restore-jobs/${id}`) as any;
+            setRestore(data.data || data.restore || data);
             setLogs(data.logs || []);
         } catch (err) {
             console.error(err);
+            setError('Failed to load restore operation.');
+            setRestore(null);
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -56,6 +62,7 @@ const OperationDetail: React.FC = () => {
     };
 
     if (loading) return <div className="p-8 text-white">Loading restore details...</div>;
+    if (error) return <div className="p-8 text-red-400">{error}</div>;
     if (!restore) return <div className="p-8 text-white">Restore operation not found</div>;
 
     const steps = [

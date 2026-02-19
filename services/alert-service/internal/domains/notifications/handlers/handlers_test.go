@@ -10,24 +10,22 @@ import (
 	"github.com/flyfleet/alert-service/internal/domains/notifications/models"
 	"github.com/flyfleet/alert-service/internal/domains/notifications/service"
 	"github.com/flyfleet/alert-service/internal/domains/notifications/service/mocks"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
-func setupTest() (*gin.Engine, *mocks.MockNotificationRepository) {
-	gin.SetMode(gin.TestMode)
+func setupTest() (http.Handler, *mocks.MockNotificationRepository) {
 	mockRepo := new(mocks.MockNotificationRepository)
 	logger := zap.NewNop()
 	svc := service.NewNotificationService(mockRepo, logger)
 	h := NewNotificationHandlers(svc, logger)
 	
-	r := gin.New()
-	admin := r.Group("/api/v1/admin/notifications")
-	{
-		admin.POST("/:id/resend", h.Resend)
-		admin.PUT("/settings", h.UpdateSettings)
-	}
+	r := chi.NewRouter()
+	r.Route("/api/v1/admin/notifications", func(r chi.Router) {
+		r.Post("/{id}/resend", h.Resend)
+		r.Put("/settings", h.UpdateSettings)
+	})
 	return r, mockRepo
 }
 

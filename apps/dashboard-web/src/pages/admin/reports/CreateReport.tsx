@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 const CreateReport: React.FC = () => {
     const navigate = useNavigate();
@@ -41,21 +42,11 @@ const CreateReport: React.FC = () => {
                 filters: filtersJson
             };
 
-            const res = await fetch('/api/v1/admin/reports/schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                navigate('/admin/reports');
-            } else {
-                const err = await res.json();
-                alert('Error creating report: ' + (err.error || 'Unknown error'));
-            }
-        } catch (error) {
+            await apiClient.post('/admin/reports/schedules', payload);
+            navigate('/admin/reports');
+        } catch (error: any) {
             console.error('Submission failed', error);
-            alert('Failed to submit');
+            alert(`Failed to submit: ${error?.message || 'Unknown error'}`);
         } finally {
             setLoading(false);
         }

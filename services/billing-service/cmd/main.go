@@ -2,141 +2,105 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/nats-io/nats.go"
-	"go.uber.org/zap"
-
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/billing-service/internal/config"
-	"github.com/flyfleet/billing-service/internal/handlers"
-	"github.com/flyfleet/billing-service/internal/repository"
-	"github.com/flyfleet/billing-service/internal/service"
+	"github.com/flyfleet/billing-service/internal/events"
+	inv_handler "github.com/flyfleet/billing-service/internal/handlers/invoice"
+	"github.com/flyfleet/billing-service/internal/middleware"
+	inv_repo "github.com/flyfleet/billing-service/internal/repository/postgres"
+	inv_service "github.com/flyfleet/billing-service/internal/service"
+	"github.com/flyfleet/billing-service/pkg/database"
+	"github.com/go-chi/chi/v5"
+	mw "github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 )
 
 func main() {
-	// Initialize logger
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	// Load configuration
-	cfg := config.Load()
-
-	// Database connection
-	db, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+	cfg, err := config.Load()
 	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
+		logger.Fatal("failed to load config", zap.Error(err))
 	}
-	defer db.Close()
 
-	// Test database connection
-	if err := db.Ping(context.Background()); err != nil {
-		logger.Fatal("Failed to ping database", zap.Error(err))
-	}
-	logger.Info("Connected to database")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// NATS connection
-	nc, err := nats.Connect(cfg.NatsURL)
+	// Database Connection
+	pool, err := database.Connect(ctx, database.Config{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPass,
+		DBName:   cfg.DBName,
+		SSLMode:  cfg.SSLMode,
+	}, logger)
 	if err != nil {
-		logger.Fatal("Failed to connect to NATS", zap.Error(err))
+		logger.Fatal("failed to connect to db", zap.Error(err))
 	}
-	defer nc.Close()
-	logger.Info("Connected to NATS")
+	defer pool.Close()
 
-	// Initialize components
-	billingRepo := repository.NewBillingRepository(db)
-	billingService := service.NewBillingService(billingRepo, logger)
-	billingHandler := handlers.NewBillingHandler(billingService, logger)
+	// NATS Publisher
+	publisher, err := events.NewNATSPublisher(cfg.NATSURL, logger)
+	if err != nil {
+		logger.Error("failed to connect to NATS, continuing in degraded mode", zap.Error(err))
+	} else {
+		defer publisher.Close()
+	}
 
-	// Setup Gin router
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(loggingMiddleware(logger))
-	r.Use(middleware.AuthMiddleware(cfg))
+	// Repositories, Services, Handlers
+	repo := inv_repo.NewInvoiceRepository(pool)
+	service := inv_service.NewInvoiceService(repo, publisher)
+	handler := inv_handler.NewHandler(service)
 
-	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "healthy",
-			"service":   "billing-service",
-			"timestamp": time.Now().Unix(),
-		})
+	// Repositories, Services, Handlers
+	r := chi.NewRouter()
+
+	// Mandatory Middleware Chain
+	r.Use(mw.RequestID)
+	r.Use(mw.RealIP)
+	r.Use(middleware.Logger(logger))
+	r.Use(middleware.Recovery(logger))
+	r.Use(middleware.Metrics)
+	r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+
+	// Register Routes
+	inv_handler.RegisterRoutes(r, handler)
+
+	// Health Check
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("healthy"))
 	})
 
-	// Billing API endpoints
-	api := r.Group("/api/v1/billing")
-	{
-		api.GET("/invoices", billingHandler.ListInvoices)
-		api.POST("/invoices", billingHandler.CreateInvoice)
-		api.GET("/invoices/:id", billingHandler.GetInvoice)
-		api.PUT("/invoices/:id", billingHandler.UpdateInvoice)
-		api.DELETE("/invoices/:id", billingHandler.DeleteInvoice)
-		api.POST("/invoices/:id/payments", billingHandler.RecordPayment)
-
-		api.GET("/settings", billingHandler.GetSettings)
-		api.PUT("/settings", billingHandler.UpdateSettings)
-
-		api.GET("/metrics", billingHandler.GetMetrics)
-	}
-
-	// Start server
-	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
 		Handler: r,
 	}
 
-	// Start server in goroutine
 	go func() {
-		logger.Info("Starting billing service", zap.String("port", cfg.Port))
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", zap.Error(err))
+		logger.Info("starting server", zap.Int("port", cfg.Port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("server failed", zap.Error(err))
 		}
 	}()
 
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	<-ctx.Done()
+	logger.Info("shutting down server...")
 
-	logger.Info("Shutting down billing service...")
-
-	// Graceful shutdown
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown", zap.Error(err))
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Error("server shutdown failed", zap.Error(err))
 	}
-
-	logger.Info("Billing service exited")
+	logger.Info("server exited")
 }
 
-func loggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		start := time.Now()
-		c.Next()
-		duration := time.Since(start)
-		status := c.Writer.Status()
-
-		logger.Info("HTTP request",
-			zap.String("method", c.Request.Method),
-			zap.String("path", c.Request.URL.Path),
-			zap.Int("status", status),
-			zap.Duration("duration", duration),
-			zap.String("client_ip", c.ClientIP()),
-		)
-	}
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}

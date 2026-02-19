@@ -36,14 +36,14 @@ export const Organizations: React.FC = () => {
       const [usersRes, vehiclesRes, devicesRes, tripsRes] = await Promise.allSettled([
         apiClient.get('/admin/users?page=1&size=1'),
         apiClient.get('/admin/vehicles?page=1&size=1'),
-        fetch('/bff/support/dashboard/stats').then(res => res.json()),
-        fetch('/api/v1/trips/stats').then(res => res.json())
+        apiClient.get('/bff/support/dashboard/stats'),
+        apiClient.get('/trips/stats')
       ]);
       
       const totalUsers = usersRes.status === 'fulfilled' ? (usersRes.value as any)?.meta?.total || 0 : 0;
       const totalVehicles = vehiclesRes.status === 'fulfilled' ? (vehiclesRes.value as any)?.meta?.total || 0 : 0;
-      const totalDevices = devicesRes.status === 'fulfilled' ? devicesRes.value?.total_devices || 0 : 0;
-      const totalTrips = tripsRes.status === 'fulfilled' ? tripsRes.value?.total_trips || 0 : 0;
+      const totalDevices = devicesRes.status === 'fulfilled' ? (devicesRes.value as any)?.total_devices || (devicesRes.value as any)?.data?.total_devices || 0 : 0;
+      const totalTrips = tripsRes.status === 'fulfilled' ? (tripsRes.value as any)?.total_trips || (tripsRes.value as any)?.data?.total_trips || 0 : 0;
       const activeAlerts = Math.floor(totalVehicles * 0.05); // 5% of vehicles typically have alerts
       
       setStats({

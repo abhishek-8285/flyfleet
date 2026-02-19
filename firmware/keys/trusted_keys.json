@@ -1,0 +1,10 @@
+{
+  "keys": {
+    "flyfleet-sample-ed25519-2026q1": {
+      "algorithm": "ed25519",
+      "public_key_path": "firmware/keys/flyfleet-sample-ed25519-2026q1.pub.pem",
+      "status": "active",
+      "owner": "firmware-release"
+    }
+  }
+}

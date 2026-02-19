@@ -1,0 +1,22 @@
+[
+  {
+    "name": "healthy_progressive_rollout",
+    "expected_terminal_action": "promote",
+    "expected_terminal_ring": "ring3",
+    "rings": {
+      "ring0": { "attempted": 20, "failed": 0, "boot_failed": 0, "silent": 0 },
+      "ring1": { "attempted": 120, "failed": 1, "boot_failed": 0, "silent": 1 },
+      "ring2": { "attempted": 600, "failed": 8, "boot_failed": 2, "silent": 4 },
+      "ring3": { "attempted": 2500, "failed": 25, "boot_failed": 8, "silent": 20 }
+    }
+  },
+  {
+    "name": "canary_auto_pause_and_rollback",
+    "expected_terminal_action": "pause_and_rollback",
+    "expected_terminal_ring": "ring1",
+    "rings": {
+      "ring0": { "attempted": 20, "failed": 0, "boot_failed": 0, "silent": 0 },
+      "ring1": { "attempted": 100, "failed": 6, "boot_failed": 2, "silent": 0 }
+    }
+  }
+]

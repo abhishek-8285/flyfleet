@@ -1,0 +1,23 @@
+{
+  "schema_version": "v1",
+  "severity_levels": ["INFO", "WARN", "CRITICAL"],
+  "event_types": [
+    "camera_frame_stall",
+    "gps_signal_loss",
+    "ble_disconnect",
+    "network_quality_drop",
+    "harsh_brake_detected",
+    "speed_spike_detected",
+    "panic_triggered",
+    "ai_model_unavailable",
+    "thermal_throttle",
+    "storage_low",
+    "can_bus_degraded",
+    "twin_drift_detected"
+  ],
+  "upload_priority_tiers": {
+    "tier1": ["panic_triggered", "harsh_brake_detected", "speed_spike_detected"],
+    "tier2": ["camera_frame_stall", "thermal_throttle"],
+    "tier3": ["network_quality_drop", "gps_signal_loss", "ble_disconnect", "ai_model_unavailable", "storage_low", "can_bus_degraded", "twin_drift_detected"]
+  }
+}

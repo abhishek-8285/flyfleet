@@ -1,0 +1,377 @@
+{
+  "services": {
+    "auth-service": {
+      "apis": []
+    },
+    "fleet-core-service": {
+      "apis": [
+        {
+          "endpoint": "/health",
+          "method": "GET",
+          "request": {},
+          "response": {
+            "status": "string",
+            "service": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/vehicles",
+          "method": "GET",
+          "request": {
+            "params": "optional query params"
+          },
+          "response": "array of Vehicle objects"
+        },
+        {
+          "endpoint": "/api/v1/vehicles",
+          "method": "POST",
+          "request": {
+            "name": "string",
+            "license_plate": "string",
+            "make": "string",
+            "model": "string",
+            "year": "number",
+            "fuel_type": "string",
+            "odometer": "number"
+          },
+          "response": "created Vehicle object"
+        },
+        {
+          "endpoint": "/api/v1/vehicles/stats",
+          "method": "GET",
+          "request": {},
+          "response": {
+            "total_vehicles": "number",
+            "active_vehicles": "number"
+          }
+        },
+        {
+          "endpoint": "/api/v1/vehicles/{id}",
+          "method": "GET",
+          "request": {},
+          "response": "Vehicle object"
+        },
+        {
+          "endpoint": "/api/v1/vehicles/{id}",
+          "method": "PUT",
+          "request": "Vehicle update object",
+          "response": "updated Vehicle object"
+        },
+        {
+          "endpoint": "/api/v1/vehicles/{id}",
+          "method": "DELETE",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/vehicles/{id}/assign-driver",
+          "method": "POST",
+          "request": {
+            "driver_id": "string"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers",
+          "method": "GET",
+          "request": {
+            "params": "optional query params"
+          },
+          "response": "array of Driver objects"
+        },
+        {
+          "endpoint": "/api/v1/drivers",
+          "method": "POST",
+          "request": {
+            "first_name": "string",
+            "last_name": "string",
+            "email": "string",
+            "phone": "string",
+            "license_number": "string"
+          },
+          "response": "created Driver object"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}",
+          "method": "GET",
+          "request": {},
+          "response": "Driver object"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}",
+          "method": "PUT",
+          "request": "Driver update object",
+          "response": "updated Driver object"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}",
+          "method": "DELETE",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/assign-vehicle",
+          "method": "POST",
+          "request": {
+            "vehicle_id": "string"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/unassign-vehicle",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/update-status",
+          "method": "POST",
+          "request": {
+            "status": "string"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/behavior-score",
+          "method": "GET",
+          "request": {},
+          "response": {
+            "score": "number"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/update-behavior",
+          "method": "POST",
+          "request": {
+            "behavior_data": "object"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/analytics",
+          "method": "GET",
+          "request": {},
+          "response": "analytics object"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/documents",
+          "method": "POST",
+          "request": "file and metadata",
+          "response": "created document object"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/documents",
+          "method": "GET",
+          "request": {},
+          "response": "array of documents"
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/documents/{doc_id}",
+          "method": "DELETE",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/attendance",
+          "method": "POST",
+          "request": {
+            "date": "string",
+            "status": "string"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/drivers/{id}/attendance",
+          "method": "GET",
+          "request": {},
+          "response": "array of attendance records"
+        },
+        {
+          "endpoint": "/api/v1/trips",
+          "method": "GET",
+          "request": {
+            "params": "optional query params"
+          },
+          "response": "array of Trip objects"
+        },
+        {
+          "endpoint": "/api/v1/trips",
+          "method": "POST",
+          "request": {
+            "vehicle_id": "string",
+            "driver_id": "string",
+            "title": "string",
+            "description": "string",
+            "scheduled_start": "string",
+            "start_location": "object",
+            "end_location": "object"
+          },
+          "response": "created Trip object"
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}",
+          "method": "GET",
+          "request": {},
+          "response": "Trip object"
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}",
+          "method": "PUT",
+          "request": "Trip update object",
+          "response": "updated Trip object"
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/start",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/pause",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/resume",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/complete",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/cancel",
+          "method": "POST",
+          "request": {},
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/events",
+          "method": "POST",
+          "request": {
+            "event_type": "string",
+            "details": "object"
+          },
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/pod",
+          "method": "POST",
+          "request": "POD data",
+          "response": {
+            "message": "string"
+          }
+        },
+        {
+          "endpoint": "/api/v1/trips/{id}/optimize-route",
+          "method": "GET",
+          "request": {},
+          "response": "optimized route object"
+        },
+        {
+          "endpoint": "/api/v1/trips/driver-stats",
+          "method": "GET",
+          "request": {},
+          "response": "driver stats object"
+        },
+        {
+          "endpoint": "/api/v1/trips/trip-stats",
+          "method": "GET",
+          "request": {},
+          "response": "trip stats object"
+        },
+        {
+          "endpoint": "/api/v1/trips/stats",
+          "method": "GET",
+          "request": {},
+          "response": "overall stats object"
+        },
+        {
+          "endpoint": "/api/v1/maintenance/work-orders",
+          "method": "GET",
+          "request": {},
+          "response": "array of WorkOrder objects"
+        },
+        {
+          "endpoint": "/api/v1/finance/fuel",
+          "method": "GET",
+          "request": {},
+          "response": "array of FuelTransaction objects"
+        },
+        {
+          "endpoint": "/api/v1/emergency/sos",
+          "method": "POST",
+          "request": {
+            "latitude": "number",
+            "longitude": "number"
+          },
+          "response": "created SOS incident object"
+        }
+      ]
+    },
+    "fleet-ml-service": {
+      "apis": [
+        {
+          "endpoint": "/api/v1/demand/predict",
+          "method": "POST",
+          "request": {
+            "route_id": "string",
+            "date": "string"
+          },
+          "response": {
+            "predicted_demand": "number"
+          }
+        }
+      ]
+    },
+    "integrations-service": {
+      "apis": [
+        {
+          "endpoint": "/api/v1/integrations/sync",
+          "method": "POST",
+          "request": {
+            "erp_type": "string"
+          },
+          "response": {
+            "job_id": "uuid"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -3,7 +3,8 @@ port = "8081"
 log_level = "info"
 
 [security]
-jwt_secret = "your-jwt-secret-key-here"
+# JWT secret should be loaded from environment variable in production
+# jwt_secret = "your-jwt-secret-key-here"
 
 [services]
 auth_url = "http://localhost:8080"

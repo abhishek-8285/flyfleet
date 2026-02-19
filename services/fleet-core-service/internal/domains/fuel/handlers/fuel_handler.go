@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -20,218 +22,237 @@ func NewFuelHandler(svc service.FuelService, logger *zap.Logger) *FuelHandler {
 	return &FuelHandler{svc: svc, logger: logger}
 }
 
+func (h *FuelHandler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListLogs)
+	r.Post("/", h.CreateLog)
+	r.Get("/stats", h.GetStats)
+	r.Get("/settings", h.GetSettings)
+	r.Put("/settings", h.UpdateSettings)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetLog)
+		r.Put("/", h.UpdateLog)
+		r.Delete("/", h.DeleteLog)
+		r.Patch("/status", h.ChangeStatus)
+	})
+}
+
 // CreateLog godoc
-// @Summary Create a fuel log
-// @Description Create a new fuel log entry
-// @Tags Fuel
-// @Accept json
-// @Produce json
-// @Param X-Organization-ID header string true "Organization ID"
-// @Param X-User-ID header string true "User ID"
-// @Param request body models.CreateFuelLogRequest true "Create Fuel Log Request"
-// @Success 201 {object} models.FuelLog
-// @Router /fuel-logs [post]
-func (h *FuelHandler) CreateLog(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	userID, _ := uuid.Parse(c.GetHeader("X-User-ID"))
+func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
 
 	var req models.CreateFuelLogRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	log, err := h.svc.CreateLog(c.Request.Context(), orgID, userID, req)
+	log, err := h.svc.CreateLog(r.Context(), orgID, userID, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, log)
+	h.writeJSONResponse(w, http.StatusCreated, log)
 }
 
 // GetLog godoc
-// @Summary Get fuel log by ID
-// @Tags Fuel
-// @Param id path string true "Fuel Log ID"
-// @Success 200 {object} models.FuelLog
-// @Router /fuel-logs/{id} [get]
-func (h *FuelHandler) GetLog(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, err := uuid.Parse(c.Param("id"))
+func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
 		return
 	}
 
-	log, err := h.svc.GetLog(c.Request.Context(), id, orgID)
+	log, err := h.svc.GetLog(r.Context(), id, orgID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, log)
+	h.writeJSONResponse(w, http.StatusOK, log)
 }
 
 // ListLogs godoc
-// @Summary List fuel logs
-// @Tags Fuel
-// @Param vehicle_id query string false "Vehicle ID"
-// @Param driver_id query string false "Driver ID"
-// @Param status query []string false "Status"
-// @Param search query string false "Search query"
-// @Success 200 {object} models.FuelLogListResponse
-// @Router /fuel-logs [get]
-func (h *FuelHandler) ListLogs(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
+func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 
+	query := r.URL.Query()
 	filter := models.FuelLogFilter{
 		OrganizationID: orgID,
-		Search:         c.Query("search"),
+		Search:         query.Get("search"),
 	}
 
-	if vID := c.Query("vehicle_id"); vID != "" {
+	if vID := query.Get("vehicle_id"); vID != "" {
 		if u, err := uuid.Parse(vID); err == nil {
 			filter.VehicleID = &u
 		}
 	}
 
-	if dID := c.Query("driver_id"); dID != "" {
+	if dID := query.Get("driver_id"); dID != "" {
 		if u, err := uuid.Parse(dID); err == nil {
 			filter.DriverID = &u
 		}
 	}
 
-	status := c.QueryArray("status")
+	status := query["status"]
 	for _, s := range status {
 		filter.Status = append(filter.Status, models.FuelLogStatus(s))
 	}
 
-	c.JSON(http.StatusOK, func() interface{} {
-		res, _ := h.svc.ListLogs(c.Request.Context(), filter)
-		return res
-	}())
+	res, err := h.svc.ListLogs(r.Context(), filter)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, res)
 }
 
 // UpdateLog godoc
-// @Summary Update fuel log
-// @Tags Fuel
-// @Param id path string true "Fuel Log ID"
-// @Param request body models.UpdateFuelLogRequest true "Update Fuel Log Request"
-// @Success 200 {object} models.FuelLog
-// @Router /fuel-logs/{id} [put]
-func (h *FuelHandler) UpdateLog(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, _ := uuid.Parse(c.Param("id"))
+func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
+		return
+	}
 
 	var req models.UpdateFuelLogRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	log, err := h.svc.UpdateLog(c.Request.Context(), id, orgID, req)
+	log, err := h.svc.UpdateLog(r.Context(), id, orgID, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, log)
+	h.writeJSONResponse(w, http.StatusOK, log)
 }
 
 // DeleteLog godoc
-// @Summary Delete fuel log
-// @Tags Fuel
-// @Param id path string true "Fuel Log ID"
-// @Success 204
-// @Router /fuel-logs/{id} [delete]
-func (h *FuelHandler) DeleteLog(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, _ := uuid.Parse(c.Param("id"))
-
-	if err := h.svc.DeleteLog(c.Request.Context(), id, orgID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	if err := h.svc.DeleteLog(r.Context(), id, orgID); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ChangeStatus godoc
-// @Summary Approve or Reject fuel log
-// @Tags Fuel
-// @Param id path string true "Fuel Log ID"
-// @Param request body models.ChangeFuelLogStatusRequest true "Status Change Request"
-// @Success 200
-// @Router /fuel-logs/{id}/status [patch]
-func (h *FuelHandler) ChangeStatus(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, _ := uuid.Parse(c.Param("id"))
+func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
+		return
+	}
 
 	var req models.ChangeFuelLogStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.svc.ChangeStatus(c.Request.Context(), id, orgID, req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.svc.ChangeStatus(r.Context(), id, orgID, req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "status updated"})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "status updated"})
 }
 
 // GetStats godoc
-// @Summary Get fuel stats
-// @Tags Fuel
-// @Success 200 {object} models.FuelLogStats
-// @Router /fuel/stats [get]
-func (h *FuelHandler) GetStats(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	stats, err := h.svc.GetStats(c.Request.Context(), orgID, models.FuelLogFilter{})
+func (h *FuelHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	stats, err := h.svc.GetStats(r.Context(), orgID, models.FuelLogFilter{})
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, stats)
+	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
 // GetSettings godoc
-// @Summary Get fuel settings
-// @Tags Fuel
-// @Success 200 {object} models.FuelSettings
-// @Router /fuel/settings [get]
-func (h *FuelHandler) GetSettings(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	settings, err := h.svc.GetSettings(c.Request.Context(), orgID)
+func (h *FuelHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	settings, err := h.svc.GetSettings(r.Context(), orgID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.writeJSONResponse(w, http.StatusOK, settings)
 }
 
 // UpdateSettings godoc
-// @Summary Update fuel settings
-// @Tags Fuel
-// @Param request body models.UpdateFuelSettingsRequest true "Update Settings Request"
-// @Success 200 {object} models.FuelSettings
-// @Router /fuel/settings [put]
-func (h *FuelHandler) UpdateSettings(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
+func (h *FuelHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 
 	var req models.UpdateFuelSettingsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	settings, err := h.svc.UpdateSettings(c.Request.Context(), orgID, req)
+	settings, err := h.svc.UpdateSettings(r.Context(), orgID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, settings)
+	h.writeJSONResponse(w, http.StatusOK, settings)
+}
+
+// Helper methods
+
+func (h *FuelHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", zap.Error(err))
+	}
+}
+
+func (h *FuelHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	resp := map[string]interface{}{
+		"error": message,
+	}
+	if err != nil && statusCode == http.StatusInternalServerError {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, statusCode, resp)
+}
+
+func (h *FuelHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *FuelHandler) getUserID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+		if userIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(userIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
 }

@@ -16,6 +16,8 @@ type AuthRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
 	UpdateUser(ctx context.Context, user *models.User) error
+	UpdateUserPassword(ctx context.Context, user *models.User) error
+	UpdateUserVerified(ctx context.Context, userID uuid.UUID, verified bool) error
 	UpdateTheme(ctx context.Context, userID uuid.UUID, theme string) error
 
 	// Organization operations
@@ -31,6 +33,9 @@ type AuthRepository interface {
 	DeleteToken(ctx context.Context, accessToken string) error
 	DeleteTokensByUserID(ctx context.Context, userID uuid.UUID) error
 	GetTokensByUserID(ctx context.Context, userID uuid.UUID) ([]models.AuthToken, error)
+	GetTokenByAccessToken(ctx context.Context, accessToken string) (*models.AuthToken, error)
+	UpdateTokenLastActive(ctx context.Context, accessToken string) error
+	CleanupExpiredTokens(ctx context.Context) error
 
 	// MFA operations
 	SaveMFACode(ctx context.Context, mfa *models.MFACode) error
@@ -52,7 +57,7 @@ type AuthRepository interface {
 
 	// Admin operations
 	ListOrganizations(ctx context.Context, page, size int) ([]models.Organization, int, error)
-	ListUsers(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.User, int, error)
+	ListUsers(ctx context.Context, filter models.UserFilter) ([]models.User, int, error)
 	SoftDeleteOrganization(ctx context.Context, id uuid.UUID) error
 	SoftDeleteUser(ctx context.Context, id uuid.UUID) error
 
@@ -77,6 +82,7 @@ type AuthRepository interface {
 	CreateDocument(ctx context.Context, doc *models.Document) error
 	GetDocumentByID(ctx context.Context, id uuid.UUID) (*models.Document, error)
 	ListDocumentsByVehicleID(ctx context.Context, vehicleID uuid.UUID) ([]models.Document, error)
+	ListDocuments(ctx context.Context, orgID uuid.UUID, filter *models.DocumentFilter) ([]models.Document, int, error)
 	UpdateDocument(ctx context.Context, doc *models.Document) error
 	DeleteDocument(ctx context.Context, id uuid.UUID) error
 
@@ -89,14 +95,14 @@ type AuthRepository interface {
 	GetMFAEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.MFAEvent, int, error)
 	GetTopFailureLocations(ctx context.Context, orgID uuid.UUID) ([]map[string]any, error)
 	GetTopFailureUsers(ctx context.Context, orgID uuid.UUID) ([]map[string]any, error)
-	GetLockedUsers(ctx context.Context, orgID uuid.UUID) ([]models.User, error)
+	GetLockedUsers(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.User, int, error)
 	UnlockUser(ctx context.Context, userID uuid.UUID) error
 	ResetMFA(ctx context.Context, userID uuid.UUID) error
 	GetMFAPolicy(ctx context.Context, orgID uuid.UUID) (*models.MFAPolicy, error)
 	UpdateMFAPolicy(ctx context.Context, policy *models.MFAPolicy, updaterID uuid.UUID, reason string) error
 	AddMFAException(ctx context.Context, exc *models.MFAException) error
 	GetMFAExceptionByID(ctx context.Context, id uuid.UUID) (*models.MFAException, error)
-	GetMFAExceptions(ctx context.Context, orgID uuid.UUID) ([]models.MFAException, error)
+	GetMFAExceptions(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.MFAException, int, error)
 	DeleteMFAException(ctx context.Context, id uuid.UUID) error
 	GetMFAPolicyHistory(ctx context.Context, orgID uuid.UUID) ([]models.MFAPolicyHistory, error)
 	RollbackMFAPolicy(ctx context.Context, historyID uuid.UUID) error
@@ -172,6 +178,14 @@ type AuthRepository interface {
 	UpdateEvidenceExportStatus(ctx context.Context, id uuid.UUID, status, fileURL, errorMsg string) error
 	GetAuditPolicy(ctx context.Context, orgID uuid.UUID) (*models.AuditPolicy, error)
 	UpdateAuditPolicy(ctx context.Context, policy *models.AuditPolicy) error
+
+	// Security Configuration
+	GetSecuritySettings(ctx context.Context, orgID uuid.UUID) (*models.SecuritySettings, error)
+	UpdateSecuritySettings(ctx context.Context, settings *models.SecuritySettings) error
+	GetSecurityMetrics(ctx context.Context, orgID uuid.UUID) (*models.SecurityMetrics, error)
+	GetVulnerabilityReport(ctx context.Context, orgID uuid.UUID) (*models.VulnerabilityReport, error)
+	GetComplianceReport(ctx context.Context, orgID uuid.UUID, reportType string, startDate, endDate time.Time) (*models.ComplianceReport, error)
+	ListSecurityEvents(ctx context.Context, orgID uuid.UUID, page, size int, filters map[string]any) ([]models.SecurityEvent, int, error)
 
 	// Stats
 	GetSystemStats(ctx context.Context) (*models.SystemStats, error)

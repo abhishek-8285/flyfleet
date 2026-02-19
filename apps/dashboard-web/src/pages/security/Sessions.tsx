@@ -14,7 +14,7 @@ interface Session {
   is_current?: boolean;
 }
 
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/api/v1';
 
 export default function Sessions() {
   const [sessions, setSessions] = useState<Session[]>([]);

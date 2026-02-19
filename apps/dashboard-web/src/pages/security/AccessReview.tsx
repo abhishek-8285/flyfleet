@@ -27,7 +27,7 @@ interface ReviewItem {
   role?: { id: string; name: string };
 }
 
-const API_BASE = process.env.REACT_APP_API_URL || '/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/api/v1';
 
 export default function AccessReview() {
   const [reviews, setReviews] = useState<AccessReview[]>([]);

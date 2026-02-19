@@ -439,10 +439,10 @@ export const GlobalAdminDashboard: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search activities..."
-                className="bg-surface-light border border-border-color text-xs text-white rounded pl-8 pr-3 py-1 w-40 focus:ring-2 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50"
+                className="bg-surface-dark border border-border-color text-xs text-white rounded pl-8 pr-3 py-1 w-40 focus:ring-2 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50"
               />
             </div>
-            <button className="p-1.5 bg-surface-light hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-border-color">
+            <button className="p-1.5 bg-surface-dark hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-border-color">
               <span className="material-symbols-outlined text-sm">filter_list</span>
             </button>
             <span className="material-symbols-outlined text-blue-400">timeline</span>
@@ -515,7 +515,7 @@ export const GlobalAdminDashboard: React.FC = () => {
             <span className="material-symbols-outlined text-sm">history</span>
             View Full Activity Log
           </button>
-          <button className="px-4 py-2 bg-surface-light hover:bg-border-color text-white rounded-lg font-medium transition-colors border border-border-color">
+          <button className="px-4 py-2 bg-surface-dark hover:bg-border-color text-white rounded-lg font-medium transition-colors border border-border-color">
             <span className="material-symbols-outlined text-sm">download</span>
           </button>
         </div>

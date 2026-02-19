@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../../services/apiClient';
 
 interface WorkOrder {
   id: string;
@@ -16,10 +17,15 @@ interface WorkOrder {
   actual_cost: number;
   created_at: string;
   updated_at: string;
+  assignee?: { name: string; initials: string };
   parts: WorkOrderPart[];
   vehicle?: { make: string; model: string; license_plate: string };
-  assignee?: { name: string; initials: string };
   total_parts_cost: number;
+  approval_status: string;
+  vendor_id?: string;
+  vendor?: { name: string; contact_person: string; phone: string; email: string };
+  cost_breakdown: { labor: number; parts: number; tax: number; other: number };
+  inspection_id?: string;
 }
 
 interface WorkOrderPart {
@@ -41,8 +47,16 @@ const statusColors: Record<string, string> = {
 const priorityColors: Record<string, string> = {
   LOW: 'bg-gray-500/20 text-gray-400',
   MEDIUM: 'bg-blue-500/20 text-blue-400',
-  HIGH: 'bg-amber-500/20 text-amber-400',
   CRITICAL: 'bg-red-500/20 text-red-400',
+};
+
+const approvalStatusColors: Record<string, string> = {
+  NOT_REQUIRED: 'bg-gray-500/10 text-gray-400 border-transparent',
+  PENDING_MANAGER: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  PENDING_FLEET_HEAD: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  PENDING_FINANCE: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  APPROVED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  REJECTED: 'bg-red-500/20 text-red-400 border-red-500/30',
 };
 
 const WorkOrderDetail: React.FC = () => {
@@ -51,20 +65,23 @@ const WorkOrderDetail: React.FC = () => {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchWorkOrder = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    try {
-      const response = await fetch(`/api/v1/admin/work-orders/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setWorkOrder(data);
-      } else if (response.status === 404) {
+        try {
+      setError(null);
+      const data = await apiClient.get(`/admin/work-orders/${id}`) as any;
+      if (data) {
+        setWorkOrder(data.data || data.work_order || data);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch work order:', err);
+      setError(err?.message || 'Unable to load the work order.');
+      if (err?.response?.status === 404) {
         navigate('/maintenance/work-orders');
       }
-    } catch (error) {
-      console.error('Failed to fetch work order:', error);
     } finally {
       setLoading(false);
     }
@@ -78,14 +95,8 @@ const WorkOrderDetail: React.FC = () => {
     if (!workOrder) return;
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/v1/admin/work-orders/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (response.ok) {
-        fetchWorkOrder();
-      }
+      await apiClient.patch(`/admin/work-orders/${id}/status`, { status: newStatus });
+      fetchWorkOrder();
     } catch (error) {
       console.error('Failed to change status:', error);
     } finally {
@@ -97,14 +108,39 @@ const WorkOrderDetail: React.FC = () => {
     if (!workOrder || workOrder.status === 'COMPLETED') return;
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/v1/admin/work-orders/${id}/close`, {
-        method: 'POST',
-      });
-      if (response.ok) {
-        fetchWorkOrder();
-      }
+      await apiClient.post(`/admin/work-orders/${id}/close`);
+      fetchWorkOrder();
     } catch (error) {
       console.error('Failed to close work order:', error);
+      setError('Unable to close the work order right now.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const approveWorkOrder = async () => {
+    if (!workOrder) return;
+    setActionLoading(true);
+    try {
+      await apiClient.patch(`/admin/work-orders/${id}/approve`);
+      fetchWorkOrder();
+    } catch (error) {
+      console.error('Failed to approve work order:', error);
+      setError('Approval request failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const rejectWorkOrder = async (reason: string) => {
+    if (!workOrder) return;
+    setActionLoading(true);
+    try {
+      await apiClient.patch(`/admin/work-orders/${id}/reject`, { reason });
+      fetchWorkOrder();
+    } catch (error) {
+      console.error('Failed to reject work order:', error);
+      setError('Rejection request failed.');
     } finally {
       setActionLoading(false);
     }
@@ -159,45 +195,74 @@ const WorkOrderDetail: React.FC = () => {
                 <span className={`px-2 py-1 text-xs font-medium rounded ${priorityColors[workOrder.priority]}`}>
                   {workOrder.priority}
                 </span>
+                <span className={`px-2 py-1 text-xs font-medium rounded border ${approvalStatusColors[workOrder.approval_status]}`}>
+                  {workOrder.approval_status ? workOrder.approval_status.replace(/_/g, ' ') : 'NOT REQUIRED'}
+                </span>
               </div>
               <p className="text-sm text-text-muted mt-1">
                 Created {formatDate(workOrder.created_at)}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {!isCompleted && (
-              <>
-                {workOrder.status === 'OPEN' && (
-                  <button
-                    onClick={() => changeStatus('IN_PROGRESS')}
-                    disabled={actionLoading}
-                    className="px-4 py-2 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Start Work
-                  </button>
-                )}
-                {workOrder.status === 'IN_PROGRESS' && (
-                  <button
-                    onClick={closeWorkOrder}
-                    disabled={actionLoading}
-                    className="px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    Complete
-                  </button>
-                )}
-              </>
-            )}
-            <button
-              onClick={() => navigate(`/maintenance/work-orders/${id}/edit`)}
-              disabled={isCompleted}
-              className="px-4 py-2 text-sm font-medium border border-border-color text-text-muted hover:text-white rounded-lg transition-colors disabled:opacity-50"
-            >
-              Edit
-            </button>
-          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {workOrder.approval_status && workOrder.approval_status.startsWith('PENDING') && (
+            <>
+              <button
+                onClick={approveWorkOrder}
+                disabled={actionLoading}
+                className="px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => {
+                  const reason = prompt('Enter rejection reason:');
+                  if (reason) rejectWorkOrder(reason);
+                }}
+                disabled={actionLoading}
+                className="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+              >
+                Reject
+              </button>
+            </>
+          )}
+          {!isCompleted && (
+            <>
+              {workOrder.status === 'OPEN' && (
+                <button
+                  onClick={() => changeStatus('IN_PROGRESS')}
+                  disabled={actionLoading}
+                  className="px-4 py-2 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Start Work
+                </button>
+              )}
+              {workOrder.status === 'IN_PROGRESS' && (
+                <button
+                  onClick={closeWorkOrder}
+                  disabled={actionLoading}
+                  className="px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  Complete
+                </button>
+              )}
+            </>
+          )}
+          <button
+            onClick={() => navigate(`/maintenance/work-orders/${id}/edit`)}
+            disabled={isCompleted}
+            className="px-4 py-2 text-sm font-medium border border-border-color text-text-muted hover:text-white rounded-lg transition-colors disabled:opacity-50"
+          >
+            Edit
+          </button>
         </div>
       </div>
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-6 py-3">
+          {error}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
@@ -274,6 +339,23 @@ const WorkOrderDetail: React.FC = () => {
               )}
             </div>
 
+            {/* Vendor */}
+            <div className="bg-surface-dark border border-border-color rounded-xl p-6">
+              <h3 className="text-sm font-medium text-text-muted mb-3">Vendor</h3>
+              {workOrder.vendor ? (
+                <div>
+                  <p className="text-white font-medium">{workOrder.vendor.name}</p>
+                  <p className="text-sm text-text-muted mt-1">{workOrder.vendor.contact_person}</p>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-text-muted text-primary">
+                    <span className="material-symbols-outlined text-sm">call</span>
+                    {workOrder.vendor.phone}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-text-muted">No external vendor assigned</p>
+              )}
+            </div>
+
             {/* Assignee */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <h3 className="text-sm font-medium text-text-muted mb-3">Assignee</h3>
@@ -317,7 +399,7 @@ const WorkOrderDetail: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

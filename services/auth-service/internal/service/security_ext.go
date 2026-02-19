@@ -14,14 +14,14 @@ import (
 
 // Error definitions
 var (
-	ErrInvalidCIDR       = errors.New("invalid IP address or CIDR range")
-	ErrInvalidAction     = errors.New("action must be ALLOW or BLOCK")
-	ErrDuplicateIPRule   = errors.New("IP rule already exists for this CIDR")
-	ErrInvalidOrgID      = errors.New("organization ID is required")
-	ErrInvalidUserID     = errors.New("user ID is required")
-	ErrInvalidReviewID   = errors.New("review ID is required")
-	ErrInvalidSessionID  = errors.New("session ID is required")
-	ErrInvalidStatus     = errors.New("invalid status value")
+	ErrInvalidCIDR      = errors.New("invalid IP address or CIDR range")
+	ErrInvalidAction    = errors.New("action must be ALLOW or BLOCK")
+	ErrDuplicateIPRule  = errors.New("IP rule already exists for this CIDR")
+	ErrInvalidOrgID     = errors.New("organization ID is required")
+	ErrInvalidUserID    = errors.New("user ID is required")
+	ErrInvalidReviewID  = errors.New("review ID is required")
+	ErrInvalidSessionID = errors.New("session ID is required")
+	ErrInvalidStatus    = errors.New("invalid status value")
 )
 
 // ValidStatuses for access reviews
@@ -40,6 +40,9 @@ var ValidItemStatuses = map[string]bool{
 // IP Rules
 
 func (s *AuthService) ListIPRules(ctx context.Context, orgID uuid.UUID) ([]models.IPRule, error) {
+	if orgID == uuid.Nil {
+		return nil, ErrInvalidOrgID
+	}
 	return s.repo.ListIPRules(ctx, orgID)
 }
 
@@ -86,14 +89,14 @@ func (s *AuthService) CreateIPRule(ctx context.Context, rule *models.IPRule, adm
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, rule.OrgID, adminID, "ip_rule_create", "ip_rules", 
+	s.logSecurityAudit(rule.OrgID, adminID, "ip_rule_create", "ip_rules",
 		fmt.Sprintf("Created IP rule: %s (%s)", rule.CIDR, rule.Action), clientIP)
 
 	return nil
 }
 
 func (s *AuthService) CreateIPRuleNoAudit(ctx context.Context, rule *models.IPRule) error {
-    return s.repo.CreateIPRule(ctx, rule)
+	return s.repo.CreateIPRule(ctx, rule)
 }
 
 func (s *AuthService) DeleteIPRule(ctx context.Context, id uuid.UUID, adminID uuid.UUID, clientIP string) error {
@@ -112,7 +115,7 @@ func (s *AuthService) DeleteIPRule(ctx context.Context, id uuid.UUID, adminID uu
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, rule.OrgID, adminID, "ip_rule_delete", "ip_rules", 
+	s.logSecurityAudit(rule.OrgID, adminID, "ip_rule_delete", "ip_rules",
 		fmt.Sprintf("Deleted IP rule: %s (%s)", rule.CIDR, rule.Action), clientIP)
 
 	return nil
@@ -198,7 +201,7 @@ func (s *AuthService) CreateAccessReview(ctx context.Context, review *models.Acc
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, review.OrgID, adminID, "access_review_create", "access_reviews", 
+	s.logSecurityAudit(review.OrgID, adminID, "access_review_create", "access_reviews",
 		fmt.Sprintf("Created access review: %s", review.Title), clientIP)
 
 	return nil
@@ -223,7 +226,7 @@ func (s *AuthService) UpdateAccessReviewStatus(ctx context.Context, id uuid.UUID
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, review.OrgID, adminID, "access_review_update", "access_reviews", 
+	s.logSecurityAudit(review.OrgID, adminID, "access_review_update", "access_reviews",
 		fmt.Sprintf("Updated review status: %s -> %s", review.Status, status), clientIP)
 
 	return nil
@@ -246,7 +249,7 @@ func (s *AuthService) UpdateReviewItem(ctx context.Context, itemID uuid.UUID, st
 
 	// Audit log - note: would need to fetch item to get org_id
 	// For now, log with reviewer's context
-	s.logSecurityAudit(ctx, uuid.Nil, reviewerID, "review_item_update", "review_items", 
+	s.logSecurityAudit(uuid.Nil, reviewerID, "review_item_update", "review_items",
 		fmt.Sprintf("Updated review item %s: %s", itemID, status), clientIP)
 
 	return nil
@@ -277,7 +280,7 @@ func (s *AuthService) RevokeSession(ctx context.Context, sessionID uuid.UUID, ad
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, uuid.Nil, adminID, "session_revoke", "sessions", 
+	s.logSecurityAudit(uuid.Nil, adminID, "session_revoke", "sessions",
 		fmt.Sprintf("Revoked session: %s", sessionID), clientIP)
 
 	return nil
@@ -297,7 +300,7 @@ func (s *AuthService) RevokeAllSessionsForOrg(ctx context.Context, orgID uuid.UU
 	}
 
 	// Audit log
-	s.logSecurityAudit(ctx, orgID, adminID, "sessions_revoke_all", "sessions", 
+	s.logSecurityAudit(orgID, adminID, "sessions_revoke_all", "sessions",
 		"Revoked all sessions for organization", clientIP)
 
 	return nil
@@ -336,11 +339,11 @@ func (s *AuthService) ListMFAUsers(ctx context.Context, orgID uuid.UUID, page, s
 	if orgID == uuid.Nil {
 		return nil, 0, ErrInvalidOrgID
 	}
-    return s.repo.ListMFAUsers(ctx, orgID, page, size)
+	return s.repo.ListMFAUsers(ctx, orgID, page, size)
 }
 
 // logSecurityAudit creates an audit log entry for security actions
-func (s *AuthService) logSecurityAudit(ctx context.Context, orgID, userID uuid.UUID, action, resource, details, clientIP string) {
+func (s *AuthService) logSecurityAudit(orgID, userID uuid.UUID, action, resource, details, clientIP string) {
 	log := &models.AuditLog{
 		ID:        uuid.New(),
 		OrgID:     orgID,

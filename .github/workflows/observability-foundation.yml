@@ -1,0 +1,36 @@
+name: Observability Foundation
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "docs/operations/**"
+      - "infrastructure/monitoring/**"
+      - "scripts/check_observability_foundation.py"
+      - ".github/workflows/observability-foundation.yml"
+      - "Makefile"
+      - "package.json"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/operations/**"
+      - "infrastructure/monitoring/**"
+      - "scripts/check_observability_foundation.py"
+      - ".github/workflows/observability-foundation.yml"
+      - "Makefile"
+      - "package.json"
+
+jobs:
+  observability-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run observability foundation checks
+        run: python3 scripts/check_observability_foundation.py

@@ -23,6 +23,7 @@ const VideoTelematics: React.FC = () => {
     const [streams, setStreams] = useState<VideoStream[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedStream, setSelectedStream] = useState<VideoStream | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchStreams();
@@ -33,9 +34,12 @@ const VideoTelematics: React.FC = () => {
 
     const fetchStreams = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const res = await api.listVideoStreams({ status: 'active' });
-            // Mock enrichment with vehicle names if not present
-            const enriched = (res.streams || []).map((s: any) => ({
+            const data = (res as any)?.data ?? res;
+            const items = data?.streams || data?.items || data?.data || data || [];
+            const enriched = (Array.isArray(items) ? items : []).map((s: any) => ({
                 ...s,
                 vehicle_name: s.vehicle_name || `Vehicle ${s.vehicle_id.substring(0, 8)}`
             }));
@@ -45,6 +49,8 @@ const VideoTelematics: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to fetch video streams", error);
+            setError('Failed to load video streams.');
+            setStreams([]);
         } finally {
             setLoading(false);
         }
@@ -70,7 +76,6 @@ const VideoTelematics: React.FC = () => {
                 <div className="lg:col-span-2 bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col relative shadow-2xl">
                     {selectedStream ? (
                         <>
-                            {/* Mock Player */}
                             <div className="flex-1 bg-black relative flex items-center justify-center group">
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent p-6 flex flex-col justify-end z-20">
                                     <div className="flex justify-between items-end">
@@ -83,7 +88,7 @@ const VideoTelematics: React.FC = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className="font-mono text-emerald-400 text-lg">{format(new Date(), 'HH:mm:ss')}</p>
-                                            <p className="text-xs text-gray-400">Latency: 45ms</p>
+                                            <p className="text-xs text-gray-400">Latency: {((selectedStream as any).latency_ms ?? '--')}ms</p>
                                         </div>
                                     </div>
                                 </div>
@@ -117,7 +122,11 @@ const VideoTelematics: React.FC = () => {
                         <span className="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full">{streams.length}</span>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-                        {streams.map(stream => (
+                        {loading ? (
+                            <div className="p-4 text-text-muted text-sm">Loading cameras...</div>
+                        ) : error ? (
+                            <div className="p-4 text-red-400 text-sm">{error}</div>
+                        ) : streams.map(stream => (
                             <div
                                 key={stream.id}
                                 onClick={() => setSelectedStream(stream)}
@@ -143,7 +152,7 @@ const VideoTelematics: React.FC = () => {
                                 </div>
                             </div>
                         ))}
-                        {streams.length === 0 && !loading && (
+                        {streams.length === 0 && !loading && !error && (
                             <div className="p-8 text-center text-text-muted text-sm">No active cameras found.</div>
                         )}
                     </div>

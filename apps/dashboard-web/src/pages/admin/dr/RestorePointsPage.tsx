@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Backup {
     id: string;
@@ -15,14 +16,19 @@ const RestorePointsPage: React.FC = () => {
     const navigate = useNavigate();
     const [backups, setBackups] = useState<Backup[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchBackups = async () => {
         try {
-            const res = await fetch('/api/v1/admin/dr/backups');
-            const data = await res.json();
-            setBackups(data.data || []);
+            setLoading(true);
+            setError(null);
+            const data = await apiClient.get('/admin/dr/backups') as any;
+            const items = data?.data || data?.items || data?.backups || data || [];
+            setBackups(Array.isArray(items) ? items : []);
         } catch (err) {
             console.error(err);
+            setError('Failed to load restore points.');
+            setBackups([]);
         } finally {
             setLoading(false);
         }
@@ -135,6 +141,8 @@ const RestorePointsPage: React.FC = () => {
                             <tbody className="text-sm divide-y divide-border-color">
                                 {loading ? (
                                     <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">Loading...</td></tr>
+                                ) : error ? (
+                                    <tr><td colSpan={6} className="px-6 py-8 text-center text-red-400">{error}</td></tr>
                                 ) : backups.length === 0 ? (
                                     <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">No restore points found</td></tr>
                                 ) : backups.map((item) => {
@@ -196,7 +204,7 @@ const RestorePointsPage: React.FC = () => {
             <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
                 <span>© 2024 FleetSecurity Management Platform. DR Module V2.4</span>
                 <div className="flex items-center gap-4">
-                    <span>API Endpoint: <span className="font-mono">GET /dr/backups</span></span>
+                    <span>API Endpoint: <span className="font-mono">GET /admin/dr/backups</span></span>
                     <span>BFF Connectivity: <span className="text-success font-bold uppercase">Active</span></span>
                 </div>
             </footer>

@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance } from 'axios';
+import { createTraceId, REQUEST_ID_HEADER, TRACE_ID_HEADER } from '../utils/trace';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
 const BFF_URL = process.env.REACT_APP_BFF_URL || '/';
@@ -31,6 +32,9 @@ class ApiService {
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
+          const traceId = createTraceId();
+          config.headers[TRACE_ID_HEADER] = traceId;
+          config.headers[REQUEST_ID_HEADER] = traceId;
           return config;
         },
         (error) => Promise.reject(error)
@@ -208,7 +212,7 @@ class ApiService {
   }
 
   async getTimeline(): Promise<any> {
-    return this.bffClient.get('/api/timeline');
+    return this.bffClient.get('/api/v1/timeline');
   }
 
   // Documents

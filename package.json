@@ -7,7 +7,35 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bff:build": "make bff-build",
+    "bff:contract-check": "make bff-contract-check",
+    "bff:smoke": "make bff-smoke",
+    "frontend:api-check": "make frontend-api-check",
+    "docs:governance": "make docs-governance",
+    "ops:governance": "make operations-governance",
+    "perf:web-budget": "make performance-web-budget",
+    "perf:api-latency": "make api-latency-smoke",
+    "api:clients:generate": "make api-clients-generate",
+    "api:clients:check": "make api-clients-check",
+    "trace:check": "make trace-propagation-check",
+    "services:all:check": "make all-services-foundation-check",
+    "identity:auth:check": "make identity-auth-foundation-check",
+    "design:system:check": "make design-system-foundation-check",
+    "observability:foundation:check": "make observability-foundation-check",
+    "mobile:sync:check": "make mobile-sync-foundation-check",
+    "mobile:sync:simulate": "make mobile-sync-simulate",
+    "firmware:ota:check": "make firmware-ota-foundation-check",
+    "firmware:ota:validate": "make firmware-ota-validate",
+    "firmware:ota:orchestrate": "make ota-rollout-simulate",
+    "device:reliability:check": "make device-reliability-foundation-check",
+    "device:command:simulate": "make device-command-simulate",
+    "vehicle:device:foundation:check": "make vehicle-device-foundation-check",
+    "vehicle:device:test": "make vehicle-device-tests",
+    "runtime:service-matrix:check": "make runtime-service-matrix-check",
+    "enterprise:foundation:check": "make enterprise-foundation-check",
+    "runtime:integration:gate": "make runtime-integration-gate",
+    "workflow:coverage:check": "make workflow-coverage-check"
   },
   "keywords": [],
   "author": "",
@@ -16,5 +44,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "framer-motion": "^12.34.0"
+  }
 }

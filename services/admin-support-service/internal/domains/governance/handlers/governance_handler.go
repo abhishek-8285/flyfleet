@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/flyfleet/admin-support-service/internal/domains/governance/models"
 	"github.com/flyfleet/admin-support-service/internal/domains/governance/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/fleet-platform/shared/pkg/middleware"
 )
 
 type GovernanceHandler struct {
@@ -17,146 +21,206 @@ func NewGovernanceHandler(svc service.GovernanceService) *GovernanceHandler {
 	return &GovernanceHandler{svc: svc}
 }
 
-func (h *GovernanceHandler) RegisterRoutes(router *gin.RouterGroup) {
-	governance := router.Group("/governance")
-	{
-		governance.POST("/requests", h.CreateRequest)
-		governance.GET("/requests", h.ListRequests)
-		governance.GET("/requests/:id", h.GetRequest)
-		governance.POST("/requests/:id/approve", h.ApproveRequest)
-		governance.POST("/requests/:id/reject", h.RejectRequest)
+func (h *GovernanceHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/governance", func(r chi.Router) {
+		r.Post("/requests", h.CreateRequest)
+		r.Get("/requests", h.ListRequests)
+		r.Get("/requests/{id}", h.GetRequest)
+		r.Post("/requests/{id}/approve", h.ApproveRequest)
+		r.Post("/requests/{id}/reject", h.RejectRequest)
 
-		governance.GET("/settings", h.GetSettings)
-		governance.PUT("/settings", h.UpdateSettings)
-	}
+		r.Get("/settings", h.GetSettings)
+		r.Put("/settings", h.UpdateSettings)
+	})
 }
 
-func (h *GovernanceHandler) CreateRequest(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	userID, _ := uuid.Parse(c.GetHeader("X-User-ID"))
+func (h *GovernanceHandler) CreateRequest(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
 
 	var req models.CreateGovernanceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	gReq, err := h.svc.CreateRequest(c.Request.Context(), orgID, userID, req)
+	gReq, err := h.svc.CreateRequest(r.Context(), orgID, userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gReq)
+	h.json(w, gReq, http.StatusCreated)
 }
 
-func (h *GovernanceHandler) GetRequest(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, err := uuid.Parse(c.Param("id"))
+func (h *GovernanceHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request id"})
+		h.errorJSON(w, "invalid request id", http.StatusBadRequest)
 		return
 	}
 
-	gReq, err := h.svc.GetRequest(c.Request.Context(), id, orgID)
+	gReq, err := h.svc.GetRequest(r.Context(), id, orgID)
 	if err != nil {
 		if err == service.ErrRequestNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			h.errorJSON(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gReq)
+	h.json(w, gReq, http.StatusOK)
 }
 
-func (h *GovernanceHandler) ListRequests(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
+func (h *GovernanceHandler) ListRequests(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	
 	var filter models.GovernanceRequestFilter
-	if err := c.ShouldBindQuery(&filter); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	query := r.URL.Query()
+	
+	if t := query.Get("type"); t != "" {
+		gt := models.GovernanceRequestType(t)
+		filter.Type = &gt
 	}
+	
+	if s := query.Get("status"); s != "" {
+		filter.Status = []models.GovernanceRequestStatus{models.GovernanceRequestStatus(s)}
+	}
+	
+	if p := query.Get("page"); p != "" {
+		filter.Page, _ = strconv.Atoi(p)
+	}
+	if ps := query.Get("page_size"); ps != "" {
+		filter.PageSize, _ = strconv.Atoi(ps)
+	}
+	
 	filter.OrganizationID = orgID
 
-	resp, err := h.svc.ListRequests(c.Request.Context(), filter)
+	resp, err := h.svc.ListRequests(r.Context(), filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, resp)
+	h.json(w, resp, http.StatusOK)
 }
 
-func (h *GovernanceHandler) ApproveRequest(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, err := uuid.Parse(c.Param("id"))
+func (h *GovernanceHandler) ApproveRequest(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request id"})
+		h.errorJSON(w, "invalid request id", http.StatusBadRequest)
 		return
 	}
 
 	var req struct {
 		Notes string `json:"notes"`
 	}
-	_ = c.ShouldBindJSON(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	if err := h.svc.ApproveRequest(c.Request.Context(), id, orgID, req.Notes); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.svc.ApproveRequest(r.Context(), id, orgID, req.Notes); err != nil {
+		h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *GovernanceHandler) RejectRequest(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
-	id, err := uuid.Parse(c.Param("id"))
+func (h *GovernanceHandler) RejectRequest(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request id"})
+		h.errorJSON(w, "invalid request id", http.StatusBadRequest)
 		return
 	}
 
 	var req struct {
 		Notes string `json:"notes"`
 	}
-	_ = c.ShouldBindJSON(&req)
+	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	if err := h.svc.RejectRequest(c.Request.Context(), id, orgID, req.Notes); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.svc.RejectRequest(r.Context(), id, orgID, req.Notes); err != nil {
+		h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *GovernanceHandler) GetSettings(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
+func (h *GovernanceHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	
-	settings, err := h.svc.GetSettings(c.Request.Context(), orgID)
+	settings, err := h.svc.GetSettings(r.Context(), orgID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, settings)
+	h.json(w, settings, http.StatusOK)
 }
 
-func (h *GovernanceHandler) UpdateSettings(c *gin.Context) {
-	orgID, _ := uuid.Parse(c.GetHeader("X-Organization-ID"))
+func (h *GovernanceHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	
 	var settings models.GovernanceSettings
-	if err := c.ShouldBindJSON(&settings); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.svc.UpdateSettings(c.Request.Context(), orgID, &settings); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.svc.UpdateSettings(r.Context(), orgID, &settings); err != nil {
+		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, settings)
+	h.json(w, settings, http.StatusOK)
+}
+
+// Helpers
+func (h *GovernanceHandler) json(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *GovernanceHandler) errorJSON(w http.ResponseWriter, message string, status int) {
+	h.json(w, map[string]string{"error": message}, status)
+}
+
+func (h *GovernanceHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback to Header if not in context (e.g. legacy or internal calls)
+	if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
+		if id, err := uuid.Parse(headerID); err == nil {
+			return id
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *GovernanceHandler) getUserID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+		if userIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(userIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	if headerID := r.Header.Get("X-User-ID"); headerID != "" {
+		if id, err := uuid.Parse(headerID); err == nil {
+			return id
+		}
+	}
+	return uuid.Nil
 }

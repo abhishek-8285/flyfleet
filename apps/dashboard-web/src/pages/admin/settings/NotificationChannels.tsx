@@ -14,17 +14,25 @@ const NotificationChannels: React.FC = () => {
     const [channels, setChannels] = useState<NotificationChannel[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchChannels();
     }, []);
 
     const fetchChannels = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/channels');
-            setChannels(response.data || []);
+            const response = await apiClient.get('/settings/channels') as any;
+            const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+            setChannels(items);
         } catch (error) {
             console.error('Failed to fetch channels', error);
+            setError('Failed to load notification channels');
         } finally {
             setLoading(false);
         }
@@ -78,6 +86,11 @@ const NotificationChannels: React.FC = () => {
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {error && (
+                    <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        {error}
+                    </div>
+                )}
                 <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Email Channel */}
                     <div className="bg-[#16202a] rounded-xl border border-[#233648] overflow-hidden">

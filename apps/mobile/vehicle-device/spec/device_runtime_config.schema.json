@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.local/schemas/device-runtime-config.schema.json",
+  "title": "Vehicle Device Runtime Config",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "heartbeat_seconds",
+    "ring_buffer_minutes",
+    "gps",
+    "ai",
+    "retention",
+    "feature_flags"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^v[0-9]+$"
+    },
+    "heartbeat_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 60
+    },
+    "ring_buffer_minutes": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 15
+    },
+    "gps": {
+      "type": "object",
+      "required": ["active_interval_seconds", "idle_interval_seconds"],
+      "properties": {
+        "active_interval_seconds": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "idle_interval_seconds": {
+          "type": "number",
+          "minimum": 15,
+          "maximum": 60
+        }
+      },
+      "additionalProperties": false
+    },
+    "ai": {
+      "type": "object",
+      "required": ["enabled", "frame_sample_stride", "severity_thresholds"],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "frame_sample_stride": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 10
+        },
+        "severity_thresholds": {
+          "type": "object",
+          "required": ["warn_min", "critical_min"],
+          "properties": {
+            "warn_min": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "critical_min": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "retention": {
+      "type": "object",
+      "required": ["critical_clip_days", "min_storage_reserve_mb"],
+      "properties": {
+        "critical_clip_days": {
+          "type": "integer",
+          "minimum": 7,
+          "maximum": 30
+        },
+        "min_storage_reserve_mb": {
+          "type": "integer",
+          "minimum": 256
+        },
+        "legal_hold": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "feature_flags": {
+      "type": "object",
+      "required": [
+        "camera_enabled",
+        "audio_event_checks_enabled",
+        "ai_enabled",
+        "can_bus_enabled",
+        "driver_lockout_enabled"
+      ],
+      "properties": {
+        "camera_enabled": {"type": "boolean"},
+        "audio_event_checks_enabled": {"type": "boolean"},
+        "ai_enabled": {"type": "boolean"},
+        "can_bus_enabled": {"type": "boolean"},
+        "driver_lockout_enabled": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

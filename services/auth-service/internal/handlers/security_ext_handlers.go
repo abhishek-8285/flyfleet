@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flyfleet/auth-service/internal/models"
 	"github.com/flyfleet/auth-service/internal/service"
@@ -335,24 +336,34 @@ func (h *SecurityExtHandlers) ListSessions(w http.ResponseWriter, r *http.Reques
 	if sessions == nil {
 		sessions = []models.AuthToken{}
 	}
+	// Calculate pagination metadata
+	totalPages := 0
+	if size > 0 {
+		totalPages = (total + size - 1) / size
+	}
+
 	writeJSON(w, map[string]interface{}{
-		"sessions": sessions,
-		"total":    total,
-		"page":     page,
-		"size":     size,
+		"data": sessions,
+		"meta": map[string]interface{}{
+			"total":       total,
+			"page":        page,
+			"limit":       size,
+			"total_pages": totalPages,
+			"has_next":    (page * size) < total,
+			"has_prev":    page > 1,
+		},
 	}, http.StatusOK)
 }
 
 func (h *SecurityExtHandlers) RevokeSession(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		SessionID string `json:"session_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, err, http.StatusBadRequest)
-		return
+	sessionIDStr := r.PathValue("id")
+	if sessionIDStr == "" {
+		// Fallback for query param or older router behavior if needed, 
+		// but sticking to standard path param as per request.
+		sessionIDStr = r.URL.Query().Get("id")
 	}
 
-	sessionID, err := uuid.Parse(req.SessionID)
+	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
 		writeError(w, service.ErrInvalidSessionID, http.StatusBadRequest)
 		return
@@ -368,10 +379,10 @@ func (h *SecurityExtHandlers) RevokeSession(w http.ResponseWriter, r *http.Reque
 	}
 
 	h.logger.Info("Session revoked", 
-		zap.String("session_id", req.SessionID),
+		zap.String("session_id", sessionIDStr),
 		zap.String("admin_id", adminID.String()),
 	)
-	writeJSON(w, map[string]string{"status": "revoked"}, http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *SecurityExtHandlers) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
@@ -522,4 +533,208 @@ w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(map[string]interface{}{
 "data": telemetry,
 })
+}
+
+// GetSecurityMetrics provides comprehensive security metrics dashboard
+func (h *SecurityExtHandlers) GetSecurityMetrics(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	metrics, err := h.service.GetSecurityMetrics(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("Failed to fetch security metrics", zap.Error(err))
+		http.Error(w, "Failed to fetch security metrics", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metrics)
+}
+
+// GetSecurityPostureScore calculates and returns the organization's security posture score
+func (h *SecurityExtHandlers) GetSecurityPostureScore(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	score, err := h.service.GetSecurityPostureScore(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("Failed to calculate security posture score", zap.Error(err))
+		http.Error(w, "Failed to calculate security posture score", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"score": score,
+		"max_score": 100,
+		"description": "Security posture score based on various security factors",
+	})
+}
+
+// ListSecurityEvents provides filtered security event listing
+func (h *SecurityExtHandlers) ListSecurityEvents(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	eventType := r.URL.Query().Get("type")
+	severity := r.URL.Query().Get("severity")
+
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	events, total, err := h.service.ListSecurityEvents(r.Context(), orgID, page, size, map[string]interface{}{
+		"type": eventType,
+		"severity": severity,
+	})
+	if err != nil {
+		h.logger.Error("Failed to list security events", zap.Error(err))
+		http.Error(w, "Failed to list security events", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"events": events,
+		"total":  total,
+		"page":   page,
+		"size":   size,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// GetSecurityComplianceReport generates compliance reports
+func (h *SecurityExtHandlers) GetSecurityComplianceReport(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	reportType := r.URL.Query().Get("type") // e.g., "soc2", "gdpr", "iso27001"
+	startDateStr := r.URL.Query().Get("start_date")
+	endDateStr := r.URL.Query().Get("end_date")
+
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	var startDate, endDate time.Time
+	if startDateStr != "" {
+		startDate, _ = time.Parse("2006-01-02", startDateStr)
+	}
+	if endDateStr != "" {
+		endDate, _ = time.Parse("2006-01-02", endDateStr)
+	}
+
+	report, err := h.service.GetSecurityComplianceReport(r.Context(), orgID, reportType, startDate, endDate)
+	if err != nil {
+		h.logger.Error("Failed to generate compliance report", zap.Error(err))
+		http.Error(w, "Failed to generate compliance report", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
+}
+
+// GetVulnerabilityReport provides vulnerability management capabilities
+func (h *SecurityExtHandlers) GetVulnerabilityReport(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	report, err := h.service.GetVulnerabilityReport(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("Failed to generate vulnerability report", zap.Error(err))
+		http.Error(w, "Failed to generate vulnerability report", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
+}
+
+// ManageSecuritySettings allows configuration of security settings
+func (h *SecurityExtHandlers) ManageSecuritySettings(w http.ResponseWriter, r *http.Request) {
+	var settings models.SecuritySettings
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	orgIDStr := r.URL.Query().Get("org_id")
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if err := h.service.UpdateSecuritySettings(r.Context(), orgID, &settings); err != nil {
+		h.logger.Error("Failed to update security settings", zap.Error(err))
+		http.Error(w, "Failed to update security settings", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Security settings updated successfully"})
+}
+
+// GetSecuritySettings retrieves current security settings
+func (h *SecurityExtHandlers) GetSecuritySettings(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := r.URL.Query().Get("org_id")
+	var orgID uuid.UUID
+	if orgIDStr != "" {
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	settings, err := h.service.GetSecuritySettings(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("Failed to get security settings", zap.Error(err))
+		http.Error(w, "Failed to get security settings", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(settings)
 }

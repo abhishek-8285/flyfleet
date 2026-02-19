@@ -11,30 +11,28 @@ import (
 	"github.com/flyfleet/alert-service/internal/domains/notifications/models"
 	"github.com/flyfleet/alert-service/internal/domains/notifications/service"
 	"github.com/flyfleet/alert-service/internal/domains/notifications/service/mocks"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 )
 
-func setupPreferenceTest() (*gin.Engine, *mocks.MockNotificationRepository) {
-	gin.SetMode(gin.TestMode)
+func setupPreferenceTest() (http.Handler, *mocks.MockNotificationRepository) {
 	mockRepo := new(mocks.MockNotificationRepository)
 	logger := zap.NewNop()
 	svc := service.NewNotificationService(mockRepo, logger)
 	h := NewNotificationHandlers(svc, logger)
 	
-	r := gin.New()
-	p := r.Group("/api/v1/admin/notifications/preferences")
-	{
-		p.GET("", h.ListPreferences)
-		p.GET("/:id", h.GetUserPreference)
-		p.PUT("/:id", h.UpdateUserPreference)
-		p.GET("/:id/audit", h.GetPreferenceAudit)
-		p.GET("/global", h.GetGlobalDefaults)
-		p.PUT("/global", h.UpdateGlobalDefaults)
-	}
+	r := chi.NewRouter()
+	r.Route("/api/v1/admin/notifications/preferences", func(r chi.Router) {
+		r.Get("/", h.ListPreferences)
+		r.Get("/{id}", h.GetUserPreference)
+		r.Put("/{id}", h.UpdateUserPreference)
+		r.Get("/{id}/audit", h.GetPreferenceAudit)
+		r.Get("/global", h.GetGlobalDefaults)
+		r.Put("/global", h.UpdateGlobalDefaults)
+	})
 	return r, mockRepo
 }
 

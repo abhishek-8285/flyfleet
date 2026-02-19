@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Backup {
     id: string;
@@ -21,16 +22,18 @@ const BackupDetailView: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [backup, setBackup] = useState<Backup | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
         const fetchBackup = async () => {
             try {
-                const res = await fetch(`/api/v1/admin/dr/backups/${id}`);
-                const data = await res.json();
-                setBackup(data.data);
+                setError(null);
+                const data = await apiClient.get(`/admin/dr/backups/${id}`) as any;
+                setBackup(data.data || data.backup || data);
             } catch (err) {
                 console.error(err);
+                setError('Failed to load backup details.');
             } finally {
                 setLoading(false);
             }
@@ -41,16 +44,16 @@ const BackupDetailView: React.FC = () => {
     const handleVerify = async () => {
         if (!id) return;
         try {
-            const res = await fetch(`/api/v1/admin/dr/backups/${id}/verify`, { method: 'POST' });
-            if (res.ok) {
-                alert("Verification scheduled");
-            }
+            await apiClient.post(`/admin/dr/backups/${id}/verify`);
+            alert("Verification scheduled");
         } catch (err) {
             console.error(err);
+            alert("Failed to schedule verification");
         }
     };
 
     if (loading) return <div className="p-8 text-white">Loading...</div>;
+    if (error) return <div className="p-8 text-red-400">{error}</div>;
     if (!backup) return <div className="p-8 text-white">Backup not found</div>;
 
     const formatSize = (bytes?: number) => bytes ? `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB` : '---';

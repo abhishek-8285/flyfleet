@@ -29,14 +29,16 @@ func (r *WorkOrderRepository) Create(ctx context.Context, wo *models.WorkOrder) 
 		INSERT INTO work_orders (
 			organization_id, vehicle_id, title, description,
 			maintenance_type, priority, status, assigned_to,
-			scheduled_date, estimated_cost, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			scheduled_date, estimated_cost, created_by,
+			vendor_id, approval_status, cost_breakdown, inspection_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
 		wo.OrganizationID, wo.VehicleID, wo.Title, wo.Description,
 		wo.MaintenanceType, wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.EstimatedCost, wo.CreatedBy,
+		wo.VendorID, wo.ApprovalStatus, wo.CostBreakdown, wo.InspectionID,
 	).Scan(&wo.ID, &wo.CreatedAt, &wo.UpdatedAt)
 }
 
@@ -46,7 +48,8 @@ func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 		SELECT id, organization_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
-			   created_by, created_at, updated_at
+			   created_by, created_at, updated_at,
+			   vendor_id, approval_status, cost_breakdown, inspection_id
 		FROM work_orders WHERE id = $1
 	`
 	wo := &models.WorkOrder{}
@@ -55,6 +58,7 @@ func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 		&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 		&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 		&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
+		&wo.VendorID, &wo.ApprovalStatus, &wo.CostBreakdown, &wo.InspectionID,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -69,7 +73,8 @@ func (r *WorkOrderRepository) Update(ctx context.Context, wo *models.WorkOrder) 
 			title = $2, description = $3, maintenance_type = $4,
 			priority = $5, status = $6, assigned_to = $7,
 			scheduled_date = $8, completed_date = $9,
-			estimated_cost = $10, actual_cost = $11
+			estimated_cost = $10, actual_cost = $11,
+			vendor_id = $12, approval_status = $13, cost_breakdown = $14
 		WHERE id = $1
 		RETURNING updated_at
 	`
@@ -78,6 +83,7 @@ func (r *WorkOrderRepository) Update(ctx context.Context, wo *models.WorkOrder) 
 		wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.CompletedDate,
 		wo.EstimatedCost, wo.ActualCost,
+		wo.VendorID, wo.ApprovalStatus, wo.CostBreakdown,
 	).Scan(&wo.UpdatedAt)
 }
 
@@ -163,7 +169,8 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 		SELECT id, organization_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
-			   created_by, created_at, updated_at
+			   created_by, created_at, updated_at,
+			   vendor_id, approval_status, cost_breakdown, inspection_id
 		FROM work_orders WHERE %s
 		ORDER BY %s %s
 		LIMIT $%d OFFSET $%d
@@ -184,6 +191,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 			&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 			&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 			&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
+			&wo.VendorID, &wo.ApprovalStatus, &wo.CostBreakdown, &wo.InspectionID,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -196,6 +204,13 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 // UpdateStatus updates only the status field
 func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status models.WorkOrderStatus) error {
 	query := "UPDATE work_orders SET status = $2 WHERE id = $1"
+	_, err := r.db.Exec(ctx, query, id, status)
+	return err
+}
+
+// UpdateApprovalStatus updates only the approval_status field
+func (r *WorkOrderRepository) UpdateApprovalStatus(ctx context.Context, id uuid.UUID, status models.ApprovalStatus) error {
+	query := "UPDATE work_orders SET approval_status = $2 WHERE id = $1"
 	_, err := r.db.Exec(ctx, query, id, status)
 	return err
 }

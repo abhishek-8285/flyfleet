@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -26,30 +28,40 @@ func NewInventoryHandler(repo *repository.InventoryRepository, logger *zap.Logge
 	}
 }
 
-// ListInventory godoc
-// @Summary List inventory parts
-// @Tags Inventory
-// @Produce json
-// @Param search query string false "Search term"
-// @Param stock_location query string false "Stock location"
-// @Param low_stock_only query bool false "Show only low stock items"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
-// @Success 200 {object} models.InventoryListResponse
-// @Router /inventory [get]
-func (h *InventoryHandler) ListInventory(c *gin.Context) {
-	orgID := getOrgID(c)
+func (h *InventoryHandler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListInventory)
+	r.Post("/", h.CreatePart)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetPart)
+		r.Put("/", h.UpdatePart)
+		r.Delete("/", h.DeletePart)
+	})
+}
 
+// ListInventory godoc
+func (h *InventoryHandler) ListInventory(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+
+	query := r.URL.Query()
 	filter := models.InventoryFilter{
 		OrganizationID: orgID,
-		Search:         c.Query("search"),
-		StockLocation:  c.Query("stock_location"),
+		Search:         query.Get("search"),
+		StockLocation:  query.Get("stock_location"),
 	}
 
-	filter.LowStockOnly, _ = strconv.ParseBool(c.Query("low_stock_only"))
-	filter.AvailableOnly, _ = strconv.ParseBool(c.Query("available_only"))
-	filter.Page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
-	filter.PageSize, _ = strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	filter.LowStockOnly, _ = strconv.ParseBool(query.Get("low_stock_only"))
+	filter.AvailableOnly, _ = strconv.ParseBool(query.Get("available_only"))
+	
+	if page := query.Get("page"); page != "" {
+		filter.Page, _ = strconv.Atoi(page)
+	} else {
+		filter.Page = 1
+	}
+	if pageSize := query.Get("page_size"); pageSize != "" {
+		filter.PageSize, _ = strconv.Atoi(pageSize)
+	} else {
+		filter.PageSize = 20
+	}
 
 	if filter.Page <= 0 {
 		filter.Page = 1
@@ -58,14 +70,14 @@ func (h *InventoryHandler) ListInventory(c *gin.Context) {
 		filter.PageSize = 20
 	}
 
-	parts, total, err := h.repo.List(c.Request.Context(), filter)
+	parts, total, err := h.repo.List(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("failed to list inventory", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, models.InventoryListResponse{
+	h.writeJSONResponse(w, http.StatusOK, models.InventoryListResponse{
 		Total:    total,
 		Page:     filter.Page,
 		PageSize: filter.PageSize,
@@ -74,19 +86,12 @@ func (h *InventoryHandler) ListInventory(c *gin.Context) {
 }
 
 // CreatePart godoc
-// @Summary Create inventory part
-// @Tags Inventory
-// @Accept json
-// @Produce json
-// @Param request body models.CreateInventoryPartRequest true "Create request"
-// @Success 201 {object} models.InventoryPart
-// @Router /inventory [post]
-func (h *InventoryHandler) CreatePart(c *gin.Context) {
-	orgID := getOrgID(c)
+func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 
 	var req models.CreateInventoryPartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -101,72 +106,58 @@ func (h *InventoryHandler) CreatePart(c *gin.Context) {
 		UnitCost:          req.UnitCost,
 	}
 
-	if err := h.repo.Create(c.Request.Context(), part); err != nil {
+	if err := h.repo.Create(r.Context(), part); err != nil {
 		h.logger.Error("failed to create part", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, part)
+	h.writeJSONResponse(w, http.StatusCreated, part)
 }
 
 // GetPart godoc
-// @Summary Get inventory part by ID
-// @Tags Inventory
-// @Produce json
-// @Param id path string true "Part ID"
-// @Success 200 {object} models.InventoryPart
-// @Router /inventory/{id} [get]
-func (h *InventoryHandler) GetPart(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *InventoryHandler) GetPart(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid part ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid part ID", nil)
 		return
 	}
 
-	part, err := h.repo.GetByID(c.Request.Context(), id)
+	part, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get part", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	if part == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "part not found"})
+		h.writeErrorResponse(w, http.StatusNotFound, "part not found", nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, part)
+	h.writeJSONResponse(w, http.StatusOK, part)
 }
 
 // UpdatePart godoc
-// @Summary Update inventory part
-// @Tags Inventory
-// @Accept json
-// @Produce json
-// @Param id path string true "Part ID"
-// @Param request body models.UpdateInventoryPartRequest true "Update request"
-// @Success 200 {object} models.InventoryPart
-// @Router /inventory/{id} [put]
-func (h *InventoryHandler) UpdatePart(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *InventoryHandler) UpdatePart(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid part ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid part ID", nil)
 		return
 	}
 
-	part, err := h.repo.GetByID(c.Request.Context(), id)
+	part, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	if part == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "part not found"})
+		h.writeErrorResponse(w, http.StatusNotFound, "part not found", nil)
 		return
 	}
 
 	var req models.UpdateInventoryPartRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -193,34 +184,60 @@ func (h *InventoryHandler) UpdatePart(c *gin.Context) {
 		part.UnitCost = *req.UnitCost
 	}
 
-	if err := h.repo.Update(c.Request.Context(), part); err != nil {
+	if err := h.repo.Update(r.Context(), part); err != nil {
 		h.logger.Error("failed to update part", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, part)
+	h.writeJSONResponse(w, http.StatusOK, part)
 }
 
 // DeletePart godoc
-// @Summary Delete inventory part
-// @Tags Inventory
-// @Produce json
-// @Param id path string true "Part ID"
-// @Success 204
-// @Router /inventory/{id} [delete]
-func (h *InventoryHandler) DeletePart(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
+func (h *InventoryHandler) DeletePart(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid part ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid part ID", nil)
 		return
 	}
 
-	if err := h.repo.Delete(c.Request.Context(), id); err != nil {
+	if err := h.repo.Delete(r.Context(), id); err != nil {
 		h.logger.Error("failed to delete part", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Helper methods
+
+func (h *InventoryHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", zap.Error(err))
+	}
+}
+
+func (h *InventoryHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	resp := map[string]interface{}{
+		"error": message,
+	}
+	if err != nil && statusCode == http.StatusInternalServerError {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, statusCode, resp)
+}
+
+func (h *InventoryHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// Default for development
+	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
 }

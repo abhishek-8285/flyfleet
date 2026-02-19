@@ -30,28 +30,27 @@ export const AddOrganization: React.FC = () => {
 
     return (
         <div className="p-8 max-w-4xl mx-auto">
-            <button 
+            <button
                 onClick={() => navigate('/admin/organizations')}
-                className="flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors mb-8 group"
+                className="flex items-center space-x-2 text-text-muted hover:text-primary transition-colors mb-8 group"
             >
                 <ArrowLeftIcon className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to Organizations</span>
             </button>
 
-            <div className="bg-white/70 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl overflow-hidden">
+            <div className="bg-surface-dark border border-primary shadow-2xl rounded-3xl overflow-hidden">
                 {/* Stepper Header */}
-                <div className="bg-slate-900/5 px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+                <div className="bg-surface-darker px-8 py-6 border-b border-border-color flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-800">Onboard New Organization</h1>
-                        <p className="text-slate-500 text-sm mt-1">Configure workspace and branding for the new tenant</p>
+                        <h1 className="text-2xl font-bold text-white">Onboard New Organization</h1>
+                        <p className="text-text-muted text-sm mt-1">Configure workspace and branding for the new tenant</p>
                     </div>
                     <div className="flex items-center space-x-2">
                         {[1, 2, 3].map((s) => (
-                            <div 
+                            <div
                                 key={s}
-                                className={`h-2 w-8 rounded-full transition-all duration-300 ${
-                                    step === s ? 'bg-blue-600 w-12' : step > s ? 'bg-green-500' : 'bg-slate-200'
-                                }`}
+                                className={`h-2 w-8 rounded-full transition-all duration-300 ${step === s ? 'bg-primary w-12' : step > s ? 'bg-green-500' : 'bg-border-color'
+                                    }`}
                             />
                         ))}
                     </div>
@@ -62,37 +61,37 @@ export const AddOrganization: React.FC = () => {
                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div className="grid grid-cols-2 gap-8">
                                 <div className="space-y-4">
-                                    <label className="text-sm font-semibold text-slate-700 flex items-center">
-                                        <BuildingOffice2Icon className="h-4 w-4 mr-2 text-blue-500" />
+                                    <label className="text-sm font-semibold text-text-muted flex items-center">
+                                        <BuildingOffice2Icon className="h-4 w-4 mr-2 text-primary" />
                                         Organization Name
                                     </label>
-                                    <input 
+                                    <input
                                         type="text"
                                         placeholder="e.g. Acme Corp"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        className="w-full bg-surface-dark border border-primary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-text-muted/50"
                                         value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     />
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="text-sm font-semibold text-slate-700 flex items-center">
-                                        <GlobeAltIcon className="h-4 w-4 mr-2 text-blue-500" />
+                                    <label className="text-sm font-semibold text-text-muted flex items-center">
+                                        <GlobeAltIcon className="h-4 w-4 mr-2 text-primary" />
                                         Custom Domain
                                     </label>
-                                    <input 
+                                    <input
                                         type="text"
                                         placeholder="acme.flyfleet.io"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                        className="w-full bg-surface-dark border border-primary rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-text-muted/50"
                                         value={formData.domain}
-                                        onChange={(e) => setFormData({...formData, domain: e.target.value})}
+                                        onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
                                     />
                                 </div>
                             </div>
                             <div className="flex justify-end pt-8">
-                                <button 
+                                <button
                                     onClick={() => setStep(2)}
                                     disabled={!formData.name}
-                                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-blue-900/20 transition-all"
+                                    className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all border border-primary"
                                 >
                                     Continue to Settings
                                 </button>
@@ -102,7 +101,7 @@ export const AddOrganization: React.FC = () => {
 
                     {step === 2 && (
                         <form onSubmit={handleSubmit} className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                             <div className="space-y-6">
+                            <div className="space-y-6">
                                 <label className="text-sm font-semibold text-slate-700 flex items-center">
                                     <PaintBrushIcon className="h-4 w-4 mr-2 text-blue-500" />
                                     Default Workspace Theme
@@ -112,12 +111,11 @@ export const AddOrganization: React.FC = () => {
                                         <button
                                             key={t}
                                             type="button"
-                                            onClick={() => setFormData({...formData, default_theme: t})}
-                                            className={`p-4 rounded-xl border-2 transition-all ${
-                                                formData.default_theme === t 
-                                                ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                                                : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
-                                            }`}
+                                            onClick={() => setFormData({ ...formData, default_theme: t })}
+                                            className={`p-4 rounded-xl border-2 transition-all ${formData.default_theme === t
+                                                ? 'border-primary bg-primary/10 text-primary'
+                                                : 'border-border-color bg-surface-dark text-text-muted hover:border-border-color/60'
+                                                }`}
                                         >
                                             <span className="capitalize font-medium">{t}</span>
                                         </button>
@@ -125,18 +123,18 @@ export const AddOrganization: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="flex justify-between pt-8 border-t border-slate-100">
-                                <button 
+                            <div className="flex justify-between pt-8 border-t border-border-color">
+                                <button
                                     type="button"
                                     onClick={() => setStep(1)}
-                                    className="text-slate-500 hover:text-slate-800 font-medium px-6 py-3"
+                                    className="bg-primary hover:bg-primary-dark text-white font-medium px-6 py-3 rounded-xl transition-all border border-primary"
                                 >
                                     Back
                                 </button>
-                                <button 
+                                <button
                                     type="submit"
                                     disabled={loading}
-                                    className="bg-slate-900 hover:bg-black text-white px-10 py-3 rounded-xl font-semibold shadow-xl transition-all flex items-center"
+                                    className="bg-primary hover:bg-primary-dark text-white px-10 py-3 rounded-xl font-semibold shadow-xl transition-all flex items-center border border-primary"
                                 >
                                     {loading ? 'Creating...' : 'Initialize Organization'}
                                 </button>
@@ -146,17 +144,17 @@ export const AddOrganization: React.FC = () => {
 
                     {step === 3 && (
                         <div className="py-12 text-center space-y-6 animate-in zoom-in duration-500">
-                            <div className="inline-flex items-center justify-center p-4 bg-green-100 rounded-full mb-4">
+                            <div className="inline-flex items-center justify-center p-4 bg-green-500/10 rounded-full mb-4">
                                 <CheckCircleIcon className="h-12 w-12 text-green-600" />
                             </div>
-                            <h2 className="text-3xl font-bold text-slate-900">Organization Created!</h2>
-                            <p className="text-slate-500 max-w-md mx-auto">
+                            <h2 className="text-3xl font-bold text-white">Organization Created!</h2>
+                            <p className="text-text-muted max-w-md mx-auto">
                                 The workspace is now ready. You can now start adding users and configuring fleet assets.
                             </p>
                             <div className="pt-8">
-                                <button 
+                                <button
                                     onClick={() => navigate('/admin/organizations')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg shadow-blue-900/20 transition-all"
+                                    className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all border border-primary"
                                 >
                                     Back to Dashboard
                                 </button>

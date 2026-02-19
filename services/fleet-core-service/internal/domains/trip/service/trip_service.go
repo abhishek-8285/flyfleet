@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
@@ -15,12 +17,39 @@ import (
 type TripService struct {
 	repo   *repository.TripRepository
 	logger *zap.Logger
+	nc     *nats.Conn
 }
 
-func NewTripService(repo *repository.TripRepository, logger *zap.Logger) *TripService {
-	return &TripService{
+func NewTripService(repo *repository.TripRepository, logger *zap.Logger, opts ...func(*TripService)) *TripService {
+	s := &TripService{
 		repo:   repo,
 		logger: logger,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// WithNATS sets the NATS connection for event publishing
+func WithNATS(nc *nats.Conn) func(*TripService) {
+	return func(s *TripService) {
+		s.nc = nc
+	}
+}
+
+// publishEvent publishes a NATS event (best-effort, non-blocking)
+func (s *TripService) publishEvent(subject string, data interface{}) {
+	if s.nc == nil {
+		return
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		s.logger.Warn("failed to marshal NATS event", zap.String("subject", subject), zap.Error(err))
+		return
+	}
+	if err := s.nc.Publish(subject, payload); err != nil {
+		s.logger.Warn("failed to publish NATS event", zap.String("subject", subject), zap.Error(err))
 	}
 }
 
@@ -397,12 +426,33 @@ func (s *TripService) SubmitPOD(ctx context.Context, tripID, driverID string, re
 		Signature:  req.Signature,
 	}
 
+    // Save to new table
+    proof := &models.ProofOfDelivery{
+        ID: pod.ID,
+        TripID: tripID,
+        Type: req.Type,
+        URL: req.URL,
+        Metadata: map[string]interface{}{
+            "recipient": req.Recipient,
+            "signature": req.Signature,
+            "otp_verified": req.OTPVerified,
+        },
+        UploadedBy: driverID,
+        Verified: false,
+        CreatedAt: time.Now(),
+    }
+    if err := s.repo.SaveProofOfDelivery(ctx, proof); err != nil {
+        s.logger.Error("failed to save POD to new table", zap.Error(err))
+        // Continue to save to legacy JSONB for backward compatibility
+    }
+
 	if err := s.repo.AddPODDocument(ctx, tripID, pod); err != nil {
 		s.logger.Error("failed to submit POD", zap.String("trip_id", tripID), zap.Error(err))
 		return fmt.Errorf("failed to submit POD: %w", err)
 	}
 
 	s.logger.Info("POD submitted", zap.String("trip_id", tripID), zap.String("pod_type", req.Type))
+    s.publishEvent("trip.pod_submitted", proof)
 	return nil
 }
 

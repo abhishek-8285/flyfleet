@@ -320,3 +320,46 @@ type BehaviorScoreUpdate struct {
 	CreatedBy   string                 `json:"created_by" db:"created_by"`
 	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
 }
+
+// DriverMessage represents messages between driver and dispatch
+type DriverMessage struct {
+	ID            string    `json:"id" db:"id"`
+	DriverID      string    `json:"driver_id" db:"driver_id"`
+	TripID        *string   `json:"trip_id" db:"trip_id"`
+	Direction     string    `json:"direction" db:"direction"` // INBOUND, OUTBOUND
+	Type          string    `json:"type" db:"type"`           // TEXT, AUDIO, IMAGE
+	Content       string    `json:"content" db:"content"`
+	AttachmentURL string    `json:"attachment_url" db:"attachment_url"`
+	IsRead        bool      `json:"is_read" db:"is_read"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+}
+
+// DriverExpense represents expenses incurred by the driver
+type DriverExpense struct {
+	ID              string    `json:"id" db:"id"`
+	DriverID        string    `json:"driver_id" db:"driver_id"`
+	TripID          *string   `json:"trip_id" db:"trip_id"`
+	Type            string    `json:"type" db:"type"` // FUEL, TOLL, MAINTENANCE, FOOD, LODGING, OTHER
+	Amount          float64   `json:"amount" db:"amount"`
+	Currency        string    `json:"currency" db:"currency"`
+	ReceiptURL      string    `json:"receipt_url" db:"receipt_url"`
+	Notes           string    `json:"notes" db:"notes"`
+	Status          string    `json:"status" db:"status"` // PENDING, APPROVED, REJECTED
+	TransactionDate time.Time `json:"transaction_date" db:"transaction_date"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// DutyStatusLog represents HOOS logs
+type DutyStatusLog struct {
+	ID              string    `json:"id" db:"id"`
+	DriverID        string    `json:"driver_id" db:"driver_id"`
+	Status          string    `json:"status" db:"status"` // OFF_DUTY, SLEEPER_BERTH, DRIVING, ON_DUTY
+	Location        *Location `json:"location" db:"location"` // Uses existing Location struct from driver.go
+	StartedAt       time.Time `json:"started_at" db:"started_at"`
+	EndedAt         *time.Time `json:"ended_at" db:"ended_at"`
+	DurationMinutes *int      `json:"duration_minutes" db:"duration_minutes"`
+	Remarks         string    `json:"remarks" db:"remarks"`
+	CreatedAt       time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+}

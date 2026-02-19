@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,20 +33,21 @@ func (r *repository) Create(ctx context.Context, report *Report) error {
 	// For V1, we might not have the table yet, so we'll mock it if DB fails or just log
 	// In a real implementation this would insert into reports table
 	// For now, we verified migrations are centralized, let's assume table exists or we fail gracefully
-	
+
 	// Stub implementation for speed to fix 404s
 	r.logger.Info("Stub: Saving report to DB", zap.Any("report", report))
 	return nil
 }
 
 func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Report, error) {
-	// Stub
+	downloadURL := fmt.Sprintf("/api/v1/reports/%s/download", id.String())
 	return &Report{
 		ID:        id,
 		Type:      ReportTypeVehicleUsage,
 		Status:    ReportStatusCompleted,
 		CreatedAt: time.Now(),
-		FileURL:   "https://example.com/reports/stub.pdf",
+		UpdatedAt: time.Now(),
+		FileURL:   downloadURL,
 	}, nil
 }
 

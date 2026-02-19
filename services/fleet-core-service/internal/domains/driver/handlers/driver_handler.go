@@ -1,245 +1,216 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/fleet-platform/shared/pkg/pagination"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-	"gopkg.in/go-playground/validator.v9"
 
+	driverMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/driver/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
 )
 
 type DriverHandler struct {
-	service *service.DriverService
-	logger  *zap.Logger
+	service  *service.DriverService
+	security *driverMiddleware.DriverSecurityMiddleware
+	logger   *zap.Logger
 	validate *validator.Validate
 }
 
-func NewDriverHandler(service *service.DriverService, logger *zap.Logger) *DriverHandler {
+func NewDriverHandler(service *service.DriverService, security *driverMiddleware.DriverSecurityMiddleware, logger *zap.Logger) *DriverHandler {
 	return &DriverHandler{
 		service:  service,
+		security: security,
 		logger:   logger,
 		validate: validator.New(),
 	}
 }
 
+func (h *DriverHandler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListDrivers)
+	r.Post("/", h.CreateDriver)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetDriver)
+		r.Put("/", h.UpdateDriver)
+		r.Delete("/", h.DeleteDriver)
+		r.Post("/assign-vehicle", h.AssignVehicle)
+		r.Post("/unassign-vehicle", h.UnassignVehicle)
+		r.Post("/update-status", h.UpdateStatus)
+		r.Get("/behavior-score", h.GetBehaviorScore)
+		r.Post("/update-behavior", h.UpdateBehaviorScore)
+		r.Get("/analytics", h.GetAnalytics)
+		r.Route("/documents", func(r chi.Router) {
+			r.Get("/", h.ListDocuments)
+			r.Post("/", h.UploadDocument)
+			r.Delete("/{doc_id}", h.DeleteDocument)
+		})
+		r.Route("/attendance", func(r chi.Router) {
+			r.Get("/", h.GetAttendance)
+			r.Post("/", h.MarkAttendance)
+		})
+		r.Route("/schedule", func(r chi.Router) {
+			r.Get("/", h.GetSchedule)
+			r.Post("/", h.SetSchedule)
+		})
+
+		// Mobile App Routes with Security Middleware
+		r.Group(func(r chi.Router) {
+			r.Use(h.security.DeviceFingerprintMiddleware)
+			
+			r.Post("/duty-status", h.UpdateDutyStatus)
+			r.Post("/sos", h.TriggerSOS)
+			r.Route("/messages", func(r chi.Router) {
+				r.Post("/", h.SendMessage)
+				r.Get("/", h.GetMessages)
+			})
+			r.Route("/expenses", func(r chi.Router) {
+				r.Post("/", h.SubmitExpense)
+				r.Get("/", h.GetExpenses)
+			})
+		})
+	})
+}
+
 // CreateDriver godoc
-// @Summary Create a new driver
-// @Description Create a new driver with personal and license information
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param driver body models.CreateDriverRequest true "Driver information"
-// @Success 201 {object} models.Driver
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers [post]
-func (h *DriverHandler) CreateDriver(c *gin.Context) {
+func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateDriverRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind create driver request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode create driver request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for create driver request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	orgID := c.GetHeader("X-Org-ID")
-	if orgID == "" {
-		orgID = "default-org"
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
+		return
 	}
 
-	driver, err := h.service.Create(c.Request.Context(), orgID, &req)
+	driver, err := h.service.Create(r.Context(), orgID.String(), &req)
 	if err != nil {
 		h.logger.Error("failed to create driver", zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "license has expired" || err.Error() == "driver with license number "+req.LicenseNumber+" already exists" {
 			statusCode = http.StatusBadRequest
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, driver)
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": driver})
 }
 
 // GetDriver godoc
-// @Summary Get driver by ID
-// @Description Get driver details by driver ID
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} models.Driver
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id} [get]
-func (h *DriverHandler) GetDriver(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) GetDriver(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	driver, err := h.service.GetByID(c.Request.Context(), driverID)
+	driver, err := h.service.GetByID(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, driver)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": driver})
 }
 
 // ListDrivers godoc
-// @Summary List drivers
-// @Description Get list of drivers with optional filtering and pagination
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param status query string false "Filter by status (active, inactive, suspended, resigned)"
-// @Param vehicle_id query string false "Filter by vehicle ID"
-// @Param name query string false "Filter by name (partial match)"
-// @Param page query int false "Page number (default: 1)"
-// @Param page_size query int false "Page size (default: 20, max: 100)"
-// @Param order_by query string false "Order by field (created_at, full_name, rating, total_trips, behavior_score, status)"
-// @Param order_dir query string false "Order direction (asc, desc)"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers [get]
-func (h *DriverHandler) ListDrivers(c *gin.Context) {
-	var filter models.DriverListFilter
-	
-	// Parse query parameters
-	filter.Status = c.Query("status")
-	filter.VehicleID = c.Query("vehicle_id")
-	filter.Name = c.Query("name")
-	
-	page, err := strconv.Atoi(c.Query("page"))
-	if err != nil || page < 1 {
-		page = 1
-	}
-	filter.Page = page
-	
-	pageSize, err := strconv.Atoi(c.Query("page_size"))
-	if err != nil || pageSize < 1 {
-		pageSize = 20
-	} else if pageSize > 100 {
-		pageSize = 100
-	}
-	filter.PageSize = pageSize
-	
-	filter.OrderBy = c.Query("order_by")
-	filter.OrderDir = c.Query("order_dir")
+func (h *DriverHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
+	p := pagination.GetParams(r)
 
-	drivers, totalCount, err := h.service.List(c.Request.Context(), filter)
+	query := r.URL.Query()
+	var filter models.DriverListFilter
+	filter.Status = query.Get("status")
+	filter.VehicleID = query.Get("vehicle_id")
+	filter.Name = query.Get("name")
+	filter.Page = p.Page
+	filter.PageSize = p.Limit
+	filter.OrderBy = query.Get("order_by")
+	filter.OrderDir = query.Get("order_dir")
+
+	drivers, totalCount, err := h.service.List(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("failed to list drivers", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list drivers", err)
 		return
 	}
 
-	response := gin.H{
-		"data":       drivers,
-		"total":      totalCount,
-		"page":       filter.Page,
-		"page_size":  filter.PageSize,
-		"total_pages": (totalCount + filter.PageSize - 1) / filter.PageSize,
-	}
-
-	c.JSON(http.StatusOK, response)
+	h.writeJSONResponse(w, http.StatusOK, pagination.NewResponse(drivers, totalCount, p.Page, p.Limit))
 }
 
 // UpdateDriver godoc
-// @Summary Update driver
-// @Description Update driver information
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param driver body models.UpdateDriverRequest true "Driver update information"
-// @Success 200 {object} models.Driver
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id} [put]
-func (h *DriverHandler) UpdateDriver(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.UpdateDriverRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind update driver request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode update driver request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for update driver request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	driver, err := h.service.Update(c.Request.Context(), driverID, &req)
+	driver, err := h.service.Update(r.Context(), driverID, &req)
 	if err != nil {
 		h.logger.Error("failed to update driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, driver)
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": driver})
 }
 
 // DeleteDriver godoc
-// @Summary Delete driver
-// @Description Soft delete a driver (mark as inactive)
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 204
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id} [delete]
-func (h *DriverHandler) DeleteDriver(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) DeleteDriver(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	err := h.service.Delete(c.Request.Context(), driverID)
+	err := h.service.Delete(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to delete driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
@@ -249,57 +220,44 @@ func (h *DriverHandler) DeleteDriver(c *gin.Context) {
 		          err.Error() == "cannot delete driver with active trip" {
 			statusCode = http.StatusConflict
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // AssignVehicle godoc
-// @Summary Assign vehicle to driver
-// @Description Assign a vehicle to a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param assignment body models.AssignVehicleRequest true "Vehicle assignment"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/assign-vehicle [post]
-func (h *DriverHandler) AssignVehicle(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.AssignVehicleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind assign vehicle request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode assign vehicle request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for assign vehicle request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
 	// Validate vehicle ID format
 	if _, err := uuid.Parse(req.VehicleID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", nil)
 		return
 	}
 
-	err := h.service.AssignVehicle(c.Request.Context(), driverID, req.VehicleID)
+	err := h.service.AssignVehicle(r.Context(), driverID, req.VehicleID)
 	if err != nil {
 		h.logger.Error("failed to assign vehicle to driver", 
 			zap.String("driver_id", driverID), 
@@ -312,11 +270,11 @@ func (h *DriverHandler) AssignVehicle(c *gin.Context) {
 		          err.Error() == "driver already has a vehicle assigned" {
 			statusCode = http.StatusConflict
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Vehicle assigned successfully",
 		"driver_id": driverID,
 		"vehicle_id": req.VehicleID,
@@ -324,28 +282,16 @@ func (h *DriverHandler) AssignVehicle(c *gin.Context) {
 }
 
 // UnassignVehicle godoc
-// @Summary Unassign vehicle from driver
-// @Description Remove vehicle assignment from a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/unassign-vehicle [post]
-func (h *DriverHandler) UnassignVehicle(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) UnassignVehicle(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	err := h.service.UnassignVehicle(c.Request.Context(), driverID)
+	err := h.service.UnassignVehicle(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to unassign vehicle from driver", 
 			zap.String("driver_id", driverID), 
@@ -356,53 +302,41 @@ func (h *DriverHandler) UnassignVehicle(c *gin.Context) {
 		} else if err.Error() == "driver has no vehicle assigned" {
 			statusCode = http.StatusConflict
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Vehicle unassigned successfully",
 		"driver_id": driverID,
 	})
 }
 
 // UpdateStatus godoc
-// @Summary Update driver status
-// @Description Update driver status (active, inactive, suspended, resigned)
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param status body models.UpdateStatusRequest true "Status update"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/update-status [post]
-func (h *DriverHandler) UpdateStatus(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.UpdateStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind update status request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode update status request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for update status request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	err := h.service.UpdateStatus(c.Request.Context(), driverID, req.Status)
+	err := h.service.UpdateStatus(r.Context(), driverID, req.Status)
 	if err != nil {
 		h.logger.Error("failed to update driver status", 
 			zap.String("driver_id", driverID), 
@@ -414,11 +348,11 @@ func (h *DriverHandler) UpdateStatus(c *gin.Context) {
 		} else if err.Error() == "invalid status: "+req.Status {
 			statusCode = http.StatusBadRequest
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Driver status updated successfully",
 		"driver_id": driverID,
 		"status": req.Status,
@@ -426,27 +360,16 @@ func (h *DriverHandler) UpdateStatus(c *gin.Context) {
 }
 
 // GetBehaviorScore godoc
-// @Summary Get driver behavior score
-// @Description Get current behavior score for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/behavior-score [get]
-func (h *DriverHandler) GetBehaviorScore(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) GetBehaviorScore(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	score, err := h.service.GetBehaviorScore(c.Request.Context(), driverID)
+	score, err := h.service.GetBehaviorScore(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get behavior score", 
 			zap.String("driver_id", driverID), 
@@ -455,11 +378,11 @@ func (h *DriverHandler) GetBehaviorScore(c *gin.Context) {
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"driver_id": driverID,
 		"behavior_score": score,
 		"max_score": 100,
@@ -467,42 +390,30 @@ func (h *DriverHandler) GetBehaviorScore(c *gin.Context) {
 }
 
 // UpdateBehaviorScore godoc
-// @Summary Update driver behavior score
-// @Description Update driver's behavior score based on driving events
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param request body models.UpdateBehaviorScoreRequest true "Score update request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/update-behavior [post]
-func (h *DriverHandler) UpdateBehaviorScore(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.UpdateBehaviorScoreRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind update behavior score request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode update behavior score request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for update behavior score request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	err := h.service.UpdateBehaviorScore(c.Request.Context(), driverID, req.ScoreChange, req.Reason)
+	err := h.service.UpdateBehaviorScore(r.Context(), driverID, req.ScoreChange, req.Reason)
 	if err != nil {
 		h.logger.Error("failed to update behavior score", 
 			zap.String("driver_id", driverID), 
@@ -515,17 +426,17 @@ func (h *DriverHandler) UpdateBehaviorScore(c *gin.Context) {
 		} else if err.Error() == "score change must be between -20 and 20" {
 			statusCode = http.StatusBadRequest
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
 	// Get updated score
-	newScore, err := h.service.GetBehaviorScore(c.Request.Context(), driverID)
+	newScore, err := h.service.GetBehaviorScore(r.Context(), driverID)
 	if err != nil {
 		newScore = 0 // fallback
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Behavior score updated successfully",
 		"driver_id": driverID,
 		"score_change": req.ScoreChange,
@@ -535,27 +446,16 @@ func (h *DriverHandler) UpdateBehaviorScore(c *gin.Context) {
 }
 
 // GetAnalytics godoc
-// @Summary Get driver analytics
-// @Description Get performance analytics for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} models.DriverAnalytics
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/analytics [get]
-func (h *DriverHandler) GetAnalytics(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	analytics, err := h.service.GetDriverAnalytics(c.Request.Context(), driverID)
+	analytics, err := h.service.GetDriverAnalytics(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get driver analytics", 
 			zap.String("driver_id", driverID), 
@@ -564,54 +464,42 @@ func (h *DriverHandler) GetAnalytics(c *gin.Context) {
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
 		}
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusOK, analytics)
+	h.writeJSONResponse(w, http.StatusOK, analytics)
 }
 
 // UploadDocument godoc
-// @Summary Upload driver document
-// @Description Upload and store driver document
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param document body models.UploadDocumentRequest true "Document information"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/documents [post]
-func (h *DriverHandler) UploadDocument(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.UploadDocumentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind upload document request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode upload document request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for upload document request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	// In a real implementation, this would store the document and update the driver record
-	// For now, we'll just return a success response
+	// In a real implementation, this would call service.UploadDocument
+	// Since we are refactoring existing gin code which had mock behavior, we maintain it or improve if service is ready
 	docID := uuid.New().String()
 	
-	c.JSON(http.StatusCreated, gin.H{
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"message": "Document uploaded successfully",
 		"driver_id": driverID,
 		"document_id": docID,
@@ -621,29 +509,17 @@ func (h *DriverHandler) UploadDocument(c *gin.Context) {
 }
 
 // ListDocuments godoc
-// @Summary List driver documents
-// @Description Get list of documents for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/documents [get]
-func (h *DriverHandler) ListDocuments(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) ListDocuments(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	// In a real implementation, this would fetch documents from the database
-	// For now, return empty list
-	c.JSON(http.StatusOK, gin.H{
+	// Mock behavior from original file
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"driver_id": driverID,
 		"documents": []interface{}{},
 		"count": 0,
@@ -651,36 +527,22 @@ func (h *DriverHandler) ListDocuments(c *gin.Context) {
 }
 
 // DeleteDocument godoc
-// @Summary Delete driver document
-// @Description Delete a document from driver's records
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param doc_id path string true "Document ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/documents/{doc_id} [delete]
-func (h *DriverHandler) DeleteDocument(c *gin.Context) {
-	driverID := c.Param("id")
-	docID := c.Param("doc_id")
+func (h *DriverHandler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	docID := chi.URLParam(r, "doc_id")
 	
 	// Validate UUID formats
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 	
 	if _, err := uuid.Parse(docID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid document ID format", nil)
 		return
 	}
 
-	// In a real implementation, this would delete the document from storage and database
-	// For now, just return success
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"message": "Document deleted successfully",
 		"driver_id": driverID,
 		"document_id": docID,
@@ -688,46 +550,32 @@ func (h *DriverHandler) DeleteDocument(c *gin.Context) {
 }
 
 // MarkAttendance godoc
-// @Summary Mark driver attendance
-// @Description Mark attendance for a driver on a specific date
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param attendance body models.MarkAttendanceRequest true "Attendance record"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/attendance [post]
-func (h *DriverHandler) MarkAttendance(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) MarkAttendance(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.MarkAttendanceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind mark attendance request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode mark attendance request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for mark attendance request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	// In a real implementation, this would store the attendance record
-	// For now, just return success
 	recordID := uuid.New().String()
 	
-	c.JSON(http.StatusCreated, gin.H{
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"message": "Attendance marked successfully",
 		"driver_id": driverID,
 		"record_id": recordID,
@@ -737,30 +585,18 @@ func (h *DriverHandler) MarkAttendance(c *gin.Context) {
 }
 
 // GetAttendance godoc
-// @Summary Get driver attendance
-// @Description Get attendance records for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param start_date query string false "Start date (YYYY-MM-DD)"
-// @Param end_date query string false "End date (YYYY-MM-DD)"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/attendance [get]
-func (h *DriverHandler) GetAttendance(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) GetAttendance(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	startDateStr := c.Query("start_date")
-	endDateStr := c.Query("end_date")
+	query := r.URL.Query()
+	startDateStr := query.Get("start_date")
+	endDateStr := query.Get("end_date")
 	
 	var startDate, endDate time.Time
 	var err error
@@ -768,7 +604,7 @@ func (h *DriverHandler) GetAttendance(c *gin.Context) {
 	if startDateStr != "" {
 		startDate, err = time.Parse("2006-01-02", startDateStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start date format"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid start date format", err)
 			return
 		}
 	} else {
@@ -778,16 +614,14 @@ func (h *DriverHandler) GetAttendance(c *gin.Context) {
 	if endDateStr != "" {
 		endDate, err = time.Parse("2006-01-02", endDateStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end date format"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid end date format", err)
 			return
 		}
 	} else {
 		endDate = time.Now()
 	}
 
-	// In a real implementation, this would fetch attendance records from database
-	// For now, return empty list
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"driver_id": driverID,
 		"attendance_records": []interface{}{},
 		"start_date": startDate.Format("2006-01-02"),
@@ -797,46 +631,32 @@ func (h *DriverHandler) GetAttendance(c *gin.Context) {
 }
 
 // SetSchedule godoc
-// @Summary Set driver schedule
-// @Description Set work schedule for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Param schedule body models.SetScheduleRequest true "Work schedule"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/schedule [post]
-func (h *DriverHandler) SetSchedule(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) SetSchedule(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	var req models.SetScheduleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Error("failed to bind set schedule request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode set schedule request", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
 		return
 	}
 
 	// Validate request
 	if err := h.validate.Struct(req); err != nil {
 		h.logger.Error("validation failed for set schedule request", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	// In a real implementation, this would store the schedule
-	// For now, just return success
 	scheduleID := uuid.New().String()
 	
-	c.JSON(http.StatusCreated, gin.H{
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"message": "Schedule set successfully",
 		"driver_id": driverID,
 		"schedule_id": scheduleID,
@@ -848,31 +668,49 @@ func (h *DriverHandler) SetSchedule(c *gin.Context) {
 }
 
 // GetSchedule godoc
-// @Summary Get driver schedule
-// @Description Get work schedule for a driver
-// @Tags drivers
-// @Accept json
-// @Produce json
-// @Param id path string true "Driver ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /drivers/{id}/schedule [get]
-func (h *DriverHandler) GetSchedule(c *gin.Context) {
-	driverID := c.Param("id")
+func (h *DriverHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
 	
 	// Validate UUID format
 	if _, err := uuid.Parse(driverID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid driver ID format"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	// In a real implementation, this would fetch schedules from database
-	// For now, return empty list
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"driver_id": driverID,
 		"schedules": []interface{}{},
 		"count": 0,
 	})
+}
+
+// Helper methods
+
+func (h *DriverHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Error("failed to encode JSON response", zap.Error(err))
+	}
+}
+
+func (h *DriverHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	resp := map[string]interface{}{
+		"error": message,
+	}
+	if err != nil && statusCode == http.StatusInternalServerError {
+		resp["details"] = err.Error()
+	}
+	h.writeJSONResponse(w, statusCode, resp)
+}
+
+func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
 }

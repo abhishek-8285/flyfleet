@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Backup {
     id: string;
@@ -21,12 +22,15 @@ const InitiateRestorePage: React.FC = () => {
     const [targetEnv, setTargetEnv] = useState('STAGING');
     const [loading, setLoading] = useState(false);
     const [checksumVerified, setChecksumVerified] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/v1/admin/dr/backups')
-            .then(res => res.json())
-            .then(data => setBackups(data.data || []))
-            .catch(console.error);
+        (apiClient.get('/admin/dr/backups') as Promise<any>)
+            .then(data => {
+                const items = data?.data || data?.items || data?.backups || data || [];
+                setBackups(Array.isArray(items) ? items : []);
+            })
+            .catch(() => setError('Failed to load backups.'));
     }, []);
 
     useEffect(() => {
@@ -49,23 +53,22 @@ const InitiateRestorePage: React.FC = () => {
     const handleSubmit = async () => {
         if (!selectedBackup) return;
         setLoading(true);
+        setError(null);
         try {
-            const res = await fetch('/api/v1/admin/dr/restores', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    backup_id: selectedBackup,
-                    restore_type: restoreType,
-                    target_env: targetEnv,
-                    requested_by: 'System User'
-                })
+            const data = await apiClient.post('/admin/dr/restore-jobs', {
+                backup_id: selectedBackup,
+                restore_type: restoreType,
+                target_environment: targetEnv,
+                requested_by: 'System User'
             });
-            const data = await res.json();
-            if (res.ok && data.data?.id) {
+            if (data?.data?.id) {
                 navigate(`/admin/dr/restores/${data.data.id}`);
+            } else {
+                throw new Error('Failed to initiate restore');
             }
         } catch (err) {
             console.error(err);
+            setError('Failed to initiate restore.');
         } finally {
             setLoading(false);
         }
@@ -132,6 +135,9 @@ const InitiateRestorePage: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                                {error && (
+                                    <p className="mt-2 text-[11px] text-danger">{error}</p>
+                                )}
                                 {selectedBackupData && (
                                     <p className="mt-2 text-[11px] text-text-muted">
                                         Type: {selectedBackupData.backup_type}. Size: {formatSize(selectedBackupData.size_bytes)}. 

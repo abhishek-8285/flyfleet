@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Backup {
     id: string;
@@ -17,17 +18,20 @@ const InitiateRestore: React.FC = () => {
     const [integrityCheck, setIntegrityCheck] = useState(true);
     const [confirmText, setConfirmText] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchBackups = async () => {
             try {
-                const res = await fetch('/api/v1/admin/dr/backups');
-                const data = await res.json();
+                setError(null);
+                const data = await apiClient.get('/admin/dr/backups') as any;
                 // Filter for successfully COMPLETED/VERIFIED backups only
-                const validBackups = (data.data || []).filter((b: Backup) => ['COMPLETED', 'VERIFIED'].includes(b.status));
+                const items = data?.data || data?.items || data?.backups || data || [];
+                const validBackups = (Array.isArray(items) ? items : []).filter((b: Backup) => ['COMPLETED', 'VERIFIED'].includes(b.status));
                 setBackups(validBackups);
             } catch (err) {
                 console.error(err);
+                setError('Failed to load backups.');
             } finally {
                 setLoading(false);
             }
@@ -39,24 +43,16 @@ const InitiateRestore: React.FC = () => {
         if (!selectedBackup) return;
         
         try {
-            const res = await fetch('/api/v1/admin/dr/restores', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    backup_id: selectedBackup,
-                    target_env: targetEnv,
-                    integrity_check: integrityCheck,
-                    requested_by: 'Alex Morgan (alex.m@fleet.com)'
-                })
+            await apiClient.post('/admin/dr/restore-jobs', {
+                backup_id: selectedBackup,
+                target_environment: targetEnv,
+                integrity_check: integrityCheck,
+                requested_by: 'Alex Morgan (alex.m@fleet.com)'
             });
-
-            if (res.ok) {
-                navigate('/admin/dr/restores');
-            } else {
-                alert("Failed to initiate restore");
-            }
+            navigate('/admin/dr/restores');
         } catch (err) {
             console.error(err);
+            alert("Failed to initiate restore");
         }
     };
 
@@ -116,6 +112,8 @@ const InitiateRestore: React.FC = () => {
                                 <tbody className="text-sm">
                                     {loading ? (
                                         <tr><td colSpan={6} className="px-6 py-4 text-center text-text-muted">Loading backups...</td></tr>
+                                    ) : error ? (
+                                        <tr><td colSpan={6} className="px-6 py-4 text-center text-red-400">{error}</td></tr>
                                     ) : backups.map((snap) => (
                                         <tr key={snap.id} 
                                             className={`border-b border-border-color transition-colors hover:bg-primary/5 cursor-pointer ${selectedBackup === snap.id ? 'bg-primary/10' : ''}`}
@@ -141,6 +139,9 @@ const InitiateRestore: React.FC = () => {
                                             </td>
                                         </tr>
                                     ))}
+                                    {!loading && !error && backups.length === 0 && (
+                                        <tr><td colSpan={6} className="px-6 py-4 text-center text-text-muted">No valid backups found.</td></tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

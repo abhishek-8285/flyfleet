@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/flyfleet/admin-support-service/internal/domains/organizations/models"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -114,18 +116,70 @@ func (r *OrganizationRepository) GetOrganizationStats(ctx context.Context) (mode
 
 func (r *OrganizationRepository) GetDashboardStats(ctx context.Context) (models.DashboardStats, error) {
 	var stats models.DashboardStats
-	
+
 	// Aggregate from multiple tables
 	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&stats.TotalVehicles)
 	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE status = 'active'").Scan(&stats.ActiveVehicles)
 	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&stats.TotalDrivers) // Fallback drivers to users
 	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM trips").Scan(&stats.ActiveTrips) // Active trips?
 	_ = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM threat_alerts WHERE status = 'open'").Scan(&stats.AlertsCount)
-	
+
 	// Distances and fuel usually come from telemetry or aggregated data
 	// Since we don't have that yet, use some realistic mock values
 	stats.TotalDistanceToday = 1245.5
 	stats.FuelConsumedToday = 450.2
-	
+
 	return stats, nil
+}
+
+func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req models.CreateOrganizationRequest) (models.CreateOrganizationResponse, error) {
+	id := uuid.New()
+	now := time.Now().UTC()
+	status := "active"
+	plan := "enterprise"
+	
+	if req.SubscriptionTier != "" {
+		plan = req.SubscriptionTier
+	}
+	
+	defaultTheme := "system"
+	if req.DefaultTheme != "" {
+		defaultTheme = req.DefaultTheme
+	}
+
+	query := `
+		INSERT INTO organizations (id, name, domain, status, plan, contact_email, default_theme, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, name, domain, status, created_at
+	`
+
+	var resp models.CreateOrganizationResponse
+	err := r.db.QueryRow(ctx, query, 
+		id, 
+		req.Name, 
+		req.Domain, 
+		status, 
+		plan,
+		req.ContactEmail,
+		defaultTheme,
+		now,
+		now,
+	).Scan(&resp.ID, &resp.Name, &resp.Domain, &resp.Status, &resp.CreatedAt)
+
+	if err != nil {
+		r.logger.Error("Failed to create organization", zap.Error(err))
+		return models.CreateOrganizationResponse{}, err
+	}
+
+	return resp, nil
+}
+
+func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
+	query := `UPDATE organizations SET is_deleted = true, updated_at = $2 WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id, time.Now().UTC())
+	if err != nil {
+		r.logger.Error("Failed to delete organization", zap.String("id", id.String()), zap.Error(err))
+		return err
+	}
+	return nil
 }

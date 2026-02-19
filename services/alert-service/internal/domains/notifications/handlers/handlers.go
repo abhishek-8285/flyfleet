@@ -7,283 +7,309 @@ import (
 
 	"github.com/flyfleet/alert-service/internal/domains/notifications/dto"
 	"github.com/flyfleet/alert-service/internal/domains/notifications/service"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type NotificationHandlers struct {
-	service *service.NotificationService
-	logger  *zap.Logger
+	service   *service.NotificationService
+	logger    *zap.Logger
+	validator *validator.Validate
 }
 
 func NewNotificationHandlers(service *service.NotificationService, logger *zap.Logger) *NotificationHandlers {
 	return &NotificationHandlers{
-		service: service,
-		logger:  logger,
+		service:   service,
+		logger:    logger,
+		validator: validator.New(),
 	}
 }
 
-func (h *NotificationHandlers) RegisterRoutes(router *gin.RouterGroup) {
-	notifications := router.Group("/notifications")
-	{
-		notifications.GET("/logs", h.ListLogs)
-		notifications.GET("/logs/:id", h.GetLogDetail)
-		notifications.POST("/send", h.SendNotification)
-		notifications.POST("/resend/:id", h.Resend)
+func (h *NotificationHandlers) RegisterRoutes(r chi.Router) {
+	r.Route("/notifications", func(r chi.Router) {
+		r.Get("/logs", h.ListLogs)
+		r.Get("/logs/{id}", h.GetLogDetail)
+		r.Post("/send", h.SendNotification)
+		r.Post("/resend/{id}", h.Resend)
 		
-		notifications.GET("/settings", h.GetSettings)
-		notifications.PUT("/settings", h.UpdateSettings)
+		r.Get("/settings", h.GetSettings)
+		r.Put("/settings", h.UpdateSettings)
 		
-		notifications.GET("/preferences", h.ListPreferences)
-		notifications.GET("/preferences/:id", h.GetUserPreference)
-		notifications.PUT("/preferences/:id", h.UpdateUserPreference)
-		notifications.GET("/preferences/:id/audit", h.GetPreferenceAudit)
+		r.Get("/preferences", h.ListPreferences)
+		r.Get("/preferences/{id}", h.GetUserPreference)
+		r.Put("/preferences/{id}", h.UpdateUserPreference)
+		r.Get("/preferences/{id}/audit", h.GetPreferenceAudit)
 		
-		notifications.GET("/defaults", h.GetGlobalDefaults)
-		notifications.PUT("/defaults", h.UpdateGlobalDefaults)
-	}
+		r.Get("/defaults", h.GetGlobalDefaults)
+		r.Put("/defaults", h.UpdateGlobalDefaults)
+	})
 }
 
-func (h *NotificationHandlers) bindStrictJSON(c *gin.Context, obj any) error {
-	decoder := json.NewDecoder(c.Request.Body)
+func (h *NotificationHandlers) bindStrictJSON(r *http.Request, obj any) error {
+	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(obj); err != nil {
 		return err
 	}
-	return binding.Validator.ValidateStruct(obj)
+	return h.validator.Struct(obj)
 }
 
-func (h *NotificationHandlers) ListLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	status := c.Query("status")
-	channel := c.Query("channel")
-	search := c.Query("search")
+func (h *NotificationHandlers) ListLogs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	if limit < 1 {
+		limit = 20
+	}
+	status := query.Get("status")
+	channel := query.Get("channel")
+	search := query.Get("search")
 
-	logs, total, err := h.service.ListLogs(c.Request.Context(), page, limit, status, channel, search)
+	logs, total, err := h.service.ListLogs(r.Context(), page, limit, status, channel, search)
 	if err != nil {
 		h.logger.Error("Failed to list logs", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list logs"})
+		h.errorJSON(w, "failed to list logs", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.ListLogsResponse{
+	h.json(w, dto.ListLogsResponse{
 		Data:  logs,
 		Total: total,
 		Page:  page,
 		Limit: limit,
-	})
+	}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) GetLogDetail(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *NotificationHandlers) GetLogDetail(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid log id"})
+		h.errorJSON(w, "invalid log id", http.StatusBadRequest)
 		return
 	}
 
-	log, err := h.service.GetLogDetail(c.Request.Context(), id)
+	log, err := h.service.GetLogDetail(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get log detail", zap.Error(err), zap.String("id", idStr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get log detail"})
+		h.errorJSON(w, "failed to get log detail", http.StatusInternalServerError)
 		return
 	}
 
 	if log == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "log not found"})
+		h.errorJSON(w, "log not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, log)
+	h.json(w, log, http.StatusOK)
 }
 
-func (h *NotificationHandlers) SendNotification(c *gin.Context) {
+func (h *NotificationHandlers) SendNotification(w http.ResponseWriter, r *http.Request) {
 	var req dto.SendNotificationRequest
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if err := h.bindStrictJSON(r, &req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	id, err := h.service.SendNotification(c.Request.Context(), req)
+	id, err := h.service.SendNotification(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to send notification", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send notification"})
+		h.errorJSON(w, "failed to send notification", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.json(w, map[string]interface{}{
 		"id":      id,
 		"message": "Notification queued successfully",
-	})
+	}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) Resend(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *NotificationHandlers) Resend(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid log id"})
+		h.errorJSON(w, "invalid log id", http.StatusBadRequest)
 		return
 	}
 
 	var req dto.ResendRequest
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if err := h.bindStrictJSON(r, &req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	newID, err := h.service.ResendNotification(c.Request.Context(), id, req.Reason, req.Force)
+	newID, err := h.service.ResendNotification(r.Context(), id, req.Reason, req.Force)
 	if err != nil {
 		h.logger.Error("Failed to resend notification", zap.Error(err), zap.String("id", idStr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resend notification"})
+		h.errorJSON(w, "failed to resend notification", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.ResendResponse{
+	h.json(w, dto.ResendResponse{
 		NewNotificationID: newID,
 		Message:           "Resend initiated successfully",
-	})
+	}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) GetSettings(c *gin.Context) {
-	settings, err := h.service.GetSettings(c.Request.Context())
+func (h *NotificationHandlers) GetSettings(w http.ResponseWriter, r *http.Request) {
+	settings, err := h.service.GetSettings(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get settings"})
+		h.errorJSON(w, "failed to get settings", http.StatusInternalServerError)
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.json(w, settings, http.StatusOK)
 }
 
-func (h *NotificationHandlers) UpdateSettings(c *gin.Context) {
+func (h *NotificationHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var req dto.SettingsUpdateRequest
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if err := h.bindStrictJSON(r, &req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := h.service.UpdateSettings(c.Request.Context(), req); err != nil {
+	if err := h.service.UpdateSettings(r.Context(), req); err != nil {
 		h.logger.Error("Failed to update settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update settings"})
+		h.errorJSON(w, "failed to update settings", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	h.json(w, map[string]string{"status": "success"}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) ListPreferences(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	search := c.Query("search")
+func (h *NotificationHandlers) ListPreferences(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	if limit < 1 {
+		limit = 20
+	}
+	search := query.Get("search")
 
-	prefs, total, err := h.service.ListPreferences(c.Request.Context(), page, limit, search)
+	prefs, total, err := h.service.ListPreferences(r.Context(), page, limit, search)
 	if err != nil {
 		h.logger.Error("Failed to list preferences", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list preferences"})
+		h.errorJSON(w, "failed to list preferences", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.PreferenceListResponse{
+	h.json(w, dto.PreferenceListResponse{
 		Items: prefs,
 		Total: total,
 		Page:  page,
 		Limit: limit,
-	})
+	}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) GetUserPreference(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *NotificationHandlers) GetUserPreference(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	userId, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		h.errorJSON(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	pref, err := h.service.GetUserPreference(c.Request.Context(), userId)
+	pref, err := h.service.GetUserPreference(r.Context(), userId)
 	if err != nil {
 		h.logger.Error("Failed to get user preference", zap.Error(err), zap.String("userId", idStr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user preference"})
+		h.errorJSON(w, "failed to get user preference", http.StatusInternalServerError)
 		return
 	}
 
 	if pref == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "preference not found"})
+		h.errorJSON(w, "preference not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, pref)
+	h.json(w, pref, http.StatusOK)
 }
 
-func (h *NotificationHandlers) UpdateUserPreference(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *NotificationHandlers) UpdateUserPreference(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	userId, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		h.errorJSON(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
 	var req dto.PreferenceUpdateRequest
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if err := h.bindStrictJSON(r, &req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	// In a real system, we'd get the admin ID from JWT context
-	adminID := uuid.MustParse("00000000-0000-0000-0000-000000000000") // Placeholder
+	adminID := uuid.Nil // Placeholder
 	
-	if err := h.service.UpdateUserPreference(c.Request.Context(), userId, req, adminID); err != nil {
+	if err := h.service.UpdateUserPreference(r.Context(), userId, req, adminID); err != nil {
 		h.logger.Error("Failed to update user preference", zap.Error(err), zap.String("userId", idStr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user preference"})
+		h.errorJSON(w, "failed to update user preference", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	h.json(w, map[string]string{"status": "success"}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) GetGlobalDefaults(c *gin.Context) {
-	defaults, err := h.service.GetGlobalDefaults(c.Request.Context())
+func (h *NotificationHandlers) GetGlobalDefaults(w http.ResponseWriter, r *http.Request) {
+	defaults, err := h.service.GetGlobalDefaults(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get global defaults", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get global defaults"})
+		h.errorJSON(w, "failed to get global defaults", http.StatusInternalServerError)
 		return
 	}
-	c.JSON(http.StatusOK, defaults)
+	h.json(w, defaults, http.StatusOK)
 }
 
-func (h *NotificationHandlers) UpdateGlobalDefaults(c *gin.Context) {
+func (h *NotificationHandlers) UpdateGlobalDefaults(w http.ResponseWriter, r *http.Request) {
 	var req dto.GlobalDefaultUpdateRequest
-	if err := h.bindStrictJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "details": err.Error()})
+	if err := h.bindStrictJSON(r, &req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	adminID := uuid.MustParse("00000000-0000-0000-0000-000000000000") // Placeholder
+	adminID := uuid.Nil // Placeholder
 
-	if err := h.service.UpdateGlobalDefaults(c.Request.Context(), req, adminID); err != nil {
+	if err := h.service.UpdateGlobalDefaults(r.Context(), req, adminID); err != nil {
 		h.logger.Error("Failed to update global defaults", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update global defaults"})
+		h.errorJSON(w, "failed to update global defaults", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	h.json(w, map[string]string{"status": "success"}, http.StatusOK)
 }
 
-func (h *NotificationHandlers) GetPreferenceAudit(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *NotificationHandlers) GetPreferenceAudit(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	userId, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		h.errorJSON(w, "invalid user id", http.StatusBadRequest)
 		return
 	}
 
-	audits, err := h.service.GetPreferenceAudit(c.Request.Context(), userId)
+	audits, err := h.service.GetPreferenceAudit(r.Context(), userId)
 	if err != nil {
 		h.logger.Error("Failed to get preference audit", zap.Error(err), zap.String("userId", idStr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get preference audit"})
+		h.errorJSON(w, "failed to get preference audit", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, audits)
+	h.json(w, audits, http.StatusOK)
+}
+
+// Helpers
+func (h *NotificationHandlers) json(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *NotificationHandlers) errorJSON(w http.ResponseWriter, message string, status int) {
+	h.json(w, map[string]string{"error": message}, status)
 }

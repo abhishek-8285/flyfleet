@@ -44,6 +44,7 @@ const RouteOptimization: React.FC = () => {
     const [stats, setStats] = useState<Stats>({ total: 0, completed: 0, saved_km: 0, saved_cost: 0 });
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -51,25 +52,30 @@ const RouteOptimization: React.FC = () => {
 
     const fetchData = async () => {
         setLoading(true);
+        setError(null);
         try {
             // Fetch requests
             const res = await api.listOptimizationRequests({ limit: 20 });
-            setRequests(res.requests || []);
+            const data = (res as any)?.data ?? res;
+            const items = data?.requests || data?.items || data?.data || data || [];
+            const list = Array.isArray(items) ? items : [];
+            setRequests(list);
 
-            // Calculate mock stats (or fetch real ones if endpoint existed)
-            const completed = (res.requests || []).filter((r: any) => r.status === 'completed').length;
+            // Calculate stats from list
+            const completed = list.filter((r: any) => r.status === 'completed').length;
             setStats({
-                total: res.total_count || 0,
+                total: data?.total_count || data?.total || list.length,
                 completed: completed,
-                saved_km: completed * 15.2, // Mock average
-                saved_cost: completed * 45 // Mock average
+                saved_km: completed * 15.2,
+                saved_cost: completed * 45
             });
 
-            if (res.requests?.length > 0) {
-                handleSelectRequest(res.requests[0]);
+            if (list.length > 0) {
+                handleSelectRequest(list[0]);
             }
         } catch (error) {
             console.error("Failed to fetch optimization data", error);
+            setError('Failed to load optimization requests.');
         } finally {
             setLoading(false);
         }
@@ -135,7 +141,11 @@ const RouteOptimization: React.FC = () => {
                         <h3 className="font-semibold text-sm uppercase tracking-wide text-text-muted">Recent Requests</h3>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
-                        {requests.map(req => (
+                        {loading ? (
+                            <div className="p-6 text-text-muted">Loading requests...</div>
+                        ) : error ? (
+                            <div className="p-6 text-red-400">{error}</div>
+                        ) : requests.map(req => (
                             <div
                                 key={req.id}
                                 onClick={() => handleSelectRequest(req)}
@@ -160,7 +170,7 @@ const RouteOptimization: React.FC = () => {
                                 </div>
                             </div>
                         ))}
-                        {requests.length === 0 && !loading && (
+                        {requests.length === 0 && !loading && !error && (
                             <div className="p-8 text-center text-text-muted">No optimization requests found.</div>
                         )}
                     </div>

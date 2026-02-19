@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import NewTicketModal from '../../components/support/NewTicketModal';
 
+const toNumber = (value: any): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const SupportDashboard: React.FC = () => {
     const [metrics, setMetrics] = useState<any>(null);
+    const [trendPoints, setTrendPoints] = useState<Array<{ label: string; value: number }>>([]);
     const [topErrors, setTopErrors] = useState<any[]>([]);
     const [recentTickets, setRecentTickets] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const fetchData = async () => {
         const token = localStorage.getItem('access_token');
@@ -16,7 +23,7 @@ const SupportDashboard: React.FC = () => {
         };
 
         try {
-            const [metricsRes, , errorsRes, ticketsRes] = await Promise.all([
+            const [metricsRes, trendsRes, errorsRes, ticketsRes] = await Promise.all([
                 fetch('/bff/support/dashboard/metrics', { headers }),
                 fetch('/bff/support/dashboard/trends', { headers }),
                 fetch('/bff/support/dashboard/top-errors', { headers }),
@@ -25,6 +32,16 @@ const SupportDashboard: React.FC = () => {
             ]);
 
             if (metricsRes.ok) setMetrics(await metricsRes.json());
+            if (trendsRes.ok) {
+                const trendPayload = await trendsRes.json();
+                const points = Array.isArray(trendPayload?.points) ? trendPayload.points : [];
+                setTrendPoints(
+                    points.map((point: any, index: number) => ({
+                        label: String(point?.day ?? point?.label ?? `D${index + 1}`),
+                        value: toNumber(point?.count ?? point?.value),
+                    }))
+                );
+            }
             if (errorsRes.ok) setTopErrors(await errorsRes.json());
             if (ticketsRes.ok) {
                 const data = await ticketsRes.json();
@@ -43,6 +60,36 @@ const SupportDashboard: React.FC = () => {
         }
         return () => clearInterval(interval);
     }, [autoRefresh]);
+
+    const chartPath = (() => {
+        if (!trendPoints.length) return '';
+        const maxVal = Math.max(...trendPoints.map((p) => p.value), 1);
+        const minVal = Math.min(...trendPoints.map((p) => p.value), 0);
+        const range = Math.max(maxVal - minVal, 1);
+        return trendPoints
+            .map((point, index) => {
+                const x = (index / Math.max(trendPoints.length - 1, 1)) * 800;
+                const y = 190 - ((point.value - minVal) / range) * 150;
+                return `${index === 0 ? 'M' : 'L'}${x},${y}`;
+            })
+            .join(' ');
+    })();
+
+    const openTickets = toNumber(metrics?.openTickets ?? metrics?.open_tickets?.count);
+    const slaBreaches = toNumber(metrics?.slaBreaches24h ?? metrics?.sla_breaches?.count);
+    const activeErrors = toNumber(metrics?.activeDeviceErrors ?? metrics?.active_errors?.count);
+    const openTicketsChange = toNumber(metrics?.trends?.openTicketsChange ?? metrics?.open_tickets?.trend);
+    const resolutionTrend = toNumber(metrics?.trends?.resolutionTimeChange ?? metrics?.avg_resolution?.trend);
+
+    const filteredTickets = recentTickets.filter((ticket) => {
+        const q = searchQuery.toLowerCase();
+        if (!q) return true;
+        return (
+            String(ticket.ticketId || '').toLowerCase().includes(q) ||
+            String(ticket.subject || '').toLowerCase().includes(q) ||
+            String(ticket.reporter || '').toLowerCase().includes(q)
+        );
+    });
 
     return (
         <main className="flex-1 flex flex-col min-w-0 bg-[#0b1219] overflow-hidden font-display">
@@ -97,13 +144,13 @@ const SupportDashboard: React.FC = () => {
                             <span className="material-symbols-outlined text-4xl text-white">inbox</span>
                         </div>
                         <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">Open Tickets</div>
-                        <div className="text-2xl font-bold text-white">{metrics?.openTickets || '0'}</div>
+                        <div className="text-2xl font-bold text-white">{openTickets}</div>
                         <div className="text-[10px] text-emerald-500 flex items-center gap-1 mt-1">
                             <span className="material-symbols-outlined text-[12px]">trending_down</span>
-                            -12% vs yesterday
+                            {openTicketsChange}% vs yesterday
                         </div>
                         <div className="w-full bg-[#233648] h-1 rounded-full mt-2 overflow-hidden">
-                            <div className="bg-white h-full" style={{ width: '35%' }}></div>
+                            <div className="bg-white h-full" style={{ width: `${Math.max(5, Math.min(100, openTickets))}%` }}></div>
                         </div>
                     </div>
 
@@ -112,10 +159,10 @@ const SupportDashboard: React.FC = () => {
                             <span className="material-symbols-outlined text-4xl text-rose-500">timer_off</span>
                         </div>
                         <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">SLA Breaches (24h)</div>
-                        <div className="text-2xl font-bold text-rose-500">{metrics?.slaBreaches24h || '0'}</div>
+                        <div className="text-2xl font-bold text-rose-500">{slaBreaches}</div>
                         <div className="text-[10px] text-rose-500 mt-1">Critical Priority</div>
                         <div className="w-full bg-[#233648] h-1 rounded-full mt-2 overflow-hidden">
-                            <div className="bg-rose-500 h-full" style={{ width: '15%' }}></div>
+                            <div className="bg-rose-500 h-full" style={{ width: `${Math.max(5, Math.min(100, slaBreaches * 8))}%` }}></div>
                         </div>
                     </div>
 
@@ -124,10 +171,10 @@ const SupportDashboard: React.FC = () => {
                             <span className="material-symbols-outlined text-4xl text-amber-500">error</span>
                         </div>
                         <div className="text-[#92adc9] text-xs font-medium uppercase mb-1">Active Device Errors</div>
-                        <div className="text-2xl font-bold text-amber-500">{metrics?.activeDeviceErrors || '0'}</div>
+                        <div className="text-2xl font-bold text-amber-500">{activeErrors}</div>
                         <div className="text-[10px] text-[#92adc9] mt-1">Across fleet</div>
                         <div className="w-full bg-[#233648] h-1 rounded-full mt-2 overflow-hidden">
-                            <div className="bg-amber-500 h-full" style={{ width: '65%' }}></div>
+                            <div className="bg-amber-500 h-full" style={{ width: `${Math.max(5, Math.min(100, activeErrors * 4))}%` }}></div>
                         </div>
                     </div>
 
@@ -139,7 +186,7 @@ const SupportDashboard: React.FC = () => {
                         <div className="text-2xl font-bold text-emerald-500">{metrics?.avgResolutionTime || '0.0h'}</div>
                         <div className="text-[10px] text-emerald-500 flex items-center gap-1 mt-1">
                             <span className="material-symbols-outlined text-[12px]">trending_down</span>
-                            15% faster this week
+                            {Math.abs(resolutionTrend)}% faster this week
                         </div>
                         <div className="w-full bg-[#233648] h-1 rounded-full mt-2 overflow-hidden">
                             <div className="bg-emerald-500 h-full" style={{ width: '85%' }}></div>
@@ -172,12 +219,15 @@ const SupportDashboard: React.FC = () => {
                                     <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="150" y2="150"></line>
                                     <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="100" y2="100"></line>
                                     <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="50" y2="50"></line>
-                                    <path d="M0,140 C100,160 150,80 250,90 S350,120 450,70 S600,60 800,40 V200 H0 Z" fill="url(#chartGradient)"></path>
-                                    <path d="M0,140 C100,160 150,80 250,90 S350,120 450,70 S600,60 800,40" fill="none" stroke="#137fec" strokeWidth="2"></path>
-                                    <circle cx="800" cy="40" fill="#fff" r="4" stroke="#137fec" strokeWidth="2"></circle>
+                                    {chartPath && (
+                                        <>
+                                            <path d={`${chartPath} L800,200 L0,200 Z`} fill="url(#chartGradient)"></path>
+                                            <path d={chartPath} fill="none" stroke="#137fec" strokeWidth="2"></path>
+                                        </>
+                                    )}
                                 </svg>
                                 <div className="absolute bottom-2 left-0 right-0 flex justify-between text-[10px] text-[#92adc9] px-2">
-                                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d}>{d}</span>)}
+                                    {(trendPoints.length ? trendPoints : [{ label: 'Mon' }, { label: 'Tue' }, { label: 'Wed' }, { label: 'Thu' }, { label: 'Fri' }, { label: 'Sat' }, { label: 'Sun' }]).map((d: any, idx: number) => <span key={`${d.label}-${idx}`}>{d.label}</span>)}
                                 </div>
                             </div>
                         </div>
@@ -220,6 +270,8 @@ const SupportDashboard: React.FC = () => {
                                 className="bg-[#16202a] border border-[#233648] text-xs text-white rounded px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" 
                                 placeholder="Search tickets, IDs..." 
                                 type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                             />
                             <button className="p-1.5 hover:bg-[#233648] rounded text-[#92adc9] hover:text-white">
                                 <span className="material-symbols-outlined text-[18px]">filter_list</span>
@@ -243,7 +295,7 @@ const SupportDashboard: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
-                                {recentTickets.map((ticket, idx) => (
+                                {filteredTickets.map((ticket, idx) => (
                                     <tr key={idx} className="border-b border-[#233648] hover:bg-[#111a22]/50 transition-colors">
                                         <td className="px-4 py-3 text-white font-mono text-xs">{ticket.ticketId}</td>
                                         <td className="px-4 py-3 text-white">{ticket.subject}</td>

@@ -1,70 +1,12 @@
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: flyfleet-postgres
-  namespace: flyfleet
-spec:
-  serviceName: postgres
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:15-alpine
-        ports:
-        - containerPort: 5432
-        env:
-        - name: POSTGRES_DB
-          value: "flyfleet"
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: flyfleet-db-secret
-              key: username
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: flyfleet-db-secret
-              key: password
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-storage
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      storageClassName: fast-ssd
-      resources:
-        requests:
-          storage: 50Gi
----
+# flyfleet-postgres-service points to the AWS RDS instance defined in Terraform
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres-service
   namespace: flyfleet
 spec:
-  selector:
-    app: postgres
-  ports:
-  - protocol: TCP
-    port: 5432
-    targetPort: 5432
-  clusterIP: None
+  type: ExternalName
+  externalName: flyfleet-postgres.xxxx.rds.amazonaws.com # User should update with actual RDS endpoint
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -72,7 +14,7 @@ metadata:
   name: flyfleet-timescaledb
   namespace: flyfleet
 spec:
-  replicas: 1
+  replicas: 1 # Scale to 2+ if using TimescaleDB multi-node or enterprise
   selector:
     matchLabels:
       app: timescaledb
@@ -83,12 +25,12 @@ spec:
     spec:
       containers:
       - name: timescaledb
-        image: timescale/timescaledb:latest-pg15
+        image: timescale/timescaledb:latest-pg16
         ports:
         - containerPort: 5432
         env:
         - name: POSTGRES_DB
-          value: "tracking"
+          value: "telemetry"
         - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
@@ -104,11 +46,21 @@ spec:
           mountPath: /var/lib/postgresql/data
         resources:
           requests:
-            memory: "1Gi"
-            cpu: "1000m"
-          limits:
-            memory: "2Gi"
+            memory: "4Gi" # Optimized for heavy write load
             cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "$(POSTGRES_USER)", "-d", "$(POSTGRES_DB)"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
       volumes:
       - name: timescaledb-storage
         persistentVolumeClaim:
@@ -122,10 +74,10 @@ metadata:
 spec:
   accessModes:
   - ReadWriteOnce
-  storageClassName: fast-ssd
+  storageClassName: gp3
   resources:
     requests:
-      storage: 100Gi
+      storage: 200Gi # Increased for telemetry scale
 ---
 apiVersion: v1
 kind: Service
@@ -139,3 +91,14 @@ spec:
   - protocol: TCP
     port: 5432
     targetPort: 5432
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: timescaledb-pdb
+  namespace: flyfleet
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: timescaledb

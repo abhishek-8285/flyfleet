@@ -1,6 +1,6 @@
 import React from 'react';
-import LiveMap from '../../pages/LiveMap'; // Importing the existing LiveMap component
 import { Trip } from '../../types';
+import LiveMap from '../LiveMap'; // Importing the existing LiveMap component
 
 interface LiveOperationsMapProps {
     trips: Trip[];

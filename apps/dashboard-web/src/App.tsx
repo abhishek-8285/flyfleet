@@ -2,6 +2,8 @@ import React from 'react';
 import { Provider } from 'react-redux';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/common/Layout';
+import { SOSOverlay } from './components/common/SOSOverlay';
+import { CustomerPortalLayout } from './components/layout/CustomerPortalLayout';
 import { GlobalAdminLayout } from './components/layout/GlobalAdminLayout';
 import SupportLayout from './components/support/SupportLayout';
 import { AuthProvider } from './context/AuthProvider';
@@ -51,7 +53,18 @@ import { UserAssignments } from './pages/admin/rbac/UserAssignments';
 import CreateReport from './pages/admin/reports/CreateReport';
 import ExecutionHistory from './pages/admin/reports/ExecutionHistory';
 import ScheduledReportsList from './pages/admin/reports/ScheduledReportsList';
+import CustomerLogin from './pages/portal/CustomerLogin';
+import PortalDashboard from './pages/portal/PortalDashboard';
+import ShipmentTracking from './pages/portal/ShipmentTracking';
 // RouteOptimization import moved to consolidated block
+import LiveMap from './components/LiveMap';
+import EmergencyDashboard from './pages/admin/emergency/EmergencyDashboard';
+import ExpenseApprovals from './pages/admin/finance/ExpenseApprovals';
+import FuelDashboard from './pages/admin/finance/FuelDashboard';
+import PolicySettings from './pages/admin/finance/PolicySettings';
+import IntegrationHub from './pages/admin/integrations/IntegrationHub';
+import WorkOrderManagement from './pages/admin/maintenance/WorkOrderManagement';
+import ForecastingDashboard from './pages/admin/revenue/ForecastingDashboard';
 import RouteOptimization from './pages/admin/RouteOptimization';
 import AccessReview from './pages/admin/security/AccessReview';
 import ActiveSessions from './pages/admin/security/ActiveSessions';
@@ -71,10 +84,14 @@ import VideoTelematics from './pages/admin/VideoTelematics';
 import Alerts from './pages/Alerts';
 import Analytics from './pages/Analytics';
 import AuditCenter from './pages/audit/AuditCenter';
+import CommandCenter from './pages/CommandCenter';
 import Dashboard from './pages/Dashboard';
+import DeviceDashboard from './pages/devices/DeviceDashboard';
+import DeviceDiagnostics from './pages/devices/DeviceDiagnostics';
 import DeviceTelemetry from './pages/devices/DeviceTelemetry';
 import FirmwareManager from './pages/devices/FirmwareManager';
 import RemoteCommands from './pages/devices/RemoteCommands';
+import DeviceTwins from './pages/devices/DeviceTwins';
 import Drivers from './pages/Drivers';
 import ErrorScreen from './pages/ErrorScreen';
 import ForgotPassword from './pages/ForgotPassword';
@@ -87,15 +104,17 @@ import RequestList from './pages/governance/RequestList';
 import History from './pages/History';
 import IntegrationsCenter from './pages/integrations/IntegrationsCenter';
 import Landing from './pages/Landing';
-import LiveMap from './pages/LiveMap';
 import Login from './pages/LoginPage';
 import Maintenance from './pages/Maintenance';
 import {
   AddWorkOrder,
+  InspectionForm,
   Inventory,
   PartAssignment,
+  VendorDirectory,
+  VendorForm,
   WorkOrderDetail,
-  WorkOrderList,
+  WorkOrderList
 } from './pages/maintenance';
 import MFAExceptions from './pages/MFAExceptions';
 import MFAOverrides from './pages/MFAOverrides';
@@ -145,6 +164,11 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Customer Portal Public Routes */}
+              <Route path="/portal/login" element={<CustomerLogin />} />
+              <Route path="/portal/track/:id" element={<ShipmentTracking />} />
+
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/select-org" element={<OrgSelection />} />
               <Route path="/session-expired" element={<SessionExpired />} />
@@ -163,6 +187,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="search" element={<SearchPage />} />
                 <Route path="timeline" element={<TimelinePage />} />
+                <Route path="command-center" element={<CommandCenter />} />
                 <Route path="map" element={<LiveMap />} />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
@@ -203,6 +228,7 @@ function App() {
                 path="/admin"
                 element={
                   <PrivateRoute>
+                    <SOSOverlay />
                     <GlobalAdminLayout />
                   </PrivateRoute>
                 }
@@ -237,11 +263,32 @@ function App() {
                 <Route path="trips/:id/telemetry" element={<TripTelemetry />} />
 
                 {/* Maintenance Module */}
+                <Route path="maintenance/work-orders" element={<WorkOrderManagement />} />
                 <Route path="work-orders" element={<WorkOrderList />} />
                 <Route path="work-orders/new" element={<AddWorkOrder />} />
                 <Route path="work-orders/:id" element={<WorkOrderDetail />} />
                 <Route path="work-orders/:id/parts" element={<PartAssignment />} />
+                <Route path="work-orders/:id/parts" element={<PartAssignment />} />
                 <Route path="inventory" element={<Inventory />} />
+                <Route path="vendors" element={<VendorDirectory />} />
+                <Route path="vendors/new" element={<VendorForm />} />
+                <Route path="vendors/:id" element={<VendorForm />} />
+                <Route path="inspections/new" element={<InspectionForm />} />
+                <Route path="inspections/:id" element={<InspectionForm />} />
+
+                {/* Finance Module */}
+                <Route path="finance/fuel" element={<FuelDashboard />} />
+                <Route path="finance/policy" element={<PolicySettings />} />
+                <Route path="finance/expenses" element={<ExpenseApprovals />} />
+
+                {/* Emergency Module */}
+                <Route path="emergency" element={<EmergencyDashboard />} />
+
+                {/* Revenue Module */}
+                <Route path="revenue/forecasting" element={<ForecastingDashboard />} />
+
+                {/* Integrations Module */}
+                <Route path="integrations" element={<IntegrationHub />} />
 
                 {/* Fuel Module */}
                 <Route path="fuel/add" element={<AddFuelLog />} />
@@ -304,6 +351,11 @@ function App() {
                 <Route path="integrations" element={<IntegrationsCenter />} />
 
                 {/* Device Diagnostics Module */}
+                <Route path="devices/diagnostics" element={<DeviceDashboard />} />
+                <Route path="devices/twins" element={<DeviceTwins />} />
+                <Route path="devices/telemetry" element={<DeviceTelemetry />} />
+                <Route path="devices/commands" element={<RemoteCommands />} />
+                <Route path="devices/:id/diagnostics" element={<DeviceDiagnostics />} />
                 <Route path="devices/:id/telemetry" element={<DeviceTelemetry />} />
                 <Route path="devices/:id/commands" element={<RemoteCommands />} />
                 <Route path="devices/:id/firmware" element={<FirmwareManager />} />
@@ -402,6 +454,16 @@ function App() {
                 }
               />
               <Route path="/support/reports" element={<PrivateRoute><SupportLayout><SLAReports /></SupportLayout></PrivateRoute>} />
+
+              {/* Customer Portal - Protected */}
+              <Route path="/portal" element={<CustomerPortalLayout />}>
+                <Route index element={<Navigate to="/portal/dashboard" replace />} />
+                <Route path="dashboard" element={<PortalDashboard />} />
+                <Route path="shipments" element={<div className="p-6 text-white">Shipments List (Placeholder)</div>} />
+                <Route path="bookings" element={<div className="p-6 text-white">New Booking (Placeholder)</div>} />
+                <Route path="invoices" element={<div className="p-6 text-white">Invoices (Placeholder)</div>} />
+                <Route path="settings" element={<div className="p-6 text-white">Settings (Placeholder)</div>} />
+              </Route>
 
               {/* 404 Catch-all */}
               <Route path="*" element={<Navigate to="/error" replace />} />

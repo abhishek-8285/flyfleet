@@ -6,6 +6,7 @@ import apiClient from '../../../services/apiClient';
 export const AddVehicle: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         license_plate: '',
@@ -30,12 +31,13 @@ export const AddVehicle: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setErrorMessage('');
         try {
             await apiClient.post('/admin/vehicles', formData);
             navigate('/admin/vehicles');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create vehicle:', error);
-            // TODO: Toast error
+            setErrorMessage(error?.message || 'Failed to create vehicle. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -56,6 +58,11 @@ export const AddVehicle: React.FC = () => {
                 </header>
 
                 <div className="p-8 max-w-4xl mx-auto w-full">
+                    {errorMessage && (
+                        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                            {errorMessage}
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         
                         {/* Section: Identification */}

@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
+const toArray = (value: any) => {
+    if (Array.isArray(value)) return value;
+    if (Array.isArray(value?.items)) return value.items;
+    if (Array.isArray(value?.data)) return value.data;
+    return [];
+};
+
 const UserConsole: React.FC = () => {
     const [profile, setProfile] = useState<any>(null);
     const [security, setSecurity] = useState<any>(null);
@@ -9,13 +16,21 @@ const UserConsole: React.FC = () => {
     const [permissions, setPermissions] = useState<any>(null);
     const [notes, setNotes] = useState<any[]>([]);
     const [newNote, setNewNote] = useState('');
-    const [searchId, setSearchId] = useState('USR-882910'); // Default for demo
+    const [searchId, setSearchId] = useState(localStorage.getItem('support_last_user_id') || '');
+    const [activeUserId, setActiveUserId] = useState(localStorage.getItem('support_last_user_id') || '');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [actionMessage, setActionMessage] = useState<string | null>(null);
 
     const fetchData = async (userId: string) => {
+        if (!userId.trim()) return;
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
         try {
+            setIsLoading(true);
+            setError(null);
+            setActionMessage(null);
             const [pRes, sRes, sessRes, lRes, rRes, permRes, nRes] = await Promise.all([
                 fetch(`/bff/support/users/${userId}/profile`, { headers }),
                 fetch(`/bff/support/users/${userId}/security`, { headers }),
@@ -28,28 +43,43 @@ const UserConsole: React.FC = () => {
 
             if (pRes.ok) setProfile(await pRes.json());
             if (sRes.ok) setSecurity(await sRes.json());
-            if (sessRes.ok) setSessions(await sessRes.json());
-            if (lRes.ok) setLogins(await lRes.json());
+            if (sessRes.ok) setSessions(toArray(await sessRes.json()));
+            if (lRes.ok) setLogins(toArray(await lRes.json()));
             if (rRes.ok) setRoles(await rRes.json());
             if (permRes.ok) setPermissions(await permRes.json());
-            if (nRes.ok) setNotes(await nRes.json());
+            if (nRes.ok) setNotes(toArray(await nRes.json()));
+            localStorage.setItem('support_last_user_id', userId);
         } catch (err) {
             console.error('Failed to fetch user console data', err);
+            setError('Failed to load user data');
+        } finally {
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchData(searchId);
-    }, [searchId]);
+        if (activeUserId) fetchData(activeUserId);
+    }, [activeUserId]);
+
+    const runSearch = () => {
+        const userId = searchId.trim();
+        if (!userId) return;
+        setActiveUserId(userId);
+    };
 
     const handleAction = async (action: string) => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
-            const res = await fetch(`/bff/support/users/${searchId}/${action}`, { method: 'POST', headers });
-            if (res.ok) alert(`${action} executed successfully`);
+            const res = await fetch(`/bff/support/users/${activeUserId}/${action}`, { method: 'POST', headers });
+            if (res.ok) {
+                setActionMessage(`${action} executed successfully`);
+            } else {
+                setError(`Failed to execute ${action}`);
+            }
         } catch (err) {
             console.error(err);
+            setError(`Failed to execute ${action}`);
         }
     };
 
@@ -57,7 +87,7 @@ const UserConsole: React.FC = () => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
-            const res = await fetch(`/bff/support/users/${searchId}/sessions/${sessionId}/revoke`, { method: 'POST', headers });
+            const res = await fetch(`/bff/support/users/${activeUserId}/sessions/${sessionId}/revoke`, { method: 'POST', headers });
             if (res.ok) {
                 setSessions(sessions.filter(s => s.sessionId !== sessionId));
             }
@@ -71,14 +101,14 @@ const UserConsole: React.FC = () => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
         try {
-            const res = await fetch(`/bff/support/users/${searchId}/notes`, { 
+            const res = await fetch(`/bff/support/users/${activeUserId}/notes`, {
                 method: 'POST', 
                 headers,
                 body: JSON.stringify({ note: newNote })
             });
             if (res.ok) {
                 setNewNote('');
-                fetchData(searchId);
+                fetchData(activeUserId);
             }
         } catch (err) {
             console.error(err);
@@ -95,7 +125,7 @@ const UserConsole: React.FC = () => {
                             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
                             <span className="text-white uppercase">User Console</span>
                         </div>
-                        <h2 className="text-white text-lg font-bold">User Troubleshooting: {profile?.name || 'Sarah Jenkins'}</h2>
+                        <h2 className="text-white text-lg font-bold">User Troubleshooting: {profile?.name || '--'}</h2>
                     </div>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
@@ -113,12 +143,36 @@ const UserConsole: React.FC = () => {
                             type="text"
                             value={searchId}
                             onChange={(e) => setSearchId(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') runSearch();
+                            }}
                         />
                     </div>
+                    <button
+                        onClick={runSearch}
+                        className="px-3 py-1.5 rounded bg-primary text-white text-xs font-semibold hover:bg-primary-dark transition-colors"
+                    >
+                        Load
+                    </button>
                 </div>
             </header>
 
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {isLoading && (
+                    <div className="mb-4 rounded border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-primary">
+                        Loading user data...
+                    </div>
+                )}
+                {error && (
+                    <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                        {error}
+                    </div>
+                )}
+                {actionMessage && (
+                    <div className="mb-4 rounded border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                        {actionMessage}
+                    </div>
+                )}
                 <div className="grid grid-cols-12 gap-6 h-full">
                     {/* Sidebar: Profile & Sessions */}
                     <div className="col-span-12 lg:col-span-3 flex flex-col gap-6">
@@ -130,15 +184,15 @@ const UserConsole: React.FC = () => {
                                     </div>
                                     <div className="flex flex-col items-end">
                                         <span className="text-[10px] text-[#92adc9] uppercase font-bold tracking-wider">User ID</span>
-                                        <span className="text-white font-mono text-xs mt-1">{profile?.userId || 'USR-882910'}</span>
+                                        <span className="text-white font-mono text-xs mt-1">{profile?.userId || activeUserId || '--'}</span>
                                     </div>
                                 </div>
                                 <div className="mt-4">
-                                    <h3 className="text-lg font-bold text-white">{profile?.name || 'Sarah Jenkins'}</h3>
-                                    <p className="text-sm text-[#92adc9]">{profile?.email || 'sarah.j@fleetcorp.com'}</p>
+                                    <h3 className="text-lg font-bold text-white">{profile?.name || '--'}</h3>
+                                    <p className="text-sm text-[#92adc9]">{profile?.email || '--'}</p>
                                     <div className="flex items-center gap-2 mt-2">
-                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-medium uppercase">{profile?.role || 'Regional Manager'}</span>
-                                        <span className="px-2 py-0.5 rounded bg-[#111a22] text-[#92adc9] border border-[#233648] text-[10px] font-medium uppercase">{profile?.region || 'EMEA'}</span>
+                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-medium uppercase">{profile?.role || '--'}</span>
+                                        <span className="px-2 py-0.5 rounded bg-[#111a22] text-[#92adc9] border border-[#233648] text-[10px] font-medium uppercase">{profile?.region || '--'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -147,9 +201,9 @@ const UserConsole: React.FC = () => {
                                     <div className="text-[10px] uppercase text-[#92adc9] font-bold mb-2 tracking-widest">Account Status</div>
                                     <div className="flex items-center gap-2 text-sm text-white">
                                         <span className="material-symbols-outlined text-success text-[18px]">check_circle</span>
-                                        {profile?.status || 'Active (Verified)'}
+                                        {profile?.status || '--'}
                                     </div>
-                                    <div className="text-[10px] text-[#92adc9] mt-1 italic">Member since {profile?.memberSince || 'Feb 12, 2021'}</div>
+                                    <div className="text-[10px] text-[#92adc9] mt-1 italic">Member since {profile?.memberSince || '--'}</div>
                                 </div>
                                 <div>
                                     <div className="text-[10px] uppercase text-[#92adc9] font-bold mb-2 tracking-widest">MFA Status</div>
@@ -298,7 +352,7 @@ const UserConsole: React.FC = () => {
                                 <p className="text-[9px] text-[#92adc9] mt-1 font-medium">Privileged Commands</p>
                             </div>
                             <div className="p-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar">
-                                <button onClick={() => handleAction('reset-password')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-primary/50 hover:bg-[#111a22] transition-all text-left">
+                                <button disabled={!activeUserId} onClick={() => handleAction('reset-password')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-primary/50 hover:bg-[#111a22] transition-all text-left disabled:opacity-50">
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="p-1.5 rounded bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                                             <span className="material-symbols-outlined text-[16px]">lock_reset</span>
@@ -306,7 +360,7 @@ const UserConsole: React.FC = () => {
                                         <span className="text-[11px] font-bold text-white uppercase tracking-tighter">Reset Pass</span>
                                     </div>
                                 </button>
-                                <button onClick={() => handleAction('unlock')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-success/50 hover:bg-[#111a22] transition-all text-left">
+                                <button disabled={!activeUserId} onClick={() => handleAction('unlock')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-success/50 hover:bg-[#111a22] transition-all text-left disabled:opacity-50">
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="p-1.5 rounded bg-success/10 text-success group-hover:bg-success group-hover:text-white transition-colors">
                                             <span className="material-symbols-outlined text-[16px]">lock_open</span>
@@ -314,7 +368,7 @@ const UserConsole: React.FC = () => {
                                         <span className="text-[11px] font-bold text-white uppercase tracking-tighter">Unlock Acc</span>
                                     </div>
                                 </button>
-                                <button onClick={() => handleAction('mfa-reset')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-warning/50 hover:bg-[#111a22] transition-all text-left">
+                                <button disabled={!activeUserId} onClick={() => handleAction('mfa-reset')} className="w-full group p-2.5 rounded border border-[#233648] hover:border-warning/50 hover:bg-[#111a22] transition-all text-left disabled:opacity-50">
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="p-1.5 rounded bg-warning/10 text-warning group-hover:bg-warning group-hover:text-white transition-colors">
                                             <span className="material-symbols-outlined text-[16px]">phonelink_setup</span>
@@ -322,7 +376,7 @@ const UserConsole: React.FC = () => {
                                         <span className="text-[11px] font-bold text-white uppercase tracking-tighter">Reset MFA</span>
                                     </div>
                                 </button>
-                                <button onClick={() => handleAction('force-logout')} className="w-full group p-2.5 rounded border border-danger/30 hover:border-danger hover:bg-danger/10 transition-all text-left">
+                                <button disabled={!activeUserId} onClick={() => handleAction('force-logout')} className="w-full group p-2.5 rounded border border-danger/30 hover:border-danger hover:bg-danger/10 transition-all text-left disabled:opacity-50">
                                     <div className="flex items-center gap-2 mb-1 text-danger">
                                         <span className="material-symbols-outlined text-[16px]">logout</span>
                                         <span className="text-[11px] font-bold uppercase tracking-tighter">Force Logout</span>
@@ -339,7 +393,7 @@ const UserConsole: React.FC = () => {
                                         value={newNote}
                                         onChange={(e) => setNewNote(e.target.value)}
                                     ></textarea>
-                                    <button onClick={saveNote} className="w-full py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white text-[10px] font-bold uppercase rounded border border-primary/20 transition-all">
+                                    <button disabled={!activeUserId} onClick={saveNote} className="w-full py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white text-[10px] font-bold uppercase rounded border border-primary/20 transition-all disabled:opacity-50">
                                         Save Note
                                     </button>
                                     

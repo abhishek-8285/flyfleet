@@ -1,0 +1,82 @@
+package models
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
+type GPSTelemetry struct {
+	Time        time.Time `json:"time" validate:"required"`
+	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
+	Latitude    float64   `json:"latitude" validate:"required"`
+	Longitude   float64   `json:"longitude" validate:"required"`
+	Altitude    *float64  `json:"altitude,omitempty"`
+	Speed       *float64  `json:"speed,omitempty"`
+	Heading     *float64  `json:"heading,omitempty"`
+	Accuracy    *float64  `json:"accuracy,omitempty"`
+	Ignition    *bool     `json:"ignition,omitempty"`
+	Odometer    *float64  `json:"odometer,omitempty"`
+	Battery     *int      `json:"battery_level,omitempty"`
+	Satellites  *int      `json:"satellites,omitempty"`
+	RawData     map[string]interface{} `json:"raw_data,omitempty"`
+}
+
+type OBDTelemetry struct {
+	Time        time.Time `json:"time" validate:"required"`
+	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
+	RPM         *int      `json:"rpm,omitempty"`
+	CoolantTemp *float64  `json:"coolant_temp,omitempty"`
+	EngineLoad  *float64  `json:"engine_load,omitempty"`
+	ThrottlePos *float64  `json:"throttle_pos,omitempty"`
+	FuelLevel   *float64  `json:"fuel_level,omitempty"`
+	DTCs        []string  `json:"dtcs,omitempty"`
+	VIN         *string   `json:"vin,omitempty"`
+	RawData     map[string]interface{} `json:"raw_data,omitempty"`
+}
+
+type FuelTelemetry struct {
+	Time        time.Time `json:"time" validate:"required"`
+	VehicleID   uuid.UUID `json:"vehicle_id" validate:"required"`
+	OrgID       uuid.UUID `json:"org_id" validate:"required"`
+	LevelPercent *float64 `json:"level_percent,omitempty"`
+	LevelLiters  *float64 `json:"level_liters,omitempty"`
+	RefuelEvent  *bool    `json:"refuel_event,omitempty"`
+	TheftEvent   *bool    `json:"theft_event,omitempty"`
+	Latitude     *float64 `json:"latitude,omitempty"`
+	Longitude    *float64 `json:"longitude,omitempty"`
+	RawData      map[string]interface{} `json:"raw_data,omitempty"`
+}
+
+type TelemetryBatch struct {
+	GPSData   []GPSTelemetry   `json:"gps_data,omitempty"`
+	OBData    []OBDTelemetry   `json:"obd_data,omitempty"`
+	FuelData  []FuelTelemetry  `json:"fuel_data,omitempty"`
+	Timestamp time.Time        `json:"timestamp"`
+	DeviceID  string           `json:"device_id"`
+}
+
+type GeofenceEvent struct {
+	ID          uuid.UUID `json:"id"`
+	VehicleID   uuid.UUID `json:"vehicle_id"`
+	OrgID       uuid.UUID `json:"org_id"`
+	GeofenceID  uuid.UUID `json:"geofence_id"`
+	EventType   string    `json:"event_type"` // ENTRY, EXIT, DWELL
+	Latitude    float64   `json:"latitude"`
+	Longitude   float64   `json:"longitude"`
+	Timestamp   time.Time `json:"timestamp"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type DeviceHeartbeat struct {
+	DeviceID    string    `json:"device_id"`
+	VehicleID   uuid.UUID `json:"vehicle_id"`
+	OrgID       uuid.UUID `json:"org_id"`
+	Status      string    `json:"status"` // ONLINE, OFFLINE, ERROR
+	LastSeen    time.Time `json:"last_seen"`
+	Battery     *int      `json:"battery_level,omitempty"`
+	SignalStrength *int   `json:"signal_strength,omitempty"`
+	ErrorCodes  []string  `json:"error_codes,omitempty"`
+}

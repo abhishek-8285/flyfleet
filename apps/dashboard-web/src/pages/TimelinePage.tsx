@@ -31,8 +31,8 @@ const TimelinePage = () => {
       setLoading(true);
       try {
         const [eventsRes, statsRes] = await Promise.all([
-            fetch('http://localhost:8081/api/timeline'),
-            fetch('http://localhost:8081/api/timeline/stats')
+            fetch('/api/v1/timeline'),
+            fetch('/api/v1/timeline/stats')
         ]);
         
         const eventsData = await eventsRes.json();
@@ -176,7 +176,7 @@ const TimelinePage = () => {
               <button className="text-[10px] text-primary hover:text-primary-dark font-medium uppercase tracking-wide">Reset All</button>
             </div>
             <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-6">
-                {/* Mock Filters - Visual Only */}
+                {/* Filters */}
               <div>
                 <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Event Types</label>
                 <div className="space-y-2">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../services/apiClient';
 
 interface CreateWorkOrderRequest {
   vehicle_id: string;
@@ -37,11 +38,8 @@ const AddWorkOrder: React.FC = () => {
     // Fetch vehicles for dropdown
     const fetchVehicles = async () => {
       try {
-        const response = await fetch('/api/v1/admin/vehicles?limit=100');
-        if (response.ok) {
-          const data = await response.json();
-          setVehicles(data.vehicles || []);
-        }
+        const data = await apiClient.get('/admin/vehicles', { params: { limit: 100 } }) as any;
+        setVehicles(data?.vehicles || []);
       } catch (error) {
         console.error('Failed to fetch vehicles:', error);
       }
@@ -64,21 +62,10 @@ const AddWorkOrder: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/admin/work-orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        navigate(`/maintenance/work-orders/${data.id}`);
-      } else {
-        const error = await response.json();
-        setErrors({ submit: error.error || 'Failed to create work order' });
-      }
-    } catch (error) {
-      setErrors({ submit: 'Network error. Please try again.' });
+      const payload = await apiClient.post('/admin/work-orders', formData) as any;
+      navigate(`/maintenance/work-orders/${payload?.id}`);
+    } catch (error: any) {
+      setErrors({ submit: error?.message || 'Failed to create work order' });
     } finally {
       setLoading(false);
     }

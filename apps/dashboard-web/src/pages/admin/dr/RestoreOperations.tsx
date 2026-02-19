@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface Restore {
     id: string;
@@ -14,14 +15,19 @@ const RestoreOperations: React.FC = () => {
     const navigate = useNavigate();
     const [restores, setRestores] = useState<Restore[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchRestores = async () => {
         try {
-            const res = await fetch('/api/v1/admin/dr/restores');
-            const data = await res.json();
-            setRestores(data.data || []);
+            setLoading(true);
+            setError(null);
+            const data = await apiClient.get('/admin/dr/restore-jobs') as any;
+            const items = data?.data || data?.items || data?.restores || data || [];
+            setRestores(Array.isArray(items) ? items : []);
         } catch (err) {
             console.error(err);
+            setError('Failed to load restore operations.');
+            setRestores([]);
         } finally {
             setLoading(false);
         }
@@ -112,6 +118,10 @@ const RestoreOperations: React.FC = () => {
                             <tbody className="text-sm">
                                 {loading ? (
                                     <tr><td colSpan={6} className="px-6 py-4 text-center text-text-muted">Loading...</td></tr>
+                                ) : error ? (
+                                    <tr><td colSpan={6} className="px-6 py-4 text-center text-red-400">{error}</td></tr>
+                                ) : restores.length === 0 ? (
+                                    <tr><td colSpan={6} className="px-6 py-4 text-center text-text-muted">No restore operations found.</td></tr>
                                 ) : restores.map((row) => (
                                     <tr key={row.id} 
                                         className="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer"
@@ -140,7 +150,7 @@ const RestoreOperations: React.FC = () => {
              <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
                 <span>© 2023 Enterprise Fleet Manager. DR Module V2.4</span>
                 <div className="flex items-center gap-4">
-                    <span>API Endpoint: <span className="text-primary">/dr/restores</span></span>
+                    <span>API Endpoint: <span className="text-primary">/admin/dr/restore-jobs</span></span>
                     <span>System Health: <span className="text-success">Stable</span></span>
                 </div>
             </footer>

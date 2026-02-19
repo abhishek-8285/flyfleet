@@ -1,15 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/flyfleet/admin-support-service/internal/domains/support/models"
 	"github.com/flyfleet/admin-support-service/internal/domains/support/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/fleet-platform/shared/pkg/middleware"
 )
 
 type TicketHandlers struct {
@@ -21,42 +24,41 @@ func NewTicketHandlers(service service.TicketService, logger *zap.Logger) *Ticke
 	return &TicketHandlers{service: service, logger: logger}
 }
 
-func (h *TicketHandlers) RegisterRoutes(router *gin.RouterGroup) {
-	support := router.Group("/support")
-	{
+func (h *TicketHandlers) RegisterRoutes(r chi.Router) {
+	r.Route("/support", func(r chi.Router) {
 		// Dashboard APIs
-		support.GET("/dashboard/summary", h.GetDashboardSummary)
-		support.GET("/dashboard/recent-activity", h.GetRecentActivity)
+		r.Get("/dashboard/summary", h.GetDashboardSummary)
+		r.Get("/dashboard/recent-activity", h.GetRecentActivity)
 
 		// Incident Management
-		support.GET("/incidents", h.ListTickets)
-		support.POST("/incidents", h.CreateTicket)
-		support.GET("/incidents/:id", h.GetTicket)
-		support.PATCH("/incidents/:id/status", h.UpdateTicketStatus)
-		support.POST("/incidents/:id/assign", h.AssignTicket)
-		support.POST("/incidents/:id/comment", h.AddComment)
-		support.GET("/incidents/:id/comments", h.GetTicketComments)
-	}
+		r.Get("/incidents", h.ListTickets)
+		r.Post("/incidents", h.CreateTicket)
+		r.Get("/incidents/{id}", h.GetTicket)
+		r.Patch("/incidents/{id}/status", h.UpdateTicketStatus)
+		r.Post("/incidents/{id}/assign", h.AssignTicket)
+		r.Post("/incidents/{id}/comment", h.AddComment)
+		r.Get("/incidents/{id}/comments", h.GetTicketComments)
+	})
 }
 
 // Dashboard APIs
-func (h *TicketHandlers) GetDashboardSummary(c *gin.Context) {
-	orgID := h.getOrgID(c)
+func (h *TicketHandlers) GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	
-	summary, err := h.service.GetDashboardSummary(c.Request.Context(), orgID)
+	summary, err := h.service.GetDashboardSummary(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("Failed to get dashboard summary", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get dashboard summary"})
+		h.errorJSON(w, "Failed to get dashboard summary", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, summary)
+	h.json(w, summary, http.StatusOK)
 }
 
-func (h *TicketHandlers) GetRecentActivity(c *gin.Context) {
-	orgID := h.getOrgID(c)
+func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
 	
-	limitStr := c.Query("limit")
+	limitStr := r.URL.Query().Get("limit")
 	limit := 10
 	if limitStr != "" {
 		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
@@ -64,10 +66,10 @@ func (h *TicketHandlers) GetRecentActivity(c *gin.Context) {
 		}
 	}
 
-	tickets, err := h.service.GetRecentActivity(c.Request.Context(), orgID, limit)
+	tickets, err := h.service.GetRecentActivity(r.Context(), orgID, limit)
 	if err != nil {
 		h.logger.Error("Failed to get recent activity", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recent activity"})
+		h.errorJSON(w, "Failed to get recent activity", http.StatusInternalServerError)
 		return
 	}
 
@@ -100,212 +102,233 @@ func (h *TicketHandlers) GetRecentActivity(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, activity)
+	h.json(w, activity, http.StatusOK)
 }
 
 // Incident Management APIs
-func (h *TicketHandlers) CreateTicket(c *gin.Context) {
+func (h *TicketHandlers) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateTicketRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	// Validation
 	if req.Title == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
+		h.errorJSON(w, "Title is required", http.StatusBadRequest)
 		return
 	}
 
-	orgID := h.getOrgID(c)
-	userID := h.getUserID(c) // Would come from auth middleware
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
 
-	ticket, err := h.service.CreateTicket(c.Request.Context(), &req, orgID, userID)
+	ticket, err := h.service.CreateTicket(r.Context(), &req, orgID, userID)
 	if err != nil {
 		h.logger.Error("Failed to create ticket", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
+		h.errorJSON(w, "Failed to create ticket", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusCreated, ticket)
+	h.json(w, ticket, http.StatusCreated)
 }
 
-func (h *TicketHandlers) GetTicket(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *TicketHandlers) GetTicket(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		h.errorJSON(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
 
-	ticket, err := h.service.GetTicket(c.Request.Context(), id)
+	ticket, err := h.service.GetTicket(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+		h.errorJSON(w, "Ticket not found", http.StatusNotFound)
 		return
 	}
 
-	c.JSON(http.StatusOK, ticket)
+	h.json(w, ticket, http.StatusOK)
 }
 
-func (h *TicketHandlers) ListTickets(c *gin.Context) {
+func (h *TicketHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	var filter models.TicketFilter
 	
 	// Parse query parameters
-	if status := c.Query("status"); status != "" {
+	query := r.URL.Query()
+	if status := query.Get("status"); status != "" {
 		filter.Status = status
 	}
-	if priority := c.Query("priority"); priority != "" {
+	if priority := query.Get("priority"); priority != "" {
 		filter.Priority = priority
 	}
-	if category := c.Query("category"); category != "" {
+	if category := query.Get("category"); category != "" {
 		filter.Category = category
 	}
 	
-	pageStr := c.Query("page")
-	if pageStr != "" {
+	if pageStr := query.Get("page"); pageStr != "" {
 		if page, err := strconv.Atoi(pageStr); err == nil {
 			filter.Page = page
 		}
 	}
 	
-	pageSizeStr := c.Query("page_size")
-	if pageSizeStr != "" {
+	if pageSizeStr := query.Get("page_size"); pageSizeStr != "" {
 		if pageSize, err := strconv.Atoi(pageSizeStr); err == nil {
 			filter.PageSize = pageSize
 		}
 	}
 
-	tickets, totalCount, err := h.service.ListTickets(c.Request.Context(), filter)
+	tickets, totalCount, err := h.service.ListTickets(r.Context(), filter)
 	if err != nil {
 		h.logger.Error("Failed to list tickets", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list tickets"})
+		h.errorJSON(w, "Failed to list tickets", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.json(w, map[string]interface{}{
 		"tickets":   tickets,
 		"total":     totalCount,
 		"page":      filter.Page,
 		"page_size": filter.PageSize,
-	})
+	}, http.StatusOK)
 }
 
-func (h *TicketHandlers) UpdateTicketStatus(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *TicketHandlers) UpdateTicketStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		h.errorJSON(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
 
 	var req models.UpdateTicketStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if req.Status == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Status is required"})
+		h.errorJSON(w, "Status is required", http.StatusBadRequest)
 		return
 	}
 
-	userID := h.getUserID(c)
-	err = h.service.UpdateTicketStatus(c.Request.Context(), id, req.Status, userID)
+	userID := h.getUserID(r)
+	err = h.service.UpdateTicketStatus(r.Context(), id, req.Status, userID)
 	if err != nil {
 		h.logger.Error("Failed to update ticket status", zap.Error(err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.errorJSON(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Status updated successfully"})
+	h.json(w, map[string]string{"message": "Status updated successfully"}, http.StatusOK)
 }
 
-func (h *TicketHandlers) AssignTicket(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *TicketHandlers) AssignTicket(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		h.errorJSON(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
 
 	var req models.AssignTicketRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	userID := h.getUserID(c)
-	err = h.service.AssignTicket(c.Request.Context(), id, req.AssignedTo, userID)
+	userID := h.getUserID(r)
+	err = h.service.AssignTicket(r.Context(), id, req.AssignedTo, userID)
 	if err != nil {
 		h.logger.Error("Failed to assign ticket", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
+		h.errorJSON(w, "Failed to assign ticket", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Ticket assigned successfully"})
+	h.json(w, map[string]string{"message": "Ticket assigned successfully"}, http.StatusOK)
 }
 
-func (h *TicketHandlers) AddComment(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *TicketHandlers) AddComment(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		h.errorJSON(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
 
 	var req models.AddCommentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	if req.Content == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Content is required"})
+		h.errorJSON(w, "Content is required", http.StatusBadRequest)
 		return
 	}
 
-	userID := h.getUserID(c)
+	userID := h.getUserID(r)
 	authorName := "Support Agent" // Would come from user context
 	
-	err = h.service.AddComment(c.Request.Context(), id, userID, &req, authorName)
+	err = h.service.AddComment(r.Context(), id, userID, &req, authorName)
 	if err != nil {
 		h.logger.Error("Failed to add comment", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add comment"})
+		h.errorJSON(w, "Failed to add comment", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Comment added successfully"})
+	h.json(w, map[string]string{"message": "Comment added successfully"}, http.StatusOK)
 }
 
-func (h *TicketHandlers) GetTicketComments(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *TicketHandlers) GetTicketComments(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
+		h.errorJSON(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
 
-	comments, err := h.service.GetTicketComments(c.Request.Context(), id)
+	comments, err := h.service.GetTicketComments(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get comments", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get comments"})
+		h.errorJSON(w, "Failed to get comments", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, comments)
+	h.json(w, comments, http.StatusOK)
 }
 
 // Helper methods
-func (h *TicketHandlers) getOrgID(_ *gin.Context) uuid.UUID {
-	// In real implementation, this would come from auth context
-	// For now, using a default org ID
+func (h *TicketHandlers) json(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *TicketHandlers) errorJSON(w http.ResponseWriter, message string, status int) {
+	h.json(w, map[string]string{"error": message}, status)
+}
+
+func (h *TicketHandlers) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback for development/tests - in production auth middleware would be mandatory
 	orgID, _ := uuid.Parse("00000000-0000-0000-0000-000000000001")
 	return orgID
 }
 
-func (h *TicketHandlers) getUserID(_ *gin.Context) uuid.UUID {
-	// In real implementation, this would come from auth context
-	// For now, using a default user ID
+func (h *TicketHandlers) getUserID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+		if userIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(userIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback
 	userID, _ := uuid.Parse("00000000-0000-0000-0000-000000000002")
 	return userID
 }

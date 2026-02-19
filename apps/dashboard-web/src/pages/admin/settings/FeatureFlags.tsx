@@ -14,6 +14,7 @@ interface FeatureFlag {
 const FeatureFlags: React.FC = () => {
     const [flags, setFlags] = useState<FeatureFlag[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
@@ -21,11 +22,18 @@ const FeatureFlags: React.FC = () => {
     }, []);
 
     const fetchFlags = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/flags');
-            setFlags(response.data || []);
+            const response = await apiClient.get('/settings/flags') as any;
+            const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+            setFlags(items);
         } catch (error) {
             console.error('Failed to fetch flags', error);
+            setError('Failed to load feature flags');
         } finally {
             setLoading(false);
         }
@@ -89,6 +97,11 @@ const FeatureFlags: React.FC = () => {
             </header>
             <div className="flex flex-1 overflow-hidden">
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    {error && (
+                        <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                            {error}
+                        </div>
+                    )}
                     <div className="grid grid-cols-4 gap-4 mb-6">
                         <div className="bg-[#16202a] rounded border border-[#233648] p-3 flex items-center justify-between">
                             <div>
@@ -124,6 +137,11 @@ const FeatureFlags: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex-1 overflow-auto custom-scrollbar">
+                            {filteredFlags.length === 0 ? (
+                                <div className="px-4 py-10 text-sm text-[#92adc9]">
+                                    No feature flags available.
+                                </div>
+                            ) : (
                             <table className="w-full text-left border-collapse">
                                 <thead className="sticky top-0 z-10">
                                     <tr className="border-b border-[#233648] text-xs text-[#92adc9] uppercase tracking-wider bg-[#111a22] shadow-sm">
@@ -172,6 +190,7 @@ const FeatureFlags: React.FC = () => {
                                     ))}
                                 </tbody>
                             </table>
+                            )}
                         </div>
                     </div>
                 </div>

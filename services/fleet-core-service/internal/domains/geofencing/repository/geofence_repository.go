@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,65 +23,49 @@ func NewGeofenceRepository(db *pgxpool.Pool) *GeofenceRepository {
 func (r *GeofenceRepository) Create(ctx context.Context, geofence *models.Geofence) error {
 	query := `
 		INSERT INTO geofences (
-			id, org_id, name, type, geometry, radius_meters, metadata,
-			is_active, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			id, org_id, name, type,
+			center, radius_meters, coordinates,
+			route_polyline, buffer_meters,
+			entry_alert, exit_alert, speed_limit,
+			vehicles, metadata,
+			enabled, created_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING created_at, updated_at`
 
-	// Convert our geofence model to geometry format for PostGIS
-	var geometry string
-	switch geofence.Type {
-	case "circle":
-		if geofence.Center != nil && geofence.RadiusMeters != nil {
-			geometry = fmt.Sprintf("SRID=4326;POINT(%f %f)", geofence.Center.Lng, geofence.Center.Lat)
-		}
-	case "polygon":
-		if len(geofence.Coordinates) > 0 {
-			coords := "("
-			for i, coord := range geofence.Coordinates {
-				if i > 0 {
-					coords += ","
-				}
-				coords += fmt.Sprintf("%f %f", coord.Lng, coord.Lat)
-			}
-			// Close the polygon
-			if len(geofence.Coordinates) > 0 {
-				firstCoord := geofence.Coordinates[0]
-				coords += fmt.Sprintf(",%f %f", firstCoord.Lng, firstCoord.Lat)
-			}
-			coords += ")"
-			geometry = fmt.Sprintf("SRID=4326;POLYGON(%s)", coords)
-		}
-	case "route_corridor":
-		// For route corridors, we'd typically use a linestring with buffer
-		// But for now, we'll store as a simple representation
-		if geofence.RoutePolyline != nil {
-			geometry = *geofence.RoutePolyline
-		}
-	}
-
-	_, err := r.db.Exec(ctx, query,
+	err := r.db.QueryRow(ctx, query,
 		geofence.ID,
 		geofence.OrgID,
 		geofence.Name,
 		geofence.Type,
-		geometry,
+		geofence.Center,
 		geofence.RadiusMeters,
+		geofence.Coordinates,
+		geofence.RoutePolyline,
+		geofence.BufferMeters,
+		geofence.EntryAlert,
+		geofence.ExitAlert,
+		geofence.SpeedLimit,
+		geofence.Vehicles,
 		geofence.Metadata,
 		geofence.Active,
 		geofence.CreatedBy,
-	)
+	).Scan(&geofence.CreatedAt, &geofence.UpdatedAt)
 	return err
+
 }
 
 // GetByID retrieves a geofence by ID
 func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Geofence, error) {
 	query := `
 		SELECT 
-			id, org_id, name, type, radius_meters, metadata,
-			is_active, created_by, created_at, updated_at
+			id, org_id, name, type, 
+			center, radius_meters, coordinates,
+			route_polyline, buffer_meters,
+			entry_alert, exit_alert, speed_limit,
+			vehicles, metadata,
+			enabled, created_by, created_at, updated_at
 		FROM geofences 
-		WHERE id = $1 AND is_active = true`
+		WHERE id = $1 AND enabled = true`
 
 	row := r.db.QueryRow(ctx, query, id)
 
@@ -90,7 +75,15 @@ func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 		&geofence.OrgID,
 		&geofence.Name,
 		&geofence.Type,
+		&geofence.Center,
 		&geofence.RadiusMeters,
+		&geofence.Coordinates,
+		&geofence.RoutePolyline,
+		&geofence.BufferMeters,
+		&geofence.EntryAlert,
+		&geofence.ExitAlert,
+		&geofence.SpeedLimit,
+		&geofence.Vehicles,
 		&geofence.Metadata,
 		&geofence.Active,
 		&geofence.CreatedBy,
@@ -106,19 +99,24 @@ func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 
 // List retrieves geofences with pagination and filtering
 func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *models.ListGeofencesRequest) ([]models.Geofence, int64, error) {
-	baseQuery := `SELECT id, org_id, name, type, radius_meters, metadata, 
-	                 is_active, created_by, created_at, updated_at, COUNT(*) OVER() as total
+	baseQuery := `SELECT id, org_id, name, type, 
+	                 center, radius_meters, coordinates,
+	                 route_polyline, buffer_meters,
+	                 entry_alert, exit_alert, speed_limit,
+	                 vehicles, metadata,
+	                 enabled, created_by, created_at, updated_at,
+	                 COUNT(*) OVER() as total
 	          FROM geofences 
-	          WHERE org_id = $1 AND is_active = true`
+	          WHERE org_id = $1 AND enabled = true`
 	
 	args := []interface{}{orgID}
 	argCount := 2
 	
 	// Add search filter
 	if req.Search != "" {
-		baseQuery += fmt.Sprintf(" AND (name ILIKE $%d OR type ILIKE $%d)", argCount, argCount)
+		baseQuery += fmt.Sprintf(" AND (name ILIKE $%d OR type ILIKE $%d)", argCount, argCount+1)
 		args = append(args, "%"+req.Search+"%", "%"+req.Search+"%")
-		argCount++
+		argCount += 2
 	}
 	
 	// Add type filter
@@ -130,7 +128,7 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 	
 	// Add active filter
 	if req.Active != nil {
-		baseQuery += fmt.Sprintf(" AND is_active = $%d", argCount)
+		baseQuery += fmt.Sprintf(" AND enabled = $%d", argCount)
 		args = append(args, *req.Active)
 		argCount++
 	}
@@ -139,14 +137,18 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 	orderClause := "ORDER BY created_at DESC"
 	if req.Sort != "" {
 		// Parse sort parameter (e.g., "created_at:desc", "name:asc")
-		parts := []string{req.Sort}
+		parts := strings.SplitN(req.Sort, ":", 2)
 		if len(parts) == 2 {
 			field := parts[0]
 			direction := parts[1]
 			if direction != "asc" && direction != "desc" {
 				direction = "desc"
 			}
-			orderClause = fmt.Sprintf("ORDER BY %s %s", field, direction)
+			// Whitelist allowed sort fields to prevent SQL injection
+			allowedFields := map[string]bool{"created_at": true, "name": true, "type": true, "updated_at": true}
+			if allowedFields[field] {
+				orderClause = fmt.Sprintf("ORDER BY %s %s", field, direction)
+			}
 		}
 	}
 	baseQuery += " " + orderClause
@@ -173,7 +175,15 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 			&geofence.OrgID,
 			&geofence.Name,
 			&geofence.Type,
+			&geofence.Center,
 			&geofence.RadiusMeters,
+			&geofence.Coordinates,
+			&geofence.RoutePolyline,
+			&geofence.BufferMeters,
+			&geofence.EntryAlert,
+			&geofence.ExitAlert,
+			&geofence.SpeedLimit,
+			&geofence.Vehicles,
 			&geofence.Metadata,
 			&geofence.Active,
 			&geofence.CreatedBy,
@@ -224,7 +234,7 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, req *mode
 		argCount++
 	}
 	if req.Active != nil {
-		query += fmt.Sprintf(", is_active = $%d", argCount+1)
+		query += fmt.Sprintf(", enabled = $%d", argCount+1)
 		args = append(args, *req.Active)
 		argCount++
 	}
@@ -238,7 +248,7 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, req *mode
 
 // Delete marks a geofence as inactive
 func (r *GeofenceRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE geofences SET is_active = false, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE geofences SET enabled = false, updated_at = NOW() WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
 	return err
 }

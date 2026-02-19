@@ -16,6 +16,18 @@ const (
 	WorkOrderStatusCompleted  WorkOrderStatus = "COMPLETED"
 )
 
+// ApprovalStatus enum
+type ApprovalStatus string
+
+const (
+	ApprovalStatusNotRequired      ApprovalStatus = "NOT_REQUIRED"
+	ApprovalStatusPendingManager   ApprovalStatus = "PENDING_MANAGER"
+	ApprovalStatusPendingFleetHead ApprovalStatus = "PENDING_FLEET_HEAD"
+	ApprovalStatusPendingFinance   ApprovalStatus = "PENDING_FINANCE"
+	ApprovalStatusApproved         ApprovalStatus = "APPROVED"
+	ApprovalStatusRejected         ApprovalStatus = "REJECTED"
+)
+
 // WorkOrderPriority enum
 type WorkOrderPriority string
 
@@ -51,6 +63,10 @@ type WorkOrder struct {
 	CompletedDate   *time.Time          `json:"completion_date,omitempty" db:"completed_date"`
 	EstimatedCost   float64             `json:"estimated_cost" db:"estimated_cost"`
 	ActualCost      float64             `json:"actual_cost" db:"actual_cost"`
+	VendorID        *uuid.UUID          `json:"vendor_id,omitempty" db:"vendor_id"`
+	ApprovalStatus  ApprovalStatus      `json:"approval_status" db:"approval_status"`
+	CostBreakdown   CostBreakdown       `json:"cost_breakdown" db:"cost_breakdown"`
+	InspectionID    *uuid.UUID          `json:"inspection_id,omitempty" db:"inspection_id"`
 	CreatedBy       uuid.UUID           `json:"created_by" db:"created_by"`
 	CreatedAt       time.Time           `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time           `json:"updated_at" db:"updated_at"`
@@ -60,6 +76,14 @@ type WorkOrder struct {
 	VehicleInfo   *VehicleInfo    `json:"vehicle,omitempty"`
 	AssigneeInfo  *UserInfo       `json:"assignee,omitempty"`
 	TotalPartsCost float64        `json:"total_parts_cost,omitempty"`
+	VendorInfo    *MaintenanceVendor `json:"vendor,omitempty"`
+}
+
+// CostBreakdown represents detailed maintenance costs
+type CostBreakdown struct {
+	LaborCost           float64 `json:"labor_cost"`
+	PartsCost           float64 `json:"parts_cost"`
+	ExternalServiceCost float64 `json:"external_service_cost"`
 }
 
 // VehicleInfo represents basic vehicle information
@@ -101,11 +125,70 @@ type InventoryPart struct {
 	Name              string    `json:"name" db:"name"`
 	Description       string    `json:"description,omitempty" db:"description"`
 	StockLocation     string    `json:"location,omitempty" db:"stock_location"`
-	QuantityAvailable int       `json:"quantity" db:"quantity_available"`
+	QuantityAvailable int      `json:"quantity" db:"quantity_available"`
 	ReorderLevel      int       `json:"reorder_level" db:"reorder_level"`
 	UnitCost          float64   `json:"unit_price" db:"unit_cost"`
+	Category          string    `json:"category,omitempty" db:"category"`
+	CompatibleVehicles []string `json:"compatible_vehicles,omitempty" db:"compatible_vehicles"`
 	CreatedAt         time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+}
+
+// MaintenanceVendor represents a service provider or part supplier
+type MaintenanceVendor struct {
+	ID             uuid.UUID      `json:"id" db:"id"`
+	OrganizationID uuid.UUID      `json:"organization_id" db:"organization_id"`
+	Name           string         `json:"name" db:"name"`
+	Specialization string         `json:"specialization,omitempty" db:"specialization"`
+	Rating         float64        `json:"rating" db:"rating"`
+	ContactInfo    map[string]any `json:"contact_info" db:"contact_info"`
+	PaymentTerms   string         `json:"payment_terms,omitempty" db:"payment_terms"`
+	Status         string         `json:"status" db:"status"`
+	CreatedAt      time.Time      `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at" db:"updated_at"`
+}
+
+// InspectionTemplate defines the structure of a digital checklist
+type InspectionTemplate struct {
+	ID                     uuid.UUID      `json:"id" db:"id"`
+	OrganizationID         uuid.UUID      `json:"organization_id" db:"organization_id"`
+	Name                   string         `json:"name" db:"name"`
+	Description            string         `json:"description,omitempty" db:"description"`
+	ApplicableVehicleTypes []string       `json:"applicable_vehicle_types" db:"applicable_vehicle_types"`
+	ChecklistItems         []ChecklistItem `json:"checklist_items" db:"checklist_items"`
+	IsActive               bool           `json:"is_active" db:"is_active"`
+	CreatedAt              time.Time      `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at" db:"updated_at"`
+}
+
+type ChecklistItem struct {
+	ItemID   string `json:"item_id"`
+	Text     string `json:"text"`
+	Type     string `json:"type"` // pass_fail, numeric, text
+	Required bool   `json:"required"`
+}
+
+// VehicleInspection represents a completed inspection report
+type VehicleInspection struct {
+	ID                    uuid.UUID          `json:"id" db:"id"`
+	OrganizationID        uuid.UUID          `json:"organization_id" db:"organization_id"`
+	VehicleID             uuid.UUID          `json:"vehicle_id" db:"vehicle_id"`
+	TemplateID            *uuid.UUID         `json:"template_id,omitempty" db:"template_id"`
+	InspectorID           uuid.UUID          `json:"inspector_id" db:"inspector_id"`
+	Status                string             `json:"status" db:"status"`
+	Results               []InspectionResult `json:"results" db:"results"`
+	Notes                 string             `json:"notes,omitempty" db:"notes"`
+	OdometerAtInspection  int64              `json:"odometer_at_inspection,omitempty" db:"odometer_at_inspection"`
+	CreatedAt             time.Time          `json:"created_at" db:"created_at"`
+	UpdatedAt             time.Time          `json:"updated_at" db:"updated_at"`
+}
+
+type InspectionResult struct {
+	ItemID    string   `json:"item_id"`
+	Status    string   `json:"status"` // pass, fail, na
+	Value     string   `json:"value,omitempty"`
+	PhotoURLs []string `json:"photo_urls,omitempty"`
+	Comments  string   `json:"comments,omitempty"`
 }
 
 // MaintenanceSettings represents org maintenance configuration
@@ -134,6 +217,7 @@ type CreateWorkOrderRequest struct {
 	AssignedTo      *uuid.UUID          `json:"assigned_to,omitempty"`
 	ScheduledDate   *time.Time          `json:"scheduled_date,omitempty"`
 	EstimatedCost   float64             `json:"estimated_cost,omitempty" validate:"omitempty,min=0"`
+	VendorID        *uuid.UUID          `json:"vendor_id,omitempty"`
 }
 
 // UpdateWorkOrderRequest represents the request for updating a work order

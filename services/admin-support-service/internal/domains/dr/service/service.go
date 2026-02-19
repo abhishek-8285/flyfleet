@@ -24,6 +24,14 @@ type DrService interface {
 	ListRestoreJobs(ctx context.Context, limit, offset int) ([]*models.RestoreJob, int, error)
 
 	ListStoragePools(ctx context.Context) ([]*models.StoragePool, error)
+
+	CreateDRTest(ctx context.Context, test *models.DRTest) (*models.DRTest, error)
+	ListDRTests(ctx context.Context, limit, offset int) ([]*models.DRTest, int, error)
+	GetDRTestDetails(ctx context.Context, id uuid.UUID) (*models.DRTest, []*models.DRTestStep, []*models.DRTestLog, error)
+	AbortDRTest(ctx context.Context, id uuid.UUID) error
+	GetDRTestMetrics(ctx context.Context) (*models.DRTestMetrics, error)
+	GetDRTestSettings(ctx context.Context) (*models.DRTestSettings, error)
+	UpdateDRTestSettings(ctx context.Context, settings *models.DRTestSettings) error
 }
 
 type drService struct {
@@ -63,12 +71,12 @@ func (s *drService) processBackup(id uuid.UUID) {
 	// Simulate background work
 	ctx := context.Background()
 	time.Sleep(2 * time.Second)
-	
+
 	// Start
 	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusInProgress, "", 0)
-	
+
 	time.Sleep(5 * time.Second)
-	
+
 	// Complete
 	s3Key := fmt.Sprintf("backups/%s/%s.tar.gz", time.Now().Format("2006-01-02"), id.String())
 	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusCompleted, s3Key, 1024*1024*500) // 500MB dummy
@@ -106,7 +114,7 @@ func (s *drService) InitiateRestore(ctx context.Context, backupID uuid.UUID, tar
 	}
 
 	s.logger.Info("Restore job initiated", zap.String("id", job.ID.String()), zap.String("env", targetEnv))
-	
+
 	// Simulate
 	go s.processRestore(job.ID)
 
@@ -116,11 +124,11 @@ func (s *drService) InitiateRestore(ctx context.Context, backupID uuid.UUID, tar
 func (s *drService) processRestore(id uuid.UUID) {
 	ctx := context.Background()
 	time.Sleep(2 * time.Second)
-	
+
 	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusInProgress, "Starting restore process...")
-	
+
 	time.Sleep(5 * time.Second)
-	
+
 	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusCompleted, "Restore completed successfully.")
 }
 
@@ -177,8 +185,8 @@ func (s *drService) ListStoragePools(ctx context.Context) ([]*models.StoragePool
 				Name:           "Primary Storage",
 				Status:         models.StoragePoolStatusActive,
 				TotalBytes:     1000 * 1024 * 1024 * 1024, // 1TB
-				UsedBytes:      350 * 1024 * 1024 * 1024,   // 350GB
-				AvailableBytes: 650 * 1024 * 1024 * 1024,   // 650GB
+				UsedBytes:      350 * 1024 * 1024 * 1024,  // 350GB
+				AvailableBytes: 650 * 1024 * 1024 * 1024,  // 650GB
 				Location:       "us-east-1",
 				BackupCount:    24,
 				CreatedAt:      time.Now().Add(-90 * 24 * time.Hour),
@@ -189,8 +197,8 @@ func (s *drService) ListStoragePools(ctx context.Context) ([]*models.StoragePool
 				Name:           "DR Storage",
 				Status:         models.StoragePoolStatusActive,
 				TotalBytes:     2000 * 1024 * 1024 * 1024, // 2TB
-				UsedBytes:      800 * 1024 * 1024 * 1024,   // 800GB
-				AvailableBytes: 1200 * 1024 * 1024 * 1024,  // 1.2TB
+				UsedBytes:      800 * 1024 * 1024 * 1024,  // 800GB
+				AvailableBytes: 1200 * 1024 * 1024 * 1024, // 1.2TB
 				Location:       "us-west-2",
 				BackupCount:    48,
 				CreatedAt:      time.Now().Add(-180 * 24 * time.Hour),
@@ -202,7 +210,7 @@ func (s *drService) ListStoragePools(ctx context.Context) ([]*models.StoragePool
 				Status:         models.StoragePoolStatusWarning,
 				TotalBytes:     5000 * 1024 * 1024 * 1024, // 5TB
 				UsedBytes:      4200 * 1024 * 1024 * 1024, // 4.2TB
-				AvailableBytes: 800 * 1024 * 1024 * 1024,   // 800GB
+				AvailableBytes: 800 * 1024 * 1024 * 1024,  // 800GB
 				Location:       "eu-central-1",
 				BackupCount:    120,
 				CreatedAt:      time.Now().Add(-365 * 24 * time.Hour),
@@ -211,4 +219,166 @@ func (s *drService) ListStoragePools(ctx context.Context) ([]*models.StoragePool
 		}, nil
 	}
 	return pools, nil
+}
+
+func (s *drService) CreateDRTest(ctx context.Context, test *models.DRTest) (*models.DRTest, error) {
+	now := time.Now()
+	test.ID = uuid.New()
+	test.TestID = fmt.Sprintf("DRT-%d", now.Unix())
+	test.CreatedAt = now
+	test.UpdatedAt = now
+	test.ProgressPercent = 0
+	if test.ScheduledAt != nil && test.ScheduledAt.After(now) {
+		test.Status = "SCHEDULED"
+	} else {
+		test.Status = "RUNNING"
+		test.StartedAt = &now
+	}
+
+	if err := s.repo.CreateDRTest(ctx, test); err != nil {
+		return nil, err
+	}
+
+	steps := []string{
+		"Initialize test context",
+		"Validate backup chain",
+		"Execute failover or restore",
+		"Validate recovery criteria",
+	}
+	for idx, name := range steps {
+		step := &models.DRTestStep{
+			ID:        uuid.New(),
+			TestID:    test.ID,
+			StepOrder: idx + 1,
+			StepName:  name,
+			Status:    "PENDING",
+		}
+		if err := s.repo.CreateDRTestStep(ctx, step); err != nil {
+			return nil, err
+		}
+	}
+
+	_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+		ID:        uuid.New(),
+		TestID:    test.ID,
+		Timestamp: now,
+		Level:     "RUN",
+		Message:   "DR test created",
+	})
+
+	if test.Status == "RUNNING" {
+		go s.runDRTestSimulation(test.ID)
+	}
+	return test, nil
+}
+
+func (s *drService) runDRTestSimulation(testID uuid.UUID) {
+	ctx := context.Background()
+	steps, err := s.repo.ListDRTestSteps(ctx, testID)
+	if err != nil {
+		return
+	}
+	total := len(steps)
+	if total == 0 {
+		return
+	}
+
+	for idx, step := range steps {
+		test, err := s.repo.GetDRTest(ctx, testID)
+		if err != nil || test.Status == "ABORTED" {
+			return
+		}
+		started := time.Now()
+		_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "RUNNING", &started, nil)
+		_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+			ID:        uuid.New(),
+			TestID:    testID,
+			Timestamp: started,
+			Level:     "RUN",
+			Message:   fmt.Sprintf("Step %d started: %s", step.StepOrder, step.StepName),
+		})
+
+		time.Sleep(1200 * time.Millisecond)
+
+		completed := time.Now()
+		_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "PASSED", nil, &completed)
+		progress := int(float64(idx+1) / float64(total) * 100.0)
+		_ = s.repo.UpdateDRTestStatus(ctx, testID, "RUNNING", progress, nil)
+		_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+			ID:        uuid.New(),
+			TestID:    testID,
+			Timestamp: completed,
+			Level:     "INFO",
+			Message:   fmt.Sprintf("Step %d completed", step.StepOrder),
+		})
+	}
+
+	completed := time.Now()
+	_ = s.repo.UpdateDRTestStatus(ctx, testID, "PASSED", 100, &completed)
+	_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+		ID:        uuid.New(),
+		TestID:    testID,
+		Timestamp: completed,
+		Level:     "INFO",
+		Message:   "DR test completed successfully",
+	})
+}
+
+func (s *drService) ListDRTests(ctx context.Context, limit, offset int) ([]*models.DRTest, int, error) {
+	return s.repo.ListDRTests(ctx, limit, offset)
+}
+
+func (s *drService) GetDRTestDetails(ctx context.Context, id uuid.UUID) (*models.DRTest, []*models.DRTestStep, []*models.DRTestLog, error) {
+	test, err := s.repo.GetDRTest(ctx, id)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	steps, err := s.repo.ListDRTestSteps(ctx, id)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	logs, err := s.repo.ListDRTestLogs(ctx, id, 200)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return test, steps, logs, nil
+}
+
+func (s *drService) AbortDRTest(ctx context.Context, id uuid.UUID) error {
+	if err := s.repo.AbortDRTest(ctx, id); err != nil {
+		return err
+	}
+	if err := s.repo.MarkPendingDRTestStepsSkipped(ctx, id); err != nil {
+		return err
+	}
+	return s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+		ID:        uuid.New(),
+		TestID:    id,
+		Timestamp: time.Now(),
+		Level:     "WARN",
+		Message:   "DR test aborted by operator",
+	})
+}
+
+func (s *drService) GetDRTestMetrics(ctx context.Context) (*models.DRTestMetrics, error) {
+	return s.repo.GetDRTestMetrics(ctx)
+}
+
+func (s *drService) GetDRTestSettings(ctx context.Context) (*models.DRTestSettings, error) {
+	settings, err := s.repo.GetDRTestSettings(ctx)
+	if err == nil {
+		return settings, nil
+	}
+	return &models.DRTestSettings{
+		ScheduleEnabled:    false,
+		Frequency:          "WEEKLY",
+		ScheduleDay:        "SATURDAY",
+		ScheduleTime:       "02:00",
+		Intensity:          "NORMAL",
+		NotificationEmails: []string{},
+	}, nil
+}
+
+func (s *drService) UpdateDRTestSettings(ctx context.Context, settings *models.DRTestSettings) error {
+	return s.repo.UpsertDRTestSettings(ctx, settings)
 }

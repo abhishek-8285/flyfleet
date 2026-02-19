@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion-service
+  namespace: flyfleet
+  labels:
+    app: ingestion-service
+spec:
+  replicas: 4 # High availability for telemetry input
+  selector:
+    matchLabels:
+      app: ingestion-service
+  template:
+    metadata:
+      labels:
+        app: ingestion-service
+    spec:
+      containers:
+      - name: ingestion-service
+        image: flyfleet/ingestion-service:latest
+        ports:
+        - containerPort: 8080 # Ingestion API
+        - containerPort: 5005 # UDP Telemetry if applicable
+        envFrom:
+        - configMapRef:
+            name: flyfleet-config
+        - secretRef:
+            name: flyfleet-secrets
+        env:
+        - name: NATS_URL
+          value: nats://nats-headless.flyfleet.svc.cluster.local:4222
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "2000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingestion-service
+  namespace: flyfleet
+spec:
+  selector:
+    app: ingestion-service
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ingestion-service-hpa
+  namespace: flyfleet
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ingestion-service
+  minReplicas: 4
+  maxReplicas: 30
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ingestion-pdb
+  namespace: flyfleet
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app: ingestion-service

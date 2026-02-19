@@ -11,17 +11,25 @@ interface LocalizationSetting {
 const Localization: React.FC = () => {
     const [settings, setSettings] = useState<LocalizationSetting[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSettings();
     }, []);
 
     const fetchSettings = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/localization');
-            setSettings(response.data || []);
+            const response = await apiClient.get('/settings/localization') as any;
+            const items = Array.isArray(response)
+                ? response
+                : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+            setSettings(items);
         } catch (error) {
             console.error('Failed to fetch localization settings', error);
+            setError('Failed to load localization settings');
         } finally {
             setLoading(false);
         }
@@ -64,14 +72,6 @@ const Localization: React.FC = () => {
         }
     };
 
-    // Mock data if empty for UI demo
-    const displaySettings = settings.length > 0 ? settings : [
-        { id: '1', language_code: 'en-US', is_active: true, is_default: true },
-        { id: '2', language_code: 'es-ES', is_active: true, is_default: false },
-        { id: '3', language_code: 'fr-FR', is_active: false, is_default: false },
-        { id: '4', language_code: 'de-DE', is_active: false, is_default: false },
-    ];
-
     if (loading) return <div className="p-6 text-white">Loading...</div>;
 
     return (
@@ -95,13 +95,20 @@ const Localization: React.FC = () => {
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {error && (
+                    <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        {error}
+                    </div>
+                )}
                 <div className="max-w-5xl mx-auto grid grid-cols-1 gap-6">
                     <div className="bg-[#16202a] rounded-xl border border-[#233648] overflow-hidden">
                         <div className="p-4 border-b border-[#233648] bg-[#111a22]/50">
                             <h3 className="text-white font-semibold text-sm">Supported Languages</h3>
                         </div>
                         <div className="divide-y divide-[#233648]">
-                            {displaySettings.map((lang) => (
+                            {settings.length === 0 ? (
+                                <div className="p-6 text-sm text-[#92adc9]">No localization entries found.</div>
+                            ) : settings.map((lang) => (
                                 <div key={lang.language_code} className="p-4 flex items-center justify-between hover:bg-[#111a22]/50 transition-colors">
                                     <div className="flex items-center gap-4">
                                         <div className="w-10 h-10 rounded-full bg-[#111a22] border border-[#233648] flex items-center justify-center text-white font-bold text-xs">

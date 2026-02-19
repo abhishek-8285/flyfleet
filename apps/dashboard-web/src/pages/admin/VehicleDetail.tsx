@@ -20,14 +20,19 @@ export const VehicleDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Fetch vehicle details
-        // TODO: Implement GetVehicleByID in backend or reuse list
-        // For now, mocking or using list to filter if needed, but best is a direct fetch
         const fetchVehicle = async () => {
             try {
-                // Temporary: fetch list and find (inefficient but works for prototype until GetByID is up)
+                const direct = await apiClient.get(`/admin/vehicles?id=${id}`) as any;
+                const directVehicle = direct?.data ?? direct;
+                if (directVehicle?.id) {
+                    setVehicle(directVehicle);
+                    return;
+                }
+
+                // Fallback for older API responses.
                 const res = await apiClient.get('/admin/vehicles?page=1&size=100') as any;
-                const v = res.data?.find((v: any) => v.id === id);
+                const list = res?.data ?? [];
+                const v = list.find((item: any) => item.id === id);
                 if (v) setVehicle(v);
             } catch (error) {
                 console.error('Failed to fetch vehicle:', error);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 const CreateDRTestView: React.FC = () => {
     const navigate = useNavigate();
@@ -12,22 +13,18 @@ const CreateDRTestView: React.FC = () => {
         scheduled_at: ''
     });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
         try {
-            const res = await fetch('/api/v1/admin/dr/tests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            if (res.ok) {
-                const data = await res.json();
-                navigate(`/admin/dr/tests/${data.data.id}`);
-            }
+            const data = await apiClient.post('/admin/dr/tests', formData) as any;
+            navigate(`/admin/dr/tests/${data.data.id}`);
         } catch (error) {
             console.error('Failed to create DR test:', error);
+            setError('Failed to create DR test.');
         } finally {
             setLoading(false);
         }
@@ -130,6 +127,11 @@ const CreateDRTestView: React.FC = () => {
                                 <p className="text-red-400 font-medium">Production Environment Selected</p>
                                 <p className="text-sm text-red-300/70">This test will execute against production systems. Ensure proper approvals are in place.</p>
                             </div>
+                        </div>
+                    )}
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-300">
+                            {error}
                         </div>
                     )}
 

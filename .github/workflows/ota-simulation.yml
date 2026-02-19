@@ -1,0 +1,36 @@
+name: OTA Rollout Simulation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/firmware/**'
+      - 'firmware/releases/**'
+      - 'scripts/ota_rollout_orchestrator.py'
+      - '.github/workflows/ota-simulation.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'docs/firmware/**'
+      - 'firmware/releases/**'
+      - 'scripts/ota_rollout_orchestrator.py'
+      - '.github/workflows/ota-simulation.yml'
+      - 'Makefile'
+      - 'package.json'
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ota-simulation:
+    name: Validate OTA Rollout Orchestration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run OTA rollout simulator
+        run: python3 scripts/ota_rollout_orchestrator.py

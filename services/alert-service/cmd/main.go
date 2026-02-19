@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,13 +10,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/alert-service/internal/config"
-	"github.com/flyfleet/alert-service/internal/middleware"
 	"github.com/flyfleet/alert-service/internal/providers"
 
 	alertHandlers "github.com/flyfleet/alert-service/internal/domains/alerts/handlers"
@@ -83,15 +85,16 @@ func main() {
 	// Subscribe to NATS topics for real-time alert processing
 	subscribeToTelemetryEvents(nc, aRuleEngine, logger)
 
-	// Setup Gin router
-	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
-	r.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+	// Setup Chi router
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(60 * time.Second))
 
 	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "healthy",
 			"service":   "alert-service",
 			"timestamp": time.Now().Unix(),
@@ -99,11 +102,11 @@ func main() {
 	})
 
 	// API endpoints
-	api := r.Group("/api/v1")
-	{
-		aHandler.RegisterRoutes(api)
-		nHandler.RegisterRoutes(api)
-	}
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(sharedMiddleware.AuthMiddleware(cfg))
+		aHandler.RegisterRoutes(r)
+		nHandler.RegisterRoutes(r)
+	})
 
 	// Start server
 	srv := &http.Server{
@@ -135,13 +138,6 @@ func main() {
 	}
 
 	logger.Info("Alert service exited gracefully")
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 func subscribeToTelemetryEvents(nc *nats.Conn, ruleEngine *alertRule.RuleEngine, logger *zap.Logger) {

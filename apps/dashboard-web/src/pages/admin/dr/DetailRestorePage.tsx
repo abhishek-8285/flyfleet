@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import apiClient from '../../../services/apiClient';
 
 interface RestoreLog {
     id: string;
@@ -27,19 +28,21 @@ const DetailRestorePage: React.FC = () => {
     const [restore, setRestore] = useState<RestoreDetail | null>(null);
     const [logs, setLogs] = useState<RestoreLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchData = async () => {
         try {
-            const [restoreRes, logsRes] = await Promise.all([
-                fetch(`/api/v1/admin/dr/restores/${id}`),
-                fetch(`/api/v1/admin/dr/restores/${id}/logs`)
+            const [restoreData, logsData] = await Promise.all([
+                apiClient.get(`/admin/dr/restore-jobs/${id}`) as any,
+                apiClient.get(`/admin/dr/restore-jobs/${id}/logs`) as any
             ]);
-            const restoreData = await restoreRes.json();
-            const logsData = await logsRes.json();
-            setRestore(restoreData.data);
-            setLogs(logsData.data || []);
+            setRestore(restoreData.data || restoreData.restore || restoreData);
+            setLogs(logsData.data || logsData.logs || []);
         } catch (err) {
             console.error(err);
+            setError('Failed to load restore job.');
+            setRestore(null);
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -51,7 +54,7 @@ const DetailRestorePage: React.FC = () => {
         return () => clearInterval(interval);
     }, [id]);
 
-    const progress = restore?.progress_percent || 68; // Mock progress if not available
+    const progress = Math.max(0, Math.min(100, Number(restore?.progress_percent || 0)));
     const steps = ['Initialization', 'Data Stream', 'Verification', 'Cleanup'];
     const activeStep = Math.min(Math.floor((progress / 100) * steps.length), steps.length - 1);
 
@@ -68,6 +71,13 @@ const DetailRestorePage: React.FC = () => {
         return (
             <div className="flex items-center justify-center h-full bg-background-dark">
                 <div className="text-text-muted">Loading...</div>
+            </div>
+        );
+    }
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-full bg-background-dark">
+                <div className="text-red-400">{error}</div>
             </div>
         );
     }

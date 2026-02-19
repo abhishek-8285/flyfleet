@@ -39,6 +39,7 @@ fun VehicleListScreen(
     var showFilters by remember { mutableStateOf(false) }
     var selectedStatusFilter by remember { mutableStateOf<String?>(null) }
     var selectedTypeFilter by remember { mutableStateOf<String?>(null) }
+    var showAssignedOnly by remember { mutableStateOf(false) }
     
     // Auto-refresh periodically
     LaunchedEffect(Unit) {
@@ -68,7 +69,14 @@ fun VehicleListScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* TODO: Add vehicle */ },
+                onClick = {
+                    val suggestedVehicle = vehicles.firstOrNull { !viewModel.isVehicleAssignedToMe(it.id) }
+                    if (suggestedVehicle != null) {
+                        onVehicleSelected(suggestedVehicle.id)
+                    } else {
+                        viewModel.refresh()
+                    }
+                },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
@@ -156,7 +164,7 @@ fun VehicleListScreen(
                         
                         if (myVehicles.size > 3) {
                             TextButton(
-                                onClick = { /* TODO: Show all my vehicles */ },
+                                onClick = { showAssignedOnly = true },
                                 modifier = Modifier.align(Alignment.End)
                             ) {
                                 Text("View All (${myVehicles.size})")
@@ -184,6 +192,30 @@ fun VehicleListScreen(
             }
             
             // Vehicle List
+            val displayedVehicles = if (showAssignedOnly) {
+                vehicles.filter { v -> viewModel.isVehicleAssignedToMe(v.id) }
+            } else {
+                vehicles
+            }
+
+            if (showAssignedOnly) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Showing assigned vehicles only",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(onClick = { showAssignedOnly = false }) {
+                        Text("Show all fleet")
+                    }
+                }
+            }
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -191,7 +223,7 @@ fun VehicleListScreen(
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (vehicles.isEmpty()) {
+            } else if (displayedVehicles.isEmpty()) {
                 EmptyState(
                     onRetry = { viewModel.refresh() }
                 )
@@ -201,7 +233,7 @@ fun VehicleListScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(vehicles) { vehicle ->
+                    items(displayedVehicles) { vehicle ->
                         VehicleListItem(
                             vehicle = vehicle,
                             isAssignedToMe = viewModel.isVehicleAssignedToMe(vehicle.id),

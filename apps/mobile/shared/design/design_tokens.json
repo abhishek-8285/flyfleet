@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "source": "packages/common/design/design_tokens.json",
+  "platform": "mobile",
+  "tokens": {
+    "color": {
+      "primary": "#0f7ecf",
+      "success": "#0f9d58",
+      "warning": "#f59e0b",
+      "danger": "#dc2626",
+      "background_light": "#f4f7fb",
+      "background_dark": "#0f1722",
+      "surface_light": "#ffffff",
+      "surface_dark": "#111a22",
+      "text_primary": "#0f172a",
+      "text_inverse": "#f8fafc"
+    },
+    "spacing": {
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24
+    },
+    "radius": {
+      "sm": 6,
+      "md": 10,
+      "lg": 14
+    }
+  }
+}

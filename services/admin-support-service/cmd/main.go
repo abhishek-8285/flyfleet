@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -33,8 +35,17 @@ import (
 	orgRepo "github.com/flyfleet/admin-support-service/internal/domains/organizations/repository"
 	orgService "github.com/flyfleet/admin-support-service/internal/domains/organizations/service"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
+	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
 )
+
+// envSecretProvider implements sharedMiddleware.SecretProvider
+type envSecretProvider struct {
+	secret string
+}
+
+func (p *envSecretProvider) GetJWTSecret() string {
+	return p.secret
+}
 
 func main() {
 	// Initialize logger
@@ -76,17 +87,22 @@ func main() {
 	oService := orgService.NewOrganizationService(oRepo, logger)
 	oHandler := orgHandlers.NewOrganizationHandlers(oService, logger)
 
-	// Setup Gin router
-	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	// Setup Chi router
+	r := chi.NewRouter()
+	
+	// Middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(sharedMiddleware.RequestIDMiddleware())
+	r.Use(sharedMiddleware.LoggingMiddleware(logger))
 	
 	// Enable Auth Middleware
-	r.Use(middleware.AuthMiddleware(&envSecretProvider{secret: cfg.JWTSecret}))
+	r.Use(sharedMiddleware.AuthMiddleware(&envSecretProvider{secret: cfg.JWTSecret}))
 
 	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "healthy",
 			"service":   "admin-support-service",
 			"timestamp": time.Now().Unix(),
@@ -94,17 +110,13 @@ func main() {
 	})
 
 	// API endpoints
-	api := r.Group("/api/v1")
-	{
-		sHandler.RegisterRoutes(api)
-		setHandler.RegisterRoutes(api)
-		gHandler.RegisterRoutes(api)
-
-		dHandler.RegisterRoutes(api)
-
-		// Organization routes
-		oHandler.RegisterRoutes(api)
-	}
+	r.Route("/api/v1", func(r chi.Router) {
+		sHandler.RegisterRoutes(r)
+		setHandler.RegisterRoutes(r)
+		gHandler.RegisterRoutes(r)
+		dHandler.RegisterRoutes(r)
+		oHandler.RegisterRoutes(r)
+	})
 
 	// Start server
 	srv := &http.Server{

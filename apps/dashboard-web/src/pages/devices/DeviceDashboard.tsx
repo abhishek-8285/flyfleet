@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface DeviceSummary {
@@ -22,18 +22,22 @@ interface Device {
   last_heartbeat?: string;
 }
 
+interface DeviceTwin {
+  device_id: string;
+  drift_status: 'in_sync' | 'drifted' | 'unknown';
+  drift_reason?: string;
+  last_seen?: string;
+}
+
 const DeviceDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [summary, setSummary] = useState<DeviceSummary | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [twinsByDevice, setTwinsByDevice] = useState<Record<string, DeviceTwin>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [filter]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
@@ -46,15 +50,28 @@ const DeviceDashboard: React.FC = () => {
         fetch('/api/devices/summary', { headers }),
         fetch(`/api/devices/status?status=${filter === 'all' ? '' : filter}`, { headers })
       ]);
+      const twinsRes = await fetch('/api/devices/twins?limit=200', { headers });
 
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (devicesRes.ok) setDevices(await devicesRes.json() || []);
+      if (twinsRes.ok) {
+        const twins = await twinsRes.json() || [];
+        const map: Record<string, DeviceTwin> = {};
+        (Array.isArray(twins) ? twins : []).forEach((t: DeviceTwin) => {
+          map[t.device_id] = t;
+        });
+        setTwinsByDevice(map);
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    void fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -117,6 +134,12 @@ const DeviceDashboard: React.FC = () => {
           icon="❤️"
           onClick={() => navigate('/admin/devices/diagnostics')}
         />
+        <ActionCard
+          title="Device Twins"
+          description="Desired vs reported state"
+          icon="🧬"
+          onClick={() => navigate('/admin/devices/twins')}
+        />
       </div>
 
       {/* Filter Tabs */}
@@ -145,6 +168,7 @@ const DeviceDashboard: React.FC = () => {
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Device</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Type</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Twin</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Firmware</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Battery</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-slate-400 uppercase tracking-wider">Signal</th>
@@ -155,13 +179,13 @@ const DeviceDashboard: React.FC = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                  <td colSpan={9} className="text-center py-12 text-slate-400">
                     Loading devices...
                   </td>
                 </tr>
               ) : devices.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                  <td colSpan={9} className="text-center py-12 text-slate-400">
                     No devices found
                   </td>
                 </tr>
@@ -177,6 +201,17 @@ const DeviceDashboard: React.FC = () => {
                     <td className="py-4 px-6">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(device.status)}`}>
                         {device.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                        twinsByDevice[device.id]?.drift_status === 'in_sync'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : twinsByDevice[device.id]?.drift_status === 'drifted'
+                          ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                          : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                      }`}>
+                        {(twinsByDevice[device.id]?.drift_status || 'unknown').replace('_', ' ')}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-slate-300">{device.firmware_version || '-'}</td>

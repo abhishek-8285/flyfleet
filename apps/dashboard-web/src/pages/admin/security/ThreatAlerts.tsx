@@ -16,6 +16,8 @@ import api from '../../../services/api';
 const ThreatAlerts: React.FC = () => {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAlerts();
@@ -23,14 +25,14 @@ const ThreatAlerts: React.FC = () => {
 
   const fetchAlerts = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await api.getThreatAlerts({ size: 50 });
-      // Mocking for high-fidelity demonstration
-      setAlerts([
-        { id: '1', type: 'BRUTE_FORCE', severity: 'critical', ip: '192.168.1.105', description: '25 failed attempts in 5 minutes for user admin@flyfleet.com', status: 'open', created_at: new Date().toISOString() },
-        { id: '2', type: 'GEO_ANOMALY', severity: 'warning', ip: '45.78.12.99', description: 'Login from Moscow, Russia (Expected: Mumbai, India)', status: 'acknowledged', created_at: new Date(Date.now() - 3600000).toISOString() },
-        { id: '3', type: 'IP_REPUTATION', severity: 'info', ip: '103.44.1.2', description: 'Connection from known Tor Exit Node', status: 'open', created_at: new Date(Date.now() - 7200000).toISOString() },
-      ]);
+      const data = (response as any)?.data ?? response;
+      const items = data?.items || data?.alerts || data?.data || data || [];
+      setAlerts(Array.isArray(items) ? items : []);
     } catch (error) {
+       setError('Failed to load threat alerts.');
        setAlerts([]);
     } finally {
       setLoading(false);
@@ -50,6 +52,20 @@ const ThreatAlerts: React.FC = () => {
       case 'BRUTE_FORCE': return <ShieldExclamationIcon className="w-6 h-6" />;
       case 'GEO_ANOMALY': return <GlobeAltIcon className="w-6 h-6" />;
       default: return <InformationCircleIcon className="w-6 h-6" />;
+    }
+  };
+
+  const handleUpdateStatus = async (alertId: string, status: 'acknowledged' | 'blocked') => {
+    try {
+      setUpdatingId(alertId);
+      await api.updateThreatAlertStatus(alertId, status);
+      setAlerts((prev) =>
+        prev.map((a) => (a.id === alertId ? { ...a, status } : a))
+      );
+    } catch (err) {
+      alert('Failed to update alert status');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -91,9 +107,9 @@ const ThreatAlerts: React.FC = () => {
            {/* Summary Cards */}
            <div className="grid grid-cols-3 gap-6">
               {[
-                { title: 'Critical Threats', value: '1', color: 'text-red-500', trend: '+1 sudden' },
-                { title: 'Avg Response Time', value: '4.2m', color: 'text-blue-400', trend: '-12% optimized' },
-                { title: 'Auto-Blocked Today', value: '124', color: 'text-emerald-400', trend: 'Global Shield Active' },
+                { title: 'Critical Threats', value: alerts.filter(a => a.severity === 'critical').length.toString(), color: 'text-red-500', trend: 'Live signal' },
+                { title: 'Open Alerts', value: alerts.filter(a => (a.status || 'open') === 'open').length.toString(), color: 'text-blue-400', trend: 'Awaiting action' },
+                { title: 'Blocked Today', value: alerts.filter(a => a.status === 'blocked').length.toString(), color: 'text-emerald-400', trend: 'Auto shield active' },
               ].map((c, i) => (
                 <div key={i} className="glass-card p-6 rounded-2xl relative overflow-hidden group">
                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -110,7 +126,13 @@ const ThreatAlerts: React.FC = () => {
            <div className="flex flex-col gap-4">
               <h3 className="text-lg font-bold text-white px-2">Live Detection Feed</h3>
               
-              {alerts.map((alert) => (
+              {loading ? (
+                <div className="glass-card rounded-2xl p-6 text-slate-500">Loading alerts...</div>
+              ) : error ? (
+                <div className="glass-card rounded-2xl p-6 text-red-400">{error}</div>
+              ) : alerts.length === 0 ? (
+                <div className="glass-card rounded-2xl p-6 text-slate-500">No threat alerts found.</div>
+              ) : alerts.map((alert) => (
                 <div key={alert.id} className={`glass-card-hover glass-card rounded-2xl p-6 border-l-4 ${getSeverityStyles(alert.severity)}`}>
                    <div className="flex items-start justify-between">
                       <div className="flex gap-4">
@@ -119,28 +141,36 @@ const ThreatAlerts: React.FC = () => {
                          </div>
                          <div>
                             <div className="flex items-center gap-3">
-                               <h4 className="text-lg font-bold text-white">{alert.type.replace('_', ' ')}</h4>
+                               <h4 className="text-lg font-bold text-white">{(alert.type || 'UNKNOWN').replace('_', ' ')}</h4>
                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getSeverityStyles(alert.severity)}`}>
                                  {alert.severity}
                                </span>
                             </div>
-                            <p className="text-slate-300 mt-1 max-w-2xl">{alert.description}</p>
+                            <p className="text-slate-300 mt-1 max-w-2xl">{alert.description || alert.message || 'No details provided.'}</p>
                             <div className="flex items-center gap-4 mt-4 text-xs text-slate-500 font-medium uppercase tracking-tighter">
-                               <span className="flex items-center gap-1.5"><GlobeAltIcon className="w-4 h-4" /> {alert.ip}</span>
-                               <span className="flex items-center gap-1.5"><ArrowPathIcon className="w-4 h-4" /> {format(new Date(alert.created_at), 'HH:mm:ss')} (just detected)</span>
+                               <span className="flex items-center gap-1.5"><GlobeAltIcon className="w-4 h-4" /> {alert.ip || alert.ip_address || '—'}</span>
+                               <span className="flex items-center gap-1.5"><ArrowPathIcon className="w-4 h-4" /> {format(new Date(alert.created_at || alert.created_at_ms || Date.now()), 'HH:mm:ss')}</span>
                                <span className="flex items-center gap-1.5"><EyeIcon className="w-4 h-4" /> Observed: 124 instances</span>
                             </div>
                          </div>
                       </div>
 
                       <div className="flex flex-col gap-2 min-w-[140px]">
-                         <button className="flex items-center justify-center gap-2 px-4 py-2 bg-vibrant-red hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-red-900/20">
+                         <button
+                            onClick={() => handleUpdateStatus(alert.id, 'blocked')}
+                            disabled={updatingId === alert.id}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-vibrant-red hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-red-900/20 disabled:opacity-60"
+                         >
                             <NoSymbolIcon className="w-4 h-4" />
-                            BLOCK IP
+                            {updatingId === alert.id ? 'BLOCKING...' : 'BLOCK IP'}
                          </button>
-                         <button className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all border border-white/5">
+                         <button
+                            onClick={() => handleUpdateStatus(alert.id, 'acknowledged')}
+                            disabled={updatingId === alert.id}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all border border-white/5 disabled:opacity-60"
+                         >
                             <CheckCircleIcon className="w-4 h-4" />
-                            ACKNOWLEDGE
+                            {updatingId === alert.id ? 'UPDATING...' : 'ACKNOWLEDGE'}
                          </button>
                       </div>
                    </div>

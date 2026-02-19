@@ -217,7 +217,7 @@ const OrganizationHub: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="relative flex-1 bg-[#0b1219] w-full h-full overflow-hidden">
-                                     {/* Mock Map Background */}
+                                     {/* Grid background for fleet distribution canvas */}
                                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#233648 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                                     
                                     {/* Simulation points */}

@@ -1,0 +1,386 @@
+openapi: 3.0.3
+info:
+  title: Settings Service API
+  version: 1.0.0
+  description: API for managing platform settings, feature flags, localization, templates, and system limits
+servers:
+  - url: http://localhost:8083
+    description: Local development server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "OK"
+
+  /settings/platform:
+    get:
+      summary: Get platform settings
+      operationId: getPlatformSettings
+      responses:
+        '200':
+          description: Platform settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformSettings'
+    put:
+      summary: Update platform settings
+      operationId: updatePlatformSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformSettings'
+      responses:
+        '200':
+          description: Platform settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformSettings'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+  /settings/flags:
+    get:
+      summary: List feature flags
+      operationId: listFeatureFlags
+      responses:
+        '200':
+          description: Feature flags retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeatureFlag'
+    post:
+      summary: Create feature flag
+      operationId: createFeatureFlag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeatureFlag'
+      responses:
+        '201':
+          description: Feature flag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureFlag'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+  /settings/flags/{id}/toggle:
+    patch:
+      summary: Toggle feature flag
+      operationId: toggleFeatureFlag
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Feature flag toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "toggled"
+        '400':
+          description: Invalid ID
+        '500':
+          description: Internal server error
+
+  /settings/localization:
+    get:
+      summary: Get localization settings
+      operationId: getLocalizationSettings
+      responses:
+        '200':
+          description: Localization settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalizationSettings'
+    put:
+      summary: Update localization settings
+      operationId: updateLocalizationSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocalizationSettings'
+      responses:
+        '200':
+          description: Localization settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalizationSettings'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+  /settings/templates:
+    get:
+      summary: List templates
+      operationId: listTemplates
+      responses:
+        '200':
+          description: Templates retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+
+  /settings/templates/{id}:
+    put:
+      summary: Update template
+      operationId: updateTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Template'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          description: Invalid ID or payload
+        '500':
+          description: Internal server error
+
+  /settings/channels:
+    get:
+      summary: List notification channels
+      operationId: listNotificationChannels
+      responses:
+        '200':
+          description: Notification channels retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationChannel'
+    put:
+      summary: Update notification channel
+      operationId: updateNotificationChannel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationChannel'
+      responses:
+        '200':
+          description: Notification channel updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationChannel'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+  /settings/limits:
+    get:
+      summary: Get system limits
+      operationId: getSystemLimits
+      responses:
+        '200':
+          description: System limits retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemLimit'
+    put:
+      summary: Update system limits
+      operationId: updateSystemLimits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemLimit'
+      responses:
+        '200':
+          description: System limits updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemLimit'
+        '400':
+          description: Invalid request payload
+        '500':
+          description: Internal server error
+
+components:
+  schemas:
+    PlatformSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        system_name:
+          type: string
+        support_email:
+          type: string
+        default_timezone:
+          type: string
+        default_currency:
+          type: string
+        default_language:
+          type: string
+        white_label_enabled:
+          type: boolean
+        smtp_config_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FeatureFlag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        description:
+          type: string
+        scope:
+          type: string
+          enum: [GLOBAL, ORG]
+        enabled:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        created_by:
+          type: string
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+
+    LocalizationSettings:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        language_code:
+          type: string
+        is_active:
+          type: boolean
+        is_default:
+          type: boolean
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        template_key:
+          type: string
+        channel:
+          type: string
+          enum: [EMAIL, SMS]
+        subject:
+          type: string
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        updated_by:
+          type: string
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+
+    NotificationChannel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        channel_type:
+          type: string
+          enum: [EMAIL, SMS]
+        provider:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+        enabled:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+
+    SystemLimit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        api_rate_limit:
+          type: integer
+        burst_limit:
+          type: integer
+        audit_retention:
+          type: string
+        activity_retention:
+          type: string

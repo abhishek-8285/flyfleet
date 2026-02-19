@@ -1,0 +1,23 @@
+{
+  "retry": {
+    "base_delay_seconds": 2,
+    "max_delay_seconds": 600,
+    "max_retries": 8,
+    "jitter_ratio": 0.2
+  },
+  "conflict": {
+    "default_strategy": "server_wins_rebase",
+    "entity_overrides": {
+      "trip": "server_authority",
+      "note": "append_merge",
+      "work_order": "field_level_merge"
+    }
+  },
+  "security": {
+    "pause_on_auth_failure": true,
+    "require_secure_storage": true
+  },
+  "ux": {
+    "states": ["up_to_date", "syncing", "action_required"]
+  }
+}

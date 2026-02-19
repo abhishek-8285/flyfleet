@@ -1,10 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"runtime"
+	"time"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -42,7 +43,7 @@ func NewHealthHandler(logger *zap.Logger, service, version string) *HealthHandle
 }
 
 // HealthCheck handles GET /health requests
-func (h *HealthHandler) HealthCheck(c *gin.Context) {
+func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	stats := h.getSystemStats()
 	
 	response := HealthCheckResponse{
@@ -54,7 +55,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 			CPUThreads: stats.CPUThreads,
 			MemoryMB:   stats.MemoryMB,
 		},
-		Timestamp: c.GetHeader("Date"),
+		Timestamp: time.Now().Format(time.RFC3339),
 	}
 	
 	h.logger.Info("Health check",
@@ -63,14 +64,13 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		zap.Int("goroutines", stats.Goroutines),
 	)
 	
-	c.JSON(http.StatusOK, response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // ReadyCheck handles GET /ready requests for readiness probes
-func (h *HealthHandler) ReadyCheck(c *gin.Context) {
-	// Check if service is ready to serve requests
-	// Add your readiness logic here (database connections, external services, etc.)
-	
+func (h *HealthHandler) ReadyCheck(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"status":  "ready",
 		"service": h.service,
@@ -79,12 +79,13 @@ func (h *HealthHandler) ReadyCheck(c *gin.Context) {
 	
 	h.logger.Info("Readiness check passed", zap.String("service", h.service))
 	
-	c.JSON(http.StatusOK, response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // LiveCheck handles GET /live requests for liveness probes
-func (h *HealthHandler) LiveCheck(c *gin.Context) {
-	// Basic liveness check - service is running
+func (h *HealthHandler) LiveCheck(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"status":  "alive",
 		"service": h.service,
@@ -93,7 +94,9 @@ func (h *HealthHandler) LiveCheck(c *gin.Context) {
 	
 	h.logger.Debug("Liveness check passed", zap.String("service", h.service))
 	
-	c.JSON(http.StatusOK, response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *HealthHandler) getSystemStats() SystemStats {

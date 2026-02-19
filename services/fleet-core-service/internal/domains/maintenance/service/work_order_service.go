@@ -18,6 +18,8 @@ type WorkOrderService struct {
 	partsRepo     *repository.WorkOrderPartsRepository
 	inventoryRepo *repository.InventoryRepository
 	settingsRepo  *repository.SettingsRepository
+	vendorRepo    *repository.VendorRepository
+	inspectionRepo *repository.InspectionRepository
 	logger        *zap.Logger
 }
 
@@ -27,14 +29,18 @@ func NewWorkOrderService(
 	partsRepo *repository.WorkOrderPartsRepository,
 	inventoryRepo *repository.InventoryRepository,
 	settingsRepo *repository.SettingsRepository,
+	vendorRepo *repository.VendorRepository,
+	inspectionRepo *repository.InspectionRepository,
 	logger *zap.Logger,
 ) *WorkOrderService {
 	return &WorkOrderService{
-		workOrderRepo: workOrderRepo,
-		partsRepo:     partsRepo,
-		inventoryRepo: inventoryRepo,
-		settingsRepo:  settingsRepo,
-		logger:        logger,
+		workOrderRepo:  workOrderRepo,
+		partsRepo:      partsRepo,
+		inventoryRepo:  inventoryRepo,
+		settingsRepo:   settingsRepo,
+		vendorRepo:     vendorRepo,
+		inspectionRepo: inspectionRepo,
+		logger:         logger,
 	}
 }
 
@@ -51,7 +57,15 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 		AssignedTo:      req.AssignedTo,
 		ScheduledDate:   req.ScheduledDate,
 		EstimatedCost:   req.EstimatedCost,
+		VendorID:        req.VendorID,
 		CreatedBy:       userID,
+		ApprovalStatus:  models.ApprovalStatusNotRequired,
+	}
+
+	// Determine if approval is needed
+	settings, _ := s.settingsRepo.GetOrDefault(ctx, orgID)
+	if settings != nil && wo.EstimatedCost >= settings.ApprovalThreshold && settings.ApprovalThreshold > 0 {
+		wo.ApprovalStatus = models.ApprovalStatusPendingManager
 	}
 
 	if err := s.workOrderRepo.Create(ctx, wo); err != nil {
@@ -195,6 +209,58 @@ func (s *WorkOrderService) ChangeStatus(ctx context.Context, id uuid.UUID, statu
 	}
 
 	return s.workOrderRepo.UpdateStatus(ctx, id, status)
+}
+
+// ApproveWorkOrder handles the approval workflow
+func (s *WorkOrderService) ApproveWorkOrder(ctx context.Context, id uuid.UUID, userID uuid.UUID, role string) error {
+	wo, err := s.workOrderRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get work order: %w", err)
+	}
+	if wo == nil {
+		return errors.New("work order not found")
+	}
+
+	switch wo.ApprovalStatus {
+	case models.ApprovalStatusPendingManager:
+		if role != "manager" && role != "admin" {
+			return errors.New("unauthorized: manager role required")
+		}
+		wo.ApprovalStatus = models.ApprovalStatusPendingFleetHead
+	case models.ApprovalStatusPendingFleetHead:
+		if role != "fleet_head" && role != "admin" {
+			return errors.New("unauthorized: fleet head role required")
+		}
+		wo.ApprovalStatus = models.ApprovalStatusPendingFinance
+	case models.ApprovalStatusPendingFinance:
+		if role != "finance" && role != "admin" {
+			return errors.New("unauthorized: finance role required")
+		}
+		wo.ApprovalStatus = models.ApprovalStatusApproved
+	default:
+		return fmt.Errorf("work order is not in a pending approval state: %s", wo.ApprovalStatus)
+	}
+
+	return s.workOrderRepo.UpdateApprovalStatus(ctx, id, wo.ApprovalStatus)
+}
+
+// RejectWorkOrder rejects a work order
+func (s *WorkOrderService) RejectWorkOrder(ctx context.Context, id uuid.UUID, userID uuid.UUID, reason string) error {
+	wo, err := s.workOrderRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get work order: %w", err)
+	}
+	if wo == nil {
+		return errors.New("work order not found")
+	}
+
+	if wo.ApprovalStatus == models.ApprovalStatusApproved || wo.ApprovalStatus == models.ApprovalStatusNotRequired {
+		return errors.New("cannot reject an already approved work order")
+	}
+
+	wo.ApprovalStatus = models.ApprovalStatusRejected
+	// We might want to add a rejection note to description or metadata
+	return s.workOrderRepo.UpdateApprovalStatus(ctx, id, wo.ApprovalStatus)
 }
 
 // CloseWorkOrder closes a work order

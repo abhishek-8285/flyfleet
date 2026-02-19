@@ -2,17 +2,21 @@ package models
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Organization struct {
-	ID          string    `json:"id" db:"id"`
-	Name        string    `json:"name" db:"name"`
-	Domain      string    `json:"domain" db:"domain"`
-	Status      string    `json:"status" db:"status"`
-	Plan        string    `json:"plan" db:"plan"`
-	RenewalDate time.Time `json:"renewalDate" db:"renewal_date"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	ID             string    `json:"id" db:"id"`
+	Name           string    `json:"name" db:"name"`
+	Domain         string    `json:"domain" db:"domain"`
+	Status         string    `json:"status" db:"status"`
+	Plan           string    `json:"plan" db:"plan"`
+	ContactEmail   string    `json:"contactEmail" db:"contact_email"`
+	DefaultTheme   string    `json:"defaultTheme" db:"default_theme"`
+	RenewalDate    time.Time `json:"renewalDate" db:"renewal_date"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
 }
 
 type OrganizationStats struct {
@@ -34,4 +38,20 @@ type DashboardStats struct {
 	TotalDistanceToday float64 `json:"total_distance_today"`
 	FuelConsumedToday  float64 `json:"fuel_consumed_today"`
 	AlertsCount        int     `json:"alerts_count"`
+}
+
+type CreateOrganizationRequest struct {
+	Name            string `json:"name" binding:"required"`
+	Domain          string `json:"domain"`
+	DefaultTheme    string `json:"default_theme"`
+	ContactEmail    string `json:"contact_email"`
+	SubscriptionTier string `json:"subscription_tier"`
+}
+
+type CreateOrganizationResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Domain    string    `json:"domain"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }

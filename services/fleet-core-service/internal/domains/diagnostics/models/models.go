@@ -29,13 +29,13 @@ type Device struct {
 
 // DeviceSummary for dashboard stats
 type DeviceSummary struct {
-	TotalDevices     int `json:"total_devices"`
-	OnlineDevices    int `json:"online_devices"`
-	OfflineDevices   int `json:"offline_devices"`
-	LowBattery       int `json:"low_battery"`
-	WeakSignal       int `json:"weak_signal"`
-	SystemErrors     int `json:"system_errors"`
-	NewDevicesWeek   int `json:"new_devices_week"`
+	TotalDevices   int `json:"total_devices"`
+	OnlineDevices  int `json:"online_devices"`
+	OfflineDevices int `json:"offline_devices"`
+	LowBattery     int `json:"low_battery"`
+	WeakSignal     int `json:"weak_signal"`
+	SystemErrors   int `json:"system_errors"`
+	NewDevicesWeek int `json:"new_devices_week"`
 }
 
 // DeviceTelemetry represents raw packet data
@@ -64,6 +64,21 @@ type DeviceCommand struct {
 	SentAt       *time.Time             `json:"sent_at,omitempty"`
 	ExecutedAt   *time.Time             `json:"executed_at,omitempty"`
 	CreatedAt    time.Time              `json:"created_at"`
+}
+
+// DeviceTwin represents desired vs reported state for reliability tracking.
+type DeviceTwin struct {
+	DeviceID          uuid.UUID              `json:"device_id"`
+	OrgID             uuid.UUID              `json:"org_id"`
+	DesiredState      map[string]interface{} `json:"desired_state,omitempty"`
+	ReportedState     map[string]interface{} `json:"reported_state,omitempty"`
+	LastSeen          *time.Time             `json:"last_seen,omitempty"`
+	DriftStatus       string                 `json:"drift_status"`
+	DriftReason       *string                `json:"drift_reason,omitempty"`
+	LastCommandID     *uuid.UUID             `json:"last_command_id,omitempty"`
+	LastCommandStatus *string                `json:"last_command_status,omitempty"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 // FirmwarePackage represents a firmware version
@@ -100,6 +115,20 @@ type FirmwareRollout struct {
 	StartedAt        *time.Time             `json:"started_at,omitempty"`
 	CompletedAt      *time.Time             `json:"completed_at,omitempty"`
 	CreatedAt        time.Time              `json:"created_at"`
+}
+
+// FirmwareRolloutEvent captures immutable rollout lifecycle/audit events.
+type FirmwareRolloutEvent struct {
+	ID          uuid.UUID              `json:"id"`
+	RolloutID   uuid.UUID              `json:"rollout_id"`
+	OrgID       uuid.UUID              `json:"org_id"`
+	EventType   string                 `json:"event_type"`
+	FromStatus  *string                `json:"from_status,omitempty"`
+	ToStatus    *string                `json:"to_status,omitempty"`
+	ActorUserID *uuid.UUID             `json:"actor_user_id,omitempty"`
+	Message     string                 `json:"message"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
 // DiagnosticsLog represents a device log entry

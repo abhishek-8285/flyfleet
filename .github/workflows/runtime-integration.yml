@@ -1,0 +1,24 @@
+name: Runtime Integration Gate
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  runtime-integration:
+    name: Full Runtime Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run runtime integration gate
+        env:
+          JWT_SECRET: ci-runtime-secret
+        run: bash scripts/runtime_integration_gate.sh

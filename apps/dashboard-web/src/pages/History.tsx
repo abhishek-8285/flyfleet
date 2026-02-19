@@ -13,6 +13,18 @@ const History: React.FC = () => {
         dispatch(fetchTrips({}) as any);
     }, [dispatch]);
 
+    const formatDuration = (trip: Trip) => {
+        if (!trip.end_time) return '-';
+        const start = new Date(trip.start_time).getTime();
+        const end = new Date(trip.end_time).getTime();
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return '-';
+        const totalMinutes = Math.floor((end - start) / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        return `${minutes}m`;
+    };
+
     return (
         <div className="flex-1 flex flex-col overflow-hidden bg-background-dark h-full">
             {/* Control Bar */}
@@ -99,7 +111,7 @@ const History: React.FC = () => {
                                                     <span>{trip.driver_id.slice(0, 8)}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">4h 20m</td> {/* Mocked as db doesn't have duration yet */}
+                                            <td className="px-6 py-4">{formatDuration(trip)}</td>
                                             <td className="px-6 py-4 font-mono">{trip.distance_km ? `${trip.distance_km.toFixed(1)} km` : '-'}</td>
                                             <td className="px-6 py-4 text-right">
                                                 <button className="text-primary text-xs font-semibold hover:text-white transition-colors flex items-center gap-1 justify-end ml-auto group-hover:underline">

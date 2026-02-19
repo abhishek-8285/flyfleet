@@ -15,7 +15,7 @@ interface Backup {
     name: string;
     size_bytes: number;
     created_at: string;
-    status: 'completed' | 'failed' | 'in_progress';
+    status: 'completed' | 'failed' | 'in_progress' | 'COMPLETED' | 'FAILED' | 'IN_PROGRESS';
     type: 'full' | 'incremental';
 }
 
@@ -32,6 +32,7 @@ const DisasterRecovery: React.FC = () => {
     const [restoreJobs, setRestoreJobs] = useState<RestoreJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [creatingBackup, setCreatingBackup] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -41,14 +42,23 @@ const DisasterRecovery: React.FC = () => {
 
     const fetchData = async () => {
         try {
+            setLoading(true);
+            setError(null);
             const [backupsRes, jobsRes] = await Promise.all([
                 api.getBackups(),
                 api.getRestoreJobs()
             ]);
-            setBackups(backupsRes.backups || []);
-            setRestoreJobs(jobsRes.jobs || []);
+            const backupsData = (backupsRes as any)?.data ?? backupsRes;
+            const jobsData = (jobsRes as any)?.data ?? jobsRes;
+            const backupItems = backupsData?.backups || backupsData?.items || backupsData?.data || backupsData || [];
+            const jobItems = jobsData?.jobs || jobsData?.items || jobsData?.data || jobsData || [];
+            setBackups(Array.isArray(backupItems) ? backupItems : []);
+            setRestoreJobs(Array.isArray(jobItems) ? jobItems : []);
         } catch (error) {
             console.error("Failed to fetch DR data", error);
+            setError('Failed to load DR data.');
+            setBackups([]);
+            setRestoreJobs([]);
         } finally {
             setLoading(false);
         }
@@ -57,7 +67,7 @@ const DisasterRecovery: React.FC = () => {
     const handleCreateBackup = async () => {
         setCreatingBackup(true);
         try {
-            await api.initiateBackup({} as any);
+            await api.initiateBackup('FULL');
             fetchData(); // Refresh list
         } catch (error) {
             console.error("Failed to initiate backup", error);
@@ -142,7 +152,15 @@ const DisasterRecovery: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-color">
-                            {backups.map((backup) => (
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-text-muted">Loading backups...</td>
+                                </tr>
+                            ) : error ? (
+                                <tr>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-red-400">{error}</td>
+                                </tr>
+                            ) : backups.map((backup) => (
                                 <tr key={backup.id} className="hover:bg-surface-darker/50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
@@ -162,7 +180,7 @@ const DisasterRecovery: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        {backup.status === 'completed' ? (
+                                        {backup.status === 'completed' || backup.status === 'COMPLETED' ? (
                                             <span className="flex items-center gap-1 text-emerald-500 text-xs font-bold uppercase">
                                                 <CheckCircleIcon className="w-4 h-4" /> Completed
                                             </span>
@@ -183,7 +201,7 @@ const DisasterRecovery: React.FC = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {backups.length === 0 && !loading && (
+                            {backups.length === 0 && !loading && !error && (
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center text-text-muted">
                                         <ArchiveBoxIcon className="w-12 h-12 mx-auto mb-3 opacity-20" />

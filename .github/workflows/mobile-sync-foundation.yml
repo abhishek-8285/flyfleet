@@ -1,0 +1,38 @@
+name: Mobile Sync Foundation
+
+on:
+  pull_request:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/mobile/shared/sync/**'
+      - 'docs/architecture/mobile-sync.md'
+      - 'scripts/mobile_sync_simulator.py'
+      - 'scripts/check_mobile_sync_foundation.py'
+      - '.github/workflows/mobile-sync-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+  push:
+    branches: [master, main, develop]
+    paths:
+      - 'apps/mobile/shared/sync/**'
+      - 'docs/architecture/mobile-sync.md'
+      - 'scripts/mobile_sync_simulator.py'
+      - 'scripts/check_mobile_sync_foundation.py'
+      - '.github/workflows/mobile-sync-foundation.yml'
+      - 'Makefile'
+      - 'package.json'
+
+jobs:
+  mobile-sync-foundation:
+    name: Validate Mobile Sync Foundation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate mobile sync artifacts
+        run: python3 scripts/check_mobile_sync_foundation.py
+
+      - name: Run mobile sync simulator
+        run: python3 scripts/mobile_sync_simulator.py

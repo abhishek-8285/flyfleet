@@ -18,10 +18,12 @@ type APIResponse struct {
 }
 
 type Meta struct {
-	Page      int `json:"page"`
-	Size      int `json:"size"`
-	Total     int `json:"total"`
-	TotalPage int `json:"total_page"`
+	Page       int  `json:"page"`
+	Limit      int  `json:"limit"`
+	Total      int  `json:"total"`
+	TotalPages int  `json:"total_pages"`
+	HasNext    bool `json:"has_next"`
+	HasPrev    bool `json:"has_prev"`
 }
 
 type APIError struct {
@@ -137,19 +139,24 @@ func writeError(w http.ResponseWriter, status int, code, message, traceID string
 }
 
 // Helper to write standardized JSON success response
-func WriteSuccess(w http.ResponseWriter, data interface{}, page, size, total int) {
+func WriteSuccess(w http.ResponseWriter, data interface{}, page, limit, total int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	
-	totalPage := (total + size - 1) / size
+	totalPages := 0
+	if total > 0 && limit > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
 	
 	json.NewEncoder(w).Encode(APIResponse{
 		Data: data,
 		Meta: &Meta{
-			Page:      page,
-			Size:      size,
-			Total:     total,
-			TotalPage: totalPage,
+			Page:       page,
+			Limit:      limit,
+			Total:      total,
+			TotalPages: totalPages,
+			HasNext:    page < totalPages,
+			HasPrev:    page > 1,
 		},
 	})
 }

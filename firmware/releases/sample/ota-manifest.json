@@ -1,0 +1,51 @@
+{
+  "manifest_version": "v1",
+  "release_id": "sample-release-2026-02-18",
+  "firmware_version": "1.0.0",
+  "hardware_compatibility": [
+    "ff-gps-v1",
+    "ff-obd-v2"
+  ],
+  "min_bootloader_version": "1.0.0",
+  "artifact": {
+    "uri": "firmware.bin",
+    "size_bytes": 28,
+    "sha256": "c08a5cf3222fb75c137c13b5a97288afa51074cbb1853c09880a5733fe078456"
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "key_id": "flyfleet-sample-ed25519-2026q1",
+    "value": "gJQds7mj5hfEscIbrI9dUZeqzK/DbgzQCUzX6nTAKYQwcOuUGfOp3kuWN1ruOdbopPzvgfcT3wQeDCAhISPeAw=="
+  },
+  "rollout_policy": {
+    "rings": [
+      {
+        "name": "ring0",
+        "percentage": 1,
+        "soak_minutes": 30
+      },
+      {
+        "name": "ring1",
+        "percentage": 5,
+        "soak_minutes": 60
+      },
+      {
+        "name": "ring2",
+        "percentage": 25,
+        "soak_minutes": 120
+      },
+      {
+        "name": "ring3",
+        "percentage": 100,
+        "soak_minutes": 180
+      }
+    ],
+    "auto_pause_thresholds": {
+      "max_failure_rate": 0.02,
+      "max_boot_failure_rate": 0.01,
+      "max_silence_rate": 0.03
+    }
+  },
+  "released_at": "2026-02-18T00:00:00Z",
+  "notes": "Sample manifest for CI pipeline validation"
+}

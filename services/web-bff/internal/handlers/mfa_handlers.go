@@ -59,6 +59,8 @@ func (h *MFAHandlers) proxyToAuth(w http.ResponseWriter, r *http.Request, source
 	h.proxyToService(h.cfg.AuthServiceURL, w, r, sourcePrefix, targetPrefix)
 }
 
+
+
 func (h *MFAHandlers) proxyToService(serviceURL string, w http.ResponseWriter, r *http.Request, sourcePrefix, targetPrefix string) {
 	path := r.URL.Path
 	if !strings.HasPrefix(path, sourcePrefix) {

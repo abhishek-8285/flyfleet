@@ -6,7 +6,9 @@ const IncidentManagement: React.FC = () => {
     const [metrics, setMetrics] = useState<any>(null);
     const [feed, setFeed] = useState<any[]>([]);
     const [incidents, setIncidents] = useState<any[]>([]);
+    const [trendPoints, setTrendPoints] = useState<number[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('daily');
 
@@ -15,6 +17,7 @@ const IncidentManagement: React.FC = () => {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         try {
+            setError(null);
             const [metricsRes, trendsRes, feedRes, listRes] = await Promise.all([
                 fetch('/bff/support/incidents/metrics', { headers }),
                 fetch('/bff/support/incidents/trends', { headers }),
@@ -22,22 +25,73 @@ const IncidentManagement: React.FC = () => {
                 fetch('/bff/support/incidents', { headers })
             ]);
 
-            if (metricsRes.ok) setMetrics(await metricsRes.json());
-            if (trendsRes.ok) {
-                // trends are currently mocked in SVG, but we fetch them to be ready
-                await trendsRes.json();
+            if (metricsRes.ok) {
+                const data = await metricsRes.json();
+                setMetrics({
+                    total: Number(data.total ?? data.total_incidents ?? 0),
+                    newToday: Number(data.newToday ?? data.new_today ?? 0),
+                    criticalOpen: Number(data.criticalOpen ?? data.critical_open ?? 0),
+                    highPriority: Number(data.highPriority ?? data.high_priority ?? 0),
+                    inProgress: Number(data.inProgress ?? data.in_progress ?? 0),
+                    resolved24h: Number(data.resolved24h ?? data.resolved_24h ?? 0),
+                    mttr: data.mttr ?? data.mttr_display ?? '0h 0m',
+                });
             }
-            if (feedRes.ok) setFeed(await feedRes.json());
+            if (trendsRes.ok) {
+                const data = await trendsRes.json();
+                const points = Array.isArray(data)
+                    ? data.map((item: any) => Number(item || 0))
+                    : Array.isArray(data.points)
+                        ? data.points.map((item: any) => Number(item || 0))
+                        : Array.isArray(data.daily)
+                            ? data.daily.map((item: any) => Number(item.incidents ?? item.value ?? 0))
+                            : [];
+                setTrendPoints(points.filter((n: number) => Number.isFinite(n)));
+            }
+            if (feedRes.ok) {
+                const data = await feedRes.json();
+                const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+                setFeed(items.map((item: any) => ({
+                    incidentId: item.incidentId ?? item.incident_id ?? item.id ?? 'N/A',
+                    subject: item.subject ?? 'Untitled incident',
+                    priority: item.priority ?? 'LOW',
+                    status: item.status ?? 'OPEN',
+                    timeAgo: item.timeAgo ?? item.time_ago ?? 'recently',
+                })));
+            }
             if (listRes.ok) {
                 const data = await listRes.json();
-                setIncidents(data.items || []);
+                const items = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+                setIncidents(items.map((incident: any) => ({
+                    incidentId: incident.incidentId ?? incident.incident_id ?? incident.id ?? 'N/A',
+                    priority: incident.priority ?? 'LOW',
+                    status: incident.status ?? 'OPEN',
+                    subject: incident.subject ?? 'Untitled incident',
+                    assignedTo: incident.assignedTo ?? incident.assigned_to ?? 'Unassigned',
+                    assigneeInitials: incident.assigneeInitials ?? incident.assignee_initials ?? 'UN',
+                    organization: incident.organization ?? incident.org_name ?? 'Unknown org',
+                    createdAt: incident.createdAt ?? incident.created_at ?? new Date().toISOString(),
+                })));
             }
         } catch (err) {
             console.error('Failed to fetch incident data', err);
+            setError('Failed to load incident data');
         } finally {
             setIsLoading(false);
         }
     }, []);
+
+    const trendPath = (() => {
+        if (trendPoints.length === 0) return '';
+        const maxVal = Math.max(...trendPoints, 1);
+        const minVal = Math.min(...trendPoints, 0);
+        const range = Math.max(maxVal - minVal, 1);
+        return trendPoints.map((value, index) => {
+            const x = (index / Math.max(trendPoints.length - 1, 1)) * 800;
+            const y = 190 - ((value - minVal) / range) * 150;
+            return `${index === 0 ? 'M' : 'L'}${x},${y}`;
+        }).join(' ');
+    })();
 
     useEffect(() => {
         fetchData();
@@ -88,6 +142,11 @@ const IncidentManagement: React.FC = () => {
             </header>
 
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {error && (
+                    <div className="mb-4 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                        {error}
+                    </div>
+                )}
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                     <div className="bg-[#16202a] rounded-xl border border-[#233648] p-4 relative overflow-hidden group hover:border-[#137fec]/50 transition-all">
@@ -198,13 +257,12 @@ const IncidentManagement: React.FC = () => {
                                     <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="100" y2="100"></line>
                                     <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="50" y2="50"></line>
                                     
-                                    {/* Area Path */}
-                                    <path d="M0,140 C100,160 200,100 300,120 S500,60 600,40 S700,80 800,50 V200 H0 Z" fill="url(#chartGradient)"></path>
-                                    {/* Line Path */}
-                                    <path d="M0,140 C100,160 200,100 300,120 S500,60 600,40 S700,80 800,50" fill="none" stroke="#137fec" strokeWidth="2.5" strokeLinecap="round"></path>
-                                    
-                                    {/* Point */}
-                                    <circle cx="600" cy="40" fill="#fff" r="4.5" stroke="#137fec" strokeWidth="2.5" className="animate-pulse"></circle>
+                                    {trendPath && (
+                                        <>
+                                            <path d={`${trendPath} L800,200 L0,200 Z`} fill="url(#chartGradient)"></path>
+                                            <path d={trendPath} fill="none" stroke="#137fec" strokeWidth="2.5" strokeLinecap="round"></path>
+                                        </>
+                                    )}
                                 </svg>
                                 <div className="absolute bottom-1 left-0 right-0 flex justify-between text-[9px] text-[#92adc9] px-2 font-bold uppercase tracking-widest opacity-60">
                                     <span>Oct 1</span>
@@ -284,7 +342,7 @@ const IncidentManagement: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="text-xs">
-                                {incidents.filter(inc => inc.incidentId.toLowerCase().includes(searchQuery.toLowerCase()) || inc.subject.toLowerCase().includes(searchQuery.toLowerCase())).map((incident) => (
+                                {incidents.filter(inc => (inc.incidentId || '').toLowerCase().includes(searchQuery.toLowerCase()) || (inc.subject || '').toLowerCase().includes(searchQuery.toLowerCase())).map((incident) => (
                                     <tr 
                                         key={incident.incidentId} 
                                         onClick={() => navigate(`/support/incidents/${incident.incidentId}`)}

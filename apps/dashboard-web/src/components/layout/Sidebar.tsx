@@ -28,6 +28,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', path: '/admin', icon: Squares2X2Icon, resource: 'dashboard', action: 'read' },
+  { name: 'Command Center', path: '/dashboard/command-center', icon: MapIcon, resource: 'trip', action: 'read' },
   { name: 'Organizations', path: '/admin/organizations', icon: BuildingOffice2Icon, resource: 'org', action: 'read' },
   { name: 'Users', path: '/admin/users', icon: UsersIcon, resource: 'user', action: 'read' },
   { name: 'Roles & Permissions', path: '/admin/rbac/roles', icon: ShieldCheckIcon, resource: 'roles', action: 'read' },

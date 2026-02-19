@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/flyfleet/india-integration-service/internal/models"
 	"github.com/flyfleet/india-integration-service/internal/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -23,83 +24,90 @@ func NewIndiaIntegrationHandlers(svc service.IndiaIntegrationService) *IndiaInte
 	}
 }
 
+func (h *IndiaIntegrationHandlers) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *IndiaIntegrationHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
+}
+
 // CreateFASTagTransaction creates a new FASTag transaction
-func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	var transaction models.FASTagTransaction
-	if err := c.ShouldBindJSON(&transaction); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateFASTagTransaction(ctx, &transaction); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateFASTagTransaction(r.Context(), &transaction); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create FASTag transaction", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, transaction)
+	h.writeJSONResponse(w, http.StatusCreated, transaction)
 }
 
 // GetFASTagTransaction retrieves a FASTag transaction by ID
-func (h *IndiaIntegrationHandlers) GetFASTagTransaction(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	transaction, err := h.service.GetFASTagTransaction(ctx, id)
+	transaction, err := h.service.GetFASTagTransaction(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "FASTag transaction not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, transaction)
+	h.writeJSONResponse(w, http.StatusOK, transaction)
 }
 
 // UpdateFASTagTransaction updates an existing FASTag transaction
-func (h *IndiaIntegrationHandlers) UpdateFASTagTransaction(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateFASTagTransaction(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateFASTagTransaction(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update FASTag transaction", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteFASTagTransaction deletes a FASTag transaction
-func (h *IndiaIntegrationHandlers) DeleteFASTagTransaction(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteFASTagTransaction(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteFASTagTransaction(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteFASTagTransaction(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete FASTag transaction", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListFASTagTransactions retrieves FASTag transactions with filtering
-func (h *IndiaIntegrationHandlers) ListFASTagTransactions(c *gin.Context) {
-	vehicleIDStr := c.Query("vehicle_id")
-	tagNumber := c.Query("tag_number")
-	startDateString := c.Query("start_date")
-	endDateString := c.Query("end_date")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+func (h *IndiaIntegrationHandlers) ListFASTagTransactions(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vehicleIDStr := query.Get("vehicle_id")
+	tagNumber := query.Get("tag_number")
+	startDateString := query.Get("start_date")
+	endDateString := query.Get("end_date")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	var vehicleID *uuid.UUID
 	if vehicleIDStr != "" {
 		parsedUUID, err := uuid.Parse(vehicleIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid vehicle ID"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid vehicle ID", err)
 			return
 		}
 		vehicleID = &parsedUUID
@@ -109,7 +117,7 @@ func (h *IndiaIntegrationHandlers) ListFASTagTransactions(c *gin.Context) {
 	if startDateString != "" {
 		parsedDate, err := time.Parse(time.RFC3339, startDateString)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start date format, use RFC3339"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid start date format, use RFC3339", err)
 			return
 		}
 		startDate = &parsedDate
@@ -118,7 +126,7 @@ func (h *IndiaIntegrationHandlers) ListFASTagTransactions(c *gin.Context) {
 	if endDateString != "" {
 		parsedDate, err := time.Parse(time.RFC3339, endDateString)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end date format, use RFC3339"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid end date format, use RFC3339", err)
 			return
 		}
 		endDate = &parsedDate
@@ -134,14 +142,13 @@ func (h *IndiaIntegrationHandlers) ListFASTagTransactions(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	transactions, totalCount, err := h.service.ListFASTagTransactions(ctx, vehicleID, &tagNumber, startDate, endDate, limit, offset)
+	transactions, totalCount, err := h.service.ListFASTagTransactions(r.Context(), vehicleID, &tagNumber, startDate, endDate, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list FASTag transactions", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        transactions,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -150,96 +157,92 @@ func (h *IndiaIntegrationHandlers) ListFASTagTransactions(c *gin.Context) {
 }
 
 // CreateEWayBill creates a new E-Way Bill
-func (h *IndiaIntegrationHandlers) CreateEWayBill(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateEWayBill(w http.ResponseWriter, r *http.Request) {
 	var bill models.EWayBill
-	if err := c.ShouldBindJSON(&bill); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&bill); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateEWayBill(ctx, &bill); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateEWayBill(r.Context(), &bill); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create E-Way Bill", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, bill)
+	h.writeJSONResponse(w, http.StatusCreated, bill)
 }
 
 // GetEWayBill retrieves an E-Way Bill by ID
-func (h *IndiaIntegrationHandlers) GetEWayBill(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetEWayBill(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	bill, err := h.service.GetEWayBill(ctx, id)
+	bill, err := h.service.GetEWayBill(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "E-Way Bill not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, bill)
+	h.writeJSONResponse(w, http.StatusOK, bill)
 }
 
 // GetEWayBillByNumber retrieves an E-Way Bill by its number
-func (h *IndiaIntegrationHandlers) GetEWayBillByNumber(c *gin.Context) {
-	number := c.Param("number")
+func (h *IndiaIntegrationHandlers) GetEWayBillByNumber(w http.ResponseWriter, r *http.Request) {
+	number := chi.URLParam(r, "number")
 
-	ctx := c.Request.Context()
-	bill, err := h.service.GetEWayBillByNumber(ctx, number)
+	bill, err := h.service.GetEWayBillByNumber(r.Context(), number)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "E-Way Bill not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, bill)
+	h.writeJSONResponse(w, http.StatusOK, bill)
 }
 
 // UpdateEWayBill updates an existing E-Way Bill
-func (h *IndiaIntegrationHandlers) UpdateEWayBill(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateEWayBill(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateEWayBill(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateEWayBill(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update E-Way Bill", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteEWayBill deletes an E-Way Bill
-func (h *IndiaIntegrationHandlers) DeleteEWayBill(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteEWayBill(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteEWayBill(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteEWayBill(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete E-Way Bill", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListEWayBills retrieves E-Way Bills with filtering
-func (h *IndiaIntegrationHandlers) ListEWayBills(c *gin.Context) {
-	vehicleNumber := c.Query("vehicle_number")
-	transporterID := c.Query("transporter_id")
-	startDateString := c.Query("start_date")
-	endDateString := c.Query("end_date")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+func (h *IndiaIntegrationHandlers) ListEWayBills(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vehicleNumber := query.Get("vehicle_number")
+	transporterID := query.Get("transporter_id")
+	startDateString := query.Get("start_date")
+	endDateString := query.Get("end_date")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	var startDate, endDate *time.Time
 	if startDateString != "" {
 		parsedDate, err := time.Parse(time.RFC3339, startDateString)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid start date format, use RFC3339"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid start date format, use RFC3339", err)
 			return
 		}
 		startDate = &parsedDate
@@ -248,7 +251,7 @@ func (h *IndiaIntegrationHandlers) ListEWayBills(c *gin.Context) {
 	if endDateString != "" {
 		parsedDate, err := time.Parse(time.RFC3339, endDateString)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid end date format, use RFC3339"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid end date format, use RFC3339", err)
 			return
 		}
 		endDate = &parsedDate
@@ -264,14 +267,13 @@ func (h *IndiaIntegrationHandlers) ListEWayBills(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	bills, totalCount, err := h.service.ListEWayBills(ctx, &vehicleNumber, &transporterID, startDate, endDate, limit, offset)
+	bills, totalCount, err := h.service.ListEWayBills(r.Context(), &vehicleNumber, &transporterID, startDate, endDate, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list E-Way Bills", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        bills,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -280,95 +282,84 @@ func (h *IndiaIntegrationHandlers) ListEWayBills(c *gin.Context) {
 }
 
 // CreateVehicleVerification creates a new vehicle verification
-func (h *IndiaIntegrationHandlers) CreateVehicleVerification(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateVehicleVerification(w http.ResponseWriter, r *http.Request) {
 	var verification models.VehicleVerification
-	if err := c.ShouldBindJSON(&verification); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&verification); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateVehicleVerification(ctx, &verification); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateVehicleVerification(r.Context(), &verification); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create vehicle verification", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, verification)
+	h.writeJSONResponse(w, http.StatusCreated, verification)
 }
 
 // GetVehicleVerification retrieves a vehicle verification by ID
-func (h *IndiaIntegrationHandlers) GetVehicleVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetVehicleVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	verification, err := h.service.GetVehicleVerification(ctx, id)
+	verification, err := h.service.GetVehicleVerification(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Vehicle verification not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, verification)
+	h.writeJSONResponse(w, http.StatusOK, verification)
 }
 
 // GetVehicleVerificationByRegNumber retrieves a vehicle verification by registration number
-func (h *IndiaIntegrationHandlers) GetVehicleVerificationByRegNumber(c *gin.Context) {
-	regNumber := c.Param("reg_number")
+func (h *IndiaIntegrationHandlers) GetVehicleVerificationByRegNumber(w http.ResponseWriter, r *http.Request) {
+	regNumber := chi.URLParam(r, "reg_number")
 
-	ctx := c.Request.Context()
-	verification, err := h.service.GetVehicleVerificationByRegNumber(ctx, regNumber)
+	verification, err := h.service.GetVehicleVerificationByRegNumber(r.Context(), regNumber)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Vehicle verification not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, verification)
+	h.writeJSONResponse(w, http.StatusOK, verification)
 }
 
 // UpdateVehicleVerification updates an existing vehicle verification
-func (h *IndiaIntegrationHandlers) UpdateVehicleVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateVehicleVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateVehicleVerification(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateVehicleVerification(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update vehicle verification", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteVehicleVerification deletes a vehicle verification
-func (h *IndiaIntegrationHandlers) DeleteVehicleVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteVehicleVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteVehicleVerification(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteVehicleVerification(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete vehicle verification", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListVehicleVerifications retrieves vehicle verifications with filtering
-func (h *IndiaIntegrationHandlers) ListVehicleVerifications(c *gin.Context) {
-	regNumber := c.Query("reg_number")
-	status := c.Query("status")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
-
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	if offsetStr == "" {
-		offsetStr = "0"
-	}
+func (h *IndiaIntegrationHandlers) ListVehicleVerifications(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	regNumber := query.Get("reg_number")
+	status := query.Get("status")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -380,14 +371,13 @@ func (h *IndiaIntegrationHandlers) ListVehicleVerifications(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	verifications, totalCount, err := h.service.ListVehicleVerifications(ctx, &regNumber, &status, limit, offset)
+	verifications, totalCount, err := h.service.ListVehicleVerifications(r.Context(), &regNumber, &status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list vehicle verifications", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        verifications,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -396,95 +386,84 @@ func (h *IndiaIntegrationHandlers) ListVehicleVerifications(c *gin.Context) {
 }
 
 // CreateDriverVerification creates a new driver verification
-func (h *IndiaIntegrationHandlers) CreateDriverVerification(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateDriverVerification(w http.ResponseWriter, r *http.Request) {
 	var verification models.DriverVerification
-	if err := c.ShouldBindJSON(&verification); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&verification); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateDriverVerification(ctx, &verification); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateDriverVerification(r.Context(), &verification); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create driver verification", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, verification)
+	h.writeJSONResponse(w, http.StatusCreated, verification)
 }
 
 // GetDriverVerification retrieves a driver verification by ID
-func (h *IndiaIntegrationHandlers) GetDriverVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetDriverVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	verification, err := h.service.GetDriverVerification(ctx, id)
+	verification, err := h.service.GetDriverVerification(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Driver verification not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, verification)
+	h.writeJSONResponse(w, http.StatusOK, verification)
 }
 
 // GetDriverVerificationByLicenseNumber retrieves a driver verification by license number
-func (h *IndiaIntegrationHandlers) GetDriverVerificationByLicenseNumber(c *gin.Context) {
-	licenseNumber := c.Param("license_number")
+func (h *IndiaIntegrationHandlers) GetDriverVerificationByLicenseNumber(w http.ResponseWriter, r *http.Request) {
+	licenseNumber := chi.URLParam(r, "license_number")
 
-	ctx := c.Request.Context()
-	verification, err := h.service.GetDriverVerificationByLicenseNumber(ctx, licenseNumber)
+	verification, err := h.service.GetDriverVerificationByLicenseNumber(r.Context(), licenseNumber)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Driver verification not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, verification)
+	h.writeJSONResponse(w, http.StatusOK, verification)
 }
 
 // UpdateDriverVerification updates an existing driver verification
-func (h *IndiaIntegrationHandlers) UpdateDriverVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateDriverVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateDriverVerification(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateDriverVerification(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update driver verification", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteDriverVerification deletes a driver verification
-func (h *IndiaIntegrationHandlers) DeleteDriverVerification(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteDriverVerification(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteDriverVerification(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteDriverVerification(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete driver verification", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListDriverVerifications retrieves driver verifications with filtering
-func (h *IndiaIntegrationHandlers) ListDriverVerifications(c *gin.Context) {
-	licenseNumber := c.Query("license_number")
-	status := c.Query("status")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
-
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	if offsetStr == "" {
-		offsetStr = "0"
-	}
+func (h *IndiaIntegrationHandlers) ListDriverVerifications(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	licenseNumber := query.Get("license_number")
+	status := query.Get("status")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
@@ -496,14 +475,13 @@ func (h *IndiaIntegrationHandlers) ListDriverVerifications(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	verifications, totalCount, err := h.service.ListDriverVerifications(ctx, &licenseNumber, &status, limit, offset)
+	verifications, totalCount, err := h.service.ListDriverVerifications(r.Context(), &licenseNumber, &status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list driver verifications", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        verifications,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -512,105 +490,94 @@ func (h *IndiaIntegrationHandlers) ListDriverVerifications(c *gin.Context) {
 }
 
 // CreateLocalPermit creates a new local permit
-func (h *IndiaIntegrationHandlers) CreateLocalPermit(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateLocalPermit(w http.ResponseWriter, r *http.Request) {
 	var permit models.LocalPermit
-	if err := c.ShouldBindJSON(&permit); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&permit); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateLocalPermit(ctx, &permit); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateLocalPermit(r.Context(), &permit); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create local permit", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, permit)
+	h.writeJSONResponse(w, http.StatusCreated, permit)
 }
 
 // GetLocalPermit retrieves a local permit by ID
-func (h *IndiaIntegrationHandlers) GetLocalPermit(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetLocalPermit(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	permit, err := h.service.GetLocalPermit(ctx, id)
+	permit, err := h.service.GetLocalPermit(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Local permit not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, permit)
+	h.writeJSONResponse(w, http.StatusOK, permit)
 }
 
 // GetLocalPermitByNumber retrieves a local permit by permit number
-func (h *IndiaIntegrationHandlers) GetLocalPermitByNumber(c *gin.Context) {
-	permitNumber := c.Param("permit_number")
+func (h *IndiaIntegrationHandlers) GetLocalPermitByNumber(w http.ResponseWriter, r *http.Request) {
+	permitNumber := chi.URLParam(r, "permit_number")
 
-	ctx := c.Request.Context()
-	permit, err := h.service.GetLocalPermitByNumber(ctx, permitNumber)
+	permit, err := h.service.GetLocalPermitByNumber(r.Context(), permitNumber)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Local permit not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, permit)
+	h.writeJSONResponse(w, http.StatusOK, permit)
 }
 
 // UpdateLocalPermit updates an existing local permit
-func (h *IndiaIntegrationHandlers) UpdateLocalPermit(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateLocalPermit(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateLocalPermit(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateLocalPermit(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update local permit", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteLocalPermit deletes a local permit
-func (h *IndiaIntegrationHandlers) DeleteLocalPermit(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteLocalPermit(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteLocalPermit(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteLocalPermit(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete local permit", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListLocalPermits retrieves local permits with filtering
-func (h *IndiaIntegrationHandlers) ListLocalPermits(c *gin.Context) {
-	vehicleIDStr := c.Query("vehicle_id")
-	permitType := c.Query("permit_type")
-	status := c.Query("status")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+func (h *IndiaIntegrationHandlers) ListLocalPermits(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	vehicleIDStr := query.Get("vehicle_id")
+	permitType := query.Get("permit_type")
+	status := query.Get("status")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	var vehicleID *uuid.UUID
 	if vehicleIDStr != "" {
 		parsedUUID, err := uuid.Parse(vehicleIDStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid vehicle ID"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid vehicle ID", err)
 			return
 		}
 		vehicleID = &parsedUUID
-	}
-
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	if offsetStr == "" {
-		offsetStr = "0"
 	}
 
 	limit, err := strconv.Atoi(limitStr)
@@ -623,14 +590,13 @@ func (h *IndiaIntegrationHandlers) ListLocalPermits(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	permits, totalCount, err := h.service.ListLocalPermits(ctx, vehicleID, &permitType, &status, limit, offset)
+	permits, totalCount, err := h.service.ListLocalPermits(r.Context(), vehicleID, &permitType, &status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list local permits", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        permits,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -639,100 +605,89 @@ func (h *IndiaIntegrationHandlers) ListLocalPermits(c *gin.Context) {
 }
 
 // CreateGSTCompliance creates a new GST compliance record
-func (h *IndiaIntegrationHandlers) CreateGSTCompliance(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateGSTCompliance(w http.ResponseWriter, r *http.Request) {
 	var compliance models.GSTCompliance
-	if err := c.ShouldBindJSON(&compliance); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&compliance); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateGSTCompliance(ctx, &compliance); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateGSTCompliance(r.Context(), &compliance); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create GST compliance record", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, compliance)
+	h.writeJSONResponse(w, http.StatusCreated, compliance)
 }
 
 // GetGSTCompliance retrieves a GST compliance record by ID
-func (h *IndiaIntegrationHandlers) GetGSTCompliance(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetGSTCompliance(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	compliance, err := h.service.GetGSTCompliance(ctx, id)
+	compliance, err := h.service.GetGSTCompliance(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "GST compliance record not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, compliance)
+	h.writeJSONResponse(w, http.StatusOK, compliance)
 }
 
 // GetGSTComplianceByGSTIN retrieves a GST compliance record by GSTIN
-func (h *IndiaIntegrationHandlers) GetGSTComplianceByGSTIN(c *gin.Context) {
-	gstin := c.Param("gstin")
+func (h *IndiaIntegrationHandlers) GetGSTComplianceByGSTIN(w http.ResponseWriter, r *http.Request) {
+	gstin := chi.URLParam(r, "gstin")
 
-	ctx := c.Request.Context()
-	compliance, err := h.service.GetGSTComplianceByGSTIN(ctx, gstin)
+	compliance, err := h.service.GetGSTComplianceByGSTIN(r.Context(), gstin)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "GST compliance record not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, compliance)
+	h.writeJSONResponse(w, http.StatusOK, compliance)
 }
 
 // UpdateGSTCompliance updates an existing GST compliance record
-func (h *IndiaIntegrationHandlers) UpdateGSTCompliance(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateGSTCompliance(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateGSTCompliance(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateGSTCompliance(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update GST compliance record", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteGSTCompliance deletes a GST compliance record
-func (h *IndiaIntegrationHandlers) DeleteGSTCompliance(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteGSTCompliance(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteGSTCompliance(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteGSTCompliance(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete GST compliance record", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListGSTCompliances retrieves GST compliance records with filtering
-func (h *IndiaIntegrationHandlers) ListGSTCompliances(c *gin.Context) {
-	orgIDStr := c.Query("org_id")
-	status := c.Query("status")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+func (h *IndiaIntegrationHandlers) ListGSTCompliances(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("org_id")
+	status := query.Get("status")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
-	}
-
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	if offsetStr == "" {
-		offsetStr = "0"
 	}
 
 	limit, err := strconv.Atoi(limitStr)
@@ -745,14 +700,13 @@ func (h *IndiaIntegrationHandlers) ListGSTCompliances(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	compliances, totalCount, err := h.service.ListGSTCompliances(ctx, orgID, &status, limit, offset)
+	compliances, totalCount, err := h.service.ListGSTCompliances(r.Context(), orgID, &status, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list GST compliance records", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        compliances,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -761,100 +715,96 @@ func (h *IndiaIntegrationHandlers) ListGSTCompliances(c *gin.Context) {
 }
 
 // CreateIntegrationConfig creates a new integration configuration
-func (h *IndiaIntegrationHandlers) CreateIntegrationConfig(c *gin.Context) {
+func (h *IndiaIntegrationHandlers) CreateIntegrationConfig(w http.ResponseWriter, r *http.Request) {
 	var config models.IntegrationConfig
-	if err := c.ShouldBindJSON(&config); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.CreateIntegrationConfig(ctx, &config); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.CreateIntegrationConfig(r.Context(), &config); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create integration config", err)
 		return
 	}
 
-	c.JSON(http.StatusCreated, config)
+	h.writeJSONResponse(w, http.StatusCreated, config)
 }
 
 // GetIntegrationConfig retrieves an integration configuration by ID
-func (h *IndiaIntegrationHandlers) GetIntegrationConfig(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) GetIntegrationConfig(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	config, err := h.service.GetIntegrationConfig(ctx, id)
+	config, err := h.service.GetIntegrationConfig(r.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Integration config not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, config)
+	h.writeJSONResponse(w, http.StatusOK, config)
 }
 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
-func (h *IndiaIntegrationHandlers) GetIntegrationConfigByServiceType(c *gin.Context) {
-	orgIDStr := c.Param("org_id")
-	serviceType := c.Param("service_type")
+func (h *IndiaIntegrationHandlers) GetIntegrationConfigByServiceType(w http.ResponseWriter, r *http.Request) {
+	orgIDStr := chi.URLParam(r, "org_id")
+	serviceType := chi.URLParam(r, "service_type")
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	config, err := h.service.GetIntegrationConfigByServiceType(ctx, orgID, serviceType)
+	config, err := h.service.GetIntegrationConfigByServiceType(r.Context(), orgID, serviceType)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusNotFound, "Integration config not found", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, config)
+	h.writeJSONResponse(w, http.StatusOK, config)
 }
 
 // UpdateIntegrationConfig updates an existing integration configuration
-func (h *IndiaIntegrationHandlers) UpdateIntegrationConfig(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) UpdateIntegrationConfig(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
 	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	ctx := c.Request.Context()
-	if err := h.service.UpdateIntegrationConfig(ctx, id, updates); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.UpdateIntegrationConfig(r.Context(), id, updates); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update integration config", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // DeleteIntegrationConfig deletes an integration configuration
-func (h *IndiaIntegrationHandlers) DeleteIntegrationConfig(c *gin.Context) {
-	id := c.Param("id")
+func (h *IndiaIntegrationHandlers) DeleteIntegrationConfig(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
-	ctx := c.Request.Context()
-	if err := h.service.DeleteIntegrationConfig(ctx, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := h.service.DeleteIntegrationConfig(r.Context(), id); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete integration config", err)
 		return
 	}
 
-	c.Status(http.StatusOK)
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
 }
 
 // ListIntegrationConfigs retrieves integration configurations with filtering
-func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(c *gin.Context) {
-	orgIDStr := c.Query("org_id")
-	serviceType := c.Query("service_type")
-	activeStr := c.Query("active")
-	limitStr := c.Query("limit")
-	offsetStr := c.Query("offset")
+func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	orgIDStr := query.Get("org_id")
+	serviceType := query.Get("service_type")
+	activeStr := query.Get("active")
+	limitStr := query.Get("limit")
+	offsetStr := query.Get("offset")
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid organization ID"})
+		h.writeErrorResponse(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
 	}
 
@@ -862,17 +812,10 @@ func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(c *gin.Context) {
 	if activeStr != "" {
 		parsedActive, err := strconv.ParseBool(activeStr)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid active parameter"})
+			h.writeErrorResponse(w, http.StatusBadRequest, "invalid active parameter", err)
 			return
 		}
 		active = &parsedActive
-	}
-
-	if limitStr == "" {
-		limitStr = "10"
-	}
-	if offsetStr == "" {
-		offsetStr = "0"
 	}
 
 	limit, err := strconv.Atoi(limitStr)
@@ -885,14 +828,13 @@ func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(c *gin.Context) {
 		offset = 0
 	}
 
-	ctx := c.Request.Context()
-	configs, totalCount, err := h.service.ListIntegrationConfigs(ctx, orgID, &serviceType, active, limit, offset)
+	configs, totalCount, err := h.service.ListIntegrationConfigs(r.Context(), orgID, &serviceType, active, limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list integration configs", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        configs,
 		"total_count": totalCount,
 		"limit":       limit,
@@ -901,39 +843,39 @@ func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(c *gin.Context) {
 }
 
 // HealthCheck performs a health check on the service
-func (h *IndiaIntegrationHandlers) HealthCheck(c *gin.Context) {
-	ctx := c.Request.Context()
-	if err := h.service.HealthCheck(ctx); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "unhealthy", "error": err.Error()})
+func (h *IndiaIntegrationHandlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	if err := h.service.HealthCheck(r.Context()); err != nil {
+		h.writeJSONResponse(w, http.StatusInternalServerError, map[string]string{"status": "unhealthy", "error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
-}
-func (h *IndiaIntegrationHandlers) SyncFASTag(c *gin.Context) {
-c.JSON(http.StatusOK, gin.H{
-"message": "FASTag sync initiated",
-"data":    gin.H{"status": "processing"},
-})
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
-func (h *IndiaIntegrationHandlers) ValidateEWayBill(c *gin.Context) {
-c.JSON(http.StatusOK, gin.H{
-"message": "E-Way bill validation initiated",
-"data":    gin.H{"status": "processing"},
-})
+func (h *IndiaIntegrationHandlers) SyncFASTag(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"message": "FASTag sync initiated",
+		"data":    map[string]string{"status": "processing"},
+	})
 }
 
-func (h *IndiaIntegrationHandlers) VerifyVehicle(c *gin.Context) {
-c.JSON(http.StatusOK, gin.H{
-"message": "Vehicle verification initiated",
-"data":    gin.H{"status": "processing"},
-})
+func (h *IndiaIntegrationHandlers) ValidateEWayBill(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"message": "E-Way bill validation initiated",
+		"data":    map[string]string{"status": "processing"},
+	})
 }
 
-func (h *IndiaIntegrationHandlers) VerifyDriver(c *gin.Context) {
-c.JSON(http.StatusOK, gin.H{
-"message": "Driver verification initiated",
-"data":    gin.H{"status": "processing"},
-})
+func (h *IndiaIntegrationHandlers) VerifyVehicle(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"message": "Vehicle verification initiated",
+		"data":    map[string]string{"status": "processing"},
+	})
+}
+
+func (h *IndiaIntegrationHandlers) VerifyDriver(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"message": "Driver verification initiated",
+		"data":    map[string]string{"status": "processing"},
+	})
 }

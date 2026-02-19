@@ -19,17 +19,29 @@ const PoliciesLimits: React.FC = () => {
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchLimits();
     }, []);
 
     const fetchLimits = async () => {
+        setError(null);
         try {
-            const response = await apiClient.get('/settings/limits');
-            setLimits(response.data);
+            const response = await apiClient.get('/settings/limits') as any;
+            const data = response?.data ?? response;
+            if (data) {
+                setLimits((prev) => ({
+                    id: data.id || prev.id,
+                    api_rate_limit: data.api_rate_limit ?? prev.api_rate_limit,
+                    burst_limit: data.burst_limit ?? prev.burst_limit,
+                    audit_retention: data.audit_retention || prev.audit_retention,
+                    activity_retention: data.activity_retention || prev.activity_retention
+                }));
+            }
         } catch (error) {
             console.error('Failed to fetch system limits', error);
+            setError('Failed to load system limits');
         } finally {
             setLoading(false);
         }
@@ -80,6 +92,11 @@ const PoliciesLimits: React.FC = () => {
                 </div>
             </header>
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {error && (
+                    <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                        {error}
+                    </div>
+                )}
                 <div className="max-w-5xl mx-auto space-y-6">
                     <div className="bg-[#16202a] rounded-xl border border-[#233648] overflow-hidden">
                         <div className="p-4 border-b border-[#233648] bg-[#111a22]/50 flex justify-between items-center">

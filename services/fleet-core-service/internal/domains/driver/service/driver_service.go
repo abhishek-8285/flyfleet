@@ -2,23 +2,79 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/driver/repository"
+	// "github.com/flyfleet/fleet-core-service/internal/domains/driver/repository" // Remove concrete dependency if possible, or keep for NewDriverRepository
 )
 
-type DriverService struct {
-	repo   *repository.DriverRepository
-	logger *zap.Logger
+// Repository defines the interface for driver persistence
+type Repository interface {
+	// Driver Methods
+	Create(ctx context.Context, driver *models.Driver) error
+	GetByID(ctx context.Context, id string) (*models.Driver, error)
+	GetByEmail(ctx context.Context, email string) (*models.Driver, error)
+	GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error)
+	List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error)
+	Update(ctx context.Context, id string, updates map[string]interface{}) error
+	Delete(ctx context.Context, id string) error
+	AssignVehicle(ctx context.Context, driverID, vehicleID string) error
+	UnassignVehicle(ctx context.Context, driverID string) error
+	UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int) error
+	IncrementStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error
+	GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error)
+	GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error)
+	
+	// Mobile App Methods
+	CreateDutyStatusLog(ctx context.Context, log *models.DutyStatusLog) error
+	GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error)
+	CreateMessage(ctx context.Context, msg *models.DriverMessage) error
+	GetMessages(ctx context.Context, driverID string, limit, offset int) ([]*models.DriverMessage, error)
+	CreateExpense(ctx context.Context, expense *models.DriverExpense) error
+	ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error)
 }
 
-func NewDriverService(repo *repository.DriverRepository, logger *zap.Logger) *DriverService {
-	return &DriverService{repo: repo, logger: logger}
+type DriverService struct {
+	repo   Repository // Use interface
+	logger *zap.Logger
+	nc     *nats.Conn
+}
+
+func NewDriverService(repo Repository, logger *zap.Logger, opts ...func(*DriverService)) *DriverService {
+	s := &DriverService{repo: repo, logger: logger}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// WithNATS sets the NATS connection for event publishing
+func WithNATS(nc *nats.Conn) func(*DriverService) {
+	return func(s *DriverService) {
+		s.nc = nc
+	}
+}
+
+// publishEvent publishes a NATS event (best-effort, non-blocking)
+func (s *DriverService) publishEvent(subject string, data interface{}) {
+	if s.nc == nil {
+		return
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		s.logger.Warn("failed to marshal NATS event", zap.String("subject", subject), zap.Error(err))
+		return
+	}
+	if err := s.nc.Publish(subject, payload); err != nil {
+		s.logger.Warn("failed to publish NATS event", zap.String("subject", subject), zap.Error(err))
+	}
 }
 
 // Create creates a new driver
@@ -28,9 +84,15 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 		return nil, fmt.Errorf("license has expired")
 	}
 
-	// Check if driver with same license number already exists
-	existingDriver, _ := s.GetByLicenseNumber(ctx, req.LicenseNumber)
-	if existingDriver != nil {
+	// Check for unique email
+	existing, err := s.repo.GetByEmail(ctx, req.Email)
+	if err == nil && existing != nil {
+		return nil, fmt.Errorf("driver with email %s already exists", req.Email)
+	}
+
+	// Check for unique license number
+	existingLic, err := s.repo.GetByLicenseNumber(ctx, req.LicenseNumber)
+	if err == nil && existingLic != nil {
 		return nil, fmt.Errorf("driver with license number %s already exists", req.LicenseNumber)
 	}
 
@@ -68,6 +130,7 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 	}
 
 	s.logger.Info("driver created", zap.String("driver_id", driver.ID))
+	s.publishEvent("drivers.created", driver)
 	return driver, nil
 }
 
@@ -118,7 +181,12 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 		}
 		updates["full_name"] = fmt.Sprintf("%s %s", firstName, lastName)
 	}
-	if req.Email != nil {
+	if req.Email != nil && *req.Email != driver.Email {
+		// Check for unique email when changing
+		existing, err := s.repo.GetByEmail(ctx, *req.Email)
+		if err == nil && existing != nil {
+			return nil, fmt.Errorf("driver with email %s already exists", *req.Email)
+		}
 		updates["email"] = *req.Email
 	}
 	if req.Phone != nil {
@@ -131,6 +199,9 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 		updates["license_type"] = *req.LicenseType
 	}
 	if req.LicenseExpiry != nil {
+		if req.LicenseExpiry.Before(time.Now()) {
+			return nil, fmt.Errorf("license has expired")
+		}
 		updates["license_expiry"] = *req.LicenseExpiry
 	}
 	if req.LicenseAuthority != nil {
@@ -161,7 +232,17 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 		}
 	}
 
-	return s.GetByID(ctx, id)
+	updated, err := s.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	s.publishEvent("drivers.updated", map[string]interface{}{
+		"driver_id":  id,
+		"updates":    updates,
+		"old_values": driver,
+	})
+	return updated, nil
 }
 
 // Delete performs soft delete of a driver
@@ -186,6 +267,7 @@ func (s *DriverService) Delete(ctx context.Context, id string) error {
 	}
 
 	s.logger.Info("driver deleted", zap.String("driver_id", id))
+	s.publishEvent("drivers.deleted", map[string]string{"driver_id": id})
 	return nil
 }
 
@@ -368,31 +450,17 @@ func (s *DriverService) IncrementDriverStats(ctx context.Context, driverID strin
 
 // GetByLicenseNumber retrieves driver by license number
 func (s *DriverService) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
-	// This would require adding a method to the repository
-	// For now, we'll implement a simple approach
-	filter := models.DriverListFilter{
-		Page: 1,
-		PageSize: 1,
-	}
-	
-	drivers, _, err := s.List(ctx, filter)
+	driver, err := s.repo.GetByLicenseNumber(ctx, licenseNumber)
 	if err != nil {
-		return nil, err
-	}
-	
-	// Filter by license number in memory (temporary solution)
-	for _, driver := range drivers {
-		if driver.LicenseNumber == licenseNumber {
-			return driver, nil
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("driver with license number %s not found", licenseNumber)
 		}
+		return nil, fmt.Errorf("failed to get driver by license: %w", err)
 	}
-	
-	return nil, fmt.Errorf("driver with license number %s not found", licenseNumber)
+	return driver, nil
 }
 
 // GetActiveDriversForVehicle retrieves active drivers for a vehicle
 func (s *DriverService) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
-	// This would require adding a method to the repository
-	// For now, return empty slice
-	return []*models.Driver{}, nil
+	return s.repo.GetActiveDriversForVehicle(ctx, vehicleID)
 }

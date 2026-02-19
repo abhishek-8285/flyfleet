@@ -19,24 +19,53 @@ type Organization struct {
 
 type User struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
+	OrgID          uuid.UUID  `json:"org_id" db:"org_id"`
 	Email          string     `json:"email" db:"email"`
 	PasswordHash   string     `json:"-" db:"password_hash"`
-	Name           string     `json:"name" db:"name"`
-	Role           string     `json:"role" db:"-"`
-	OrgID          uuid.UUID  `json:"org_id" db:"-"`
-	Phone          string     `json:"phone,omitempty" db:"phone"`
+	FirstName      *string    `json:"first_name,omitempty" db:"first_name"`
+	LastName       *string    `json:"last_name,omitempty" db:"last_name"`
+	Name           *string    `json:"name,omitempty" db:"name"` // Keep for compat
+	Role           string     `json:"role" db:"role"`
+	Phone          *string    `json:"phone,omitempty" db:"phone"`
 	MFAEnabled     bool       `json:"mfa_enabled" db:"mfa_enabled"`
 	MFASecret      string     `json:"-" db:"mfa_secret"`
 	Status         string     `json:"status" db:"status"`
 	RoleID         *uuid.UUID `json:"role_id,omitempty" db:"role_id"`
 	FailedLogins   int        `json:"failed_logins" db:"failed_logins"`
 	LockedUntil    *time.Time `json:"locked_until,omitempty" db:"locked_until"`
+	LastLoginAt    *time.Time `json:"last_login_at,omitempty" db:"last_login_at"`
 	Verified       bool       `json:"verified" db:"verified"`
 	Theme          string     `json:"theme" db:"theme"`
 	ThemeUpdatedAt *time.Time `json:"theme_updated_at,omitempty" db:"theme_updated_at"`
 	IsDeleted      bool       `json:"is_deleted" db:"is_deleted"`
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
+	DeletedAt      *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
+}
+
+type UserFilter struct {
+	OrgID    uuid.UUID
+	Role     string
+	Status   string
+	Search   string
+	Page     int
+	Limit    int
+	SortBy   string
+	SortOrder string
+}
+
+type UserListResponse struct {
+	Data []User    `json:"data"`
+	Meta UserMeta  `json:"meta"`
+}
+
+type UserMeta struct {
+	Total       int  `json:"total"`
+	Page        int  `json:"page"`
+	Limit       int  `json:"limit"`
+	TotalPages  int  `json:"total_pages"`
+	HasNext     bool `json:"has_next"`
+	HasPrev     bool `json:"has_prev"`
 }
 
 type Role struct {
@@ -121,24 +150,48 @@ type Device struct {
 
 // Document represents a compliance document associated with a vehicle
 type Document struct {
-	ID          uuid.UUID       `json:"id" db:"id"`
-	VehicleID   uuid.UUID       `json:"vehicle_id" db:"vehicle_id"`
-	Type        string          `json:"type" db:"type"`
-	DocNumber   string          `json:"doc_number" db:"doc_number"`
-	IssueDate   time.Time       `json:"issue_date" db:"issue_date"`
-	ExpiryDate  time.Time       `json:"expiry_date" db:"expiry_date"`
-	FileURL     string          `json:"file_url,omitempty" db:"file_url"`
-	Status      string          `json:"status" db:"status"`
-	Metadata    interface{} 	`json:"metadata,omitempty" db:"metadata"` // Changed from json.RawMessage to interface{} to avoid import issues if any, or verify json import.
-	// Wait, models.go does NOT import encoding/json based on my previous read (lines 1-8). 
-	// I need to check if I can add the import.
-	// Actually, line 116 uses `Details string` for JSON, and line 139 `Metadata string`.
-	// Line 186 uses `map[string]interface{}`.
-	// I should probably use `map[string]interface{}` for Metadata to be consistent with `Trip` struct (line 186) or `string` if it's raw JSON text.
-	// `documents` table definition said JSONB. 
-	// `Trip` uses `map[string]interface{}`. Use that.
-	CreatedAt   time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at" db:"updated_at"`
+	ID            uuid.UUID   `json:"id" db:"id"`
+	VehicleID     *uuid.UUID  `json:"vehicle_id,omitempty" db:"vehicle_id"`
+	OrgID         uuid.UUID   `json:"org_id" db:"org_id"`
+	Type          string      `json:"type" db:"type"`
+	Title         string      `json:"title" db:"title"`
+	DocNumber     string      `json:"doc_number" db:"doc_number"`
+	FileName      string      `json:"file_name" db:"file_name"`
+	FileSizeBytes int         `json:"file_size_bytes" db:"file_size_bytes"`
+	MimeType      string      `json:"mime_type" db:"mime_type"`
+	StoragePath   string      `json:"-" db:"storage_path"` // Never exposed in API
+	Status        string      `json:"status" db:"status"`
+	IssueDate     *time.Time  `json:"issued_date,omitempty" db:"issue_date"`
+	ExpiryDate    *time.Time  `json:"expiry_date,omitempty" db:"expiry_date"`
+	ReminderDays  int         `json:"reminder_days" db:"reminder_days"`
+	UploadedBy    string      `json:"uploaded_by" db:"uploaded_by"` // email from join
+	UploadedAt    time.Time   `json:"uploaded_at" db:"created_at"`
+	Metadata      interface{} `json:"metadata,omitempty" db:"metadata"`
+	CreatedAt     time.Time   `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at" db:"updated_at"`
+}
+
+// DocumentFilter represents query parameters for listing documents
+type DocumentFilter struct {
+	VehicleID          *uuid.UUID
+	Type               string
+	Status             string
+	ExpiringWithinDays int
+	Page               int
+	Limit              int
+}
+
+// DocumentListResponse represents the paginated response for listing documents
+type DocumentListResponse struct {
+	Data []Document         `json:"data"`
+	Meta DocumentListMeta   `json:"meta"`
+}
+
+// DocumentListMeta holds pagination metadata
+type DocumentListMeta struct {
+	Total int `json:"total"`
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
 }
 
 // DocumentMetadata defines structure for JSONB metadata
@@ -248,7 +301,8 @@ type AuthToken struct {
 type MFACode struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	UserID    uuid.UUID `json:"user_id" db:"user_id"`
-	Code      string    `json:"code" db:"code"`
+	Code      string    `json:"-" db:"-"`           // Used internally for verification, not stored in DB
+	CodeHash  string    `json:"-" db:"code_hash"`  // Store hashed code, don't expose in JSON
 	Method    string    `json:"method" db:"method"`
 	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
@@ -441,4 +495,118 @@ type SystemStats struct {
 	ActiveOrgs     int `json:"active_orgs"`
 	PendingOrgs    int `json:"pending_orgs"`
 	InactiveOrgs   int `json:"inactive_orgs"`
+}
+
+// SecuritySettings represents security configuration for an organization
+type SecuritySettings struct {
+	ID                      uuid.UUID `json:"id" db:"id"`
+	OrgID                   uuid.UUID `json:"org_id" db:"org_id"`
+	PasswordComplexity      PasswordComplexity `json:"password_complexity" db:"password_complexity"`
+	SessionTimeoutMinutes   int                `json:"session_timeout_minutes" db:"session_timeout_minutes"`
+	MaxConcurrentSessions   int                `json:"max_concurrent_sessions" db:"max_concurrent_sessions"`
+	EnableMFA               bool               `json:"enable_mfa" db:"enable_mfa"`
+	MFARequiredForAdmins    bool               `json:"mfa_required_for_admins" db:"mfa_required_for_admins"`
+	EnableIPWhitelist       bool               `json:"enable_ip_whitelist" db:"enable_ip_whitelist"`
+	EnableBruteForceProtection bool           `json:"enable_brute_force_protection" db:"enable_brute_force_protection"`
+	BruteForceThreshold     int                `json:"brute_force_threshold" db:"brute_force_threshold"`
+	BruteForceLockoutMins   int                `json:"brute_force_lockout_mins" db:"brute_force_lockout_mins"`
+	EnableSecurityQuestions bool               `json:"enable_security_questions" db:"enable_security_questions"`
+	EnableDeviceTrust       bool               `json:"enable_device_trust" db:"enable_device_trust"`
+	EnableRiskBasedAuth     bool               `json:"enable_risk_based_auth" db:"enable_risk_based_auth"`
+	RequireEncryptedTraffic bool               `json:"require_encrypted_traffic" db:"require_encrypted_traffic"`
+	EnableAuditLogging      bool               `json:"enable_audit_logging" db:"enable_audit_logging"`
+	EnableAnomalyDetection  bool               `json:"enable_anomaly_detection" db:"enable_anomaly_detection"`
+	CreatedAt               time.Time          `json:"created_at" db:"created_at"`
+	UpdatedAt               time.Time          `json:"updated_at" db:"updated_at"`
+}
+
+type PasswordComplexity struct {
+	MinLength            int  `json:"min_length"`
+	RequireUppercase     bool `json:"require_uppercase"`
+	RequireLowercase     bool `json:"require_lowercase"`
+	RequireNumbers       bool `json:"require_numbers"`
+	RequireSpecialChars  bool `json:"require_special_chars"`
+	MaxAgeDays           int  `json:"max_age_days"`
+	ReuseHistoryLimit    int  `json:"reuse_history_limit"`
+}
+
+// SecurityMetrics represents security metrics for an organization
+type SecurityMetrics struct {
+	OrgID                    uuid.UUID `json:"org_id"`
+	MFARate                  float64   `json:"mfa_rate"`
+	PasswordStrengthAvg      float64   `json:"password_strength_avg"`
+	FailedLoginRate          float64   `json:"failed_login_rate"`
+	AccountLockoutEvents     int       `json:"account_lockout_events"`
+	SuspiciousActivityEvents int       `json:"suspicious_activity_events"`
+	ComplianceScore          float64   `json:"compliance_score"`
+	SecurityPostureScore     float64   `json:"security_posture_score"`
+	LastUpdated              time.Time `json:"last_updated"`
+}
+
+// VulnerabilityReport represents vulnerability assessment results
+type VulnerabilityReport struct {
+	OrgID         uuid.UUID         `json:"org_id"`
+	ReportDate    time.Time         `json:"report_date"`
+	Vulnerabilities []Vulnerability `json:"vulnerabilities"`
+	Summary       VulnerabilitySummary `json:"summary"`
+	Recommendations []string        `json:"recommendations"`
+}
+
+type Vulnerability struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Severity    string    `json:"severity"` // critical, high, medium, low
+	CVSSScore   float64   `json:"cvss_score"`
+	Status      string    `json:"status"` // open, in_progress, resolved, false_positive
+	FoundDate   time.Time `json:"found_date"`
+	Target      string    `json:"target"`
+	RemediatedDate *time.Time `json:"remediated_date,omitempty"`
+}
+
+type VulnerabilitySummary struct {
+	Critical int `json:"critical"`
+	High     int `json:"high"`
+	Medium   int `json:"medium"`
+	Low      int `json:"low"`
+	Total    int `json:"total"`
+	Resolved int `json:"resolved"`
+	Open     int `json:"open"`
+}
+
+// ComplianceReport represents compliance assessment results
+type ComplianceReport struct {
+	OrgID       uuid.UUID        `json:"org_id"`
+	ReportType  string           `json:"report_type"` // soc2, gdpr, iso27001, etc.
+	ReportDate  time.Time        `json:"report_date"`
+	Requirements []ComplianceRequirement `json:"requirements"`
+	Summary     ComplianceSummary `json:"summary"`
+	Findings    []ComplianceFinding `json:"findings"`
+	Recommendations []string      `json:"recommendations"`
+}
+
+type ComplianceRequirement struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Status      string `json:"status"` // compliant, non_compliant, not_applicable
+	Evidence    string `json:"evidence"`
+	LastChecked time.Time `json:"last_checked"`
+}
+
+type ComplianceSummary struct {
+	TotalRequirements int `json:"total_requirements"`
+	Compliant       int `json:"compliant"`
+	NonCompliant    int `json:"non_compliant"`
+	NotApplicable   int `json:"not_applicable"`
+	CompliancePercentage float64 `json:"compliance_percentage"`
+}
+
+type ComplianceFinding struct {
+	ID          string    `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Severity    string    `json:"severity"` // high, medium, low
+	Status      string    `json:"status"` // open, in_progress, resolved
+	Remediation string    `json:"remediation"`
+	FoundDate   time.Time `json:"found_date"`
 }

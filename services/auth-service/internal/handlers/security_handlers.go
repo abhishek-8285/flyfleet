@@ -95,7 +95,20 @@ func (h *SecurityHandlers) GetTopFailureLocations(w http.ResponseWriter, r *http
 		locs = []map[string]any{}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(locs)
+	// Standardize even for non-paginated lists if requested, but for "Top N" it's usually just data.
+	// However, user requested "getMFAFailureLocations: Add meta".
+	length := len(locs)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": locs,
+		"meta": map[string]any{
+			"total":       length,
+			"page":        1,
+			"limit":       length,
+			"total_pages": 1,
+			"has_next":    false,
+			"has_prev":    false,
+		},
+	})
 }
 
 func (h *SecurityHandlers) GetTopFailureUsers(w http.ResponseWriter, r *http.Request) {
@@ -105,25 +118,53 @@ func (h *SecurityHandlers) GetTopFailureUsers(w http.ResponseWriter, r *http.Req
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-if users == nil {
+	if users == nil {
 		users = []map[string]any{}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	length := len(users)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": users,
+		"meta": map[string]any{
+			"total":       length,
+			"page":        1,
+			"limit":       length,
+			"total_pages": 1,
+			"has_next":    false,
+			"has_prev":    false,
+		},
+	})
 }
 
 func (h *SecurityHandlers) GetLockedUsers(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(r.URL.Query().Get("org_id"))
-	users, err := h.service.GetLockedUsers(r.Context(), orgID)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 { page = 1 }
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 { limit = 20 }
+
+	users, total, err := h.service.GetLockedUsers(r.Context(), orgID, page, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-if users == nil {
+	if users == nil {
 		users = []models.User{}
 	}
+	
+	totalPages := (total + limit - 1) / limit
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": users,
+		"meta": map[string]any{
+			"total":       total,
+			"page":        page,
+			"limit":       limit,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
+	})
 }
 
 func (h *SecurityHandlers) UnlockUser(w http.ResponseWriter, r *http.Request) {
@@ -251,13 +292,33 @@ func (h *SecurityHandlers) UpdateMFAOrgOverride(w http.ResponseWriter, r *http.R
 
 func (h *SecurityHandlers) GetMFAExceptions(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(r.URL.Query().Get("org_id"))
-	excs, err := h.service.GetMFAExceptions(r.Context(), orgID)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 { page = 1 }
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 { limit = 20 }
+
+	excs, total, err := h.service.GetMFAExceptions(r.Context(), orgID, page, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if excs == nil {
+		excs = []models.MFAException{}
+	}
+	
+	totalPages := (total + limit - 1) / limit
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(excs)
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": excs,
+		"meta": map[string]any{
+			"total":       total,
+			"page":        page,
+			"limit":       limit,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+		},
+	})
 }
 
 func (h *SecurityHandlers) AddMFAException(w http.ResponseWriter, r *http.Request) {

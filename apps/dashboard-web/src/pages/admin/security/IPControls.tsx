@@ -16,6 +16,7 @@ import api from '../../../services/api';
 const IPControls: React.FC = () => {
   const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRules();
@@ -23,14 +24,14 @@ const IPControls: React.FC = () => {
 
   const fetchRules = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await api.getIPRules('default');
-      // Mocking for high-fidelity demonstration
-      setRules([
-        { id: '1', name: 'HQ Office Network', cidr: '203.0.113.0/24', action: 'ALLOW', type: 'STATIC', description: 'Main office building branch' },
-        { id: '2', name: 'Untrusted VPS Network', cidr: '45.1.0.0/16', action: 'BLOCK', type: 'RANGE', description: 'Common source of scraping attempts' },
-        { id: '3', name: 'Remote Fleet Admin', cidr: '1.2.3.4/32', action: 'ALLOW', type: 'STICKY', description: 'Lead analyst temporary home IP' },
-      ]);
+      const data = (response as any)?.data ?? response;
+      const items = data?.items || data?.rules || data?.data || data || [];
+      setRules(Array.isArray(items) ? items : []);
     } catch (error) {
+       setError('Failed to load IP rules.');
        setRules([]);
     } finally {
       setLoading(false);
@@ -98,21 +99,33 @@ const IPControls: React.FC = () => {
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                       {rules.map((rule) => (
-                          <tr key={rule.id} className="hover:bg-white/[0.02] transition-colors group">
+                     {loading ? (
+                        <tr>
+                           <td colSpan={5} className="px-6 py-6 text-sm text-slate-500">Loading rules...</td>
+                        </tr>
+                     ) : error ? (
+                        <tr>
+                           <td colSpan={5} className="px-6 py-6 text-sm text-red-400">{error}</td>
+                        </tr>
+                     ) : rules.length === 0 ? (
+                        <tr>
+                           <td colSpan={5} className="px-6 py-6 text-sm text-slate-500">No IP rules found.</td>
+                        </tr>
+                     ) : rules.map((rule) => (
+                         <tr key={rule.id} className="hover:bg-white/[0.02] transition-colors group">
                              <td className="px-6 py-4">
                                 <div className="flex flex-col">
-                                   <span className="text-sm font-bold text-white">{rule.name}</span>
+                                   <span className="text-sm font-bold text-white">{rule.name || rule.label || 'Unnamed Rule'}</span>
                                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">ID: {rule.id}</span>
                                 </div>
                              </td>
                              <td className="px-6 py-4">
                                 <span className="bg-slate-800 px-3 py-1.5 rounded-lg font-mono text-sm text-primary border border-white/5">
-                                   {rule.cidr}
+                                   {rule.cidr || rule.ip_range || rule.cidr_block || '—'}
                                 </span>
                              </td>
                              <td className="px-6 py-4">
-                                {rule.action === 'ALLOW' ? (
+                                {rule.action === 'ALLOW' || rule.action === 'allow' ? (
                                    <span className="flex items-center gap-1.5 text-vibrant-green font-bold text-xs">
                                       <ShieldCheckIcon className="w-4 h-4" /> ALLOW
                                    </span>
@@ -123,7 +136,7 @@ const IPControls: React.FC = () => {
                                 )}
                              </td>
                              <td className="px-6 py-4">
-                                <p className="text-sm text-slate-400 max-w-[200px] truncate">{rule.description}</p>
+                                <p className="text-sm text-slate-400 max-w-[200px] truncate">{rule.description || rule.reason || '—'}</p>
                              </td>
                              <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -10,11 +10,16 @@ import { Alert, Trip } from '../types';
 
 const Dashboard = () => {
     const [stats, setStats] = useState<any>({
-        total_vehicles: 842, // Default mock values to match design initially
-        active_trips: 125,
-        active_alerts: 3,
+        total_vehicles: 0,
+        active_trips: 0,
+        active_alerts: 0,
         total_drivers: 0,
-        online_drivers: 0
+        online_drivers: 0,
+        trends: {
+            vehicles: 0,
+            trips: 0,
+            alerts: 0
+        }
     });
     const [trips, setTrips] = useState<Trip[]>([]);
     const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -42,13 +47,23 @@ const Dashboard = () => {
             if (statsData && (statsData as any).data) {
                 const s = (statsData as any).data;
                 setStats({
-                    ...stats,
-                    total_vehicles: s.total_vehicles,
-                    active_trips: s.active_trips || (tripsData as any).total,
-                    active_alerts: s.alerts_count || (alertsData as any).total,
-                    total_drivers: s.total_drivers,
-                    online_drivers: s.active_vehicles || 0
+                    total_vehicles: Number(s.total_vehicles || 0),
+                    active_trips: Number(s.active_trips || (tripsData as any).total || 0),
+                    active_alerts: Number(s.alerts_count || (alertsData as any).total || 0),
+                    total_drivers: Number(s.total_drivers || 0),
+                    online_drivers: Number(s.active_vehicles || 0),
+                    trends: {
+                        vehicles: Number(s.vehicles_trend_pct || 0),
+                        trips: Number(s.trips_trend_pct || 0),
+                        alerts: Number(s.alerts_trend_pct || 0)
+                    }
                 });
+            } else {
+                setStats((prev: any) => ({
+                    ...prev,
+                    active_trips: Number((tripsData as any).total || (tripsData as any).trips?.length || 0),
+                    active_alerts: Number((alertsData as any).total || (alertsData as any).alerts?.length || 0)
+                }));
             }
         } catch (error) {
             console.error("Failed to load dashboard data", error);

@@ -1,0 +1,40 @@
+name: Identity Auth Foundation
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "apps/mobile/shared/auth/**"
+      - "apps/mobile/shared/sync/**"
+      - "docs/architecture/identity-auth-contract.md"
+      - "services/auth-service/**"
+      - "services/billing-service/internal/middleware/**"
+      - "services/web-bff/internal/middleware/**"
+      - "scripts/check_identity_auth_contract.py"
+      - ".github/workflows/identity-auth-foundation.yml"
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "apps/mobile/shared/auth/**"
+      - "apps/mobile/shared/sync/**"
+      - "docs/architecture/identity-auth-contract.md"
+      - "services/auth-service/**"
+      - "services/billing-service/internal/middleware/**"
+      - "services/web-bff/internal/middleware/**"
+      - "scripts/check_identity_auth_contract.py"
+      - ".github/workflows/identity-auth-foundation.yml"
+
+jobs:
+  identity-auth-foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run identity/auth contract checks
+        run: python3 scripts/check_identity_auth_contract.py

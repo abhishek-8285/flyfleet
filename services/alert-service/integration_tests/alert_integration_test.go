@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
@@ -18,18 +17,19 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/alert-service/internal/handlers"
-	"github.com/flyfleet/alert-service/internal/models"
+	"github.com/flyfleet/alert-service/internal/domains/alerts/handlers"
+	"github.com/flyfleet/alert-service/internal/domains/alerts/models"
+	"github.com/flyfleet/alert-service/internal/domains/alerts/repository"
+	"github.com/flyfleet/alert-service/internal/domains/alerts/rule_engine"
+	"github.com/flyfleet/alert-service/internal/domains/alerts/service"
 	"github.com/flyfleet/alert-service/internal/providers"
-	"github.com/flyfleet/alert-service/internal/repository"
-	"github.com/flyfleet/alert-service/internal/rule_engine"
-	"github.com/flyfleet/alert-service/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type AlertServiceTestSuite struct {
 	suite.Suite
 	db                  *pgxpool.Pool
-	router              *gin.Engine
+	router              chi.Router
 	alertRepo           *repository.AlertRepository
 	alertService        *service.AlertService
 	alertHandler        *handlers.AlertHandler
@@ -83,8 +83,7 @@ func (suite *AlertServiceTestSuite) SetupSuite() {
 	suite.testUserID = uuid.New()
 
 	// Setup router
-	gin.SetMode(gin.TestMode)
-	suite.router = gin.New()
+	suite.router = chi.NewRouter()
 	suite.setupRoutes()
 }
 
@@ -102,8 +101,9 @@ func (suite *AlertServiceTestSuite) TearDownSuite() {
 
 func (suite *AlertServiceTestSuite) setupRoutes() {
 	// Health check
-	suite.router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+	suite.router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "healthy",
 			"service":   "alert-service-test",
 			"timestamp": time.Now().Unix(),
@@ -111,29 +111,27 @@ func (suite *AlertServiceTestSuite) setupRoutes() {
 	})
 
 	// Alert API endpoints
-	api := suite.router.Group("/api/v1")
-	{
-		alerts := api.Group("/alerts")
-		{
+	suite.router.Route("/api/v1", func(r chi.Router) {
+		r.Route("/alerts", func(r chi.Router) {
 			// Alert rules management
-			alerts.POST("/rules", suite.alertHandler.CreateRule)
-			alerts.GET("/rules", suite.alertHandler.ListRules)
-			alerts.GET("/rules/:id", suite.alertHandler.GetRule)
-			alerts.PUT("/rules/:id", suite.alertHandler.UpdateRule)
-			alerts.DELETE("/rules/:id", suite.alertHandler.DeleteRule)
-			alerts.POST("/rules/:id/enable", suite.alertHandler.EnableRule)
-			alerts.POST("/rules/:id/disable", suite.alertHandler.DisableRule)
+			r.Post("/rules", suite.alertHandler.CreateRule)
+			r.Get("/rules", suite.alertHandler.ListRules)
+			r.Get("/rules/{id}", suite.alertHandler.GetRule)
+			r.Put("/rules/{id}", suite.alertHandler.UpdateRule)
+			r.Delete("/rules/{id}", suite.alertHandler.DeleteRule)
+			r.Post("/rules/{id}/enable", suite.alertHandler.EnableRule)
+			r.Post("/rules/{id}/disable", suite.alertHandler.DisableRule)
 
 			// Alert instances
-			alerts.GET("", suite.alertHandler.ListAlerts)
-			alerts.GET("/:id", suite.alertHandler.GetAlert)
-			alerts.POST("/:id/acknowledge", suite.alertHandler.AcknowledgeAlert)
-			alerts.POST("/:id/resolve", suite.alertHandler.ResolveAlert)
+			r.Get("/", suite.alertHandler.ListAlerts)
+			r.Get("/{id}", suite.alertHandler.GetAlert)
+			r.Post("/{id}/acknowledge", suite.alertHandler.AcknowledgeAlert)
+			r.Post("/{id}/resolve", suite.alertHandler.ResolveAlert)
 
 			// Alert statistics
-			alerts.GET("/stats/summary", suite.alertHandler.GetAlertSummary)
-		}
-	}
+			r.Get("/stats/summary", suite.alertHandler.GetAlertSummary)
+		})
+	})
 }
 
 func (suite *AlertServiceTestSuite) TestHealthCheck() {

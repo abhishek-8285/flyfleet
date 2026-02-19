@@ -6,7 +6,7 @@ import (
 
 	"github.com/flyfleet/admin-support-service/internal/domains/settings/models"
 	"github.com/flyfleet/admin-support-service/internal/domains/settings/service"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -20,28 +20,27 @@ func NewSettingsHandlers(service *service.SettingsService, logger *zap.Logger) *
 	return &SettingsHandlers{service: service, logger: logger}
 }
 
-func (h *SettingsHandlers) RegisterRoutes(router *gin.RouterGroup) {
-	settings := router.Group("/settings")
-	{
-		settings.GET("/platform", h.GetPlatformSettings)
-		settings.PUT("/platform", h.UpdatePlatformSettings)
+func (h *SettingsHandlers) RegisterRoutes(r chi.Router) {
+	r.Route("/settings", func(r chi.Router) {
+		r.Get("/platform", h.GetPlatformSettings)
+		r.Put("/platform", h.UpdatePlatformSettings)
 
-		settings.GET("/flags", h.ListFeatureFlags)
-		settings.POST("/flags", h.CreateFeatureFlag)
-		settings.PATCH("/flags/:id/toggle", h.ToggleFeatureFlag)
+		r.Get("/flags", h.ListFeatureFlags)
+		r.Post("/flags", h.CreateFeatureFlag)
+		r.Patch("/flags/{id}/toggle", h.ToggleFeatureFlag)
 
-		settings.GET("/localization", h.GetLocalizationSettings)
-		settings.PUT("/localization", h.UpdateLocalizationSettings)
+		r.Get("/localization", h.GetLocalizationSettings)
+		r.Put("/localization", h.UpdateLocalizationSettings)
 
-		settings.GET("/templates", h.ListTemplates)
-		settings.PUT("/templates/:id", h.UpdateTemplate)
+		r.Get("/templates", h.ListTemplates)
+		r.Put("/templates/{id}", h.UpdateTemplate)
 
-		settings.GET("/channels", h.ListNotificationChannels)
-		settings.PUT("/channels", h.UpdateNotificationChannel)
+		r.Get("/channels", h.ListNotificationChannels)
+		r.Put("/channels", h.UpdateNotificationChannel)
 
-		settings.GET("/limits", h.GetSystemLimits)
-		settings.PUT("/limits", h.UpdateSystemLimits)
-	}
+		r.Get("/limits", h.GetSystemLimits)
+		r.Put("/limits", h.UpdateSystemLimits)
+	})
 }
 
 // Helper for JSON responses
@@ -60,181 +59,181 @@ func (h *SettingsHandlers) respondError(w http.ResponseWriter, status int, messa
 }
 
 // Platform Settings
-func (h *SettingsHandlers) GetPlatformSettings(c *gin.Context) {
-	settings, err := h.service.GetPlatformSettings(c.Request.Context())
+func (h *SettingsHandlers) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
+	settings, err := h.service.GetPlatformSettings(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get platform settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.respondJSON(w, http.StatusOK, settings)
 }
 
-func (h *SettingsHandlers) UpdatePlatformSettings(c *gin.Context) {
+func (h *SettingsHandlers) UpdatePlatformSettings(w http.ResponseWriter, r *http.Request) {
 	var settings models.PlatformSettings
-	if err := c.ShouldBindJSON(&settings); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.UpdatePlatformSettings(c.Request.Context(), &settings); err != nil {
+	if err := h.service.UpdatePlatformSettings(r.Context(), &settings); err != nil {
 		h.logger.Error("Failed to update platform settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.respondJSON(w, http.StatusOK, settings)
 }
 
 // Feature Flags
-func (h *SettingsHandlers) ListFeatureFlags(c *gin.Context) {
-	flags, err := h.service.ListFeatureFlags(c.Request.Context())
+func (h *SettingsHandlers) ListFeatureFlags(w http.ResponseWriter, r *http.Request) {
+	flags, err := h.service.ListFeatureFlags(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list feature flags", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, flags)
+	h.respondJSON(w, http.StatusOK, flags)
 }
 
-func (h *SettingsHandlers) CreateFeatureFlag(c *gin.Context) {
+func (h *SettingsHandlers) CreateFeatureFlag(w http.ResponseWriter, r *http.Request) {
 	var flag models.FeatureFlag
-	if err := c.ShouldBindJSON(&flag); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&flag); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.CreateFeatureFlag(c.Request.Context(), &flag); err != nil {
+	if err := h.service.CreateFeatureFlag(r.Context(), &flag); err != nil {
 		h.logger.Error("Failed to create feature flag", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusCreated, flag)
+	h.respondJSON(w, http.StatusCreated, flag)
 }
 
-func (h *SettingsHandlers) ToggleFeatureFlag(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *SettingsHandlers) ToggleFeatureFlag(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		h.respondError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
 
-	if err := h.service.ToggleFeatureFlag(c.Request.Context(), id); err != nil {
+	if err := h.service.ToggleFeatureFlag(r.Context(), id); err != nil {
 		h.logger.Error("Failed to toggle feature flag", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "toggled"})
+	h.respondJSON(w, http.StatusOK, map[string]string{"status": "toggled"})
 }
 
 // Localization
-func (h *SettingsHandlers) GetLocalizationSettings(c *gin.Context) {
-	settings, err := h.service.GetLocalizationSettings(c.Request.Context())
+func (h *SettingsHandlers) GetLocalizationSettings(w http.ResponseWriter, r *http.Request) {
+	settings, err := h.service.GetLocalizationSettings(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get localization settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.respondJSON(w, http.StatusOK, settings)
 }
 
-func (h *SettingsHandlers) UpdateLocalizationSettings(c *gin.Context) {
+func (h *SettingsHandlers) UpdateLocalizationSettings(w http.ResponseWriter, r *http.Request) {
 	var settings models.LocalizationSettings
-	if err := c.ShouldBindJSON(&settings); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.UpdateLocalizationSettings(c.Request.Context(), &settings); err != nil {
+	if err := h.service.UpdateLocalizationSettings(r.Context(), &settings); err != nil {
 		h.logger.Error("Failed to update localization settings", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, settings)
+	h.respondJSON(w, http.StatusOK, settings)
 }
 
 // Templates
-func (h *SettingsHandlers) ListTemplates(c *gin.Context) {
-	templates, err := h.service.ListTemplates(c.Request.Context())
+func (h *SettingsHandlers) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	templates, err := h.service.ListTemplates(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list templates", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, templates)
+	h.respondJSON(w, http.StatusOK, templates)
 }
 
-func (h *SettingsHandlers) UpdateTemplate(c *gin.Context) {
-	idStr := c.Param("id")
+func (h *SettingsHandlers) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		h.respondError(w, http.StatusBadRequest, "Invalid ID")
 		return
 	}
 
 	var template models.Template
-	if err := c.ShouldBindJSON(&template); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 	template.ID = id
 
-	if err := h.service.UpdateTemplate(c.Request.Context(), &template); err != nil {
+	if err := h.service.UpdateTemplate(r.Context(), &template); err != nil {
 		h.logger.Error("Failed to update template", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, template)
+	h.respondJSON(w, http.StatusOK, template)
 }
 
 // Channels
-func (h *SettingsHandlers) ListNotificationChannels(c *gin.Context) {
-	channels, err := h.service.ListNotificationChannels(c.Request.Context())
+func (h *SettingsHandlers) ListNotificationChannels(w http.ResponseWriter, r *http.Request) {
+	channels, err := h.service.ListNotificationChannels(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list notification channels", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, channels)
+	h.respondJSON(w, http.StatusOK, channels)
 }
 
-func (h *SettingsHandlers) UpdateNotificationChannel(c *gin.Context) {
+func (h *SettingsHandlers) UpdateNotificationChannel(w http.ResponseWriter, r *http.Request) {
 	var channel models.NotificationChannel
-	if err := c.ShouldBindJSON(&channel); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&channel); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.UpdateNotificationChannel(c.Request.Context(), &channel); err != nil {
+	if err := h.service.UpdateNotificationChannel(r.Context(), &channel); err != nil {
 		h.logger.Error("Failed to update notification channel", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, channel)
+	h.respondJSON(w, http.StatusOK, channel)
 }
 
 // Limits
-func (h *SettingsHandlers) GetSystemLimits(c *gin.Context) {
-	limits, err := h.service.GetSystemLimits(c.Request.Context())
+func (h *SettingsHandlers) GetSystemLimits(w http.ResponseWriter, r *http.Request) {
+	limits, err := h.service.GetSystemLimits(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get system limits", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, limits)
+	h.respondJSON(w, http.StatusOK, limits)
 }
 
-func (h *SettingsHandlers) UpdateSystemLimits(c *gin.Context) {
+func (h *SettingsHandlers) UpdateSystemLimits(w http.ResponseWriter, r *http.Request) {
 	var limits models.SystemLimit
-	if err := c.ShouldBindJSON(&limits); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+	if err := json.NewDecoder(r.Body).Decode(&limits); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.UpdateSystemLimits(c.Request.Context(), &limits); err != nil {
+	if err := h.service.UpdateSystemLimits(r.Context(), &limits); err != nil {
 		h.logger.Error("Failed to update system limits", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
-	c.JSON(http.StatusOK, limits)
+	h.respondJSON(w, http.StatusOK, limits)
 }

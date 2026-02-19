@@ -1,58 +1,47 @@
 package config
 
 import (
-	"strings"
-
+	"fmt"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	NatsURL     string
-	JWTSecret   string
-	LogLevel    string
+	Port      int
+	DBHost    string
+	DBPort    int
+	DBUser    string
+	DBPass    string
+	DBName    string
+	SSLMode   string
+	JWTSecret string
+	NATSURL   string
+	RedisURL  string
 }
 
-func Load() *Config {
-	v := viper.New()
+func Load() (*Config, error) {
+	viper.SetDefault("PORT", 8081)
+	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_PORT", 5432)
+	viper.SetDefault("SSL_MODE", "disable")
+	viper.AutomaticEnv()
 
-	v.SetDefault("server.port", "8087")
-	v.SetDefault("database.url", "")
-	v.SetDefault("nats.url", "nats://localhost:4222")
-	v.SetDefault("server.log_level", "info")
-	v.SetDefault("security.jwt_secret", "")
-
-	v.SetConfigName("config")
-	v.SetConfigType("toml")
-	v.AddConfigPath("../../") 
-	v.AddConfigPath(".")      
-
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			zap.S().Warnf("Error reading config file: %v", err)
-		}
+	cfg := &Config{
+		Port:      viper.GetInt("PORT"),
+		DBHost:    viper.GetString("DB_HOST"),
+		DBPort:    viper.GetInt("DB_PORT"),
+		DBUser:    viper.GetString("DB_USER"),
+		DBPass:    viper.GetString("DB_PASS"),
+		DBName:    viper.GetString("DB_NAME"),
+		SSLMode:   viper.GetString("SSL_MODE"),
+		JWTSecret: viper.GetString("JWT_SECRET"),
+		NATSURL:   viper.GetString("NATS_URL"),
+		RedisURL:  viper.GetString("REDIS_URL"),
 	}
 
-	v.BindEnv("server.port", "PORT")
-	v.BindEnv("database.url", "DATABASE_URL")
-	v.BindEnv("nats.url", "NATS_URL")
-	v.BindEnv("server.log_level", "LOG_LEVEL")
-	v.BindEnv("security.jwt_secret", "JWT_SECRET")
-
-	return &Config{
-		Port:        v.GetString("server.port"),
-		DatabaseURL: v.GetString("database.url"),
-		NatsURL:     v.GetString("nats.url"),
-		LogLevel:    v.GetString("server.log_level"),
-		JWTSecret:   v.GetString("security.jwt_secret"),
+	if cfg.DBUser == "" || cfg.DBPass == "" || cfg.DBName == "" {
+		return nil, fmt.Errorf("missing mandatory database environment variables")
 	}
+
+	return cfg, nil
 }
 
-func (c *Config) GetJWTSecret() string {
-	return c.JWTSecret
-}

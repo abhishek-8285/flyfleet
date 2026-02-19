@@ -47,9 +47,9 @@ services:
     image: timescale/timescaledb:latest-pg15
     container_name: flyfleet-postgres
     environment:
-      POSTGRES_DB: fleetdb
-      POSTGRES_USER: fleet
-      POSTGRES_PASSWORD: fleet
+      POSTGRES_DB: ${POSTGRES_DB:-fleetdb}
+      POSTGRES_USER: ${POSTGRES_USER:-fleet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -125,9 +125,9 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-auth-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
-      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
-      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_key}
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-}
       PORT: 8080
     depends_on:
       postgres:
@@ -150,8 +150,8 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-vehicle-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
-      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
       NATS_URL: nats://nats:4222
       PORT: 8081
     depends_on:
@@ -199,8 +199,8 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-driver-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
-      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
       NATS_URL: nats://nats:4222
       PORT: 8083
     depends_on:
@@ -224,8 +224,8 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-trip-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
-      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
       NATS_URL: nats://nats:4222
       OSRM_URL: http://osrm:5000
       PORT: 8084
@@ -250,8 +250,8 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-alert-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
-      REDIS_URL: redis://:${REDIS_PASSWORD:-fleet_redis_secret}@redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
       NATS_URL: nats://nats:4222
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -280,7 +280,7 @@ services:
       dockerfile: Dockerfile
     container_name: flyfleet-geofencing-service
     environment:
-      DATABASE_URL: postgres://fleet:fleet@postgres:5432/fleetdb
+      DATABASE_URL: postgres://${POSTGRES_USER:-fleet}:${POSTGRES_PASSWORD:-}@postgres:5432/${POSTGRES_DB:-fleetdb}
       NATS_URL: nats://nats:4222
       PORT: 8086
     depends_on:
@@ -377,9 +377,9 @@ services:
       SCHEDULE: 0 2 * * *
       DB_TYPE: postgresql
       DB_HOST: postgres
-      DB_NAME: fleetdb
-      DB_USER: fleet
-      DB_PASS: fleet
+      DB_NAME: ${POSTGRES_DB:-fleetdb}
+      DB_USER: ${POSTGRES_USER:-fleet}
+      DB_PASS: ${POSTGRES_PASSWORD:-}
       HEALTHCHECK_SMTP: ${HEALTHCHECK_SMTP:-""}
     networks:
       - flyfleet-net

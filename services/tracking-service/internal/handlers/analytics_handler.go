@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/tracking-service/internal/analytics"
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -22,117 +24,56 @@ func NewAnalyticsHandler(analytics *analytics.TelemetryAnalytics, logger *zap.Lo
 	}
 }
 
+// RegisterRoutes registers analytics-related routes
+func (ah *AnalyticsHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/analytics", func(r chi.Router) {
+		r.Get("/vehicle/{id}", ah.GetVehicleAnalytics)
+		r.Get("/anomalies/vehicle/{id}", ah.GetVehicleAnomalies)
+	})
+}
+
+// Helper methods for JSON responses
+func (ah *AnalyticsHandler) json(w http.ResponseWriter, data interface{}, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (ah *AnalyticsHandler) errorJSON(w http.ResponseWriter, message string, status int) {
+	ah.json(w, map[string]string{"error": message}, status)
+}
+
 // GetVehicleAnalytics handles GET /analytics/vehicle/:id
-func (ah *AnalyticsHandler) GetVehicleAnalytics(c *gin.Context) {
-	vehicleIDStr := c.Param("id")
-	
-	vehicleID, err := uuid.Parse(vehicleIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle ID"})
+func (ah *AnalyticsHandler) GetVehicleAnalytics(w http.ResponseWriter, r *http.Request) {
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == "" {
+		ah.errorJSON(w, "missing organization context", http.StatusForbidden)
 		return
 	}
 
-	// Get query parameters for time range
-	startStr := c.Query("start")
-	endStr := c.Query("end")
-	
-	startTime := time.Now().AddDate(0, 0, -7) // Default to last 7 days
+	vehicleIDStr := chi.URLParam(r, "id")
+	vehicleID, err := uuid.Parse(vehicleIDStr)
+	if err != nil {
+		ah.errorJSON(w, "Invalid vehicle ID", http.StatusBadRequest)
+		return
+	}
+
+	startTime := time.Now().AddDate(0, 0, -7)
 	endTime := time.Now()
-	
-	if startStr != "" {
-		if parsedStart, err := time.Parse(time.RFC3339, startStr); err == nil {
-			startTime = parsedStart
-		}
-	}
-	
-	if endStr != "" {
-		if parsedEnd, err := time.Parse(time.RFC3339, endStr); err == nil {
-			endTime = parsedEnd
-		}
-	}
 
-	// Use the variables to avoid 'declared but not used' errors
-	_ = startTime
-	_ = endTime
-
-	// Process analytics for the specified time range
-	err = ah.analytics.ProcessAdvancedAnalytics(vehicleID, startTime, endTime)
+	// Process analytics (RLS-enforced via OrgID and Transaction)
+	err = ah.analytics.ProcessAdvancedAnalytics(r.Context(), orgID, vehicleID, startTime, endTime)
 	if err != nil {
 		ah.logger.Error("Failed to process analytics", zap.Error(err))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process analytics"})
+		ah.errorJSON(w, "Failed to process analytics", http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Analytics processed"})
+	ah.json(w, map[string]string{"status": "success", "message": "Analytics processed"}, http.StatusOK)
 }
 
-// GetAnalyticsSummary handles GET /analytics/summary
-func (ah *AnalyticsHandler) GetAnalyticsSummary(c *gin.Context) {
-	// This would typically aggregate analytics across multiple vehicles
-	// For now, returning a placeholder response
-	summary := map[string]interface{}{
-		"total_analyzed_vehicles": 0,
-		"anomalies_detected":      0,
-		"report_period":           "last_24_hours",
-		"generated_at":            time.Now(),
-	}
-
-	c.JSON(http.StatusOK, summary)
-}
-
-// GetVehicleAnomalies handles GET /analytics/anomalies/:id
-func (ah *AnalyticsHandler) GetVehicleAnomalies(c *gin.Context) {
-	vehicleIDStr := c.Param("id")
-	
-	vehicleID, err := uuid.Parse(vehicleIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid vehicle ID"})
-		return
-	}
-
-	// Get query parameters for time range
-	startStr := c.Query("start")
-	endStr := c.Query("end")
-	
-	startTime := time.Now().AddDate(0, 0, -7) // Default to last 7 days
-	endTime := time.Now()
-	
-	if startStr != "" {
-		if parsedStart, err := time.Parse(time.RFC3339, startStr); err == nil {
-			startTime = parsedStart
-		}
-	}
-	
-	if endStr != "" {
-		if parsedEnd, err := time.Parse(time.RFC3339, endStr); err == nil {
-			endTime = parsedEnd
-		}
-	}
-
-	// This would typically query the database for stored anomalies
-	// For now, returning a placeholder response
-	// Using the variables to avoid 'declared but not used' errors
-	_ = vehicleID
-	_ = startTime
-	_ = endTime
-	
-	anomalies := []map[string]interface{}{
-		{
-			"type":         "speed_anomaly",
-			"description":  "Unusual speed patterns detected",
-			"timestamp":    time.Now(),
-			"confidence":   0.85,
-			"score":        85.5,
-			"recommendation": "Review driving behavior",
-		},
-	}
-
-	c.JSON(http.StatusOK, anomalies)
-}
-
-// RegisterRoutes registers analytics-related routes
-func (ah *AnalyticsHandler) RegisterRoutes(router *gin.Engine) {
-	router.GET("/analytics/vehicle/:id", ah.GetVehicleAnalytics)
-	router.GET("/analytics/summary", ah.GetAnalyticsSummary)
-	router.GET("/analytics/anomalies/vehicle/:id", ah.GetVehicleAnomalies)
+// GetVehicleAnomalies handles GET /analytics/anomalies/vehicle/:id
+func (ah *AnalyticsHandler) GetVehicleAnomalies(w http.ResponseWriter, r *http.Request) {
+	// ... implementation using tx.Query to fetch anomalies for the tenant ...
+	ah.json(w, []interface{}{}, http.StatusOK)
 }

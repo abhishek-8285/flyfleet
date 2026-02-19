@@ -1,0 +1,91 @@
+openapi: 3.1.0
+info:
+  title: FlyFleet Billing Service
+  description: Microservice for managing invoices, payments, and billing settings.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /api/v1/billing/invoices:
+    get:
+      summary: List invoices
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInvoiceRequest'
+      responses:
+        '201':
+          description: Created
+
+  /api/v1/billing/invoices/{id}:
+    get:
+      summary: Get an invoice by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+
+  /api/v1/billing/invoices/{id}/void:
+    post:
+      summary: Void an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content
+
+components:
+  schemas:
+    CreateInvoiceRequest:
+      type: object
+      required: [customer_name, customer_email, due_date, currency, items]
+      properties:
+        customer_name: { type: string }
+        customer_email: { type: string, format: email }
+        due_date: { type: string, format: date-time }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateItemRequest'
+
+    CreateItemRequest:
+      type: object
+      required: [description, quantity, unit_price]
+      properties:
+        description: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unit_price: { type: number, minimum: 0 }
+

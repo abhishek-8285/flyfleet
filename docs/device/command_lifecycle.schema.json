@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.local/schemas/command-lifecycle.schema.json",
+  "title": "Command Lifecycle Event",
+  "type": "object",
+  "required": ["command_id", "device_id", "state", "timestamp"],
+  "properties": {
+    "command_id": {"type": "string", "minLength": 1},
+    "device_id": {"type": "string", "minLength": 1},
+    "state": {
+      "type": "string",
+      "enum": ["created", "queued", "delivered", "acked", "applied", "failed", "timed_out"]
+    },
+    "timestamp": {"type": "string", "format": "date-time"},
+    "trace_id": {"type": "string"},
+    "reason": {"type": "string"}
+  },
+  "additionalProperties": false
+}

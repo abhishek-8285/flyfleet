@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flyfleet.dev/schemas/auth/token_claims.schema.json",
+  "title": "FlyFleet Access Token Claims",
+  "type": "object",
+  "required": [
+    "org_id",
+    "role"
+  ],
+  "properties": {
+    "sub": {
+      "type": "string",
+      "description": "Canonical user subject identifier."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Legacy user identifier used by some services."
+    },
+    "org_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Tenant organization identifier."
+    },
+    "role": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Effective RBAC role for authorization checks."
+    },
+    "exp": {
+      "type": "integer",
+      "description": "Token expiry (unix seconds)."
+    },
+    "iat": {
+      "type": "integer",
+      "description": "Token issued-at (unix seconds)."
+    },
+    "jti": {
+      "type": "string",
+      "description": "Unique token identifier for revocation tracking."
+    }
+  },
+  "allOf": [
+    {
+      "anyOf": [
+        {
+          "required": [
+            "sub"
+          ]
+        },
+        {
+          "required": [
+            "user_id"
+          ]
+        }
+      ]
+    }
+  ],
+  "additionalProperties": true
+}

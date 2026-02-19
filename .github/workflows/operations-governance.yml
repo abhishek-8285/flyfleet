@@ -1,0 +1,34 @@
+name: Operations Governance
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "docs/operations/**"
+      - "docs/release/**"
+      - "docs/quality/**"
+      - "scripts/check_operations_governance.py"
+      - ".github/workflows/operations-governance.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/operations/**"
+      - "docs/release/**"
+      - "docs/quality/**"
+      - "scripts/check_operations_governance.py"
+      - ".github/workflows/operations-governance.yml"
+
+jobs:
+  operations-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run operations governance checks
+        run: python3 scripts/check_operations_governance.py
