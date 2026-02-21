@@ -32,13 +32,13 @@ const UserConsole: React.FC = () => {
             setError(null);
             setActionMessage(null);
             const [pRes, sRes, sessRes, lRes, rRes, permRes, nRes] = await Promise.all([
-                fetch(`/bff/support/users/${userId}/profile`, { headers }),
-                fetch(`/bff/support/users/${userId}/security`, { headers }),
-                fetch(`/bff/support/users/${userId}/sessions`, { headers }),
-                fetch(`/bff/support/users/${userId}/logins`, { headers }),
-                fetch(`/bff/support/users/${userId}/roles`, { headers }),
-                fetch(`/bff/support/users/${userId}/permissions`, { headers }),
-                fetch(`/bff/support/users/${userId}/notes`, { headers })
+                fetch(`/api/v1/support/users/${userId}/profile`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/security`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/sessions`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/logins`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/roles`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/permissions`, { headers }),
+                fetch(`/api/v1/support/users/${userId}/notes`, { headers })
             ]);
 
             if (pRes.ok) setProfile(await pRes.json());
@@ -71,7 +71,7 @@ const UserConsole: React.FC = () => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
-            const res = await fetch(`/bff/support/users/${activeUserId}/${action}`, { method: 'POST', headers });
+            const res = await fetch(`/api/v1/support/users/${activeUserId}/${action}`, { method: 'POST', headers });
             if (res.ok) {
                 setActionMessage(`${action} executed successfully`);
             } else {
@@ -87,7 +87,7 @@ const UserConsole: React.FC = () => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         try {
-            const res = await fetch(`/bff/support/users/${activeUserId}/sessions/${sessionId}/revoke`, { method: 'POST', headers });
+            const res = await fetch(`/api/v1/support/users/${activeUserId}/sessions/${sessionId}/revoke`, { method: 'POST', headers });
             if (res.ok) {
                 setSessions(sessions.filter(s => s.sessionId !== sessionId));
             }
@@ -101,7 +101,7 @@ const UserConsole: React.FC = () => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
         try {
-            const res = await fetch(`/bff/support/users/${activeUserId}/notes`, {
+            const res = await fetch(`/api/v1/support/users/${activeUserId}/notes`, {
                 method: 'POST', 
                 headers,
                 body: JSON.stringify({ note: newNote })

@@ -31,8 +31,8 @@ func (r *DeviceRepository) Register(ctx context.Context, device *models.Device) 
 		INSERT INTO devices (
 			id, device_id, organization_id, vehicle_id, hardware_attestation,
 			android_version, device_model, app_version, status, jwt_token,
-			refresh_token, token_expires_at, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+			refresh_token, token_expires_at, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, NOW(), $14)
 		ON CONFLICT (device_id) DO UPDATE SET
 			organization_id = EXCLUDED.organization_id,
 			vehicle_id = EXCLUDED.vehicle_id,
@@ -44,7 +44,8 @@ func (r *DeviceRepository) Register(ctx context.Context, device *models.Device) 
 			jwt_token = EXCLUDED.jwt_token,
 			refresh_token = EXCLUDED.refresh_token,
 			token_expires_at = EXCLUDED.token_expires_at,
-			updated_at = NOW()
+			updated_at = NOW(),
+			updated_by = EXCLUDED.updated_by
 	`
 
 	_, err := r.db.Exec(ctx, query,
@@ -60,6 +61,8 @@ func (r *DeviceRepository) Register(ctx context.Context, device *models.Device) 
 		device.JWTToken,
 		device.RefreshToken,
 		device.TokenExpiresAt,
+		device.CreatedBy,
+		device.UpdatedBy,
 	)
 
 	return err
@@ -70,7 +73,7 @@ func (r *DeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (
 	query := `
 		SELECT id, device_id, organization_id, vehicle_id, hardware_attestation,
 		       android_version, device_model, app_version, status, jwt_token,
-		       refresh_token, token_expires_at, last_heartbeat, created_at, updated_at
+		       refresh_token, token_expires_at, last_heartbeat, created_at, created_by, updated_at, updated_by
 		FROM devices
 		WHERE device_id = $1
 	`
@@ -91,7 +94,9 @@ func (r *DeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (
 		&device.TokenExpiresAt,
 		&device.LastHeartbeat,
 		&device.CreatedAt,
+		&device.CreatedBy,
 		&device.UpdatedAt,
+		&device.UpdatedBy,
 	)
 
 	if err == sql.ErrNoRows {

@@ -148,10 +148,8 @@ func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.ID = id
-	temp := uuid.New()
-	req.UpdatedBy = &temp
-	now := time.Now()
-	req.UpdatedAt = &now
+	req.UpdatedBy = uuid.New()
+	req.UpdatedAt = time.Now()
 
 	if err := h.svc.UpdateReport(r.Context(), &req); err != nil {
 		h.logger.Error("Failed to update report", zap.Error(err))

@@ -46,7 +46,7 @@ const DeviceTwins: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/devices/twins?limit=200', { headers: headers() });
+      const res = await fetch('/api/v1/devices/twins?limit=200', { headers: headers() });
       if (!res.ok) throw new Error(await parseError(res));
       const data = await res.json();
       setTwins(Array.isArray(data) ? data : []);
@@ -73,7 +73,7 @@ const DeviceTwins: React.FC = () => {
     setError(null);
     try {
       const desiredState = JSON.parse(desiredEditor);
-      const res = await fetch(`/api/devices/twins/${selected.device_id}/desired`, {
+      const res = await fetch(`/api/v1/devices/twins/${selected.device_id}/desired`, {
         method: 'PUT',
         headers: headers(),
         body: JSON.stringify({ desired_state: desiredState }),
@@ -93,7 +93,7 @@ const DeviceTwins: React.FC = () => {
     setError(null);
     try {
       const reportedState = JSON.parse(reportedEditor);
-      const res = await fetch(`/api/devices/twins/${selected.device_id}/reported`, {
+      const res = await fetch(`/api/v1/devices/twins/${selected.device_id}/reported`, {
         method: 'PUT',
         headers: headers(),
         body: JSON.stringify({ reported_state: reportedState }),

@@ -25,9 +25,16 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, orgID uuid.UUID, inv
 	inv.OrgID = orgID
 	inv.Status = invoice.StatusDraft
 	
+	userID := s.getUserID(ctx)
+	inv.CreatedBy = userID
+	inv.UpdatedBy = userID
+
 	// Basic calculation
 	var subtotal float64
 	for i := range inv.Items {
+		inv.Items[i].OrgID = orgID
+		inv.Items[i].CreatedBy = userID
+		inv.Items[i].UpdatedBy = userID
 		inv.Items[i].Amount = float64(inv.Items[i].Quantity) * inv.Items[i].UnitPrice
 		subtotal += inv.Items[i].Amount
 	}
@@ -56,7 +63,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, orgID uuid.UUID, limi
 }
 
 func (s *InvoiceService) VoidInvoice(ctx context.Context, orgID, id uuid.UUID) error {
-	err := s.repo.UpdateStatus(ctx, orgID, id, invoice.StatusVoid)
+	err := s.repo.UpdateStatus(ctx, orgID, id, invoice.StatusVoid, s.getUserID(ctx))
 	if err != nil {
 		return err
 	}
@@ -68,5 +75,18 @@ func (s *InvoiceService) VoidInvoice(ctx context.Context, orgID, id uuid.UUID) e
 		})
 	}
 	return nil
+}
+
+func (s *InvoiceService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 

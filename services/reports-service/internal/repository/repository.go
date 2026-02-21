@@ -19,7 +19,7 @@ type Repository interface {
 	ResumeReport(ctx context.Context, id uuid.UUID) error
 	
 	CreateExecution(ctx context.Context, exec *models.ReportExecution) error
-	UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string) error
+	UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string, updatedBy uuid.UUID) error
 	ListExecutions(ctx context.Context, reportID uuid.UUID, page, limit int) ([]models.ReportExecution, int, error)
 	
 	GetSettings(ctx context.Context) (*models.GlobalSettings, error)
@@ -41,10 +41,10 @@ func (r *PostgresRepository) CreateReport(ctx context.Context, report *models.Sc
 	}
 	defer tx.Rollback(ctx)
 
-	query := `INSERT INTO scheduled_reports (id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time, timezone, filters, status, created_by, created_at)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	query := `INSERT INTO scheduled_reports (id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time, timezone, filters, status, created_by, updated_by, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 	
-	_, err = tx.Exec(ctx, query, report.ID, report.OrganizationID, report.Name, report.ReportType, report.Format, report.Frequency, report.CronExpression, report.DeliveryTime, report.Timezone, report.Filters, report.Status, report.CreatedBy, report.CreatedAt)
+	_, err = tx.Exec(ctx, query, report.ID, report.OrganizationID, report.Name, report.ReportType, report.Format, report.Frequency, report.CronExpression, report.DeliveryTime, report.Timezone, report.Filters, report.Status, report.CreatedBy, report.UpdatedBy, report.CreatedAt, report.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (r *PostgresRepository) GetReport(ctx context.Context, id uuid.UUID) (*mode
 	          FROM scheduled_reports WHERE id = $1`
 	
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&report.ID, &report.OrganizationID, &report.Name, &report.ReportType, &report.Format, &report.Frequency, &report.CronExpression, &report.DeliveryTime, &report.Timezone, &report.Filters, &report.Status, &report.CreatedBy, &report.UpdatedBy, &report.CreatedAt, &report.UpdatedBy,
+		&report.ID, &report.OrganizationID, &report.Name, &report.ReportType, &report.Format, &report.Frequency, &report.CronExpression, &report.DeliveryTime, &report.Timezone, &report.Filters, &report.Status, &report.CreatedBy, &report.UpdatedBy, &report.CreatedAt, &report.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -161,16 +161,16 @@ func (r *PostgresRepository) ResumeReport(ctx context.Context, id uuid.UUID) err
 }
 
 func (r *PostgresRepository) CreateExecution(ctx context.Context, exec *models.ReportExecution) error {
-	query := `INSERT INTO report_executions (id, report_id, started_at, status) VALUES ($1, $2, $3, $4)`
-	_, err := r.pool.Exec(ctx, query, exec.ID, exec.ReportID, exec.StartedAt, exec.Status)
+	query := `INSERT INTO report_executions (id, report_id, started_at, status, created_at, created_by, updated_at, updated_by) VALUES ($1, $2, $3, $4, NOW(), $5, NOW(), $5)`
+	_, err := r.pool.Exec(ctx, query, exec.ID, exec.ReportID, exec.StartedAt, exec.Status, exec.CreatedBy)
 	return err
 }
 
-func (r *PostgresRepository) UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string) error {
+func (r *PostgresRepository) UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string, updatedBy uuid.UUID) error {
 	query := `UPDATE report_executions 
-	          SET status = $1, error_message = $2, file_url = $3, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END
-	          WHERE id = $4`
-	_, err := r.pool.Exec(ctx, query, status, errorMessage, fileURL, id)
+	          SET status = $1, error_message = $2, file_url = $3, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END, updated_by = $4, updated_at = NOW()
+	          WHERE id = $5`
+	_, err := r.pool.Exec(ctx, query, status, errorMessage, fileURL, updatedBy, id)
 	return err
 }
 
@@ -193,7 +193,7 @@ func (r *PostgresRepository) ListExecutions(ctx context.Context, reportID uuid.U
 	}
 
 	// Select
-	query := fmt.Sprintf(`SELECT id, report_id, started_at, duration_seconds, status, error_message, file_url 
+	query := fmt.Sprintf(`SELECT id, report_id, started_at, duration_seconds, status, error_message, file_url, created_at, created_by, updated_at, updated_by 
 	                      FROM report_executions %s ORDER BY started_at DESC LIMIT $%d OFFSET $%d`, whereClause, len(args)+1, len(args)+2)
 	
 	args = append(args, limit, offset)
@@ -206,7 +206,7 @@ func (r *PostgresRepository) ListExecutions(ctx context.Context, reportID uuid.U
 
 	for rows.Next() {
 		var e models.ReportExecution
-		if err := rows.Scan(&e.ID, &e.ReportID, &e.StartedAt, &e.DurationSeconds, &e.Status, &e.ErrorMessage, &e.FileURL); err != nil {
+		if err := rows.Scan(&e.ID, &e.ReportID, &e.StartedAt, &e.DurationSeconds, &e.Status, &e.ErrorMessage, &e.FileURL, &e.CreatedAt, &e.CreatedBy, &e.UpdatedAt, &e.UpdatedBy); err != nil {
 			return nil, 0, err
 		}
 		execs = append(execs, e)
@@ -222,8 +222,8 @@ func (r *PostgresRepository) GetSettings(ctx context.Context) (*models.GlobalSet
 		return nil, err
 	}
 
-	err = r.pool.QueryRow(ctx, "SELECT id, max_concurrent_jobs, max_retry_attempts, retention_days, smtp_host, smtp_port, smtp_user FROM report_global_settings WHERE id = 1").Scan(
-		&s.ID, &s.MaxConcurrentJobs, &s.MaxRetryAttempts, &s.RetentionDays, &s.SMTPHost, &s.SMTPPort, &s.SMTPUser,
+	err = r.pool.QueryRow(ctx, "SELECT id, max_concurrent_jobs, max_retry_attempts, retention_days, smtp_host, smtp_port, smtp_user, created_at, created_by, updated_at, updated_by FROM report_global_settings WHERE id = 1").Scan(
+		&s.ID, &s.MaxConcurrentJobs, &s.MaxRetryAttempts, &s.RetentionDays, &s.SMTPHost, &s.SMTPPort, &s.SMTPUser, &s.CreatedAt, &s.CreatedBy, &s.UpdatedAt, &s.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -232,7 +232,7 @@ func (r *PostgresRepository) GetSettings(ctx context.Context) (*models.GlobalSet
 }
 
 func (r *PostgresRepository) UpdateSettings(ctx context.Context, s *models.GlobalSettings) error {
-	query := `UPDATE report_global_settings SET max_concurrent_jobs=$1, max_retry_attempts=$2, retention_days=$3, smtp_host=$4, smtp_port=$5, smtp_user=$6, updated_at=NOW() WHERE id=1`
-	_, err := r.pool.Exec(ctx, query, s.MaxConcurrentJobs, s.MaxRetryAttempts, s.RetentionDays, s.SMTPHost, s.SMTPPort, s.SMTPUser)
+	query := `UPDATE report_global_settings SET max_concurrent_jobs=$1, max_retry_attempts=$2, retention_days=$3, smtp_host=$4, smtp_port=$5, smtp_user=$6, updated_at=NOW(), updated_by=$7 WHERE id=1`
+	_, err := r.pool.Exec(ctx, query, s.MaxConcurrentJobs, s.MaxRetryAttempts, s.RetentionDays, s.SMTPHost, s.SMTPPort, s.SMTPUser, s.UpdatedBy)
 	return err
 }

@@ -12,6 +12,7 @@ type Config struct {
 	DatabaseURL string
 	JWTSecret   string
 	LogLevel    string
+	NatsURL     string
 }
 
 func Load() *Config {
@@ -21,6 +22,7 @@ func Load() *Config {
 	v.SetDefault("database.url", "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable")
 	v.SetDefault("server.log_level", "info")
 	v.SetDefault("security.jwt_secret", "")
+	v.SetDefault("nats.url", "nats://localhost:4222")
 
 	v.SetConfigName("config")
 	v.SetConfigType("toml")
@@ -40,11 +42,13 @@ func Load() *Config {
 	v.BindEnv("database.url", "DATABASE_URL")
 	v.BindEnv("server.log_level", "LOG_LEVEL")
 	v.BindEnv("security.jwt_secret", "JWT_SECRET")
+	v.BindEnv("nats.url", "NATS_URL")
 
 	return &Config{
 		Port:        v.GetString("server.port"),
 		DatabaseURL: v.GetString("database.url"),
 		LogLevel:    v.GetString("server.log_level"),
 		JWTSecret:   v.GetString("security.jwt_secret"),
+		NatsURL:     v.GetString("nats.url"),
 	}
 }

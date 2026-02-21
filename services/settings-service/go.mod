@@ -1,6 +1,8 @@
 module github.com/flyfleet/settings-service
 
-go 1.25.7
+replace github.com/fleet-platform/shared => ../../packages/common/go
+
+go 1.26
 
 require (
 	github.com/google/uuid v1.6.0
@@ -16,3 +18,4 @@ require (
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 )
+replace github.com/flyfleet/proto => ../../proto

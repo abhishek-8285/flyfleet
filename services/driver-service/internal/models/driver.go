@@ -5,6 +5,12 @@ import (
 )
 
 // Driver represents a vehicle driver
+type DriverStats struct {
+	TotalDrivers    int
+	ActiveDrivers   int
+	InactiveDrivers int
+}
+
 type Driver struct {
 	ID                   string             `json:"id" db:"id"`
 	OrgID                string             `json:"org_id" db:"org_id"`
@@ -36,7 +42,9 @@ type Driver struct {
 	Schedules            []WorkSchedule     `json:"schedules" db:"schedules"`
 	Metadata             map[string]interface{} `json:"metadata" db:"metadata"`
 	CreatedAt            time.Time          `json:"created_at" db:"created_at"`
+	CreatedBy            string             `json:"created_by" db:"created_by"`
 	UpdatedAt            time.Time          `json:"updated_at" db:"updated_at"`
+	UpdatedBy            string             `json:"updated_by" db:"updated_by"`
 	DeletedAt            *time.Time         `json:"deleted_at" db:"deleted_at"`
 }
 
@@ -71,6 +79,9 @@ type DriverDocument struct {
 	VerifiedBy  *string   `json:"verified_by" db:"verified_by"`
 	VerifiedAt  *time.Time `json:"verified_at" db:"verified_at"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   string    `json:"created_by" db:"created_by"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy   string    `json:"updated_by" db:"updated_by"`
 }
 
 // AttendanceRecord represents driver attendance records
@@ -82,6 +93,9 @@ type AttendanceRecord struct {
 	CheckOutTime *time.Time `json:"check_out_time" db:"check_out_time"`
 	Remarks     string    `json:"remarks" db:"remarks"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   string    `json:"created_by" db:"created_by"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy   string    `json:"updated_by" db:"updated_by"`
 }
 
 // WorkSchedule represents driver work schedules
@@ -92,7 +106,9 @@ type WorkSchedule struct {
 	EndTime     string    `json:"end_time" db:"end_time"`       // HH:MM format
 	IsWorking   bool      `json:"is_working" db:"is_working"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   string    `json:"created_by" db:"created_by"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy   string    `json:"updated_by" db:"updated_by"`
 }
 
 // CreateDriverRequest represents the request body for creating a driver
@@ -212,6 +228,7 @@ type BehaviorEvent struct {
 	Location    *Location `json:"location" db:"location"` // optional GPS location
 	TripID      *string   `json:"trip_id" db:"trip_id"`   // optional trip association
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   string    `json:"created_by" db:"created_by"`
 }
 
 // Location represents geographic coordinates
@@ -282,7 +299,9 @@ type DriverBehavior struct {
 	// Metadata
 	Metadata           map[string]interface{} `json:"metadata" db:"metadata"`
 	CreatedAt          time.Time           `json:"created_at" db:"created_at"`
+	CreatedBy          string              `json:"created_by" db:"created_by"`
 	UpdatedAt          time.Time           `json:"updated_at" db:"updated_at"`
+	UpdatedBy          string              `json:"updated_by" db:"updated_by"`
 }
 
 // DriverIncident represents a specific driving incident
@@ -299,6 +318,9 @@ type DriverIncident struct {
 	Resolved    bool                   `json:"resolved" db:"resolved"`
 	ResolutionNotes string             `json:"resolution_notes" db:"resolution_notes"`
 	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	CreatedBy   string                 `json:"created_by" db:"created_by"`
+	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at"`
+	UpdatedBy   string                 `json:"updated_by" db:"updated_by"`
 }
 
 // BehaviorReportRequest represents request for behavior reports
@@ -317,6 +339,8 @@ type BehaviorScoreUpdate struct {
 	Reason      string                 `json:"reason" db:"reason"`
 	EventType   string                 `json:"event_type" db:"event_type"`
 	Details     map[string]interface{} `json:"details" db:"details"`
-	CreatedBy   string                 `json:"created_by" db:"created_by"`
 	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	CreatedBy   string                 `json:"created_by" db:"created_by"`
+	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at"`
+	UpdatedBy   string                 `json:"updated_by" db:"updated_by"`
 }

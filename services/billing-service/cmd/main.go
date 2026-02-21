@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,10 +16,13 @@ import (
 	"github.com/flyfleet/billing-service/internal/middleware"
 	inv_repo "github.com/flyfleet/billing-service/internal/repository/postgres"
 	inv_service "github.com/flyfleet/billing-service/internal/service"
+	billinggrpc "github.com/flyfleet/billing-service/internal/grpc"
+	pb "github.com/flyfleet/proto/billing/v1"
 	"github.com/flyfleet/billing-service/pkg/database"
 	"github.com/go-chi/chi/v5"
 	mw "github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 )
 
 func main() {
@@ -60,6 +64,27 @@ func main() {
 	service := inv_service.NewInvoiceService(repo, publisher)
 	handler := inv_handler.NewHandler(service)
 
+	// Start gRPC Server
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "50055"
+	}
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		billingServer := billinggrpc.NewBillingServer(service, logger)
+		pb.RegisterBillingServiceServer(grpcServer, billingServer)
+		
+		logger.Info("Starting billing gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
+
 	// Repositories, Services, Handlers
 	r := chi.NewRouter()
 
@@ -69,16 +94,17 @@ func main() {
 	r.Use(middleware.Logger(logger))
 	r.Use(middleware.Recovery(logger))
 	r.Use(middleware.Metrics)
-	r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
-
-	// Register Routes
-	inv_handler.RegisterRoutes(r, handler)
 
 	// Health Check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("healthy"))
 	})
+
+	r.Use(middleware.Auth([]byte(cfg.JWTSecret)))
+
+	// Register Routes
+	inv_handler.RegisterRoutes(r, handler)
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.Port),

@@ -19,8 +19,8 @@ const TroubleshootingLogs: React.FC = () => {
 
         try {
             const [logsRes, filterRes] = await Promise.all([
-                fetch('/bff/support/logs', { headers }),
-                fetch('/bff/support/logs/filters', { headers })
+                fetch('/api/v1/support/logs', { headers }),
+                fetch('/api/v1/support/logs/filters', { headers })
             ]);
 
             if (logsRes.ok) {
@@ -38,7 +38,7 @@ const TroubleshootingLogs: React.FC = () => {
     const fetchLogDetail = async (traceId: string) => {
         const token = localStorage.getItem('access_token');
         try {
-            const res = await fetch(`/bff/support/logs/${traceId}`, {
+            const res = await fetch(`/api/v1/support/logs/${traceId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) setSelectedLog(await res.json());

@@ -78,7 +78,7 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule, err := h.service.CreateRule(r.Context(), orgID, &req, userID)
+	rule, err := h.service.CreateRule(r.Context(), orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to create alert rule", zap.Error(err))
 		h.errorJSON(w, err.Error(), http.StatusInternalServerError)

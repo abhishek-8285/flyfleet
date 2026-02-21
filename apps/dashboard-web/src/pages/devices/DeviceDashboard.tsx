@@ -47,10 +47,10 @@ const DeviceDashboard: React.FC = () => {
       };
 
       const [summaryRes, devicesRes] = await Promise.all([
-        fetch('/api/devices/summary', { headers }),
-        fetch(`/api/devices/status?status=${filter === 'all' ? '' : filter}`, { headers })
+        fetch('/api/v1/devices/summary', { headers }),
+        fetch(`/api/v1/devices/status?status=${filter === 'all' ? '' : filter}`, { headers })
       ]);
-      const twinsRes = await fetch('/api/devices/twins?limit=200', { headers });
+      const twinsRes = await fetch('/api/v1/devices/twins?limit=200', { headers });
 
       if (summaryRes.ok) setSummary(await summaryRes.json());
       if (devicesRes.ok) setDevices(await devicesRes.json() || []);

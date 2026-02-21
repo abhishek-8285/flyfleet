@@ -210,7 +210,7 @@ func (suite *AlertServiceTestSuite) TestGetAlertRule() {
 		DriverIDs: []uuid.UUID{},
 	}
 
-	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), createdRule.ID)
 
@@ -253,7 +253,7 @@ func (suite *AlertServiceTestSuite) TestListAlertRules() {
 	}
 
 	for _, ruleReq := range rules {
-		_, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+		_, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 		assert.NoError(suite.T(), err)
 	}
 
@@ -287,7 +287,7 @@ func (suite *AlertServiceTestSuite) TestUpdateAlertRule() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Update the rule
@@ -325,7 +325,7 @@ func (suite *AlertServiceTestSuite) TestDeleteAlertRule() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Delete the rule
@@ -355,7 +355,7 @@ func (suite *AlertServiceTestSuite) TestEnableDisableRule() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	createdRule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Initially should be enabled
@@ -397,7 +397,7 @@ func (suite *AlertServiceTestSuite) TestCreateAlert() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Create an alert
@@ -449,7 +449,7 @@ func (suite *AlertServiceTestSuite) TestListAlerts() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Create multiple alerts
@@ -517,7 +517,7 @@ func (suite *AlertServiceTestSuite) TestAcknowledgeAlert() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	alert := &models.Alert{
@@ -569,7 +569,7 @@ func (suite *AlertServiceTestSuite) TestResolveAlert() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	alert := &models.Alert{
@@ -621,7 +621,7 @@ func (suite *AlertServiceTestSuite) TestGetAlertSummary() {
 		DriverIDs:   []uuid.UUID{},
 	}
 
-	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq, suite.testUserID)
+	rule, err := suite.alertService.CreateRule(context.Background(), suite.testOrgID, &ruleReq)
 	assert.NoError(suite.T(), err)
 
 	// Create alerts with different statuses and severities

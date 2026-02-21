@@ -28,7 +28,9 @@ type FASTagTransaction struct {
 	Reconciled      bool      `json:"reconciled"`
 	ReconciliationDate *time.Time `json:"reconciliation_date,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
+	CreatedBy       uuid.UUID `json:"created_by"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	UpdatedBy       uuid.UUID `json:"updated_by"`
 }
 
 // EWayBill represents an E-Way Bill
@@ -68,9 +70,10 @@ type EWayBill struct {
 	CancelledBy       *string   `json:"cancelled_by,omitempty"`
 	CancelledOn       *time.Time `json:"cancelled_on,omitempty"`
 	CancelledReason   *string   `json:"cancelled_reason,omitempty"`
-	UpdatedBy         *string   `json:"updated_by,omitempty"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by"`
 }
 
 // VehicleVerification represents Vahan vehicle verification response
@@ -104,7 +107,9 @@ type VehicleVerification struct {
 	PUCNumber        string    `json:"puc_number"`
 	PUCExpiry        time.Time `json:"puc_expiry"`
 	CreatedAt        time.Time `json:"created_at"`
+	CreatedBy        uuid.UUID `json:"created_by"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	UpdatedBy        uuid.UUID `json:"updated_by"`
 }
 
 // DriverVerification represents Sarathi driver license verification
@@ -131,7 +136,9 @@ type DriverVerification struct {
 	LastTransaction string    `json:"last_transaction"`   // current status
 	EnrollmentNumber string   `json:"enrollment_number"`
 	CreatedAt       time.Time `json:"created_at"`
+	CreatedBy       uuid.UUID `json:"created_by"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	UpdatedBy       uuid.UUID `json:"updated_by"`
 }
 
 // LocalPermit represents local permits and authorizations
@@ -156,7 +163,9 @@ type LocalPermit struct {
 	Status            string    `json:"status"`            // active, expired, cancelled, suspended
 	Remarks           string    `json:"remarks"`
 	CreatedAt         time.Time `json:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by"`
 }
 
 // GSTCompliance represents GST compliance status
@@ -177,7 +186,9 @@ type GSTCompliance struct {
 	ReturnFilingStatus string   `json:"return_filing_status"`    // compliant, non_compliant
 	PaymentStatus    string    `json:"payment_status"`          // compliant, non_compliant
 	CreatedAt        time.Time `json:"created_at"`
+	CreatedBy        uuid.UUID `json:"created_by"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	UpdatedBy        uuid.UUID `json:"updated_by"`
 }
 
 // IntegrationConfig represents configuration for India integrations
@@ -197,5 +208,7 @@ type IntegrationConfig struct {
 	NextSyncAt        *time.Time `json:"next_sync_at,omitempty"`
 	SyncInterval      int       `json:"sync_interval"`     // in minutes
 	CreatedAt         time.Time `json:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by"`
 }

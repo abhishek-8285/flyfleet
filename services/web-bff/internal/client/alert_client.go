@@ -2,56 +2,53 @@ package client
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"time"
+
+	"github.com/fleet-platform/shared/pkg/grpcclient"
+	pb "github.com/flyfleet/proto/alert/v1"
+	"google.golang.org/grpc"
 )
 
 type AlertClient struct {
-	BaseURL    string
-	HTTPClient *http.Client
+	conn   *grpc.ClientConn
+	client pb.AlertServiceClient
 }
 
-func NewAlertClient(baseURL string) *AlertClient {
-	return &AlertClient{
-		BaseURL: baseURL,
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+func NewAlertClient(baseURL string) (*AlertClient, error) {
+	baseClient, err := grpcclient.NewClient(baseURL, 5*time.Second)
+	if err != nil {
+		return nil, err
 	}
+
+	return &AlertClient{
+		conn:   baseClient.Conn,
+		client: pb.NewAlertServiceClient(baseClient.Conn),
+	}, nil
+}
+
+func (c *AlertClient) Close() error {
+	return c.conn.Close()
 }
 
 type AlertStats struct {
-	TotalAlerts int `json:"total_alerts"`
-	NewAlerts   int `json:"new_alerts"`
+	TotalAlerts    int
+	CriticalAlerts int
+	OpenAlerts     int
+	NewAlerts      int
 }
 
-func (c *AlertClient) GetStats(ctx context.Context, token string) (*AlertStats, error) {
-	url := fmt.Sprintf("%s/api/v1/alerts/stats/new", c.BaseURL)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+func (c *AlertClient) GetStats(ctx context.Context, orgID string) (*AlertStats, error) {
+	resp, err := c.client.GetAlertStats(ctx, &pb.GetAlertStatsRequest{
+		OrgId: orgID,
+	})
 	if err != nil {
-		return nil, err
+		return &AlertStats{}, err
 	}
 
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return &AlertStats{TotalAlerts: 0, NewAlerts: 0}, fmt.Errorf("alert service returned status %d", resp.StatusCode)
-	}
-
-	var result AlertStats
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	return &AlertStats{
+		TotalAlerts:    int(resp.TotalAlerts),
+		CriticalAlerts: int(resp.CriticalAlerts),
+		OpenAlerts:     int(resp.OpenAlerts),
+		NewAlerts:      int(resp.OpenAlerts), // Map Open to New for now
+	}, nil
 }

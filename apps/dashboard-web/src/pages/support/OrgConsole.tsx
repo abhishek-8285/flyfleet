@@ -21,14 +21,14 @@ const OrgConsole: React.FC = () => {
       setError(null);
 
       try {
-        const summaryRes = await fetch(`/bff/support/orgs/${orgId}/summary`, { headers });
+        const summaryRes = await fetch(`/api/v1/support/orgs/${orgId}/summary`, { headers });
         if (summaryRes.ok) {
           const data = await summaryRes.json();
           setOrg(data);
           return;
         }
 
-        const fallbackRes = await fetch('/api/support/orgs/overview', { headers });
+        const fallbackRes = await fetch('/api/v1/support/orgs/overview', { headers });
         if (fallbackRes.ok) {
           setOrg(await fallbackRes.json());
           return;

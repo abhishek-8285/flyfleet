@@ -5,6 +5,7 @@ on:
     branches: [main, master, develop]
     paths:
       - "services/**"
+      - "!services/_archive/**"
       - "docker-compose.yml"
       - "scripts/check_all_services_foundation.py"
       - ".github/workflows/all-services-foundation.yml"
@@ -12,6 +13,7 @@ on:
     branches: [main, master, develop]
     paths:
       - "services/**"
+      - "!services/_archive/**"
       - "docker-compose.yml"
       - "scripts/check_all_services_foundation.py"
       - ".github/workflows/all-services-foundation.yml"

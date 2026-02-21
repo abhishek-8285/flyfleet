@@ -27,7 +27,7 @@ func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, li
 	offset := (page - 1) * limit
 	
 	query := `
-		SELECT id, name, domain, status, created_at, updated_at
+		SELECT id, name, domain, status, created_at, created_by, updated_at, updated_by
 		FROM organizations
 		WHERE is_deleted = false
 	`
@@ -69,7 +69,9 @@ func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, li
 			&org.Domain,
 			&org.Status,
 			&org.CreatedAt,
+			&org.CreatedBy,
 			&org.UpdatedAt,
+			&org.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -132,7 +134,7 @@ func (r *OrganizationRepository) GetDashboardStats(ctx context.Context) (models.
 	return stats, nil
 }
 
-func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req models.CreateOrganizationRequest) (models.CreateOrganizationResponse, error) {
+func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req models.CreateOrganizationRequest, creatorID uuid.UUID) (models.CreateOrganizationResponse, error) {
 	id := uuid.New()
 	now := time.Now().UTC()
 	status := "active"
@@ -148,8 +150,8 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 	}
 
 	query := `
-		INSERT INTO organizations (id, name, domain, status, plan, contact_email, default_theme, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO organizations (id, name, domain, status, plan, contact_email, default_theme, created_at, created_by, updated_at, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, name, domain, status, created_at
 	`
 
@@ -163,7 +165,9 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 		req.ContactEmail,
 		defaultTheme,
 		now,
+		creatorID,
 		now,
+		creatorID,
 	).Scan(&resp.ID, &resp.Name, &resp.Domain, &resp.Status, &resp.CreatedAt)
 
 	if err != nil {
@@ -174,9 +178,9 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 	return resp, nil
 }
 
-func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE organizations SET is_deleted = true, updated_at = $2 WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id, time.Now().UTC())
+func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid.UUID, updatedBy uuid.UUID) error {
+	query := `UPDATE organizations SET is_deleted = true, updated_at = $2, updated_by = $3 WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id, time.Now().UTC(), updatedBy)
 	if err != nil {
 		r.logger.Error("Failed to delete organization", zap.String("id", id.String()), zap.Error(err))
 		return err

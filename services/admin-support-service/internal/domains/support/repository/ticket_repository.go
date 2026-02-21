@@ -55,8 +55,8 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 	query := `
 		INSERT INTO support_tickets (
 			id, ticket_id, org_id, title, description, status, priority, category, 
-			assigned_to, reporter_id, created_at, updated_at, tags, metadata
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, tags, metadata
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at`
 
 	now := time.Now()
@@ -66,7 +66,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 	err := r.db.QueryRow(ctx, query,
 		ticket.ID, ticket.TicketID, ticket.OrgID, ticket.Title, ticket.Description,
 		ticket.Status, ticket.Priority, ticket.Category, ticket.AssignedTo,
-		ticket.ReporterID, ticket.CreatedAt, ticket.UpdatedAt, ticket.Tags, ticket.Metadata,
+		ticket.ReporterID, ticket.CreatedAt, ticket.CreatedBy, ticket.UpdatedAt, ticket.UpdatedBy, ticket.Tags, ticket.Metadata,
 	).Scan(&ticket.ID, &ticket.CreatedAt, &ticket.UpdatedAt)
 
 	if err != nil {
@@ -88,7 +88,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*models.SupportTicket, error) {
 	query := `
 		SELECT id, ticket_id, org_id, title, description, status, priority, category,
-		       assigned_to, reporter_id, created_at, updated_at, resolved_at, 
+		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
 		       sla_deadline, tags, metadata
 		FROM support_tickets 
 		WHERE id = $1`
@@ -97,7 +97,7 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
 		&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
-		&ticket.ReporterID, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ResolvedAt,
+		&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 		&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
 	)
 
@@ -111,7 +111,7 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID string) (*models.SupportTicket, error) {
 	query := `
 		SELECT id, ticket_id, org_id, title, description, status, priority, category,
-		       assigned_to, reporter_id, created_at, updated_at, resolved_at, 
+		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
 		       sla_deadline, tags, metadata
 		FROM support_tickets 
 		WHERE ticket_id = $1`
@@ -120,7 +120,7 @@ func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID str
 	err := r.db.QueryRow(ctx, query, ticketID).Scan(
 		&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
 		&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
-		&ticket.ReporterID, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ResolvedAt,
+		&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 		&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
 	)
 
@@ -154,7 +154,7 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 	// Main query
 	query := `
 		SELECT id, ticket_id, org_id, title, description, status, priority, category,
-		       assigned_to, reporter_id, created_at, updated_at, resolved_at, 
+		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
 		       sla_deadline, tags, metadata
 		FROM support_tickets 
 		WHERE 1=1`
@@ -192,7 +192,7 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 		err := rows.Scan(
 			&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
 			&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
-			&ticket.ReporterID, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ResolvedAt,
+			&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 			&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
 		)
 		if err != nil {

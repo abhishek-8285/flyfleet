@@ -32,6 +32,7 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 	// This would typically involve calling vehicle-service and driver-service
 	// For now, we'll assume validation happens elsewhere or in middleware
 
+	userID := s.getUserID(ctx)
 	trip := &models.Trip{
 		ID:                   uuid.New().String(),
 		OrgID:                orgID,
@@ -50,7 +51,9 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 		CustomerPhone:        req.CustomerPhone,
 		CustomerEmail:        req.CustomerEmail,
 		CreatedAt:            time.Now(),
+		CreatedBy:            userID,
 		UpdatedAt:            time.Now(),
+		UpdatedBy:            userID,
 	}
 
 	if err := s.repo.Create(ctx, trip); err != nil {
@@ -60,6 +63,19 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 
 	s.logger.Info("trip created", zap.String("trip_id", trip.ID))
 	return trip, nil
+}
+
+func (s *TripService) getUserID(ctx context.Context) string {
+	// For trip-service which uses strings for IDs in models
+	val := ctx.Value("user_id")
+	if val == nil {
+		return ""
+	}
+	uid, ok := val.(string)
+	if !ok {
+		return ""
+	}
+	return uid
 }
 
 // Get retrieves a trip by ID
@@ -139,6 +155,7 @@ func (s *TripService) Update(ctx context.Context, id string, req *models.UpdateT
 	}
 
 	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
 
 	if err := s.repo.Update(ctx, id, updates); err != nil {
 		s.logger.Error("failed to update trip", zap.String("trip_id", id), zap.Error(err))

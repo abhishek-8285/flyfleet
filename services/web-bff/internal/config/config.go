@@ -17,12 +17,18 @@ type Config struct {
 	TrackingServiceURL     string
 	SettingsServiceURL     string
 	AnalyticsServiceURL    string
+	MLServiceURL           string
 
 	// Legacy/Backlog Service URLs (for V2 compatibility if needed)
 	ReportsServiceURL          string
 	DRServiceURL               string
 	IntegrationsServiceURL     string
 	IndiaIntegrationServiceURL string
+
+	VehicleServiceURL          string
+	TripServiceURL             string
+	MaintenanceServiceURL      string
+	GovernanceServiceURL       string
 
 	JWTSecret string
 	NatsURL   string
@@ -46,6 +52,7 @@ func Load() *Config {
 	v.SetDefault("services.tracking_url", "http://tracking-service:8082")
 	v.SetDefault("services.settings_url", "http://settings-service:8091")
 	v.SetDefault("services.analytics_url", "http://analytics-service:8089")
+	v.SetDefault("services.ml_url", "http://fleet-ml-service:8090")
 	v.SetDefault("services.reports_url", "http://reports-service:8083")
 	v.SetDefault("services.dr_url", "http://admin-support-service:8086")
 	v.SetDefault("services.integrations_url", "http://fleet-core-service:8084")
@@ -53,6 +60,11 @@ func Load() *Config {
 	v.SetDefault("services.india_integration_url", "http://india-integration-service:8088")
 	v.SetDefault("services.nats_url", "nats://nats:4222")
 	v.SetDefault("redis.addr", "redis:6379")
+
+	v.SetDefault("services.vehicle_url", "http://vehicle-service:8093")
+	v.SetDefault("services.trip_url", "http://trip-service:8095")
+	v.SetDefault("services.maintenance_url", "http://maintenance-service:8092")
+	v.SetDefault("services.governance_url", "http://governance-service:8088")
 
 	// Config file setup
 	v.SetConfigName("config")
@@ -84,10 +96,17 @@ func Load() *Config {
 	v.BindEnv("services.tracking_url", "TRACKING_SERVICE_URL")
 	v.BindEnv("services.settings_url", "SETTINGS_SERVICE_URL")
 	v.BindEnv("services.analytics_url", "ANALYTICS_SERVICE_URL")
+	v.BindEnv("services.ml_url", "ML_SERVICE_URL")
 	v.BindEnv("services.reports_url", "REPORTS_SERVICE_URL")
 	v.BindEnv("services.india_integration_url", "INDIA_INTEGRATION_SERVICE_URL")
 	v.BindEnv("services.dr_url", "DR_SERVICE_URL")
 	v.BindEnv("services.integrations_url", "INTEGRATIONS_SERVICE_URL")
+	
+	v.BindEnv("services.vehicle_url", "VEHICLE_SERVICE_URL")
+	v.BindEnv("services.trip_url", "TRIP_SERVICE_URL")
+	v.BindEnv("services.maintenance_url", "MAINTENANCE_SERVICE_URL")
+	v.BindEnv("services.governance_url", "GOVERNANCE_SERVICE_URL")
+
 	v.BindEnv("security.jwt_secret", "JWT_SECRET")
 	v.BindEnv("server.port", "PORT")
 	v.BindEnv("server.log_level", "LOG_LEVEL")
@@ -104,12 +123,18 @@ func Load() *Config {
 		TrackingServiceURL:     v.GetString("services.tracking_url"),
 		SettingsServiceURL:     v.GetString("services.settings_url"),
 		AnalyticsServiceURL:    v.GetString("services.analytics_url"),
+		MLServiceURL:           v.GetString("services.ml_url"),
 
 		ReportsServiceURL:      v.GetString("services.reports_url"),
 		DRServiceURL:           v.GetString("services.dr_url"),
 		IntegrationsServiceURL: v.GetString("services.integrations_url"),
 
 		IndiaIntegrationServiceURL: v.GetString("services.india_integration_url"),
+
+		VehicleServiceURL:          v.GetString("services.vehicle_url"),
+		TripServiceURL:             v.GetString("services.trip_url"),
+		MaintenanceServiceURL:      v.GetString("services.maintenance_url"),
+		GovernanceServiceURL:       v.GetString("services.governance_url"),
 
 		JWTSecret: v.GetString("security.jwt_secret"),
 		NatsURL:   v.GetString("services.nats_url"),

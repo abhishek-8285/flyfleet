@@ -49,13 +49,13 @@ func (h *MaintenanceHandler) writeErrorResponse(w http.ResponseWriter, status in
 
 // Global helpers for maintenance package
 
-func getOrgID(r *http.Request) uuid.UUID {
+func getOrgID(_ *http.Request) uuid.UUID {
 	// org_id would come from auth middleware via context
 	// For now using fallback as in original code
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
 }
 
-func getUserID(r *http.Request) uuid.UUID {
+func getUserID(_ *http.Request) uuid.UUID {
 	// user_id would come from auth middleware via context
 	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
 }
@@ -70,9 +70,8 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 	}
 
 	orgID := getOrgID(r)
-	userID := getUserID(r)
 
-	schedule, err := h.service.CreateSchedule(r.Context(), orgID, &req, userID)
+	schedule, err := h.service.CreateSchedule(r.Context(), orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to create maintenance schedule", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())

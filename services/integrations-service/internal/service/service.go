@@ -53,14 +53,17 @@ func NewIntegrationsService(repo repository.Repository, encryptKey string, logge
 }
 
 func (s *integrationsService) CreateIntegration(ctx context.Context, orgID uuid.UUID, name, iType, provider string, config any) (*models.Integration, error) {
+	userID := s.getUserID(ctx)
 	integration := &models.Integration{
-		ID:       uuid.New(),
-		OrgID:    orgID,
-		Name:     name,
-		Type:     iType,
-		Provider: provider,
-		Status:   "active",
-		Config:   config, // Encrypting during repository save or here if strictly needed
+		ID:        uuid.New(),
+		OrgID:     orgID,
+		Name:      name,
+		Type:      iType,
+		Provider:  provider,
+		Status:    "active",
+		Config:    config, // Encrypting during repository save or here if strictly needed
+		CreatedBy: userID,
+		UpdatedBy: userID,
 	}
 	err := s.repo.CreateIntegration(ctx, integration)
 	return integration, err
@@ -75,14 +78,16 @@ func (s *integrationsService) ListIntegrations(ctx context.Context, orgID uuid.U
 }
 
 func (s *integrationsService) UpdateIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID, name, iType, provider, status string, config any) error {
+	userID := s.getUserID(ctx)
 	integration := &models.Integration{
-		ID:       id,
-		OrgID:    orgID,
-		Name:     name,
-		Type:     iType,
-		Provider: provider,
-		Status:   status,
-		Config:   config,
+		ID:        id,
+		OrgID:     orgID,
+		Name:      name,
+		Type:      iType,
+		Provider:  provider,
+		Status:    status,
+		Config:    config,
+		UpdatedBy: userID,
 	}
 	return s.repo.UpdateIntegration(ctx, integration)
 }
@@ -107,6 +112,7 @@ func (s *integrationsService) CreateAPIClient(ctx context.Context, orgID uuid.UU
 		expiry = &t
 	}
 
+	userID := s.getUserID(ctx)
 	u := uuid.New()
 	client := &models.APIClient{
 		ID:               uuid.New(),
@@ -117,6 +123,8 @@ func (s *integrationsService) CreateAPIClient(ctx context.Context, orgID uuid.UU
 		Scopes:           scopes,
 		Expiry:           expiry,
 		Status:           "active",
+		CreatedBy:        userID,
+		UpdatedBy:        userID,
 	}
 
 	err := s.repo.CreateAPIClient(ctx, client)
@@ -133,6 +141,7 @@ func (s *integrationsService) RotateAPIClientKey(ctx context.Context, id uuid.UU
 	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
 	
 	client.ClientSecretHash = string(hash)
+	client.UpdatedBy = s.getUserID(ctx)
 	return rawKey, s.repo.UpdateAPIClient(ctx, client) 
 }
 
@@ -145,13 +154,16 @@ func (s *integrationsService) DeleteAPIClient(ctx context.Context, id uuid.UUID,
 }
 
 func (s *integrationsService) CreateWebhook(ctx context.Context, orgID uuid.UUID, url string, events []string) (*models.Webhook, error) {
+	userID := s.getUserID(ctx)
 	webhook := &models.Webhook{
-		ID:     uuid.New(),
-		OrgID:  orgID,
-		URL:    url,
-		Events: events,
-		Secret: "whsec_" + generateSecureKey(16),
-		Status: "active",
+		ID:        uuid.New(),
+		OrgID:     orgID,
+		URL:       url,
+		Events:    events,
+		Secret:    "whsec_" + generateSecureKey(16),
+		Status:    "active",
+		CreatedBy: userID,
+		UpdatedBy: userID,
 	}
 	err := s.repo.CreateWebhook(ctx, webhook)
 	return webhook, err
@@ -162,14 +174,29 @@ func (s *integrationsService) ListWebhooks(ctx context.Context, orgID uuid.UUID)
 }
 
 func (s *integrationsService) UpdateWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID, url string, events []string, status string) error {
+	userID := s.getUserID(ctx)
 	webhook := &models.Webhook{
-		ID:     id,
-		OrgID:  orgID,
-		URL:    url,
-		Events: events,
-		Status: status,
+		ID:        id,
+		OrgID:     orgID,
+		URL:       url,
+		Events:    events,
+		Status:    status,
+		UpdatedBy: userID,
 	}
 	return s.repo.UpdateWebhook(ctx, webhook)
+}
+
+func (s *integrationsService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *integrationsService) DeleteWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {

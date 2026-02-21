@@ -8,7 +8,7 @@ write_timeout = "30s"
 host = "postgres"
 port = 5432
 user = "fleet_user"
-password = "fleet_password"
+password = ""
 dbname = "fleet_db"
 sslmode = "disable"
 max_open_conns = 100
@@ -34,7 +34,7 @@ service_url = "http://admin-support-service:8086"
 service_url = "http://tracking-service:8082"
 
 [security]
-jwt_secret = "your-jwt-secret-key-here"
+jwt_secret = ""
 token_expiry = "24h"
 
 [logging]

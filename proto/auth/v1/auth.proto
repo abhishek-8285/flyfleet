@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/flyfleet/proto/auth/v1;authv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+service AuthService {
+  rpc Login (LoginRequest) returns (LoginResponse);
+  rpc Register (RegisterRequest) returns (RegisterResponse);
+  rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse);
+  
+  // Admin & Stats added back
+  rpc GetOrganization (GetOrganizationRequest) returns (GetOrganizationResponse);
+  rpc ListOrganizations (ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetStats (GetStatsRequest) returns (GetStatsResponse);
+  rpc GetSecurityTelemetry (GetSecurityTelemetryRequest) returns (GetSecurityTelemetryResponse);
+  rpc GetAuditLogs (GetAuditLogsRequest) returns (GetAuditLogsResponse);
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string role = 4;
+  string org_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string domain = 3;
+  string default_theme = 4;
+  string status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message AuditLog {
+  string id = 1;
+  string action = 2;
+  string entity = 3;
+  string entity_id = 4;
+  string actor_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Struct metadata = 7;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  string ip = 3;
+  string user_agent = 4;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+  string ip = 4;
+  string user_agent = 5;
+}
+
+message RegisterResponse {
+  User user = 1;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  User user = 2;
+}
+
+message GetOrganizationRequest {
+  string id = 1;
+}
+
+message GetOrganizationResponse {
+  Organization organization = 1;
+}
+
+message ListOrganizationsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+  int64 total = 2;
+}
+
+message GetStatsRequest {}
+
+message GetStatsResponse {
+  int32 total_users = 1;
+  int32 active_users = 2;
+  int32 total_drivers = 3;
+  int32 total_orgs = 4;
+  int32 active_orgs = 5;
+  int32 pending_orgs = 6;
+  int32 inactive_orgs = 7;
+}
+
+message GetSecurityTelemetryRequest {}
+
+message GetSecurityTelemetryResponse {
+  google.protobuf.Struct telemetry = 1;
+}
+
+message GetAuditLogsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message GetAuditLogsResponse {
+  repeated AuditLog logs = 1;
+  int64 total = 2;
+}

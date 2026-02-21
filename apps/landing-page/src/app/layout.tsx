@@ -15,10 +15,18 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: {
     default: "FlyFleet | Enterprise Fleet Management Platform",
-    template: "%s | FlyFleet"
+    template: "%s | FlyFleet",
   },
-  description: "Secure, scalable, and compliant fleet management for logistics leaders. Reduce costs and mitigate risk with AI-driven route optimization and real-time tracking.",
-  keywords: ["fleet management", "telematics", "gps tracking", "route optimization", "logistics technology", "enterprise fleet"],
+  description:
+    "Secure, scalable, and compliant fleet management for logistics leaders. Reduce costs and mitigate risk with AI-driven route optimization and real-time tracking.",
+  keywords: [
+    "fleet management",
+    "telematics",
+    "gps tracking",
+    "route optimization",
+    "logistics technology",
+    "enterprise fleet",
+  ],
   authors: [{ name: "FlyFleet Enterprise" }],
   creator: "FlyFleet",
   publisher: "FlyFleet Inc.",
@@ -29,26 +37,27 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "FlyFleet | The Trust Standard for Enterprise Fleets",
-    description: "Next-generation fleet management with 99.9% uptime SLA and ISO 27001 security.",
-    url: 'https://flyfleet.io',
-    siteName: 'FlyFleet',
+    description:
+      "Next-generation fleet management with 99.9% uptime SLA and ISO 27001 security.",
+    url: "https://flyfleet.io",
+    siteName: "FlyFleet",
     images: [
       {
-        url: 'https://flyfleet.io/og-image.png',
+        url: "https://flyfleet.io/og-image.png",
         width: 1200,
         height: 630,
-        alt: 'FlyFleet Enterprise Dashboard Preview',
+        alt: "FlyFleet Enterprise Dashboard Preview",
       },
     ],
-    locale: 'en_US',
-    type: 'website',
+    locale: "en_US",
+    type: "website",
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'FlyFleet Enterprise',
-    description: 'Transform your logistics with AI-driven fleet optimization.',
-    creator: '@flyfleet',
-    images: ['https://flyfleet.io/twitter-image.png'],
+    card: "summary_large_image",
+    title: "FlyFleet Enterprise",
+    description: "Transform your logistics with AI-driven fleet optimization.",
+    creator: "@flyfleet",
+    images: ["https://flyfleet.io/twitter-image.png"],
   },
   robots: {
     index: true,
@@ -56,22 +65,24 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
     },
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/shortcut-icon.png',
-    apple: '/apple-touch-icon.png',
+    icon: "/favicon.ico",
+    shortcut: "/shortcut-icon.png",
+    apple: "/apple-touch-icon.png",
   },
-  manifest: '/site.webmanifest',
+  manifest: "/site.webmanifest",
 };
 
 import CookieConsent from "@/components/landing/CookieConsent";
 
 import { ThemeProvider } from "@/context/ThemeContext";
+
+import { CSPostHogProvider } from "@/components/providers/PostHogProvider";
 
 export default function RootLayout({
   children,
@@ -81,15 +92,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning={true}>
       <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        />
       </head>
-      <body
-        className={`${inter.variable} ${outfit.variable} antialiased`}
-      >
-        <ThemeProvider>
-          {children}
-          <CookieConsent />
-        </ThemeProvider>
+      <body className={`${inter.variable} ${outfit.variable} antialiased`}>
+        <CSPostHogProvider>
+          <ThemeProvider>
+            {children}
+            <CookieConsent />
+          </ThemeProvider>
+        </CSPostHogProvider>
       </body>
     </html>
   );

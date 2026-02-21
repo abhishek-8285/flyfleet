@@ -17,6 +17,7 @@ const (
 type ReportGeneratePayload struct {
 	ExecutionID uuid.UUID
 	ReportID    uuid.UUID
+	UserID      uuid.UUID
 }
 
 type QueueClient struct {
@@ -28,10 +29,11 @@ func NewQueueClient(redisAddr string) *QueueClient {
 	return &QueueClient{client: client}
 }
 
-func (c *QueueClient) EnqueueReportGeneration(executionID, reportID uuid.UUID) error {
+func (c *QueueClient) EnqueueReportGeneration(executionID, reportID, userID uuid.UUID) error {
 	payload, err := json.Marshal(ReportGeneratePayload{
 		ExecutionID: executionID,
 		ReportID:    reportID,
+		UserID:      userID,
 	})
 	if err != nil {
 		return err

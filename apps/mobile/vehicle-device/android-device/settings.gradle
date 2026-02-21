@@ -6,3 +6,4 @@ pluginManagement {
     }
 }
 rootProject.name = 'flyfleet-vehicle-device'
+include ':app', ':core', ':domain', ':data'

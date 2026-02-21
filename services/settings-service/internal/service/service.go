@@ -317,6 +317,9 @@ func (s *SettingsService) UpdatePlatformSettings(ctx context.Context, settings *
 	}
 	// Enforce singleton identity for global platform settings.
 	settings.ID = models.PlatformSettingsSingletonID
+	userID := s.getUserID(ctx)
+	settings.UpdatedBy = userID
+	
 	if err := s.repo.UpdatePlatformSettings(ctx, settings); err != nil {
 		return err
 	}
@@ -337,6 +340,9 @@ func (s *SettingsService) CreateFeatureFlag(ctx context.Context, f *models.Featu
 	if f.Key == "" {
 		return errors.New("flag key is required")
 	}
+	userID := s.getUserID(ctx)
+	f.CreatedBy = userID
+	f.UpdatedBy = userID
 	if err := s.repo.CreateFeatureFlag(ctx, f); err != nil {
 		return err
 	}
@@ -345,6 +351,7 @@ func (s *SettingsService) CreateFeatureFlag(ctx context.Context, f *models.Featu
 }
 
 func (s *SettingsService) UpdateFeatureFlag(ctx context.Context, f *models.FeatureFlag) error {
+	f.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateFeatureFlag(ctx, f); err != nil {
 		return err
 	}
@@ -366,6 +373,7 @@ func (s *SettingsService) ToggleFeatureFlag(ctx context.Context, id uuid.UUID) e
 		return err
 	}
 	flag.Enabled = !flag.Enabled
+	flag.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateFeatureFlag(ctx, flag); err != nil {
 		return err
 	}
@@ -382,6 +390,9 @@ func (s *SettingsService) UpdateLocalizationSettings(ctx context.Context, l *mod
 	if l.LanguageCode == "" {
 		return errors.New("language code is required")
 	}
+	userID := s.getUserID(ctx)
+	l.CreatedBy = userID
+	l.UpdatedBy = userID
 	if err := s.repo.UpdateLocalizationSettings(ctx, l); err != nil {
 		return err
 	}
@@ -402,6 +413,9 @@ func (s *SettingsService) CreateTemplate(ctx context.Context, t *models.Template
 	if t.Key == "" {
 		return errors.New("template key is required")
 	}
+	userID := s.getUserID(ctx)
+	t.CreatedBy = userID
+	t.UpdatedBy = userID
 	if err := s.repo.CreateTemplate(ctx, t); err != nil {
 		return err
 	}
@@ -410,6 +424,7 @@ func (s *SettingsService) CreateTemplate(ctx context.Context, t *models.Template
 }
 
 func (s *SettingsService) UpdateTemplate(ctx context.Context, t *models.Template) error {
+	t.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateTemplate(ctx, t); err != nil {
 		return err
 	}
@@ -458,6 +473,10 @@ func (s *SettingsService) UpdateNotificationChannel(ctx context.Context, c *mode
 		}
 	}
 
+	userID := s.getUserID(ctx)
+	c.CreatedBy = userID
+	c.UpdatedBy = userID
+
 	if err := s.repo.UpdateNotificationChannel(ctx, c); err != nil {
 		return err
 	}
@@ -474,9 +493,24 @@ func (s *SettingsService) UpdateSystemLimits(ctx context.Context, l *models.Syst
 	if l.APIRateLimit < 0 {
 		return errors.New("api rate limit cannot be negative")
 	}
+	userID := s.getUserID(ctx)
+	l.CreatedBy = userID
+	l.UpdatedBy = userID
 	if err := s.repo.UpdateSystemLimits(ctx, l); err != nil {
 		return err
 	}
 	s.logAudit(ctx, "SYSTEM_LIMITS", &l.ID, "UPDATE", map[string]any{"rate_limit": l.APIRateLimit})
 	return nil
+}
+
+func (s *SettingsService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value(middleware.UserIDKey)
+	if val == nil {
+		return uuid.Nil
+	}
+	uid, ok := val.(uuid.UUID)
+	if !ok {
+		return uuid.Nil
+	}
+	return uid
 }

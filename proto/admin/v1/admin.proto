@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package admin.v1;
+
+option go_package = "github.com/flyfleet/proto/admin/v1;adminv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AdminSupportService {
+  rpc ListOrganizations (ListOrganizationsRequest) returns (ListOrganizationsResponse);
+  rpc GetOrganizationStats (GetOrganizationStatsRequest) returns (GetOrganizationStatsResponse);
+  rpc GetDashboardStats (GetDashboardStatsRequest) returns (GetDashboardStatsResponse);
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string domain = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ListOrganizationsRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string search = 3;
+}
+
+message ListOrganizationsResponse {
+  repeated Organization organizations = 1;
+  int32 total = 2;
+}
+
+message GetOrganizationStatsRequest {}
+
+message GetOrganizationStatsResponse {
+  int32 total_orgs = 1;
+  int32 active_orgs = 2;
+}
+
+message GetDashboardStatsRequest {}
+
+message GetDashboardStatsResponse {
+  map<string, double> stats = 1;
+}

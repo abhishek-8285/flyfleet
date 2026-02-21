@@ -70,6 +70,7 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 		return nil, fmt.Errorf("driver with license number %s already exists", req.LicenseNumber)
 	}
 
+	userID := s.getUserID(ctx)
 	driver := &models.Driver{
 		ID:                uuid.New().String(),
 		OrgID:             orgID,
@@ -95,7 +96,9 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 		BehaviorScore:     100, // Start with perfect score
 		Metadata:          req.Metadata,
 		CreatedAt:         time.Now(),
+		CreatedBy:         userID,
 		UpdatedAt:         time.Now(),
+		UpdatedBy:         userID,
 	}
 
 	if err := s.repo.Create(ctx, driver); err != nil {
@@ -106,6 +109,18 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 	s.logger.Info("driver created", zap.String("driver_id", driver.ID))
 	s.publishEvent("drivers.created", driver)
 	return driver, nil
+}
+
+func (s *DriverService) getUserID(ctx context.Context) string {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return ""
+	}
+	uid, ok := val.(string)
+	if !ok {
+		return ""
+	}
+	return uid
 }
 
 // GetByID retrieves a driver by ID
@@ -199,6 +214,7 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
+		updates["updated_by"] = s.getUserID(ctx)
 		
 		if err := s.repo.Update(ctx, id, updates); err != nil {
 			s.logger.Error("failed to update driver", zap.String("driver_id", id), zap.Error(err))
@@ -262,7 +278,7 @@ func (s *DriverService) AssignVehicle(ctx context.Context, driverID, vehicleID s
 		return fmt.Errorf("driver already has a vehicle assigned")
 	}
 
-	if err := s.repo.AssignVehicle(ctx, driverID, vehicleID); err != nil {
+	if err := s.repo.AssignVehicle(ctx, driverID, vehicleID, s.getUserID(ctx)); err != nil {
 		s.logger.Error("failed to assign vehicle to driver", 
 			zap.String("driver_id", driverID), 
 			zap.String("vehicle_id", vehicleID), 
@@ -289,7 +305,7 @@ func (s *DriverService) UnassignVehicle(ctx context.Context, driverID string) er
 		return fmt.Errorf("driver has no vehicle assigned")
 	}
 
-	if err := s.repo.UnassignVehicle(ctx, driverID); err != nil {
+	if err := s.repo.UnassignVehicle(ctx, driverID, s.getUserID(ctx)); err != nil {
 		s.logger.Error("failed to unassign vehicle from driver", 
 			zap.String("driver_id", driverID), 
 			zap.Error(err))
@@ -310,9 +326,11 @@ func (s *DriverService) UpdateStatus(ctx context.Context, driverID string, statu
 		return fmt.Errorf("invalid status: %s", status)
 	}
 
+	userID := s.getUserID(ctx)
 	updates := map[string]interface{}{
 		"status":     status,
 		"updated_at": time.Now(),
+		"updated_by": userID,
 	}
 
 	// If resigning, set resignation date
@@ -322,7 +340,7 @@ func (s *DriverService) UpdateStatus(ctx context.Context, driverID string, statu
 		driver, err := s.GetByID(ctx, driverID)
 		if err == nil {
 			if driver.CurrentVehicleID != nil {
-				s.repo.UnassignVehicle(ctx, driverID)
+				s.repo.UnassignVehicle(ctx, driverID, userID)
 			}
 			if driver.CurrentTripID != nil {
 				// Would need to integrate with trip service to properly end trip
@@ -369,7 +387,7 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 
 	scoreChangeActual := newScore - driver.BehaviorScore
 	
-	if err := s.repo.UpdateBehaviorScore(ctx, driverID, scoreChangeActual); err != nil {
+	if err := s.repo.UpdateBehaviorScore(ctx, driverID, scoreChangeActual, s.getUserID(ctx)); err != nil {
 		s.logger.Error("failed to update behavior score", 
 			zap.String("driver_id", driverID), 
 			zap.Int("score_change", scoreChange), 
@@ -420,6 +438,10 @@ func (s *DriverService) IncrementDriverStats(ctx context.Context, driverID strin
 		return fmt.Errorf("failed to increment driver stats: %w", err)
 	}
 	return nil
+}
+
+func (s *DriverService) GetStats(ctx context.Context, orgID string) (*models.DriverStats, error) {
+	return s.repo.GetStats(ctx, orgID)
 }
 
 // GetByLicenseNumber retrieves driver by license number

@@ -69,7 +69,7 @@ func (r *WorkOrderRepository) Update(ctx context.Context, wo *models.WorkOrder) 
 			title = $2, description = $3, maintenance_type = $4,
 			priority = $5, status = $6, assigned_to = $7,
 			scheduled_date = $8, completed_date = $9,
-			estimated_cost = $10, actual_cost = $11
+			estimated_cost = $10, actual_cost = $11, updated_by = $12
 		WHERE id = $1
 		RETURNING updated_at
 	`
@@ -77,7 +77,7 @@ func (r *WorkOrderRepository) Update(ctx context.Context, wo *models.WorkOrder) 
 		wo.ID, wo.Title, wo.Description, wo.MaintenanceType,
 		wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.CompletedDate,
-		wo.EstimatedCost, wo.ActualCost,
+		wo.EstimatedCost, wo.ActualCost, wo.UpdatedBy,
 	).Scan(&wo.UpdatedAt)
 }
 
@@ -194,22 +194,24 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 }
 
 // UpdateStatus updates only the status field
-func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status models.WorkOrderStatus) error {
-	query := "UPDATE work_orders SET status = $2 WHERE id = $1"
-	_, err := r.db.Exec(ctx, query, id, status)
+func (r *WorkOrderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status models.WorkOrderStatus, updatedBy uuid.UUID) error {
+	query := "UPDATE work_orders SET status = $2, updated_by = $3, updated_at = NOW() WHERE id = $1"
+	_, err := r.db.Exec(ctx, query, id, status, updatedBy)
 	return err
 }
 
 // Close marks a work order as completed
-func (r *WorkOrderRepository) Close(ctx context.Context, id uuid.UUID, actualCost float64) error {
+func (r *WorkOrderRepository) Close(ctx context.Context, id uuid.UUID, actualCost float64, updatedBy uuid.UUID) error {
 	query := `
 		UPDATE work_orders SET
 			status = 'COMPLETED',
 			completed_date = $2,
-			actual_cost = $3
+			actual_cost = $3,
+			updated_by = $4,
+			updated_at = NOW()
 		WHERE id = $1
 	`
-	_, err := r.db.Exec(ctx, query, id, time.Now(), actualCost)
+	_, err := r.db.Exec(ctx, query, id, time.Now(), actualCost, updatedBy)
 	return err
 }
 

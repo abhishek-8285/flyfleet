@@ -16,7 +16,9 @@ type Organization struct {
 	DefaultTheme   string    `json:"defaultTheme" db:"default_theme"`
 	RenewalDate    time.Time `json:"renewalDate" db:"renewal_date"`
 	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	CreatedBy      uuid.UUID `json:"createdBy" db:"created_by"`
 	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
+	UpdatedBy      uuid.UUID `json:"updatedBy" db:"updated_by"`
 }
 
 type OrganizationStats struct {

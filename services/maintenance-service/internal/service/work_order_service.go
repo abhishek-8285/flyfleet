@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -41,6 +42,7 @@ func NewWorkOrderService(
 // CreateWorkOrder creates a new work order
 func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uuid.UUID, req *models.CreateWorkOrderRequest) (*models.WorkOrder, error) {
 	wo := &models.WorkOrder{
+		ID:              uuid.New(),
 		OrganizationID:  orgID,
 		VehicleID:       req.VehicleID,
 		Title:           req.Title,
@@ -52,6 +54,9 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 		ScheduledDate:   req.ScheduledDate,
 		EstimatedCost:   req.EstimatedCost,
 		CreatedBy:       userID,
+		UpdatedBy:       userID,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	if err := s.workOrderRepo.Create(ctx, wo); err != nil {
@@ -65,6 +70,19 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 	)
 
 	return wo, nil
+}
+
+func (s *WorkOrderService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 // GetWorkOrder retrieves a work order by ID with parts
@@ -158,6 +176,9 @@ func (s *WorkOrderService) UpdateWorkOrder(ctx context.Context, id uuid.UUID, re
 		wo.ActualCost = *req.ActualCost
 	}
 
+	wo.UpdatedAt = time.Now()
+	wo.UpdatedBy = s.getUserID(ctx)
+
 	if err := s.workOrderRepo.Update(ctx, wo); err != nil {
 		return nil, fmt.Errorf("failed to update work order: %w", err)
 	}
@@ -194,7 +215,7 @@ func (s *WorkOrderService) ChangeStatus(ctx context.Context, id uuid.UUID, statu
 		return fmt.Errorf("invalid status transition from %s to %s", wo.Status, status)
 	}
 
-	return s.workOrderRepo.UpdateStatus(ctx, id, status)
+	return s.workOrderRepo.UpdateStatus(ctx, id, status, s.getUserID(ctx))
 }
 
 // CloseWorkOrder closes a work order
@@ -217,7 +238,7 @@ func (s *WorkOrderService) CloseWorkOrder(ctx context.Context, id uuid.UUID) err
 		actualCost = wo.ActualCost
 	}
 
-	return s.workOrderRepo.Close(ctx, id, actualCost)
+	return s.workOrderRepo.Close(ctx, id, actualCost, s.getUserID(ctx))
 }
 
 // AssignPart assigns a part to a work order

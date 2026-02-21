@@ -1,8 +1,8 @@
 module github.com/flyfleet/vehicle-service
 
-go 1.24.0
+replace github.com/fleet-platform/shared => ../../packages/common/go
 
-toolchain go1.24.13
+go 1.26
 
 require (
 	github.com/getkin/kin-openapi v0.133.0
@@ -41,3 +41,4 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+replace github.com/flyfleet/proto => ../../proto

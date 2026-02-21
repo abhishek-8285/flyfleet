@@ -1,5 +1,5 @@
 {
-  "operation_count": 27,
+  "operation_count": 38,
   "operations": [
     {
       "method": "GET",
@@ -31,6 +31,19 @@
         }
       ],
       "path": "/analytics/dashboard",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardMetrics"
+              }
+            }
+          },
+          "description": "Dashboard metrics"
+        }
+      },
       "summary": "Get dashboard analytics",
       "tags": [
         "Analytics"
@@ -41,9 +54,181 @@
       "operationId": "post_auth_login",
       "parameters": [],
       "path": "/auth/login",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/LoginRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginResponse"
+              }
+            }
+          },
+          "description": "Successful login"
+        },
+        "401": {
+          "description": "Invalid credentials"
+        },
+        "429": {
+          "description": "Too many requests"
+        }
+      },
       "summary": "User login",
       "tags": [
         "Authentication"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_device_commands",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "device_id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "query",
+          "name": "last_command_id",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/device/commands",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "commands": {
+                    "items": {
+                      "$ref": "#/components/schemas/Command"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Pending commands"
+        }
+      },
+      "summary": "Get pending device commands",
+      "tags": [
+        "device"
+      ]
+    },
+    {
+      "method": "GET",
+      "operationId": "get_device_config",
+      "parameters": [
+        {
+          "in": "query",
+          "name": "device_id",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "path": "/device/config",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigResponse"
+              }
+            }
+          },
+          "description": "Device configuration"
+        }
+      },
+      "summary": "Get device configuration",
+      "tags": [
+        "device"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_device_heartbeat",
+      "parameters": [],
+      "path": "/device/heartbeat",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HeartbeatRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeartbeatResponse"
+              }
+            }
+          },
+          "description": "Heartbeat accepted"
+        }
+      },
+      "summary": "Update device heartbeat",
+      "tags": [
+        "device"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_device_register",
+      "parameters": [],
+      "path": "/device/register",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DeviceRegisterRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegisterResponse"
+              }
+            }
+          },
+          "description": "Device registered successfully"
+        }
+      },
+      "summary": "Register a new device",
+      "tags": [
+        "device"
       ]
     },
     {
@@ -61,6 +246,42 @@
         }
       ],
       "path": "/devices/summary",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "low_battery": {
+                    "type": "integer"
+                  },
+                  "new_devices_week": {
+                    "type": "integer"
+                  },
+                  "offline_devices": {
+                    "type": "integer"
+                  },
+                  "online_devices": {
+                    "type": "integer"
+                  },
+                  "system_errors": {
+                    "type": "integer"
+                  },
+                  "total_devices": {
+                    "type": "integer"
+                  },
+                  "weak_signal": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Diagnostics summary"
+        }
+      },
       "summary": "Get device diagnostics summary",
       "tags": [
         "Devices"
@@ -82,9 +303,148 @@
         }
       ],
       "path": "/devices/twins",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "twins": {
+                    "items": {
+                      "properties": {
+                        "desired_state": {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        "desired_updated_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "device_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "reported_state": {
+                          "additionalProperties": true,
+                          "type": "object"
+                        },
+                        "reported_updated_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Device twins list"
+        }
+      },
       "summary": "List device twins",
       "tags": [
         "Devices"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_driver_hos",
+      "parameters": [],
+      "path": "/driver/hos",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/HOSUpdateRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HOSUpdateResponse"
+              }
+            }
+          },
+          "description": "HOS updated"
+        }
+      },
+      "summary": "Update driver HOS duty status",
+      "tags": [
+        "driver"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_driver_login",
+      "parameters": [],
+      "path": "/driver/login",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DriverLoginRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverLoginResponse"
+              }
+            }
+          },
+          "description": "Login successful"
+        }
+      },
+      "summary": "Driver login with HOS tracking",
+      "tags": [
+        "driver"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_driver_logout",
+      "parameters": [],
+      "path": "/driver/logout",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DriverLogoutRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverLogoutResponse"
+              }
+            }
+          },
+          "description": "Logout successful"
+        }
+      },
+      "summary": "Driver logout",
+      "tags": [
+        "driver"
       ]
     },
     {
@@ -106,6 +466,19 @@
         }
       ],
       "path": "/drivers",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverListResponse"
+              }
+            }
+          },
+          "description": "List of drivers"
+        }
+      },
       "summary": "List drivers",
       "tags": [
         "Drivers"
@@ -116,6 +489,27 @@
       "operationId": "get_finance_expenses_policies",
       "parameters": [],
       "path": "/finance/expenses/policies",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "policies": {
+                    "items": {
+                      "$ref": "#/components/schemas/ExpensePolicy"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Expense policies"
+        }
+      },
       "summary": "List expense policies",
       "tags": [
         "Finance"
@@ -126,6 +520,21 @@
       "operationId": "put_finance_expenses_policies",
       "parameters": [],
       "path": "/finance/expenses/policies",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ExpensePolicy"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Policy saved"
+        }
+      },
       "summary": "Upsert expense policy",
       "tags": [
         "Finance"
@@ -166,6 +575,36 @@
         }
       ],
       "path": "/finance/expenses/reports",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "offset": {
+                    "type": "integer"
+                  },
+                  "reports": {
+                    "items": {
+                      "$ref": "#/components/schemas/ExpenseReport"
+                    },
+                    "type": "array"
+                  },
+                  "total": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Expense reports list"
+        }
+      },
       "summary": "List expense reports",
       "tags": [
         "Finance"
@@ -188,6 +627,27 @@
         }
       ],
       "path": "/finance/revenue/experiments",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "experiments": {
+                    "items": {
+                      "$ref": "#/components/schemas/ABTestExperiment"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Revenue experiments"
+        }
+      },
       "summary": "List revenue experiments",
       "tags": [
         "Finance",
@@ -208,6 +668,24 @@
         }
       ],
       "path": "/finance/revenue/forecast",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "forecast": {
+                    "$ref": "#/components/schemas/RevenueForecast"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Revenue forecast"
+        }
+      },
       "summary": "Get revenue forecast by route",
       "tags": [
         "Finance",
@@ -230,6 +708,74 @@
         }
       ],
       "path": "/firmware/rollouts",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "rollouts": {
+                    "items": {
+                      "properties": {
+                        "completed_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "completed_devices": {
+                          "type": "integer"
+                        },
+                        "created_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "failed_devices": {
+                          "type": "integer"
+                        },
+                        "firmware_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "started_at": {
+                          "format": "date-time",
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "scheduled",
+                            "in_progress",
+                            "paused",
+                            "completed",
+                            "cancelled"
+                          ],
+                          "type": "string"
+                        },
+                        "target_group": {
+                          "type": "string"
+                        },
+                        "total_devices": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Firmware rollouts"
+        }
+      },
       "summary": "List firmware rollouts",
       "tags": [
         "Devices",
@@ -241,6 +787,43 @@
       "operationId": "post_firmware_rollouts",
       "parameters": [],
       "path": "/firmware/rollouts",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "properties": {
+                "firmware_id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "target_group": {
+                  "type": "string"
+                },
+                "total_devices": {
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "firmware_id",
+                "name",
+                "target_group",
+                "total_devices"
+              ],
+              "type": "object"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "description": "Rollout created"
+        }
+      },
       "summary": "Create firmware rollout",
       "tags": [
         "Devices",
@@ -262,6 +845,42 @@
         }
       ],
       "path": "/firmware/rollouts/{id}",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "firmware_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "scheduled",
+                      "in_progress",
+                      "paused",
+                      "completed",
+                      "cancelled"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Rollout details"
+        },
+        "404": {
+          "description": "Rollout not found"
+        }
+      },
       "summary": "Get firmware rollout by ID",
       "tags": [
         "Devices",
@@ -320,6 +939,64 @@
         }
       ],
       "path": "/firmware/rollouts/{id}/events",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "properties": {
+                    "actor_user_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "event_type": {
+                      "enum": [
+                        "rollout.note",
+                        "rollout.transition",
+                        "rollout.created"
+                      ],
+                      "type": "string"
+                    },
+                    "from_status": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "metadata": {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    "rollout_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "to_status": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "description": "Rollout events list"
+        },
+        "400": {
+          "description": "Invalid request (e.g., invalid event_type)"
+        }
+      },
       "summary": "List rollout events",
       "tags": [
         "Devices",
@@ -341,6 +1018,36 @@
         }
       ],
       "path": "/firmware/rollouts/{id}/events",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": true,
+                  "type": "object"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "description": "Rollout note created"
+        },
+        "400": {
+          "description": "Invalid request"
+        }
+      },
       "summary": "Add rollout note event",
       "tags": [
         "Devices",
@@ -362,10 +1069,82 @@
         }
       ],
       "path": "/firmware/rollouts/{id}/status",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "properties": {
+                "reason": {
+                  "description": "Optional operator reason for this transition, recorded in rollout events.",
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "scheduled",
+                    "in_progress",
+                    "paused",
+                    "completed",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "type": "object"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Rollout status updated"
+        },
+        "400": {
+          "description": "Invalid status transition"
+        },
+        "404": {
+          "description": "Rollout not found"
+        }
+      },
       "summary": "Transition firmware rollout status",
       "tags": [
         "Devices",
         "Firmware"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_forensics_attest",
+      "parameters": [],
+      "path": "/forensics/attest",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AttestationRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttestationResponse"
+              }
+            }
+          },
+          "description": "Attestation created"
+        }
+      },
+      "summary": "Attest evidence integrity",
+      "tags": [
+        "forensics"
       ]
     },
     {
@@ -397,6 +1176,19 @@
         }
       ],
       "path": "/maintenance/schedules",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceScheduleListResponse"
+              }
+            }
+          },
+          "description": "List of maintenance schedules"
+        }
+      },
       "summary": "List maintenance schedules",
       "tags": [
         "Maintenance"
@@ -407,9 +1199,95 @@
       "operationId": "post_maintenance_schedules",
       "parameters": [],
       "path": "/maintenance/schedules",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateMaintenanceScheduleRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceSchedule"
+              }
+            }
+          },
+          "description": "Maintenance schedule created"
+        }
+      },
       "summary": "Create maintenance schedule",
       "tags": [
         "Maintenance"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_media_confirm",
+      "parameters": [],
+      "path": "/media/confirm",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ConfirmUploadRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmUploadResponse"
+              }
+            }
+          },
+          "description": "Upload confirmed"
+        }
+      },
+      "summary": "Confirm media upload completion",
+      "tags": [
+        "media"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_media_upload_url",
+      "parameters": [],
+      "path": "/media/upload-url",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UploadUrlRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadUrlResponse"
+              }
+            }
+          },
+          "description": "Upload URL generated"
+        }
+      },
+      "summary": "Get pre-signed media upload URL",
+      "tags": [
+        "media"
       ]
     },
     {
@@ -455,6 +1333,36 @@
         }
       ],
       "path": "/settings/audit",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "logs": {
+                    "items": {
+                      "$ref": "#/components/schemas/AuditLog"
+                    },
+                    "type": "array"
+                  },
+                  "offset": {
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "description": "Audit log entries"
+        },
+        "400": {
+          "description": "Invalid query parameters"
+        }
+      },
       "summary": "List settings audit logs",
       "tags": [
         "Settings"
@@ -465,6 +1373,19 @@
       "operationId": "get_settings_export",
       "parameters": [],
       "path": "/settings/export",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsExport"
+              }
+            }
+          },
+          "description": "Settings snapshot payload"
+        }
+      },
       "summary": "Export settings snapshot",
       "tags": [
         "Settings"
@@ -475,9 +1396,66 @@
       "operationId": "post_settings_import",
       "parameters": [],
       "path": "/settings/import",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SettingsImportRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsImportResult"
+              }
+            }
+          },
+          "description": "Import result summary"
+        },
+        "400": {
+          "description": "Validation error"
+        }
+      },
       "summary": "Import settings snapshot",
       "tags": [
         "Settings"
+      ]
+    },
+    {
+      "method": "POST",
+      "operationId": "post_telemetry_batch",
+      "parameters": [],
+      "path": "/telemetry/batch",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/TelemetryBatchRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelemetryResponse"
+              }
+            }
+          },
+          "description": "Telemetry uploaded"
+        }
+      },
+      "summary": "Upload telemetry batch",
+      "tags": [
+        "telemetry"
       ]
     },
     {
@@ -504,6 +1482,19 @@
         }
       ],
       "path": "/tracking/vehicles/{id}/location",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleLocation"
+              }
+            }
+          },
+          "description": "Vehicle location"
+        }
+      },
       "summary": "Get vehicle location",
       "tags": [
         "Tracking"
@@ -548,6 +1539,19 @@
         }
       ],
       "path": "/trips",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TripListResponse"
+              }
+            }
+          },
+          "description": "List of trips"
+        }
+      },
       "summary": "List trips",
       "tags": [
         "Trips"
@@ -558,6 +1562,28 @@
       "operationId": "post_trips",
       "parameters": [],
       "path": "/trips",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateTripRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Trip"
+              }
+            }
+          },
+          "description": "Trip created successfully"
+        }
+      },
       "summary": "Create trip",
       "tags": [
         "Trips"
@@ -577,6 +1603,19 @@
         }
       ],
       "path": "/vehicles",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VehicleListResponse"
+              }
+            }
+          },
+          "description": "List of vehicles"
+        }
+      },
       "summary": "List vehicles",
       "tags": [
         "Vehicles"
@@ -587,6 +1626,28 @@
       "operationId": "post_vehicles",
       "parameters": [],
       "path": "/vehicles",
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateVehicleRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Vehicle"
+              }
+            }
+          },
+          "description": "Vehicle created successfully"
+        }
+      },
       "summary": "Create vehicle",
       "tags": [
         "Vehicles"
@@ -607,6 +1668,22 @@
         }
       ],
       "path": "/vehicles/{id}",
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Vehicle"
+              }
+            }
+          },
+          "description": "Vehicle details"
+        },
+        "404": {
+          "description": "Vehicle not found"
+        }
+      },
       "summary": "Get vehicle details",
       "tags": [
         "Vehicles"
@@ -614,6 +1691,6 @@
     }
   ],
   "source": "docs/api/openapi.yaml",
-  "spec_sha256": "46031f8702230e4a23a54d59a03a4b71c977bc5000b2c92dfc08331e709d4abd",
+  "spec_sha256": "83a38bd52da3927da7f0b60f11417ed0742c0679fdfb6d0e3c99fb17a2f70ef4",
   "spec_version": "1.0.0"
 }

@@ -1,0 +1,185 @@
+global:
+  domain: flyfleet.local
+  jwtSecret: "your-jwt-secret-key-here"
+  postgres:
+    host: "postgres"
+    port: "5432"
+    user: "fleet_user"
+    password: "fleet_password"
+    db: "fleet_db"
+  redis:
+    host: "redis"
+    port: "6379"
+  nats:
+    url: "nats://nats:4222"
+
+auth-service:
+  enabled: true
+  image:
+    repository: "flyfleet/auth-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+fleet-core-service:
+  enabled: true
+  image:
+    repository: "flyfleet/fleet-core-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+alert-service:
+  enabled: true
+  image:
+    repository: "flyfleet/alert-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+admin-support-service:
+  enabled: true
+  image:
+    repository: "flyfleet/admin-support-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+billing-service:
+  enabled: true
+  image:
+    repository: "flyfleet/billing-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+tracking-service:
+  enabled: true
+  image:
+    repository: "flyfleet/tracking-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+web-bff:
+  enabled: true
+  image:
+    repository: "flyfleet/web-bff"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+reports-service:
+  enabled: true
+  image:
+    repository: "flyfleet/reports-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+governance-service:
+  enabled: true
+  image:
+    repository: "flyfleet/governance-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+analytics-service:
+  enabled: true
+  image:
+    repository: "flyfleet/analytics-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+integrations-service:
+  enabled: true
+  image:
+    repository: "flyfleet/integrations-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+settings-service:
+  enabled: true
+  image:
+    repository: "flyfleet/settings-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+maintenance-service:
+  enabled: true
+  image:
+    repository: "flyfleet/maintenance-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+vehicle-service:
+  enabled: true
+  image:
+    repository: "flyfleet/vehicle-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+driver-service:
+  enabled: true
+  image:
+    repository: "flyfleet/driver-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+trip-service:
+  enabled: true
+  image:
+    repository: "flyfleet/trip-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"
+fleet-ml-service:
+  enabled: true
+  image:
+    repository: "flyfleet/fleet-ml-service"
+    tag: "latest"
+  service:
+    port: 8080
+  env:
+    PORT: "8080"
+    JWT_SECRET: "{{ .Values.global.jwtSecret }}"

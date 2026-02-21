@@ -23,7 +23,9 @@ type Trip struct {
 	Waypoints      []Waypoint `json:"waypoints,omitempty"`
 	OrganizationID uuid.UUID  `json:"organization_id"`
 	CreatedAt      time.Time  `json:"created_at"`
+	CreatedBy      uuid.UUID  `json:"created_by"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	UpdatedBy      uuid.UUID  `json:"updated_by"`
 }
 
 type GeoPoint struct {
@@ -59,7 +61,10 @@ type TripSettings struct {
 	OrganizationID  uuid.UUID              `json:"organization_id"`
 	RetentionPeriod int                    `json:"retention_period"`
 	Policies        map[string]interface{} `json:"policies"`
+	CreatedAt       time.Time              `json:"created_at"`
+	CreatedBy       uuid.UUID              `json:"created_by"`
 	UpdatedAt       time.Time              `json:"updated_at"`
+	UpdatedBy       uuid.UUID              `json:"updated_by"`
 }
 
 // CreateTripRequest is the DTO for creating a trip

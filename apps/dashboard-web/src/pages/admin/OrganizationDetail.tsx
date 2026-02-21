@@ -49,7 +49,7 @@ export const OrganizationDetail: React.FC = () => {
                     // Fetch total vehicles for this organization
                     apiClient.get(`/admin/vehicles?org_id=${id}&page=1&size=1`),
                     // Fetch device stats (using support endpoint)
-                    fetch(`/bff/support/orgs/${id}/devices/stats`).then(res => res.json()),
+                    fetch(`/api/v1/support/orgs/${id}/devices/stats`).then(res => res.json()),
                     // Fetch trip stats
                     fetch(`/api/v1/trips/stats?org_id=${id}`).then(res => res.json())
                 ]);

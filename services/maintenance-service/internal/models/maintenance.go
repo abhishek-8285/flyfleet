@@ -30,6 +30,7 @@ type MaintenanceSchedule struct {
 	CreatedBy       uuid.UUID         `json:"created_by" db:"created_by"`
 	CreatedAt       time.Time         `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time         `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID         `json:"updated_by" db:"updated_by"`
 	CompletedAt     *time.Time        `json:"completed_at,omitempty" db:"completed_at"`
 	CompletedBy     *uuid.UUID        `json:"completed_by,omitempty" db:"completed_by"`
 }
@@ -56,7 +57,9 @@ type MaintenanceLog struct {
 	Documents       []string      `json:"documents,omitempty" db:"documents"` // file URLs
 	Status          string        `json:"status" db:"status"`                 // completed, partially_completed
 	CreatedAt       time.Time     `json:"created_at" db:"created_at"`
+	CreatedBy       uuid.UUID     `json:"created_by" db:"created_by"`
 	UpdatedAt       time.Time     `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID     `json:"updated_by" db:"updated_by"`
 }
 
 // ServiceItem represents a specific maintenance task within a schedule/log

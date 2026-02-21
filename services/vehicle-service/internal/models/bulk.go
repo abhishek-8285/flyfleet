@@ -19,6 +19,7 @@ type BulkJob struct {
 	CreatedBy     uuid.UUID `json:"created_by"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	UpdatedBy     uuid.UUID `json:"updated_by"`
 }
 
 type BulkJobRecord struct {
@@ -37,5 +38,8 @@ type BulkConfig struct {
 	ConcurrentThreads int             `json:"concurrent_threads"`
 	RetentionMonths   int             `json:"retention_months"`
 	MandatoryFields   json.RawMessage `json:"mandatory_fields"` // Array of strings
+	CreatedAt         time.Time       `json:"created_at"`
+	CreatedBy         uuid.UUID       `json:"created_by"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	UpdatedBy         uuid.UUID       `json:"updated_by"`
 }

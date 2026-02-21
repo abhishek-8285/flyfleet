@@ -29,8 +29,8 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveModel(ctx context.Context, mod
 	query := `
 		INSERT INTO predictive_models (id, name, description, model_type, algorithm, input_features, output_variable, 
 			training_data_start, training_data_end, accuracy, precision, recall, f1_score, 
-			status, version, trained_at, expires_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+			status, version, trained_at, expires_at, created_at, created_by, updated_at, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 	`
 	
 	inputFeaturesJSON, err := json.Marshal(model.InputFeatures)
@@ -57,7 +57,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveModel(ctx context.Context, mod
 	_, err = r.db.Exec(ctx, query, model.ID, model.Name, model.Description, model.ModelType, model.Algorithm,
 		inputFeaturesJSON, model.OutputVariable, model.TrainingDataStart, model.TrainingDataEnd,
 		model.Accuracy, precision, recall, f1Score, model.Status, model.Version, 
-		model.TrainedAt, model.ExpiresAt, model.CreatedAt, model.UpdatedAt)
+		model.TrainedAt, model.ExpiresAt, model.CreatedAt, model.CreatedBy, model.UpdatedAt, model.UpdatedBy)
 	
 	return err
 }
@@ -67,7 +67,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 	query := `
 		SELECT id, name, description, model_type, algorithm, input_features, output_variable, 
 			training_data_start, training_data_end, accuracy, precision, recall, f1_score, 
-			status, version, trained_at, expires_at, created_at, updated_at
+			status, version, trained_at, expires_at, created_at, created_by, updated_at, updated_by
 		FROM predictive_models WHERE id = $1
 	`
 	
@@ -79,7 +79,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 		&model.ID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 		&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 		&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
-		&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.UpdatedAt,
+		&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.CreatedBy, &model.UpdatedAt, &model.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, mode
 	// Main query
 	mainQuery := "SELECT id, name, description, model_type, algorithm, input_features, output_variable, " +
 		"training_data_start, training_data_end, accuracy, precision, recall, f1_score, " +
-		"status, version, trained_at, expires_at, created_at, updated_at " +
+		"status, version, trained_at, expires_at, created_at, created_by, updated_at, updated_by " +
 		"FROM predictive_models WHERE TRUE"
 	
 	args := []interface{}{}
@@ -244,7 +244,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, mode
 			&model.ID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 			&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 			&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
-			&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.UpdatedAt,
+			&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.CreatedBy, &model.UpdatedAt, &model.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -271,8 +271,8 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResult(ctx context.Context, re
 	query := `
 		INSERT INTO prediction_results (id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+			organization_id, request_id, predicted_at, created_at, created_by, updated_at, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	`
 	
 	predictionInputJSON, err := json.Marshal(result.PredictionInput)
@@ -299,7 +299,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResult(ctx context.Context, re
 	_, err = r.db.Exec(ctx, query, result.ID, result.ModelID, predictionInputJSON, result.PredictedValue,
 		result.ConfidenceScore, probabilityScoresJSON, featureImportanceJSON, result.AnomalyDetected,
 		anomalyScore, result.Explanation, result.OrganizationID, result.RequestID, result.PredictedAt,
-		result.CreatedAt, result.UpdatedAt)
+		result.CreatedAt, result.CreatedBy, result.UpdatedAt, result.UpdatedBy)
 	
 	return err
 }
@@ -309,7 +309,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 	query := `
 		SELECT id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at
+			organization_id, request_id, predicted_at, created_at, created_by, updated_at, updated_by
 		FROM prediction_results WHERE id = $1
 	`
 	
@@ -321,7 +321,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 		&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 		&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
 		&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
-		&result.CreatedAt, &result.UpdatedAt,
+		&result.CreatedAt, &result.CreatedBy, &result.UpdatedAt, &result.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -592,7 +592,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, org
 			&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 			&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
 			&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
-			&result.CreatedAt, &result.UpdatedAt,
+			&result.CreatedAt, &result.CreatedBy, &result.UpdatedAt, &result.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -626,8 +626,8 @@ func (r *AnalyticsRepositoryImpl) CreateAnalyticsJob(ctx context.Context, job *m
 	query := `
 		INSERT INTO analytics_jobs (id, name, type, description, status, job_type, parameters, 
 			input_source, output_destination, start_time, end_time, progress, error_details, 
-			organization_id, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			organization_id, created_by, updated_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`
 	
 	parametersJSON, err := json.Marshal(job.Parameters)
@@ -653,7 +653,7 @@ func (r *AnalyticsRepositoryImpl) CreateAnalyticsJob(ctx context.Context, job *m
 	
 	_, err = r.db.Exec(ctx, query, job.ID, job.Name, job.Type, job.Description, job.Status, job.JobType,
 		parametersJSON, job.InputSource, job.OutputDestination, startTime, endTime, job.Progress,
-		errorDetails, job.OrganizationID, job.CreatedBy, job.CreatedAt, job.UpdatedAt)
+		errorDetails, job.OrganizationID, job.CreatedBy, job.UpdatedBy, job.CreatedAt, job.UpdatedAt)
 	
 	return err
 }
@@ -663,7 +663,7 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 	query := `
 		SELECT id, name, type, description, status, job_type, parameters, 
 			input_source, output_destination, start_time, end_time, progress, error_details, 
-			organization_id, created_by, created_at, updated_at
+			organization_id, created_by, updated_by, created_at, updated_at
 		FROM analytics_jobs WHERE id = $1
 	`
 	
@@ -675,7 +675,7 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&job.ID, &job.Name, &job.Type, &job.Description, &job.Status, &job.JobType, &parametersJSON,
 		&job.InputSource, &job.OutputDestination, &startTime, &endTime, &job.Progress, &errorDetails,
-		&job.OrganizationID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt,
+		&job.OrganizationID, &job.CreatedBy, &job.UpdatedBy, &job.CreatedAt, &job.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -761,7 +761,7 @@ func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType
 	mainQuery := `
 		SELECT id, name, type, description, status, job_type, parameters, 
 			input_source, output_destination, start_time, end_time, progress, error_details, 
-			organization_id, created_by, created_at, updated_at
+			organization_id, created_by, updated_by, created_at, updated_at
 		FROM analytics_jobs 
 		WHERE organization_id = $1
 	`
@@ -806,7 +806,7 @@ func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType
 		err := rows.Scan(
 			&job.ID, &job.Name, &job.Type, &job.Description, &job.Status, &job.JobType, &parametersJSON,
 			&job.InputSource, &job.OutputDestination, &startTime, &endTime, &job.Progress, &errorDetails,
-			&job.OrganizationID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt,
+			&job.OrganizationID, &job.CreatedBy, &job.UpdatedBy, &job.CreatedAt, &job.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -836,9 +836,9 @@ func (r *AnalyticsRepositoryImpl) CreateFleetAnalytics(ctx context.Context, anal
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
 			maintenance_cost, revenue, profit_margin, safety_score, accidents_count, 
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
-			data_points_collected, processing_time, generated_at, created_at, updated_at)
+			data_points_collected, processing_time, generated_at, created_at, created_by, updated_at, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 
-			$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+			$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
 	`
 	
 	_, err := r.db.Exec(ctx, query, analytics.ID, analytics.OrganizationID, analytics.StartDate,
@@ -850,7 +850,7 @@ func (r *AnalyticsRepositoryImpl) CreateFleetAnalytics(ctx context.Context, anal
 		analytics.SafetyScore, analytics.AccidentsCount, analytics.IncidentsCount,
 		analytics.EmergencyStops, analytics.GeofenceViolations, analytics.AlertsTriggered,
 		analytics.DataPointsCollected, analytics.ProcessingTime, analytics.GeneratedAt,
-		analytics.CreatedAt, analytics.UpdatedAt)
+		analytics.CreatedAt, analytics.CreatedBy, analytics.UpdatedAt, analytics.UpdatedBy)
 	
 	return err
 }
@@ -864,7 +864,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id stri
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
 			maintenance_cost, revenue, profit_margin, safety_score, accidents_count, 
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
-			data_points_collected, processing_time, generated_at, created_at, updated_at
+			data_points_collected, processing_time, generated_at, created_at, created_by, updated_at, updated_by
 		FROM fleet_analytics WHERE id = $1
 	`
 	
@@ -880,7 +880,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id stri
 		&analytics.SafetyScore, &analytics.AccidentsCount, &analytics.IncidentsCount,
 		&analytics.EmergencyStops, &analytics.GeofenceViolations, &analytics.AlertsTriggered,
 		&analytics.DataPointsCollected, &analytics.ProcessingTime, &analytics.GeneratedAt,
-		&analytics.CreatedAt, &analytics.UpdatedAt,
+		&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -898,7 +898,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
 			maintenance_cost, revenue, profit_margin, safety_score, accidents_count, 
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
-			data_points_collected, processing_time, generated_at, created_at, updated_at
+			data_points_collected, processing_time, generated_at, created_at, created_by, updated_at, updated_by
 		FROM fleet_analytics 
 		WHERE organization_id = $1 AND start_date >= $2 AND end_date <= $3
 	`
@@ -915,7 +915,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 		&analytics.SafetyScore, &analytics.AccidentsCount, &analytics.IncidentsCount,
 		&analytics.EmergencyStops, &analytics.GeofenceViolations, &analytics.AlertsTriggered,
 		&analytics.DataPointsCollected, &analytics.ProcessingTime, &analytics.GeneratedAt,
-		&analytics.CreatedAt, &analytics.UpdatedAt,
+		&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -996,7 +996,7 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, orgID 
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
 			maintenance_cost, revenue, profit_margin, safety_score, accidents_count, 
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
-			data_points_collected, processing_time, generated_at, created_at, updated_at
+			data_points_collected, processing_time, generated_at, created_at, created_by, updated_at, updated_by
 		FROM fleet_analytics 
 		WHERE organization_id = $1
 	`
@@ -1045,7 +1045,7 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, orgID 
 			&analytics.SafetyScore, &analytics.AccidentsCount, &analytics.IncidentsCount,
 			&analytics.EmergencyStops, &analytics.GeofenceViolations, &analytics.AlertsTriggered,
 			&analytics.DataPointsCollected, &analytics.ProcessingTime, &analytics.GeneratedAt,
-			&analytics.CreatedAt, &analytics.UpdatedAt,
+			&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -1064,9 +1064,9 @@ func (r *AnalyticsRepositoryImpl) CreateDriverBehaviorAnalytics(ctx context.Cont
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
-			behavior_trend, generated_at, created_at, updated_at)
+			behavior_trend, generated_at, created_at, created_by, updated_at, updated_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 
-			$18, $19, $20, $21, $22, $23)
+			$18, $19, $20, $21, $22, $23, $24, $25)
 	`
 	
 	improvementSuggestionsJSON, err := json.Marshal(analytics.ImprovementSuggestions)
@@ -1080,7 +1080,7 @@ func (r *AnalyticsRepositoryImpl) CreateDriverBehaviorAnalytics(ctx context.Cont
 		analytics.OverSpeedingCount, analytics.IdlingTime, analytics.AverageSpeed,
 		analytics.MaxSpeed, analytics.FuelEfficiency, analytics.SafetyScore, analytics.EfficiencyScore,
 		analytics.ComfortScore, analytics.Ranking, improvementSuggestionsJSON,
-		analytics.BehaviorTrend, analytics.GeneratedAt, analytics.CreatedAt, analytics.UpdatedAt)
+		analytics.BehaviorTrend, analytics.GeneratedAt, analytics.CreatedAt, analytics.CreatedBy, analytics.UpdatedAt, analytics.UpdatedBy)
 	
 	return err
 }
@@ -1092,7 +1092,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
-			behavior_trend, generated_at, created_at, updated_at
+			behavior_trend, generated_at, created_at, created_by, updated_at, updated_by
 		FROM driver_behavior_analytics WHERE id = $1
 	`
 	
@@ -1106,7 +1106,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context
 		&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
 		&analytics.SafetyScore, &analytics.EfficiencyScore, &analytics.ComfortScore, &analytics.Ranking,
 		&improvementSuggestionsJSON, &analytics.BehaviorTrend, &analytics.GeneratedAt,
-		&analytics.CreatedAt, &analytics.UpdatedAt,
+		&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -1136,7 +1136,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
-			behavior_trend, generated_at, created_at, updated_at
+			behavior_trend, generated_at, created_at, created_by, updated_at, updated_by
 		FROM driver_behavior_analytics 
 		WHERE driver_id = $1
 		ORDER BY analysis_period_start DESC 
@@ -1161,7 +1161,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 			&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
 			&analytics.SafetyScore, &analytics.EfficiencyScore, &analytics.ComfortScore, &analytics.Ranking,
 			&improvementSuggestionsJSON, &analytics.BehaviorTrend, &analytics.GeneratedAt,
-			&analytics.CreatedAt, &analytics.UpdatedAt,
+			&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -1194,7 +1194,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
-			behavior_trend, generated_at, created_at, updated_at
+			behavior_trend, generated_at, created_at, created_by, updated_at, updated_by
 		FROM driver_behavior_analytics 
 		WHERE organization_id = $1
 		ORDER BY analysis_period_start DESC 
@@ -1219,7 +1219,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 			&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
 			&analytics.SafetyScore, &analytics.EfficiencyScore, &analytics.ComfortScore, &analytics.Ranking,
 			&improvementSuggestionsJSON, &analytics.BehaviorTrend, &analytics.GeneratedAt,
-			&analytics.CreatedAt, &analytics.UpdatedAt,
+			&analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -1376,8 +1376,8 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveMaintenanceAnalytics(ctx conte
 		INSERT INTO predictive_maintenance_analytics (id, vehicle_id, organization_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
-			reliability_score, recommendations, generated_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			reliability_score, recommendations, generated_at, created_at, created_by, updated_at, updated_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`
 	
 	componentRisksJSON, err := json.Marshal(analytics.ComponentRisks)
@@ -1412,7 +1412,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveMaintenanceAnalytics(ctx conte
 		analytics.AnalysisDate, analytics.NextServiceDue, analytics.ServicePriority,
 		componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON,
 		analytics.CostEstimation, analytics.UptimePrediction, analytics.ReliabilityScore,
-		recommendationsJSON, analytics.GeneratedAt, analytics.CreatedAt, analytics.UpdatedAt)
+		recommendationsJSON, analytics.GeneratedAt, analytics.CreatedAt, analytics.CreatedBy, analytics.UpdatedAt, analytics.UpdatedBy)
 	
 	return err
 }
@@ -1423,7 +1423,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.
 		SELECT id, vehicle_id, organization_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
-			reliability_score, recommendations, generated_at, created_at, updated_at
+			reliability_score, recommendations, generated_at, created_at, created_by, updated_at, updated_by
 		FROM predictive_maintenance_analytics WHERE id = $1
 	`
 	
@@ -1435,7 +1435,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.
 		&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 		&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
 		&analytics.UptimePrediction, &analytics.ReliabilityScore, &recommendationsJSON,
-		&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.UpdatedAt,
+		&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -1488,7 +1488,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 		SELECT id, vehicle_id, organization_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
-			reliability_score, recommendations, generated_at, created_at, updated_at
+			reliability_score, recommendations, generated_at, created_at, created_by, updated_at, updated_by
 		FROM predictive_maintenance_analytics 
 		WHERE vehicle_id = $1
 		ORDER BY created_at DESC 
@@ -1511,7 +1511,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 			&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 			&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
 			&analytics.UptimePrediction, &analytics.ReliabilityScore, &recommendationsJSON,
-			&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.UpdatedAt,
+			&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -1615,7 +1615,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context
 		SELECT id, vehicle_id, organization_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
-			reliability_score, recommendations, generated_at, created_at, updated_at
+			reliability_score, recommendations, generated_at, created_at, created_by, updated_at, updated_by
 		FROM predictive_maintenance_analytics 
 		WHERE organization_id = $1
 	`
@@ -1654,7 +1654,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context
 			&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 			&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
 			&analytics.UptimePrediction, &analytics.ReliabilityScore, &recommendationsJSON,
-			&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.UpdatedAt,
+			&analytics.GeneratedAt, &analytics.CreatedAt, &analytics.CreatedBy, &analytics.UpdatedAt, &analytics.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err

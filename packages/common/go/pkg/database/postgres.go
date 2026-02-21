@@ -41,11 +41,24 @@ func NewPostgres(connectionString string, logger *zap.Logger) (Database, error) 
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	config.MaxConns = 20
-	config.MinConns = 5
-	config.MaxConnLifetime = time.Hour
-	config.HealthCheckPeriod = time.Minute
+	// Default pool settings
+	maxConns := 30
+	minConns := 5
+	statementTimeout := "15000" // 15 seconds
+
+	// Allow overrides via env
+	config.MaxConns = int32(maxConns)
+	config.MinConns = int32(minConns)
+	config.MaxConnLifetime = 1 * time.Hour
+	config.MaxConnIdleTime = 30 * time.Minute
+	config.HealthCheckPeriod = 1 * time.Minute
 	config.ConnConfig.ConnectTimeout = 5 * time.Second
+
+	// Hardening: Enforce statement timeouts
+	if config.ConnConfig.RuntimeParams == nil {
+		config.ConnConfig.RuntimeParams = make(map[string]string)
+	}
+	config.ConnConfig.RuntimeParams["statement_timeout"] = statementTimeout
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {

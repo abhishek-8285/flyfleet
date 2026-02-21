@@ -145,6 +145,7 @@ func (h *GovernanceHandler) GetSettings(w http.ResponseWriter, r *http.Request) 
 
 func (h *GovernanceHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := uuid.Parse(r.Header.Get("X-Organization-ID"))
+	userID, _ := uuid.Parse(r.Header.Get("X-User-ID"))
 	
 	var settings models.GovernanceSettings
 	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
@@ -152,7 +153,7 @@ func (h *GovernanceHandler) UpdateSettings(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.svc.UpdateSettings(r.Context(), orgID, &settings); err != nil {
+	if err := h.svc.UpdateSettings(r.Context(), orgID, userID, &settings); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}

@@ -3,7 +3,7 @@ info:
   title: FlyFleet API
   description: |
     Enterprise Fleet Management Platform API
-    
+
     ## Key Features
     - Real-time vehicle tracking and monitoring
     - Intelligent trip management and dispatch
@@ -12,11 +12,11 @@ info:
     - Analytics and reporting
     - Payment processing integration
     - Geofencing and alerting
-    
+
     ## Authentication
     All API endpoints require a valid JWT token in the Authorization header:
     `Authorization: Bearer <token>`
-    
+
     ## Rate Limiting
     - 1000 requests per hour for authenticated users
     - 100 requests per hour for anonymous endpoints
@@ -50,17 +50,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Successful login
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
           description: Invalid credentials
-        '429':
+        "429":
           description: Too many requests
 
   /vehicles:
@@ -69,22 +69,22 @@ paths:
       description: Retrieve vehicles with optional filtering
       tags: [Vehicles]
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
-        - $ref: '#/components/parameters/status'
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/status"
         - name: license_plate
           in: query
           schema:
             type: string
           description: Filter by license plate
       responses:
-        '200':
+        "200":
           description: List of vehicles
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VehicleListResponse'
-    
+                $ref: "#/components/schemas/VehicleListResponse"
+
     post:
       summary: Create vehicle
       description: Register a new vehicle in the fleet
@@ -94,14 +94,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateVehicleRequest'
+              $ref: "#/components/schemas/CreateVehicleRequest"
       responses:
-        '201':
+        "201":
           description: Vehicle created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Vehicle'
+                $ref: "#/components/schemas/Vehicle"
 
   /vehicles/{id}:
     get:
@@ -116,13 +116,13 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Vehicle details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Vehicle'
-        '404':
+                $ref: "#/components/schemas/Vehicle"
+        "404":
           description: Vehicle not found
 
   /drivers:
@@ -131,20 +131,20 @@ paths:
       description: Retrieve drivers with optional filtering
       tags: [Drivers]
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
         - name: status
           in: query
           schema:
             type: string
             enum: [active, inactive, suspended]
       responses:
-        '200':
+        "200":
           description: List of drivers
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DriverListResponse'
+                $ref: "#/components/schemas/DriverListResponse"
 
   /trips:
     get:
@@ -152,8 +152,8 @@ paths:
       description: Retrieve trips with filtering and pagination
       tags: [Trips]
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
         - name: status
           in: query
           schema:
@@ -170,13 +170,13 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: List of trips
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TripListResponse'
-    
+                $ref: "#/components/schemas/TripListResponse"
+
     post:
       summary: Create trip
       description: Request a new trip
@@ -186,14 +186,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTripRequest'
+              $ref: "#/components/schemas/CreateTripRequest"
       responses:
-        '201':
+        "201":
           description: Trip created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Trip'
+                $ref: "#/components/schemas/Trip"
 
   /maintenance/schedules:
     get:
@@ -201,8 +201,8 @@ paths:
       description: Retrieve maintenance schedules with filtering
       tags: [Maintenance]
       parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/pageSize'
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
         - name: status
           in: query
           schema:
@@ -214,13 +214,13 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: List of maintenance schedules
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MaintenanceScheduleListResponse'
-    
+                $ref: "#/components/schemas/MaintenanceScheduleListResponse"
+
     post:
       summary: Create maintenance schedule
       description: Schedule vehicle maintenance
@@ -230,14 +230,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateMaintenanceScheduleRequest'
+              $ref: "#/components/schemas/CreateMaintenanceScheduleRequest"
       responses:
-        '201':
+        "201":
           description: Maintenance schedule created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MaintenanceSchedule'
+                $ref: "#/components/schemas/MaintenanceSchedule"
 
   /tracking/vehicles/{id}/location:
     get:
@@ -258,12 +258,12 @@ paths:
             format: date-time
           description: Specific timestamp for location history
       responses:
-        '200':
+        "200":
           description: Vehicle location
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VehicleLocation'
+                $ref: "#/components/schemas/VehicleLocation"
 
   /analytics/dashboard:
     get:
@@ -284,12 +284,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Dashboard metrics
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DashboardMetrics'
+                $ref: "#/components/schemas/DashboardMetrics"
 
   /devices/summary:
     get:
@@ -305,7 +305,7 @@ paths:
             format: uuid
           description: Optional organization identifier for super-admin contexts.
       responses:
-        '200':
+        "200":
           description: Diagnostics summary
           content:
             application/json:
@@ -333,7 +333,7 @@ paths:
       description: Retrieve desired/reported state snapshots for device digital twins.
       tags: [Devices]
       parameters:
-        - $ref: '#/components/parameters/pageSize'
+        - $ref: "#/components/parameters/pageSize"
         - name: offset
           in: query
           schema:
@@ -341,7 +341,7 @@ paths:
             minimum: 0
             default: 0
       responses:
-        '200':
+        "200":
           description: Device twins list
           content:
             application/json:
@@ -375,7 +375,7 @@ paths:
       description: Retrieve firmware rollout jobs for the current organization.
       tags: [Devices, Firmware]
       parameters:
-        - $ref: '#/components/parameters/pageSize'
+        - $ref: "#/components/parameters/pageSize"
         - name: offset
           in: query
           schema:
@@ -383,7 +383,7 @@ paths:
             minimum: 0
             default: 0
       responses:
-        '200':
+        "200":
           description: Firmware rollouts
           content:
             application/json:
@@ -407,7 +407,14 @@ paths:
                           type: string
                         status:
                           type: string
-                          enum: [scheduled, in_progress, paused, completed, cancelled]
+                          enum:
+                            [
+                              scheduled,
+                              in_progress,
+                              paused,
+                              completed,
+                              cancelled,
+                            ]
                         total_devices:
                           type: integer
                         completed_devices:
@@ -446,7 +453,7 @@ paths:
                   type: integer
                   minimum: 1
       responses:
-        '201':
+        "201":
           description: Rollout created
 
   /firmware/rollouts/{id}/status:
@@ -476,11 +483,11 @@ paths:
                   type: string
                   description: Optional operator reason for this transition, recorded in rollout events.
       responses:
-        '200':
+        "200":
           description: Rollout status updated
-        '400':
+        "400":
           description: Invalid status transition
-        '404':
+        "404":
           description: Rollout not found
 
   /firmware/rollouts/{id}:
@@ -496,7 +503,7 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Rollout details
           content:
             application/json:
@@ -512,7 +519,7 @@ paths:
                   status:
                     type: string
                     enum: [scheduled, in_progress, paused, completed, cancelled]
-        '404':
+        "404":
           description: Rollout not found
 
   /firmware/rollouts/{id}/events:
@@ -555,7 +562,7 @@ paths:
               - rollout.transition
               - rollout.created
       responses:
-        '200':
+        "200":
           description: Rollout events list
           content:
             application/json:
@@ -588,7 +595,7 @@ paths:
                     created_at:
                       type: string
                       format: date-time
-        '400':
+        "400":
           description: Invalid request (e.g., invalid event_type)
     post:
       summary: Add rollout note event
@@ -615,9 +622,9 @@ paths:
                   type: object
                   additionalProperties: true
       responses:
-        '201':
+        "201":
           description: Rollout note created
-        '400':
+        "400":
           description: Invalid request
 
   /settings/export:
@@ -626,12 +633,12 @@ paths:
       description: Returns a full snapshot of platform settings for backup/audit workflows.
       tags: [Settings]
       responses:
-        '200':
+        "200":
           description: Settings snapshot payload
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SettingsExport'
+                $ref: "#/components/schemas/SettingsExport"
 
   /settings/audit:
     get:
@@ -661,7 +668,7 @@ paths:
             minimum: 0
             default: 0
       responses:
-        '200':
+        "200":
           description: Audit log entries
           content:
             application/json:
@@ -671,12 +678,12 @@ paths:
                   logs:
                     type: array
                     items:
-                      $ref: '#/components/schemas/AuditLog'
+                      $ref: "#/components/schemas/AuditLog"
                   limit:
                     type: integer
                   offset:
                     type: integer
-        '400':
+        "400":
           description: Invalid query parameters
 
   /settings/import:
@@ -689,15 +696,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SettingsImportRequest'
+              $ref: "#/components/schemas/SettingsImportRequest"
       responses:
-        '200':
+        "200":
           description: Import result summary
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SettingsImportResult'
-        '400':
+                $ref: "#/components/schemas/SettingsImportResult"
+        "400":
           description: Validation error
 
   /finance/expenses/reports:
@@ -723,7 +730,7 @@ paths:
             minimum: 0
             default: 0
       responses:
-        '200':
+        "200":
           description: Expense reports list
           content:
             application/json:
@@ -733,7 +740,7 @@ paths:
                   reports:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ExpenseReport'
+                      $ref: "#/components/schemas/ExpenseReport"
                   total:
                     type: integer
                   limit:
@@ -746,7 +753,7 @@ paths:
       summary: List expense policies
       tags: [Finance]
       responses:
-        '200':
+        "200":
           description: Expense policies
           content:
             application/json:
@@ -756,7 +763,7 @@ paths:
                   policies:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ExpensePolicy'
+                      $ref: "#/components/schemas/ExpensePolicy"
     put:
       summary: Upsert expense policy
       tags: [Finance]
@@ -765,9 +772,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExpensePolicy'
+              $ref: "#/components/schemas/ExpensePolicy"
       responses:
-        '200':
+        "200":
           description: Policy saved
 
   /finance/revenue/forecast:
@@ -781,7 +788,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Revenue forecast
           content:
             application/json:
@@ -789,7 +796,7 @@ paths:
                 type: object
                 properties:
                   forecast:
-                    $ref: '#/components/schemas/RevenueForecast'
+                    $ref: "#/components/schemas/RevenueForecast"
 
   /finance/revenue/experiments:
     get:
@@ -804,7 +811,7 @@ paths:
             maximum: 100
             default: 20
       responses:
-        '200':
+        "200":
           description: Revenue experiments
           content:
             application/json:
@@ -814,7 +821,246 @@ paths:
                   experiments:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ABTestExperiment'
+                      $ref: "#/components/schemas/ABTestExperiment"
+
+  /device/register:
+    post:
+      summary: Register a new device
+      tags:
+        - device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRegisterRequest"
+      responses:
+        "200":
+          description: Device registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceRegisterResponse"
+
+  /device/heartbeat:
+    post:
+      summary: Update device heartbeat
+      tags:
+        - device
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeartbeatRequest"
+      responses:
+        "200":
+          description: Heartbeat accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeartbeatResponse"
+
+  /device/config:
+    get:
+      summary: Get device configuration
+      tags:
+        - device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: device_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Device configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+
+  /telemetry/batch:
+    post:
+      summary: Upload telemetry batch
+      tags:
+        - telemetry
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelemetryBatchRequest"
+      responses:
+        "200":
+          description: Telemetry uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TelemetryResponse"
+
+  /media/upload-url:
+    post:
+      summary: Get pre-signed media upload URL
+      tags:
+        - media
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+
+  /media/confirm:
+    post:
+      summary: Confirm media upload completion
+      tags:
+        - media
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmUploadRequest"
+      responses:
+        "200":
+          description: Upload confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmUploadResponse"
+
+  /forensics/attest:
+    post:
+      summary: Attest evidence integrity
+      tags:
+        - forensics
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttestationRequest"
+      responses:
+        "200":
+          description: Attestation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttestationResponse"
+
+  /device/commands:
+    get:
+      summary: Get pending device commands
+      tags:
+        - device
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: device_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: last_command_id
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pending commands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commands:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Command"
+
+  /driver/login:
+    post:
+      summary: Driver login with HOS tracking
+      tags:
+        - driver
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverLoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverLoginResponse"
+
+  /driver/logout:
+    post:
+      summary: Driver logout
+      tags:
+        - driver
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DriverLogoutRequest"
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DriverLogoutResponse"
+
+  /driver/hos:
+    post:
+      summary: Update driver HOS duty status
+      tags:
+        - driver
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HOSUpdateRequest"
+      responses:
+        "200":
+          description: HOS updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HOSUpdateResponse"
 
 components:
   securitySchemes:
@@ -832,7 +1078,7 @@ components:
         minimum: 1
         default: 1
       description: Page number for pagination
-    
+
     pageSize:
       name: page_size
       in: query
@@ -842,7 +1088,7 @@ components:
         maximum: 100
         default: 20
       description: Number of items per page
-    
+
     status:
       name: status
       in: query
@@ -863,7 +1109,7 @@ components:
         password:
           type: string
           minLength: 8
-    
+
     LoginResponse:
       type: object
       properties:
@@ -874,8 +1120,8 @@ components:
         expires_in:
           type: integer
         user:
-          $ref: '#/components/schemas/User'
-    
+          $ref: "#/components/schemas/User"
+
     User:
       type: object
       properties:
@@ -893,7 +1139,7 @@ components:
         org_id:
           type: string
           format: uuid
-    
+
     Vehicle:
       type: object
       properties:
@@ -925,8 +1171,8 @@ components:
           type: string
           enum: [petrol, diesel, electric, hybrid]
         current_location:
-          $ref: '#/components/schemas/GeoPoint'
-    
+          $ref: "#/components/schemas/GeoPoint"
+
     CreateVehicleRequest:
       type: object
       required:
@@ -948,17 +1194,17 @@ components:
         fuel_type:
           type: string
           enum: [petrol, diesel, electric, hybrid]
-    
+
     VehicleListResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Vehicle'
+            $ref: "#/components/schemas/Vehicle"
         pagination:
-          $ref: '#/components/schemas/Pagination'
-    
+          $ref: "#/components/schemas/Pagination"
+
     Driver:
       type: object
       properties:
@@ -984,18 +1230,18 @@ components:
           type: string
           enum: [active, inactive, suspended]
         current_location:
-          $ref: '#/components/schemas/GeoPoint'
-    
+          $ref: "#/components/schemas/GeoPoint"
+
     DriverListResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Driver'
+            $ref: "#/components/schemas/Driver"
         pagination:
-          $ref: '#/components/schemas/Pagination'
-    
+          $ref: "#/components/schemas/Pagination"
+
     Trip:
       type: object
       properties:
@@ -1016,11 +1262,12 @@ components:
           format: uuid
         status:
           type: string
-          enum: [requested, assigned, accepted, in_progress, completed, cancelled]
+          enum:
+            [requested, assigned, accepted, in_progress, completed, cancelled]
         pickup_location:
-          $ref: '#/components/schemas/GeoPoint'
+          $ref: "#/components/schemas/GeoPoint"
         dropoff_location:
-          $ref: '#/components/schemas/GeoPoint'
+          $ref: "#/components/schemas/GeoPoint"
         distance:
           type: number
           format: float
@@ -1032,7 +1279,7 @@ components:
         created_at:
           type: string
           format: date-time
-    
+
     CreateTripRequest:
       type: object
       required:
@@ -1040,26 +1287,26 @@ components:
         - dropoff_location
       properties:
         pickup_location:
-          $ref: '#/components/schemas/GeoPoint'
+          $ref: "#/components/schemas/GeoPoint"
         dropoff_location:
-          $ref: '#/components/schemas/GeoPoint'
+          $ref: "#/components/schemas/GeoPoint"
         preferred_time:
           type: string
           format: date-time
         passenger_count:
           type: integer
           minimum: 1
-    
+
     TripListResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Trip'
+            $ref: "#/components/schemas/Trip"
         pagination:
-          $ref: '#/components/schemas/Pagination'
-    
+          $ref: "#/components/schemas/Pagination"
+
     MaintenanceSchedule:
       type: object
       properties:
@@ -1093,7 +1340,7 @@ components:
         estimated_cost:
           type: number
           format: float
-    
+
     CreateMaintenanceScheduleRequest:
       type: object
       required:
@@ -1120,17 +1367,17 @@ components:
         priority:
           type: string
           enum: [low, medium, high, critical]
-    
+
     MaintenanceScheduleListResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/MaintenanceSchedule'
+            $ref: "#/components/schemas/MaintenanceSchedule"
         pagination:
-          $ref: '#/components/schemas/Pagination'
-    
+          $ref: "#/components/schemas/Pagination"
+
     VehicleLocation:
       type: object
       properties:
@@ -1152,7 +1399,7 @@ components:
         timestamp:
           type: string
           format: date-time
-    
+
     DashboardMetrics:
       type: object
       properties:
@@ -1171,7 +1418,7 @@ components:
         avg_trip_rating:
           type: number
           format: float
-    
+
     GeoPoint:
       type: object
       required:
@@ -1186,7 +1433,7 @@ components:
           format: double
         address:
           type: string
-    
+
     Pagination:
       type: object
       properties:
@@ -1316,25 +1563,25 @@ components:
       type: object
       properties:
         platform_settings:
-          $ref: '#/components/schemas/PlatformSettings'
+          $ref: "#/components/schemas/PlatformSettings"
         feature_flags:
           type: array
           items:
-            $ref: '#/components/schemas/FeatureFlag'
+            $ref: "#/components/schemas/FeatureFlag"
         localization_settings:
           type: array
           items:
-            $ref: '#/components/schemas/LocalizationSettings'
+            $ref: "#/components/schemas/LocalizationSettings"
         templates:
           type: array
           items:
-            $ref: '#/components/schemas/Template'
+            $ref: "#/components/schemas/Template"
         notification_channels:
           type: array
           items:
-            $ref: '#/components/schemas/NotificationChannel'
+            $ref: "#/components/schemas/NotificationChannel"
         system_limits:
-          $ref: '#/components/schemas/SystemLimit'
+          $ref: "#/components/schemas/SystemLimit"
         exported_at:
           type: string
           format: date-time
@@ -1343,25 +1590,25 @@ components:
       type: object
       properties:
         platform_settings:
-          $ref: '#/components/schemas/PlatformSettings'
+          $ref: "#/components/schemas/PlatformSettings"
         feature_flags:
           type: array
           items:
-            $ref: '#/components/schemas/FeatureFlag'
+            $ref: "#/components/schemas/FeatureFlag"
         localization_settings:
           type: array
           items:
-            $ref: '#/components/schemas/LocalizationSettings'
+            $ref: "#/components/schemas/LocalizationSettings"
         templates:
           type: array
           items:
-            $ref: '#/components/schemas/Template'
+            $ref: "#/components/schemas/Template"
         notification_channels:
           type: array
           items:
-            $ref: '#/components/schemas/NotificationChannel'
+            $ref: "#/components/schemas/NotificationChannel"
         system_limits:
-          $ref: '#/components/schemas/SystemLimit'
+          $ref: "#/components/schemas/SystemLimit"
         replace_existing:
           type: boolean
 
@@ -1460,39 +1707,606 @@ components:
           type: string
           format: date-time
 
-    RevenueForecast:
+    HOSUpdateResponse:
       type: object
       properties:
-        route_id:
-          type: string
-        predicted_demand:
-          type: number
-        current_demand:
-          type: number
-        suggested_price:
-          type: number
-        base_price:
-          type: number
-        confidence_pct:
-          type: number
-
-    ABTestExperiment:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
         status:
           type: string
-        variants:
+        violations:
           type: array
           items:
             type: string
-        metrics:
+        remaining_drive_time:
+          type: number
+        remaining_on_duty_time:
+          type: number
+
+    VehicleDriversResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        drivers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DriverProfile"
+
+    DeviceRegisterRequest:
+      type: object
+      required:
+        - device_id
+        - hardware_attestation
+        - android_version
+        - device_model
+        - app_version
+      properties:
+        device_id:
+          type: string
+        hardware_attestation:
+          type: string
+        android_version:
+          type: string
+        device_model:
+          type: string
+        app_version:
+          type: string
+        organization_id:
+          type: string
+          format: uuid
+        vehicle_id:
+          type: string
+          format: uuid
+
+    DeviceRegisterResponse:
+      type: object
+      properties:
+        device_id:
+          type: string
+        jwt_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_at:
+          type: integer
+          format: int64
+
+    HeartbeatRequest:
+      type: object
+      required:
+        - device_id
+        - status
+        - uptime
+        - module_health
+      properties:
+        device_id:
+          type: string
+        status:
+          type: string
+        uptime:
+          type: integer
+          format: int64
+        module_health:
+          $ref: "#/components/schemas/ModuleHealth"
+        telemetry_summary:
+          $ref: "#/components/schemas/TelemetrySummary"
+
+    ModuleHealth:
+      type: object
+      properties:
+        camera:
+          $ref: "#/components/schemas/ModuleStatus"
+        ai:
+          $ref: "#/components/schemas/ModuleStatus"
+        gps:
+          $ref: "#/components/schemas/ModuleStatus"
+        can_bus:
+          $ref: "#/components/schemas/ModuleStatus"
+        storage:
+          $ref: "#/components/schemas/ModuleStatus"
+        network:
+          $ref: "#/components/schemas/ModuleStatus"
+
+    ModuleStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        temperature:
+          type: number
+        memory_usage:
+          type: number
+        error_count:
+          type: integer
+
+    TelemetrySummary:
+      type: object
+      properties:
+        gps_points_count:
+          type: integer
+        can_bus_messages_count:
+          type: integer
+        average_speed_kph:
+          type: number
+        max_speed_kph:
+          type: number
+        distance_km:
+          type: number
+
+    HeartbeatResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        config_version:
+          type: string
+        pending_commands:
+          type: array
+          items:
+            $ref: "#/components/schemas/Command"
+
+    ConfigResponse:
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/DeviceRuntimeConfig"
+        signature:
+          type: string
+        version:
+          type: string
+        expires_at:
+          type: integer
+          format: int64
+
+    DeviceRuntimeConfig:
+      type: object
+      properties:
+        schema_version:
+          type: string
+        heartbeat_seconds:
+          type: integer
+        ring_buffer_minutes:
+          type: integer
+        gps:
+          $ref: "#/components/schemas/GPSConfig"
+        ai:
+          $ref: "#/components/schemas/AIConfig"
+        retention:
+          $ref: "#/components/schemas/RetentionConfig"
+        feature_flags:
+          $ref: "#/components/schemas/FeatureFlags"
+
+    GPSConfig:
+      type: object
+      properties:
+        active_interval_seconds:
+          type: integer
+        idle_interval_seconds:
+          type: integer
+
+    AIConfig:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        frame_sample_stride:
+          type: integer
+        severity_thresholds:
+          $ref: "#/components/schemas/SeverityThresholds"
+
+    SeverityThresholds:
+      type: object
+      properties:
+        warn_min:
+          type: number
+        critical_min:
+          type: number
+
+    RetentionConfig:
+      type: object
+      properties:
+        critical_clip_days:
+          type: integer
+        min_storage_reserve_mb:
+          type: integer
+        legal_hold:
+          type: boolean
+
+    FeatureFlags:
+      type: object
+      properties:
+        camera_enabled:
+          type: boolean
+        audio_event_checks_enabled:
+          type: boolean
+        ai_enabled:
+          type: boolean
+        can_bus_enabled:
+          type: boolean
+        driver_lockout_enabled:
+          type: boolean
+
+    TelemetryBatchRequest:
+      type: object
+      required:
+        - device_id
+        - batch_id
+        - telemetry
+        - timestamp
+      properties:
+        device_id:
+          type: string
+        batch_id:
+          type: string
+        telemetry:
+          type: array
+          items:
+            $ref: "#/components/schemas/TelemetryPoint"
+        timestamp:
+          type: integer
+          format: int64
+
+    TelemetryPoint:
+      type: object
+      required:
+        - timestamp
+        - gps
+        - speed_kph
+        - heading
+        - altitude
+        - accuracy
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        gps:
+          $ref: "#/components/schemas/GPSData"
+        can_bus:
+          $ref: "#/components/schemas/CANBusData"
+        speed_kph:
+          type: number
+        heading:
+          type: number
+        altitude:
+          type: number
+        accuracy:
+          type: number
+
+    GPSData:
+      type: object
+      required:
+        - latitude
+        - longitude
+        - accuracy
+        - satellites
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        accuracy:
+          type: number
+        satellites:
+          type: integer
+
+    CANBusData:
+      type: object
+      properties:
+        engine_rpm:
+          type: integer
+        speed_kph:
+          type: number
+        brake_pressed:
+          type: boolean
+        turn_signal_on:
+          type: boolean
+        fuel_level:
+          type: number
+        coolant_temp:
+          type: number
+        dtc_count:
+          type: integer
+        odometer_km:
+          type: number
+
+    TelemetryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        received_count:
+          type: integer
+        next_batch_id:
+          type: string
+
+    UploadUrlRequest:
+      type: object
+      required:
+        - device_id
+        - clip_id
+        - size_bytes
+        - content_type
+        - duration_seconds
+      properties:
+        device_id:
+          type: string
+        clip_id:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        content_type:
+          type: string
+        duration_seconds:
+          type: integer
+        event_type:
+          type: string
+        storage_mode:
+          type: string
+
+    UploadUrlResponse:
+      type: object
+      properties:
+        upload_url:
+          type: string
+        local_path:
+          type: string
+        expires_at:
+          type: integer
+          format: int64
+        object_key:
+          type: string
+        storage_mode:
+          type: string
+        max_local_size_mb:
+          type: integer
+          format: int64
+
+    ConfirmUploadRequest:
+      type: object
+      required:
+        - clip_id
+        - checksum_sha256
+        - duration_seconds
+        - uploaded_bytes
+        - storage_mode
+      properties:
+        clip_id:
+          type: string
+        checksum_sha256:
+          type: string
+        duration_seconds:
+          type: integer
+        uploaded_bytes:
+          type: integer
+          format: int64
+        storage_mode:
+          type: string
+        local_path:
+          type: string
+
+    ConfirmUploadResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        storage_location:
+          type: string
+        storage_mode:
+          type: string
+        sync_status:
+          type: string
+
+    AttestationRequest:
+      type: object
+      required:
+        - device_id
+        - evidence_hash
+        - chain_hash
+        - timestamp
+      properties:
+        device_id:
+          type: string
+        evidence_hash:
+          type: string
+        chain_hash:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+
+    AttestationResponse:
+      type: object
+      properties:
+        attestation_id:
+          type: string
+        signature:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        blockchain_tx:
+          type: string
+
+    Command:
+      type: object
+      required:
+        - id
+        - type
+        - expires_at
+        - priority
+        - created_at
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        params:
           type: object
           additionalProperties: true
+        expires_at:
+          type: integer
+          format: int64
+        priority:
+          type: integer
         created_at:
+          type: integer
+          format: int64
+
+    DriverLoginRequest:
+      type: object
+      required:
+        - device_id
+        - driver_id
+        - duty_status
+      properties:
+        device_id:
           type: string
-          format: date-time
+        driver_id:
+          type: string
+        rfid_token:
+          type: string
+        photo_hash:
+          type: string
+        duty_status:
+          type: string
+
+    DriverLoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        driver_profile:
+          $ref: "#/components/schemas/DriverProfile"
+        hos_status:
+          $ref: "#/components/schemas/HOSStatus"
+        shift_start:
+          type: integer
+          format: int64
+
+    DriverProfile:
+      type: object
+      required:
+        - driver_id
+        - name
+        - license_number
+        - hos_limits
+      properties:
+        driver_id:
+          type: string
+        name:
+          type: string
+        license_number:
+          type: string
+        initials:
+          type: string
+        role:
+          type: string
+        hos_limits:
+          $ref: "#/components/schemas/HOSLimits"
+
+    HOSLimits:
+      type: object
+      properties:
+        max_driving_hours:
+          type: number
+        max_on_duty_hours:
+          type: number
+        min_break_after_hours:
+          type: number
+        min_break_duration:
+          type: number
+        max_on_duty_days:
+          type: integer
+
+    HOSStatus:
+      type: object
+      properties:
+        duty_status:
+          type: string
+        driving_time_remaining:
+          type: number
+        on_duty_time_remaining:
+          type: number
+        break_required:
+          type: boolean
+        violations:
+          type: array
+          items:
+            type: string
+
+    DriverLogoutRequest:
+      type: object
+      required:
+        - device_id
+        - driver_id
+        - shift_duration
+        - end_duty_status
+      properties:
+        device_id:
+          type: string
+        driver_id:
+          type: string
+        shift_duration:
+          type: number
+        end_duty_status:
+          type: string
+
+    DriverLogoutResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        hos_summary:
+          $ref: "#/components/schemas/HOSSummary"
+        violations:
+          type: array
+          items:
+            type: string
+
+    HOSSummary:
+      type: object
+      properties:
+        shift_start:
+          type: integer
+          format: int64
+        shift_end:
+          type: integer
+          format: int64
+        total_driving:
+          type: number
+        total_on_duty:
+          type: number
+        total_breaks:
+          type: number
+        distance_km:
+          type: number
+
+    HOSUpdateRequest:
+      type: object
+      required:
+        - device_id
+        - driver_id
+        - duty_status
+        - timestamp
+      properties:
+        device_id:
+          type: string
+        driver_id:
+          type: string
+        duty_status:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        location:
+          $ref: "#/components/schemas/Location"
+
+    Location:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string

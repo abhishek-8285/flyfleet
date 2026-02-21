@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package trip.v1;
+
+option go_package = "github.com/flyfleet/proto/trip/v1;tripv1";
+
+import "google/protobuf/timestamp.proto";
+
+service TripService {
+  rpc CreateTrip (CreateTripRequest) returns (CreateTripResponse);
+  rpc GetTrip (GetTripRequest) returns (GetTripResponse);
+  rpc ListTrips (ListTripsRequest) returns (ListTripsResponse);
+  rpc UpdateTripStatus (UpdateTripStatusRequest) returns (UpdateTripStatusResponse);
+  rpc GetTripStats (GetTripStatsRequest) returns (GetTripStatsResponse);
+}
+
+message Trip {
+  string id = 1;
+  string org_id = 2;
+  string vehicle_id = 3;
+  string driver_id = 4;
+  string status = 5;
+  google.protobuf.Timestamp start_time = 6;
+  google.protobuf.Timestamp end_time = 7;
+  double start_latitude = 8;
+  double start_longitude = 9;
+  double end_latitude = 10;
+  double end_longitude = 11;
+  double distance = 12;
+  string created_by = 13;
+  google.protobuf.Timestamp created_at = 14;
+}
+
+message CreateTripRequest {
+  string vehicle_id = 1;
+  string driver_id = 2;
+  double start_latitude = 3;
+  double start_longitude = 4;
+  double end_latitude = 5;
+  double end_longitude = 6;
+}
+
+message CreateTripResponse {
+  Trip trip = 1;
+}
+
+message GetTripRequest {
+  string id = 1;
+}
+
+message GetTripResponse {
+  Trip trip = 1;
+}
+
+message ListTripsRequest {
+  string org_id = 1;
+  string vehicle_id = 2;
+  string driver_id = 3;
+  string status = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message ListTripsResponse {
+  repeated Trip trips = 1;
+  int32 total = 2;
+}
+
+message UpdateTripStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateTripStatusResponse {
+  Trip trip = 1;
+}
+
+message GetTripStatsRequest {
+  string org_id = 1;
+}
+
+message GetTripStatsResponse {
+  int32 total_trips = 1;
+  int32 active_trips = 2;
+  double total_distance = 3;
+}

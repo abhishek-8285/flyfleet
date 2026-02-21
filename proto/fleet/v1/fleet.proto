@@ -1,0 +1,431 @@
+syntax = "proto3";
+
+package fleet.v1;
+
+option go_package = "github.com/flyfleet/proto/fleet/v1;fleetv1";
+
+import "google/protobuf/timestamp.proto";
+
+service FleetService {
+  // Vehicle RPCs
+  rpc CreateVehicle (CreateVehicleRequest) returns (CreateVehicleResponse);
+  rpc GetVehicle (GetVehicleRequest) returns (GetVehicleResponse);
+  rpc ListVehicles (ListVehiclesRequest) returns (ListVehiclesResponse);
+  rpc UpdateVehicle (UpdateVehicleRequest) returns (UpdateVehicleResponse);
+  rpc DeleteVehicle (DeleteVehicleRequest) returns (DeleteVehicleResponse);
+  
+  // Driver RPCs
+  rpc CreateDriver (CreateDriverRequest) returns (CreateDriverResponse);
+  rpc GetDriver (GetDriverRequest) returns (GetDriverResponse);
+  rpc ListDrivers (ListDriversRequest) returns (ListDriversResponse);
+  rpc UpdateDriver (UpdateDriverRequest) returns (UpdateDriverResponse);
+  rpc DeleteDriver (DeleteDriverRequest) returns (DeleteDriverResponse);
+  rpc UpdateDriverStatus (UpdateDriverStatusRequest) returns (UpdateDriverStatusResponse);
+  
+  // Assignment RPCs
+  rpc AssignDriver (AssignDriverRequest) returns (AssignDriverResponse);
+
+  // Maintenance RPCs
+  rpc CreateWorkOrder (CreateWorkOrderRequest) returns (CreateWorkOrderResponse);
+  rpc GetWorkOrder (GetWorkOrderRequest) returns (GetWorkOrderResponse);
+  rpc ListWorkOrders (ListWorkOrdersRequest) returns (ListWorkOrdersResponse);
+  rpc UpdateWorkOrder (UpdateWorkOrderRequest) returns (UpdateWorkOrderResponse);
+  rpc ChangeWorkOrderStatus (ChangeWorkOrderStatusRequest) returns (ChangeWorkOrderStatusResponse);
+  rpc CreateInspection (CreateInspectionRequest) returns (CreateInspectionResponse);
+  rpc ListInspections (ListInspectionsRequest) returns (ListInspectionsResponse);
+
+  // Fuel RPCs
+  rpc CreateFuelLog (CreateFuelLogRequest) returns (CreateFuelLogResponse);
+  rpc ListFuelLogs (ListFuelLogsRequest) returns (ListFuelLogsResponse);
+  rpc GetFuelStats (GetFuelStatsRequest) returns (GetFuelStatsResponse);
+
+  // Telemetry RPCs
+  rpc ReportTelemetry (ReportTelemetryRequest) returns (ReportTelemetryResponse);
+  rpc GetLatestTelemetry (GetLatestTelemetryRequest) returns (GetLatestTelemetryResponse);
+}
+
+message Vehicle {
+  string id = 1;
+  string org_id = 2;
+  string license_plate = 3;
+  string model = 4;
+  string make = 5;
+  int32 year = 6;
+  string status = 7;
+  string vin = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message Driver {
+  string id = 1;
+  string org_id = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string email = 5;
+  string phone = 6;
+  string license_number = 7;
+  string license_type = 8;
+  google.protobuf.Timestamp license_expiry = 9;
+  string status = 10;
+  optional string current_vehicle_id = 11;
+  double rating = 12;
+  int32 behavior_score = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+}
+
+// Vehicle Messages
+message CreateVehicleRequest {
+  string license_plate = 1;
+  string model = 2;
+  string make = 3;
+  int32 year = 4;
+  string vin = 5;
+  string org_id = 6;
+}
+
+message CreateVehicleResponse {
+  Vehicle vehicle = 1;
+}
+
+message GetVehicleRequest {
+  string id = 1;
+}
+
+message GetVehicleResponse {
+  Vehicle vehicle = 1;
+}
+
+message ListVehiclesRequest {
+  string org_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message ListVehiclesResponse {
+  repeated Vehicle vehicles = 1;
+  int64 total = 2;
+}
+
+message UpdateVehicleRequest {
+  string id = 1;
+  optional string model = 2;
+  optional string make = 3;
+  optional int32 year = 4;
+  optional string status = 5;
+}
+
+message UpdateVehicleResponse {
+  Vehicle vehicle = 1;
+}
+
+message DeleteVehicleRequest {
+  string id = 1;
+}
+
+message DeleteVehicleResponse {}
+
+// Driver Messages
+message CreateDriverRequest {
+  string org_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string email = 4;
+  string phone = 5;
+  string license_number = 6;
+  string license_type = 7;
+  google.protobuf.Timestamp license_expiry = 8;
+}
+
+message CreateDriverResponse {
+  Driver driver = 1;
+}
+
+message GetDriverRequest {
+  string id = 1;
+}
+
+message GetDriverResponse {
+  Driver driver = 1;
+}
+
+message ListDriversRequest {
+  string org_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  optional string status = 4;
+}
+
+message ListDriversResponse {
+  repeated Driver drivers = 1;
+  int64 total = 2;
+}
+
+message UpdateDriverRequest {
+  string id = 1;
+  optional string first_name = 2;
+  optional string last_name = 3;
+  optional string email = 4;
+  optional string phone = 5;
+}
+
+message UpdateDriverResponse {
+  Driver driver = 1;
+}
+
+message DeleteDriverRequest {
+  string id = 1;
+}
+
+message DeleteDriverResponse {}
+
+message UpdateDriverStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateDriverStatusResponse {
+  Driver driver = 1;
+}
+
+// Assignment Messages
+message AssignDriverRequest {
+  string vehicle_id = 1;
+  string driver_id = 2;
+}
+
+message AssignDriverResponse {
+  Vehicle vehicle = 1;
+}
+
+// Maintenance Messages
+enum WorkOrderStatus {
+  WORK_ORDER_STATUS_UNSPECIFIED = 0;
+  WORK_ORDER_STATUS_OPEN = 1;
+  WORK_ORDER_STATUS_IN_PROGRESS = 2;
+  WORK_ORDER_STATUS_ON_HOLD = 3;
+  WORK_ORDER_STATUS_COMPLETED = 4;
+  WORK_ORDER_STATUS_CANCELLED = 5;
+}
+
+enum WorkOrderPriority {
+  WORK_ORDER_PRIORITY_UNSPECIFIED = 0;
+  WORK_ORDER_PRIORITY_LOW = 1;
+  WORK_ORDER_PRIORITY_MEDIUM = 2;
+  WORK_ORDER_PRIORITY_HIGH = 3;
+  WORK_ORDER_PRIORITY_CRITICAL = 4;
+}
+
+message WorkOrder {
+  string id = 1;
+  string org_id = 2;
+  string vehicle_id = 3;
+  string title = 4;
+  string description = 5;
+  string type = 6;
+  WorkOrderPriority priority = 7;
+  WorkOrderStatus status = 8;
+  optional string assigned_to = 9;
+  optional google.protobuf.Timestamp scheduled_date = 10;
+  optional google.protobuf.Timestamp completed_date = 11;
+  double estimated_cost = 12;
+  double actual_cost = 13;
+  optional string vendor_id = 14;
+  string approval_status = 15;
+  google.protobuf.Timestamp created_at = 16;
+  google.protobuf.Timestamp updated_at = 17;
+}
+
+message Inspection {
+  string id = 1;
+  string org_id = 2;
+  string vehicle_id = 3;
+  string inspector_id = 4;
+  string status = 5;
+  string notes = 6;
+  int64 odometer = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateWorkOrderRequest {
+  string org_id = 1;
+  string vehicle_id = 2;
+  string title = 3;
+  string description = 4;
+  string type = 5;
+  WorkOrderPriority priority = 6;
+  optional string assigned_to = 7;
+  optional google.protobuf.Timestamp scheduled_date = 8;
+  double estimated_cost = 9;
+  optional string vendor_id = 10;
+}
+
+message CreateWorkOrderResponse {
+  WorkOrder work_order = 1;
+}
+
+message GetWorkOrderRequest {
+  string id = 1;
+}
+
+message GetWorkOrderResponse {
+  WorkOrder work_order = 1;
+}
+
+message ListWorkOrdersRequest {
+  string org_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  optional string vehicle_id = 4;
+  optional WorkOrderStatus status = 5;
+}
+
+message ListWorkOrdersResponse {
+  repeated WorkOrder work_orders = 1;
+  int64 total = 2;
+}
+
+message UpdateWorkOrderRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional WorkOrderPriority priority = 4;
+  optional string assigned_to = 5;
+  optional double estimated_cost = 6;
+  optional double actual_cost = 7;
+}
+
+message UpdateWorkOrderResponse {
+  WorkOrder work_order = 1;
+}
+
+message ChangeWorkOrderStatusRequest {
+  string id = 1;
+  WorkOrderStatus status = 2;
+}
+
+message ChangeWorkOrderStatusResponse {
+  WorkOrder work_order = 1;
+}
+
+message CreateInspectionRequest {
+  string org_id = 1;
+  string vehicle_id = 2;
+  string inspector_id = 3;
+  int64 odometer = 4;
+  string notes = 5;
+}
+
+message CreateInspectionResponse {
+  Inspection inspection = 1;
+}
+
+message ListInspectionsRequest {
+  string org_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  optional string vehicle_id = 4;
+}
+
+message ListInspectionsResponse {
+  repeated Inspection inspections = 1;
+  int64 total = 2;
+}
+
+// Fuel Messages
+message FuelLog {
+  string id = 1;
+  string org_id = 2;
+  string vehicle_id = 3;
+  string driver_id = 4;
+  string station_name = 5;
+  string fuel_type = 6;
+  double quantity = 7;
+  double unit_price = 8;
+  double total_cost = 9;
+  double odometer = 10;
+  google.protobuf.Timestamp transaction_date = 11;
+  string status = 12;
+  optional string receipt_url = 13;
+  optional string notes = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}
+
+message CreateFuelLogRequest {
+  string org_id = 1;
+  string vehicle_id = 2;
+  string driver_id = 3;
+  string station_name = 4;
+  string fuel_type = 5;
+  double quantity = 6;
+  double unit_price = 7;
+  double total_cost = 8;
+  double odometer = 9;
+  google.protobuf.Timestamp transaction_date = 10;
+  optional string receipt_url = 11;
+  optional string notes = 12;
+}
+
+message CreateFuelLogResponse {
+  FuelLog fuel_log = 1;
+}
+
+message ListFuelLogsRequest {
+  string org_id = 1;
+  int32 page = 2;
+  int32 limit = 3;
+  optional string vehicle_id = 4;
+  optional string driver_id = 5;
+}
+
+message ListFuelLogsResponse {
+  repeated FuelLog logs = 1;
+  int64 total = 2;
+}
+
+message GetFuelStatsRequest {
+  string org_id = 1;
+  optional string vehicle_id = 2;
+}
+
+message GetFuelStatsResponse {
+  double total_consumption = 1;
+  double total_cost = 2;
+  double avg_consumption = 3;
+  double avg_cost_per_km = 4;
+}
+
+// Telemetry Messages
+message Telemetry {
+  string vehicle_id = 1;
+  string org_id = 2;
+  string device_id = 3;
+  double latitude = 4;
+  double longitude = 5;
+  double speed = 6;
+  double fuel_level = 7;
+  double battery_voltage = 8;
+  double coolant_temp = 9;
+  int64 odometer = 10;
+  google.protobuf.Timestamp timestamp = 11;
+  map<string, string> metadata = 12;
+}
+
+message ReportTelemetryRequest {
+  Telemetry telemetry = 1;
+}
+
+message ReportTelemetryResponse {
+  bool success = 1;
+}
+
+message GetLatestTelemetryRequest {
+  string vehicle_id = 1;
+}
+
+message GetLatestTelemetryResponse {
+  Telemetry telemetry = 1;
+}

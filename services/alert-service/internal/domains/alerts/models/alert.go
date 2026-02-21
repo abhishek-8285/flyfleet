@@ -22,6 +22,7 @@ type AlertRule struct {
 	CreatedAt   time.Time         `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time         `json:"updated_at" db:"updated_at"`
 	CreatedBy   uuid.UUID         `json:"created_by" db:"created_by"`
+	UpdatedBy   uuid.UUID         `json:"updated_by" db:"updated_by"`
 }
 
 // AlertAction represents an action to take when an alert is triggered
@@ -58,7 +59,9 @@ type Alert struct {
 	EscalatedTo     []uuid.UUID       `json:"escalated_to" db:"escalated_to"`
 	Notes           string            `json:"notes" db:"notes"`
 	CreatedAt       time.Time         `json:"created_at" db:"created_at"`
+	CreatedBy       uuid.UUID         `json:"created_by" db:"created_by"`
 	UpdatedAt       time.Time         `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID         `json:"updated_by" db:"updated_by"`
 }
 
 // Location represents geographic coordinates
@@ -87,6 +90,7 @@ type Geofence struct {
 	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at" db:"updated_at"`
 	CreatedBy      uuid.UUID   `json:"created_by" db:"created_by"`
+	UpdatedBy      uuid.UUID   `json:"updated_by" db:"updated_by"`
 }
 
 // NotificationTemplate represents a template for alert notifications
@@ -102,6 +106,7 @@ type NotificationTemplate struct {
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 	CreatedBy   uuid.UUID `json:"created_by" db:"created_by"`
+	UpdatedBy   uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // AlertRuleType represents different types of alert rules

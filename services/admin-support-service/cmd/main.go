@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,9 +13,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 
 	"github.com/flyfleet/admin-support-service/internal/config"
+	admingrpc "github.com/flyfleet/admin-support-service/internal/grpc"
+	pb "github.com/flyfleet/proto/admin/v1"
 	supportHandlers "github.com/flyfleet/admin-support-service/internal/domains/support/handlers"
 	supportRepo "github.com/flyfleet/admin-support-service/internal/domains/support/repository"
 	supportService "github.com/flyfleet/admin-support-service/internal/domains/support/service"
@@ -34,6 +39,9 @@ import (
 	orgHandlers "github.com/flyfleet/admin-support-service/internal/domains/organizations/handlers"
 	orgRepo "github.com/flyfleet/admin-support-service/internal/domains/organizations/repository"
 	orgService "github.com/flyfleet/admin-support-service/internal/domains/organizations/service"
+
+	emergencyHandlers "github.com/flyfleet/admin-support-service/internal/domains/emergency/handlers"
+	emergencyService "github.com/flyfleet/admin-support-service/internal/domains/emergency/service"
 
 	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
 )
@@ -61,7 +69,16 @@ func main() {
 		logger.Fatal("Failed to connect to database", zap.Error(err))
 	}
 	defer db.Close()
+	logger.Info("Connected to database")
 
+	// NATS connection
+	nc, err := nats.Connect(cfg.NatsURL)
+	if err != nil {
+		logger.Warn("Failed to connect to NATS, emergency halt will be disabled", zap.Error(err))
+	} else {
+		defer nc.Close()
+		logger.Info("Connected to NATS")
+	}
 	// Initialize Support Domain
 	sRepo := supportRepo.NewTicketRepository(db, logger)
 	sService := supportService.NewTicketService(sRepo, logger)
@@ -87,19 +104,44 @@ func main() {
 	oService := orgService.NewOrganizationService(oRepo, logger)
 	oHandler := orgHandlers.NewOrganizationHandlers(oService, logger)
 
+	// Initialize Emergency Domain
+	var eHandler *emergencyHandlers.EmergencyHandler
+	if nc != nil {
+		eService := emergencyService.NewEmergencyService(nc, logger)
+		eHandler = emergencyHandlers.NewEmergencyHandler(eService, logger)
+	}
+
+	// Start gRPC Server
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "50056"
+	}
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		adminServer := admingrpc.NewAdminSupportServer(sService, oService, logger)
+		pb.RegisterAdminSupportServiceServer(grpcServer, adminServer)
+		
+		logger.Info("Starting admin-support gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
+
 	// Setup Chi router
 	r := chi.NewRouter()
 	
-	// Middleware
+	// Global Middleware
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(sharedMiddleware.RequestIDMiddleware())
 	r.Use(sharedMiddleware.LoggingMiddleware(logger))
 	
-	// Enable Auth Middleware
-	r.Use(sharedMiddleware.AuthMiddleware(&envSecretProvider{secret: cfg.JWTSecret}))
-
-	// Health check endpoint
+	// Public Routes
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -109,13 +151,20 @@ func main() {
 		})
 	})
 
-	// API endpoints
-	r.Route("/api/v1", func(r chi.Router) {
-		sHandler.RegisterRoutes(r)
-		setHandler.RegisterRoutes(r)
-		gHandler.RegisterRoutes(r)
-		dHandler.RegisterRoutes(r)
-		oHandler.RegisterRoutes(r)
+	// Authenticated API endpoints
+	r.Group(func(r chi.Router) {
+		r.Use(sharedMiddleware.AuthMiddleware(&envSecretProvider{secret: cfg.JWTSecret}))
+
+		r.Route("/api/v1", func(r chi.Router) {
+			sHandler.RegisterRoutes(r)
+			setHandler.RegisterRoutes(r)
+			gHandler.RegisterRoutes(r)
+			dHandler.RegisterRoutes(r)
+			oHandler.RegisterRoutes(r)
+			if eHandler != nil {
+				eHandler.RegisterRoutes(r)
+			}
+		})
 	})
 
 	// Start server

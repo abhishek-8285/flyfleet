@@ -1,76 +1,113 @@
-# Dependencies
+# --- Dependencies ---
 node_modules/
 .pnp
 .pnp.js
 
-# Testing
+# --- Testing ---
 coverage/
+*.test
+*.out
+**/build_error.log
 
-# Next.js
+# --- Next.js / Web ---
 .next/
 out/
-build/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+next-env.d.ts
 
-# Production
+# --- Production & Binaries ---
 dist/
+build/
+web-bff
+*.pid
+web-bff.pid
 
-# Misc
-.DS_Store
-*.pem
+# --- Go Binaries (Recursive) ---
+# Catching service-name binaries, -bin, -server, and main
+**/main
+**/[a-z0-9_-]*-service
+**/[a-z0-9_-]*-server
+**/[a-z0-9_-]*-bin
+**/[a-z0-9_-]*_final
+**/[a-z0-9_-]*_new
+**/[a-z0-9_-]*_host
+vendor/
+*.cover
+*.prof
 
-# Debug
+# --- Logs ---
+*.log
+*_service.log
+*.log.gz
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-alert_service.log
-auth_service.log
-auth_service_final.log
-auth_service_retry.log
-trip_service.log
-# Local Env Files
+
+# --- Local Environment ---
 .env
 .env*.local
+local.properties
+go.work
+go.work.sum
 
-# Vercel
-.vercel
-
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Go
-bin/
-*.exe
-*.test
-*.out
-vendor/
-*.log
-*.cover
-*.prof
-services/*/*-service
-services/*/web-bff
-services/*/auth-service
-services/*/vehicle-service
-services/*/fleet-core-service
-
-# Editors
+# --- Editors / IDEs ---
 .vscode/
 .idea/
+.claude/
+.cursor/
+.qoder/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
 
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
 
-# Docker
+# --- Android ---
+.gradle/
+.android/
+.navigation/
+captures/
+*.apk
+*.aar
+*.jks
+*.keystore
+**/build/
+temp_wrapper/
+
+# --- Docker & Volumes ---
 docker-compose.override.yml
-backups/**/*.gz
+backups/
 uploads/
 
-# OS Generated
-Thumbs.db
-.DS_Store
+# --- Project Specific Artifacts ---
+tmp/
+outside/
+soul/
+firmware/build/
+*_files_list.txt
+untracked_files.txt
 
-# Antigravity/Agent
+# --- Optional Doc Artifacts (Uncomment to ignore) ---
+# all_apis.json
+# api_spec.json
+# backend_apis.json
+# db_schema.json
+# openapi.json
+# openapi.yaml
+# openapi_settings.yaml
+# tech_stack.json
+
+# --- Assistant ---
 .gemini/
 .agent/
 brain/

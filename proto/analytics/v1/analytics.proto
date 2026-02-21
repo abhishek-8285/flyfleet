@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package analytics.v1;
+
+option go_package = "github.com/flyfleet/proto/analytics/v1;analyticsv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AnalyticsService {
+  rpc CreateAnalyticsJob (CreateAnalyticsJobRequest) returns (CreateAnalyticsJobResponse);
+  rpc GetAnalyticsJob (GetAnalyticsJobRequest) returns (GetAnalyticsJobResponse);
+  rpc ListAnalyticsJobs (ListAnalyticsJobsRequest) returns (ListAnalyticsJobsResponse);
+  rpc GetFleetAnalytics (GetFleetAnalyticsRequest) returns (GetFleetAnalyticsResponse);
+  rpc GetDriverBehaviorAnalytics (GetDriverBehaviorAnalyticsRequest) returns (GetDriverBehaviorAnalyticsResponse);
+}
+
+message AnalyticsJob {
+  string id = 1;
+  string org_id = 2;
+  string type = 3;
+  string status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  string created_by = 6;
+}
+
+message CreateAnalyticsJobRequest {
+  string type = 1;
+  map<string, string> parameters = 2;
+}
+
+message CreateAnalyticsJobResponse {
+  AnalyticsJob job = 1;
+}
+
+message GetAnalyticsJobRequest {
+  string id = 1;
+}
+
+message GetAnalyticsJobResponse {
+  AnalyticsJob job = 1;
+}
+
+message ListAnalyticsJobsRequest {
+  string org_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListAnalyticsJobsResponse {
+  repeated AnalyticsJob jobs = 1;
+  int32 total = 2;
+}
+
+message GetFleetAnalyticsRequest {
+  string org_id = 1;
+  google.protobuf.Timestamp from_date = 2;
+  google.protobuf.Timestamp to_date = 3;
+}
+
+message GetFleetAnalyticsResponse {
+  double total_distance = 1;
+  double total_fuel = 2;
+  int32 total_trips = 3;
+  double utilization_rate = 4;
+}
+
+message GetDriverBehaviorAnalyticsRequest {
+  string driver_id = 1;
+  string org_id = 2;
+}
+
+message GetDriverBehaviorAnalyticsResponse {
+  int32 score = 1;
+  int32 harsh_events = 2;
+  double idling_time = 3;
+}

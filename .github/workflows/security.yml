@@ -1,0 +1,144 @@
+name: Security & Quality Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.24"
+  TRIVY_VERSION: "0.50.0"
+
+jobs:
+  # ── Static Analysis (SAST) ──────────────────────────
+  sast:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - services/auth-service
+          - services/fleet-core-service-new
+          - services/tracking-service
+          - services/web-bff
+          - packages/common/go
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run Go Vet
+        run: |
+          cd ${{ matrix.service }}
+          go vet ./...
+
+      - name: Run Staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          working-directory: ${{ matrix.service }}
+
+      - name: Run Gosec (Security Scanner)
+        uses: securego/gosec@master
+        with:
+          args: "-severity medium -quiet ./..."
+          working-directory: ${{ matrix.service }}
+
+  # ── Container Image Scanning ────────────────────────
+  trivy:
+    name: Container Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - fleet-core-service-new
+          - tracking-service
+          - web-bff
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t flyfleet/${{ matrix.service }}:scan \
+            -f services/${{ matrix.service }}/Dockerfile \
+            services/${{ matrix.service }}
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "flyfleet/${{ matrix.service }}:scan"
+          format: "sarif"
+          output: "trivy-${{ matrix.service }}.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-${{ matrix.service }}.sarif"
+
+  # ── Tenant Isolation Leak Test ──────────────────────
+  tenant-isolation:
+    name: Tenant Isolation Verification
+    runs-on: ubuntu-latest
+    needs: [sast]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build services
+        run: |
+          cd services/fleet-core-service-new && go build -o /dev/null ./cmd/...
+          cd ../tracking-service && go build -o /dev/null ./cmd/...
+          cd ../web-bff && go build -o /dev/null ./cmd/...
+
+      - name: Verify StrictTenantMiddleware usage
+        run: |
+          echo "Checking that critical endpoints use StrictTenantMiddleware..."
+          # Ensure no database query uses raw org_id without middleware
+          if grep -rn 'org_id.*r\.URL\.Query' services/ --include='*.go' | grep -v '_test.go'; then
+            echo "WARNING: Found potential org_id from query parameter (should come from middleware)"
+          fi
+
+      - name: Verify org_id in all SQL queries
+        run: |
+          echo "Checking org_id enforcement in SQL queries..."
+          # Count queries missing org_id filter
+          MISSING=$(grep -rn 'SELECT.*FROM' services/ --include='*.go' | \
+            grep -v 'org_id' | grep -v '_test.go' | grep -v 'migrations' | \
+            grep -v 'schema_migrations' | grep -v 'devices WHERE device_id' | wc -l)
+          echo "Queries without org_id filter: $MISSING"
+          if [ "$MISSING" -gt 10 ]; then
+            echo "WARNING: Many queries missing org_id — review for tenant isolation"
+          fi
+
+  # ── Dependency Audit ────────────────────────────────
+  dependency-audit:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - services/auth-service
+          - services/fleet-core-service-new
+          - services/tracking-service
+          - services/web-bff
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          cd ${{ matrix.service }}
+          govulncheck ./...

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/cache"
+	"github.com/fleet-platform/shared/pkg/security"
 	"github.com/flyfleet/web-bff/internal/client"
 	"github.com/flyfleet/web-bff/internal/config"
 	"go.uber.org/zap"
@@ -23,12 +24,15 @@ type DashboardHandlers struct {
 	logger        *zap.Logger
 	cache         cache.RedisCacheInterface
 	authClient    *client.AuthClient
-	vehicleClient *client.VehicleClient
+	fleetClient   *client.FleetClient
 	tripClient    *client.TripClient
 	alertClient   *client.AlertClient
 	billingClient *client.BillingClient
-	supportClient *client.SupportClient
-}
+		supportClient  *client.SupportClient
+		trackingClient *client.TrackingClient
+		maintenanceClient *client.MaintenanceClient
+	}
+	
 
 type Statistics struct {
 	TotalVehicles      int     `json:"total_vehicles"`
@@ -73,17 +77,19 @@ type AdminDashboardData struct {
 	RecentActivity   []map[string]interface{} `json:"recent_activity"`
 }
 
-func NewDashboardHandlers(cfg *config.Config, logger *zap.Logger, redisCache cache.RedisCacheInterface, authClient *client.AuthClient, vehicleClient *client.VehicleClient, tripClient *client.TripClient, alertClient *client.AlertClient, billingClient *client.BillingClient, supportClient *client.SupportClient) *DashboardHandlers {
+func NewDashboardHandlers(cfg *config.Config, logger *zap.Logger, redisCache cache.RedisCacheInterface, authClient *client.AuthClient, fleetClient *client.FleetClient, tripClient *client.TripClient, alertClient *client.AlertClient, billingClient *client.BillingClient, supportClient *client.SupportClient, trackingClient *client.TrackingClient, maintenanceClient *client.MaintenanceClient) *DashboardHandlers {
 	return &DashboardHandlers{
 		cfg:           cfg,
 		logger:        logger,
 		cache:         redisCache,
 		authClient:    authClient,
-		vehicleClient: vehicleClient,
+		fleetClient:   fleetClient,
 		tripClient:    tripClient,
 		alertClient:   alertClient,
 		billingClient: billingClient,
 		supportClient: supportClient,
+		trackingClient: trackingClient,
+		maintenanceClient: maintenanceClient,
 	}
 }
 
@@ -93,15 +99,15 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 
 	ctx := r.Context()
 	token := getTokenFromRequest(r)
+	orgID, _ := security.GetOrgID(ctx)
+	orgIDStr := orgID.String()
 
-	// Create a cache key based on the token (or user ID/OrgID if available)
-	// For global stats, we might want to cache platform-wide or per-org.
-	// Let's assume per-org/per-user for now.
-	cacheKey := fmt.Sprintf("stats:global:%s", token)
+	// Create a cache key based on the org ID
+	cacheKey := fmt.Sprintf("stats:global:%s", orgIDStr)
 
 	stats, err := cache.FetchWithCache(ctx, h.cache, cacheKey, 5*time.Minute, func() (Statistics, error) {
 		// Fetch real data in parallel
-		vStats, err := h.vehicleClient.GetStats(ctx, token)
+		vStats, err := h.fleetClient.GetStats(ctx, token)
 		if err != nil {
 			h.logger.Error("Failed to fetch vehicle stats", zap.Error(err))
 			vStats = &client.VehicleStats{}
@@ -113,15 +119,15 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 			uStats = &client.UserStats{}
 		}
 
-		tStats, err := h.tripClient.GetStats(ctx, token)
+		tStats, err := h.tripClient.GetStats(ctx, orgIDStr)
 		if err != nil {
-			h.logger.Error("Failed to fetch trip stats", zap.Error(err))
+			h.logger.Error("Failed to fetch trip stats via gRPC", zap.Error(err))
 			tStats = &client.TripStats{}
 		}
 
-		aStats, err := h.alertClient.GetStats(ctx, token)
+		aStats, err := h.alertClient.GetStats(ctx, orgIDStr)
 		if err != nil {
-			h.logger.Error("Failed to fetch alert stats", zap.Error(err))
+			h.logger.Error("Failed to fetch alert stats via gRPC", zap.Error(err))
 			aStats = &client.AlertStats{}
 		}
 
@@ -132,7 +138,7 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 			ActiveVehicles:     vStats.ActiveVehicles,
 			TotalDrivers:       uStats.TotalDrivers,
 			ActiveTrips:        tStats.ActiveTrips,
-			TotalDistanceToday: vStats.TotalDistance,
+			TotalDistanceToday: tStats.Distance,
 			FuelConsumedToday:  vStats.TotalFuel,
 			AlertsCount:        aStats.NewAlerts,
 		}
@@ -180,12 +186,13 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 func (h *DashboardHandlers) GetOrganizationStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	token := getTokenFromRequest(r)
-	cacheKey := fmt.Sprintf("stats:org:%s", token)
+	orgID, _ := security.GetOrgID(ctx)
+	cacheKey := fmt.Sprintf("stats:org:%s", orgID.String())
 
 	orgStats, err := cache.FetchWithCache(ctx, h.cache, cacheKey, 3*time.Minute, func() (map[string]interface{}, error) {
 		stats, err := h.supportClient.GetOrganizationStats(ctx, token)
 		if err != nil {
-			h.logger.Warn("Failed to fetch organization stats from support service", zap.Error(err))
+			h.logger.Warn("Failed to fetch organization stats via gRPC from support service", zap.Error(err))
 			return map[string]interface{}{
 				"active_orgs": 0,
 				"total_orgs":  0,
@@ -215,7 +222,7 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 		admin.LastUpdated = now.Format(time.RFC3339)
 		admin.UptimeTrend = []int{99, 99, 98, 99, 100, 99, 99}
 
-		vStats, vErr := h.vehicleClient.GetStats(ctx, token)
+		vStats, vErr := h.fleetClient.GetStats(ctx, token)
 		if vErr != nil {
 			h.logger.Warn("Failed to fetch vehicle stats for admin dashboard", zap.Error(vErr))
 			vStats = &client.VehicleStats{}
@@ -227,9 +234,9 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 			uStats = &client.UserStats{}
 		}
 
-		bMetrics, bErr := h.billingClient.GetMetrics(ctx, token)
+		bMetrics, bErr := h.billingClient.GetMetrics(ctx, orgIDStr)
 		if bErr != nil {
-			h.logger.Warn("Failed to fetch billing metrics for admin dashboard", zap.Error(bErr))
+			h.logger.Warn("Failed to fetch billing metrics via gRPC for admin dashboard", zap.Error(bErr))
 			bMetrics = &client.BillingMetrics{}
 		}
 
@@ -243,6 +250,12 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 		if supErr != nil {
 			h.logger.Warn("Failed to fetch support dashboard summary for admin dashboard", zap.Error(supErr))
 			supportSummary = map[string]any{}
+		}
+
+		mStats, mErr := h.maintenanceClient.GetStats(ctx, orgIDStr)
+		if mErr != nil {
+			h.logger.Warn("Failed to fetch maintenance stats for admin dashboard", zap.Error(mErr))
+			mStats = &client.MaintenanceStats{}
 		}
 
 		recentActivity, raErr := h.fetchSupportRecentActivity(ctx, token)
@@ -266,7 +279,7 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 		admin.RiskOverview.PaymentFailures = intNumber(supportSummary, "payment_failures")
 		admin.RiskOverview.SecurityScore = securityScore
 
-		admin.CriticalIndicators.OpenIncidents = openTickets
+		admin.CriticalIndicators.OpenIncidents = openTickets + mStats.OverdueServices
 		admin.CriticalIndicators.TotalDevices = totalVehicles
 		admin.CriticalIndicators.DevicesOffline = maxInt(totalVehicles-activeVehicles, 0)
 		admin.CriticalIndicators.IntegrationFailures = admin.RiskOverview.IntegrationFailures

@@ -20,7 +20,7 @@ const NewTicketModal: React.FC<NewTicketModalProps> = ({ isOpen, onClose, onCrea
         setSubmitting(true);
         const token = localStorage.getItem('access_token');
         try {
-            const res = await fetch('/bff/support/incidents/create', {
+            const res = await fetch('/api/v1/support/incidents/create', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

@@ -30,8 +30,8 @@ func (r *MaintenanceRepositoryImpl) CreateSchedule(ctx context.Context, schedule
 			id, org_id, vehicle_id, type, name, description, due_date, due_odometer, 
 			due_engine_hours, assigned_to, priority, status, estimated_cost, 
 			parts_required, service_items, notes, reminders, recurring, 
-			created_by, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+			created_by, updated_by, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -49,7 +49,7 @@ func (r *MaintenanceRepositoryImpl) CreateSchedule(ctx context.Context, schedule
 		schedule.DueEngineHours, schedule.AssignedTo, schedule.Priority,
 		schedule.Status, schedule.EstimatedCost, partsRequiredJSON,
 		serviceItemsJSON, schedule.Notes, remindersJSON, recurringJSON,
-		schedule.CreatedBy, now, now,
+		schedule.CreatedBy, schedule.UpdatedBy, now, now,
 	).Scan(&schedule.ID, &schedule.CreatedAt, &schedule.UpdatedAt)
 
 	return err
@@ -61,7 +61,7 @@ func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id stri
 		SELECT id, org_id, vehicle_id, type, name, description, due_date, due_odometer, 
 		       due_engine_hours, assigned_to, priority, status, estimated_cost, actual_cost,
 		       parts_required, service_items, notes, reminders, recurring, 
-		       created_by, created_at, updated_at, completed_at, completed_by
+		       created_by, updated_by, created_at, updated_at, completed_at, completed_by
 		FROM maintenance_schedules WHERE id = $1`
 
 	var schedule models.MaintenanceSchedule
@@ -73,7 +73,7 @@ func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id stri
 		&schedule.DueEngineHours, &schedule.AssignedTo, &schedule.Priority,
 		&schedule.Status, &schedule.EstimatedCost, &schedule.ActualCost,
 		&partsRequiredJSON, &serviceItemsJSON, &schedule.Notes, &remindersJSON,
-		&recurringJSON, &schedule.CreatedBy, &schedule.CreatedAt, &schedule.UpdatedAt,
+		&recurringJSON, &schedule.CreatedBy, &schedule.UpdatedBy, &schedule.CreatedAt, &schedule.UpdatedAt,
 		&schedule.CompletedAt, &schedule.CompletedBy,
 	)
 
@@ -94,7 +94,7 @@ func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id stri
 func (r *MaintenanceRepositoryImpl) ListSchedules(ctx context.Context, filter models.MaintenanceListFilter) ([]*models.MaintenanceSchedule, int, error) {
 	baseQuery := `
 		SELECT id, org_id, vehicle_id, type, name, due_date, priority, status, 
-		       estimated_cost, created_at, updated_at
+		       estimated_cost, created_at, created_by, updated_at, updated_by
 		FROM maintenance_schedules WHERE org_id = $1`
 
 	countQuery := `SELECT COUNT(*) FROM maintenance_schedules WHERE org_id = $1`
@@ -219,7 +219,7 @@ func (r *MaintenanceRepositoryImpl) ListSchedules(ctx context.Context, filter mo
 		err := rows.Scan(
 			&schedule.ID, &schedule.OrgID, &schedule.VehicleID, &schedule.Type,
 			&schedule.Name, &schedule.DueDate, &schedule.Priority, &schedule.Status,
-			&schedule.EstimatedCost, &schedule.CreatedAt, &schedule.UpdatedAt,
+			&schedule.EstimatedCost, &schedule.CreatedAt, &schedule.CreatedBy, &schedule.UpdatedAt, &schedule.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -291,8 +291,8 @@ func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.M
 		INSERT INTO maintenance_logs (
 			id, org_id, vehicle_id, schedule_id, type, name, description, start_date, 
 			end_date, duration_minutes, performed_by, cost, odometer, engine_hours,
-			parts_used, service_items, notes, documents, status, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+			parts_used, service_items, notes, documents, status, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -310,7 +310,7 @@ func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.M
 		id, log.OrgID, log.VehicleID, log.ScheduleID, log.Type, log.Name,
 		log.Description, log.StartDate, log.EndDate, duration, log.PerformedBy,
 		log.Cost, log.Odometer, log.EngineHours, partsUsedJSON, serviceItemsJSON,
-		log.Notes, documentsJSON, log.Status, now, now,
+		log.Notes, documentsJSON, log.Status, now, log.CreatedBy, now, log.UpdatedBy,
 	).Scan(&log.ID, &log.CreatedAt, &log.UpdatedAt)
 
 	return err
@@ -321,7 +321,7 @@ func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (
 	query := `
 		SELECT id, org_id, vehicle_id, schedule_id, type, name, description, start_date, 
 		       end_date, duration_minutes, performed_by, cost, odometer, engine_hours,
-		       parts_used, service_items, notes, documents, status, created_at, updated_at
+		       parts_used, service_items, notes, documents, status, created_at, created_by, updated_at, updated_by
 		FROM maintenance_logs WHERE id = $1`
 
 	var log models.MaintenanceLog
@@ -332,7 +332,7 @@ func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (
 		&log.Name, &log.Description, &log.StartDate, &log.EndDate,
 		&log.DurationMinutes, &log.PerformedBy, &log.Cost, &log.Odometer,
 		&log.EngineHours, &partsUsedJSON, &serviceItemsJSON, &log.Notes,
-		&documentsJSON, &log.Status, &log.CreatedAt, &log.UpdatedAt,
+		&documentsJSON, &log.Status, &log.CreatedAt, &log.CreatedBy, &log.UpdatedAt, &log.UpdatedBy,
 	)
 
 	if err != nil {
@@ -466,7 +466,7 @@ func (r *MaintenanceRepositoryImpl) ListLogs(ctx context.Context, filter models.
 		err := rows.Scan(
 			&log.ID, &log.OrgID, &log.VehicleID, &log.Type, &log.Name,
 			&log.StartDate, &log.PerformedBy, &log.Cost, &log.Odometer,
-			&log.Status, &log.CreatedAt, &log.UpdatedAt,
+			&log.Status, &log.CreatedAt, &log.CreatedBy, &log.UpdatedAt, &log.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err

@@ -32,7 +32,7 @@ func NewBulkProcessor(bulkRepo *repository.BulkRepository, vehicleRepo *reposito
 func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid.UUID) {
 	// Update status to processing
 	ctx := context.Background()
-	p.bulkRepo.UpdateJobStatus(ctx, jobID, "processing", 0, 0)
+	p.bulkRepo.UpdateJobStatus(ctx, jobID, "processing", 0, 0, uuid.Nil)
 
 	csvReader := csv.NewReader(reader)
 	
@@ -40,7 +40,7 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 	header, err := csvReader.Read()
 	if err != nil {
 		p.logger.Error("Failed to read CSV header", zap.Error(err))
-		p.bulkRepo.UpdateJobStatus(ctx, jobID, "failed", 0, 0)
+		p.bulkRepo.UpdateJobStatus(ctx, jobID, "failed", 0, 0, uuid.Nil)
 		return
 	}
 
@@ -198,5 +198,5 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
         finalStatus = "completed"
     }
 
-	p.bulkRepo.UpdateJobStatus(ctx, jobID, finalStatus, successCount, failedCount)
+	p.bulkRepo.UpdateJobStatus(ctx, jobID, finalStatus, successCount, failedCount, uuid.Nil)
 }

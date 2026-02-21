@@ -48,3 +48,4 @@ require (
 	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
+replace github.com/flyfleet/proto => ../../proto

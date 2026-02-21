@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,10 +15,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 
+	maintenancegrpc "github.com/flyfleet/maintenance-service/internal/grpc"
 	"github.com/flyfleet/maintenance-service/internal/handlers"
 	"github.com/flyfleet/maintenance-service/internal/repository"
 	"github.com/flyfleet/maintenance-service/internal/service"
+	pb "github.com/flyfleet/proto/maintenance/v1"
 )
 
 func main() {
@@ -72,6 +76,24 @@ func main() {
 	if err := telemetryWorker.Start(context.Background()); err != nil {
 		logger.Error("Failed to start telemetry worker", zap.Error(err))
 	}
+
+	// Start gRPC Server
+	grpcPort := getEnv("GRPC_PORT", "50057")
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		mSrv := maintenancegrpc.NewMaintenanceServer(maintenanceService, workOrderService, logger)
+		pb.RegisterMaintenanceServiceServer(grpcServer, mSrv)
+		
+		logger.Info("Starting maintenance gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
 
 	// Setup Chi router
 	r := chi.NewRouter()

@@ -97,6 +97,14 @@ func GetContextFields(ctx context.Context) []zap.Field {
 	if traceID := ctx.Value("trace_id"); traceID != nil {
 		fields = append(fields, zap.String("trace_id", traceID.(string)))
 	}
+
+	if orgID := ctx.Value("org_id"); orgID != nil {
+		fields = append(fields, zap.String("org_id", orgID.(string)))
+	}
+
+	if vehicleID := ctx.Value("vehicle_id"); vehicleID != nil {
+		fields = append(fields, zap.String("vehicle_id", vehicleID.(string)))
+	}
 	
 	fields = append(fields, zap.String("timestamp", time.Now().Format(time.RFC3339)))
 	return fields

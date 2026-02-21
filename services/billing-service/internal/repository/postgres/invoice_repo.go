@@ -27,14 +27,16 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 	query := `
 		INSERT INTO invoices (
 			org_id, invoice_number, customer_name, customer_email, billing_address,
-			due_date, status, subtotal, tax_amount, total_amount, currency, notes
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			due_date, status, subtotal, tax_amount, total_amount, currency, notes,
+			created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id, created_at, updated_at
 	`
 
 	err = tx.QueryRow(ctx, query,
 		inv.OrgID, inv.InvoiceNumber, inv.CustomerName, inv.CustomerEmail, inv.BillingAddress,
 		inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.Currency, inv.Notes,
+		inv.CreatedBy, inv.UpdatedBy,
 	).Scan(&inv.ID, &inv.CreatedAt, &inv.UpdatedAt)
 
 	if err != nil {
@@ -45,12 +47,14 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 		item := &inv.Items[i]
 		itemQuery := `
 			INSERT INTO invoice_items (
-				org_id, invoice_id, description, quantity, unit_price, amount
-			) VALUES ($1, $2, $3, $4, $5, $6)
+				org_id, invoice_id, description, quantity, unit_price, amount,
+				created_by, updated_by
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			RETURNING id, created_at, updated_at
 		`
 		err = tx.QueryRow(ctx, itemQuery,
 			inv.OrgID, inv.ID, item.Description, item.Quantity, item.UnitPrice, item.Amount,
+			inv.CreatedBy, inv.UpdatedBy,
 		).Scan(&item.ID, &item.CreatedAt, &item.UpdatedAt)
 
 		if err != nil {
@@ -69,7 +73,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 	query := `
 		SELECT id, org_id, invoice_number, customer_name, customer_email, billing_address,
 		       due_date, status, subtotal, tax_amount, total_amount, amount_paid, amount_remaining,
-		       currency, notes, created_at, updated_at
+		       currency, notes, created_at, created_by, updated_at, updated_by
 		FROM invoices
 		WHERE id = $1 AND org_id = $2 AND is_deleted = false
 	`
@@ -77,7 +81,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 	err := r.pool.QueryRow(ctx, query, id, orgID).Scan(
 		&inv.ID, &inv.OrgID, &inv.InvoiceNumber, &inv.CustomerName, &inv.CustomerEmail, &inv.BillingAddress,
 		&inv.DueDate, &inv.Status, &inv.Subtotal, &inv.TaxAmount, &inv.TotalAmount, &inv.AmountPaid, &inv.AmountRemaining,
-		&inv.Currency, &inv.Notes, &inv.CreatedAt, &inv.UpdatedAt,
+		&inv.Currency, &inv.Notes, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -85,7 +89,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 
 	// Fetch items
 	itemQuery := `
-		SELECT id, invoice_id, description, quantity, unit_price, amount, created_at, updated_at
+		SELECT id, invoice_id, description, quantity, unit_price, amount, created_at, created_by, updated_at, updated_by
 		FROM invoice_items
 		WHERE invoice_id = $1 AND org_id = $2 AND is_deleted = false
 	`
@@ -97,7 +101,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 
 	for rows.Next() {
 		var item invoice.InvoiceItem
-		err := rows.Scan(&item.ID, &item.InvoiceID, &item.Description, &item.Quantity, &item.UnitPrice, &item.Amount, &item.CreatedAt, &item.UpdatedAt)
+		err := rows.Scan(&item.ID, &item.InvoiceID, &item.Description, &item.Quantity, &item.UnitPrice, &item.Amount, &item.CreatedAt, &item.CreatedBy, &item.UpdatedAt, &item.UpdatedBy)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +120,7 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	}
 
 	query := `
-		SELECT id, org_id, invoice_number, customer_name, status, total_amount, due_date, created_at
+		SELECT id, org_id, invoice_number, customer_name, status, total_amount, due_date, created_at, created_by, updated_at, updated_by
 		FROM invoices
 		WHERE org_id = $1 AND is_deleted = false
 		ORDER BY created_at DESC
@@ -131,7 +135,7 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	var invoices []invoice.Invoice
 	for rows.Next() {
 		var inv invoice.Invoice
-		err := rows.Scan(&inv.ID, &inv.OrgID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.DueDate, &inv.CreatedAt)
+		err := rows.Scan(&inv.ID, &inv.OrgID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.DueDate, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -141,9 +145,9 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	return invoices, total, nil
 }
 
-func (r *InvoiceRepository) UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status invoice.InvoiceStatus) error {
-	query := `UPDATE invoices SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND org_id = $3 AND is_deleted = false`
-	_, err := r.pool.Exec(ctx, query, status, id, orgID)
+func (r *InvoiceRepository) UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status invoice.InvoiceStatus, updatedBy uuid.UUID) error {
+	query := `UPDATE invoices SET status = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3 AND org_id = $4 AND is_deleted = false`
+	_, err := r.pool.Exec(ctx, query, status, updatedBy, id, orgID)
 	return err
 }
 

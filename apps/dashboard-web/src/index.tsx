@@ -1,21 +1,31 @@
-import 'leaflet/dist/leaflet.css';
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
-import './styles/design-tokens.css';
-import reportWebVitals from './reportWebVitals';
-import { initializeTraceFetch } from './utils/traceFetch';
+import "leaflet/dist/leaflet.css";
+import posthog from "posthog-js";
+import { PostHogProvider } from "posthog-js/react";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+import reportWebVitals from "./reportWebVitals";
+import "./styles/design-tokens.css";
+import { initializeTraceFetch } from "./utils/traceFetch";
 
 initializeTraceFetch();
 
+posthog.init(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || "dummy_key", {
+  api_host:
+    process.env.REACT_APP_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+  person_profiles: "always",
+});
+
 const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
+  document.getElementById("root") as HTMLElement,
 );
 root.render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
+    <PostHogProvider client={posthog}>
+      <App />
+    </PostHogProvider>
+  </React.StrictMode>,
 );
 
 // If you want to start measuring performance in your app, pass a function

@@ -27,8 +27,7 @@ func NewMaintenanceService(
 	}
 }
 
-// CreateSchedule creates a new maintenance schedule
-func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID, req *models.CreateScheduleRequest, createdBy uuid.UUID) (*models.MaintenanceSchedule, error) {
+func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID, req *models.CreateScheduleRequest) (*models.MaintenanceSchedule, error) {
 	// Validate maintenance type
 	validTypes := map[string]bool{
 		models.MaintenanceTypeRoutine:    true,
@@ -53,6 +52,7 @@ func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID
 		return nil, fmt.Errorf("invalid priority: %s", req.Priority)
 	}
 
+	userID := s.getUserID(ctx)
 	schedule := &models.MaintenanceSchedule{
 		ID:            uuid.New().String(),
 		OrgID:         orgID,
@@ -72,7 +72,8 @@ func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID
 		Notes:         req.Notes,
 		Reminders:     req.Reminders,
 		Recurring:     req.Recurring,
-		CreatedBy:     createdBy,
+		CreatedBy:     userID,
+		UpdatedBy:     userID,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
@@ -84,6 +85,19 @@ func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID
 
 	s.logger.Info("maintenance schedule created", zap.String("schedule_id", schedule.ID))
 	return schedule, nil
+}
+
+func (s *MaintenanceService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 // GetSchedule retrieves a maintenance schedule by ID
@@ -218,6 +232,7 @@ func (s *MaintenanceService) UpdateSchedule(ctx context.Context, id string, req 
 
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
+		updates["updated_by"] = s.getUserID(ctx)
 
 		if err := s.repo.UpdateSchedule(ctx, id, updates); err != nil {
 			s.logger.Error("failed to update maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
@@ -274,6 +289,7 @@ func (s *MaintenanceService) CreateLog(ctx context.Context, orgID uuid.UUID, req
 		return nil, fmt.Errorf("end date must be after start date")
 	}
 
+	userID := s.getUserID(ctx)
 	log := &models.MaintenanceLog{
 		ID:            uuid.New().String(),
 		OrgID:         orgID,
@@ -293,6 +309,8 @@ func (s *MaintenanceService) CreateLog(ctx context.Context, orgID uuid.UUID, req
 		Notes:         req.Notes,
 		Documents:     req.Documents,
 		Status:        req.Status,
+		CreatedBy:     userID,
+		UpdatedBy:     userID,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
 	}
@@ -411,6 +429,7 @@ func (s *MaintenanceService) UpdateLog(ctx context.Context, id string, req *mode
 
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
+		updates["updated_by"] = s.getUserID(ctx)
 
 		if err := s.repo.UpdateLog(ctx, id, updates); err != nil {
 			s.logger.Error("failed to update maintenance log", zap.String("log_id", id), zap.Error(err))

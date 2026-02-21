@@ -1,6 +1,6 @@
 module github.com/flyfleet/integrations-service
 
-go 1.25.7
+go 1.26
 
 replace github.com/fleet-platform/shared => ../../packages/common/go
 
@@ -18,3 +18,4 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 )
+replace github.com/flyfleet/proto => ../../proto

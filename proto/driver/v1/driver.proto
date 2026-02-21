@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package driver.v1;
+
+option go_package = "github.com/flyfleet/proto/driver/v1;driverv1";
+
+import "google/protobuf/timestamp.proto";
+
+service DriverService {
+  rpc CreateDriver (CreateDriverRequest) returns (CreateDriverResponse);
+  rpc GetDriver (GetDriverRequest) returns (GetDriverResponse);
+  rpc ListDrivers (ListDriversRequest) returns (ListDriversResponse);
+  rpc UpdateDriver (UpdateDriverRequest) returns (UpdateDriverResponse);
+  rpc GetDriverStats (GetDriverStatsRequest) returns (GetDriverStatsResponse);
+}
+
+message Driver {
+  string id = 1;
+  string org_id = 2;
+  string user_id = 3; // Link to auth user
+  string name = 4;
+  string license_number = 5;
+  string phone = 6;
+  string status = 7; // active, inactive, suspended
+  google.protobuf.Timestamp created_at = 8;
+  string created_by = 9;
+}
+
+message CreateDriverRequest {
+  string user_id = 1;
+  string name = 2;
+  string license_number = 3;
+  string phone = 4;
+}
+
+message CreateDriverResponse {
+  Driver driver = 1;
+}
+
+message GetDriverRequest {
+  string id = 1;
+}
+
+message GetDriverResponse {
+  Driver driver = 1;
+}
+
+message ListDriversRequest {
+  string org_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListDriversResponse {
+  repeated Driver drivers = 1;
+  int32 total = 2;
+}
+
+message UpdateDriverRequest {
+  string id = 1;
+  string name = 2;
+  string license_number = 3;
+  string phone = 4;
+  string status = 5;
+}
+
+message UpdateDriverResponse {
+  Driver driver = 1;
+}
+
+message GetDriverStatsRequest {
+  string org_id = 1;
+}
+
+message GetDriverStatsResponse {
+  int32 total_drivers = 1;
+  int32 active_drivers = 2;
+  int32 inactive_drivers = 3;
+}

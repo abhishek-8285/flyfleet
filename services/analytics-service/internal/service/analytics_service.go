@@ -177,16 +177,15 @@ func (s *AnalyticsServiceImpl) CreatePredictiveModel(ctx context.Context, model 
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if model.ID == "" {
 		model.ID = uuid.New().String()
 	}
-	if model.CreatedAt.IsZero() {
-		model.CreatedAt = time.Now()
-	}
-	if model.UpdatedAt.IsZero() {
-		model.UpdatedAt = time.Now()
-	}
+	model.CreatedAt = time.Now()
+	model.CreatedBy = userID
+	model.UpdatedAt = time.Now()
+	model.UpdatedBy = userID
 
 	return s.repo.CreatePredictiveModel(ctx, model)
 }
@@ -221,6 +220,9 @@ func (s *AnalyticsServiceImpl) UpdatePredictiveModel(ctx context.Context, id str
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdatePredictiveModel(ctx, id, updates)
 }
 
@@ -251,16 +253,15 @@ func (s *AnalyticsServiceImpl) CreatePredictionResult(ctx context.Context, resul
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if result.ID == "" {
 		result.ID = uuid.New().String()
 	}
-	if result.CreatedAt.IsZero() {
-		result.CreatedAt = time.Now()
-	}
-	if result.UpdatedAt.IsZero() {
-		result.UpdatedAt = time.Now()
-	}
+	result.CreatedAt = time.Now()
+	result.CreatedBy = userID
+	result.UpdatedAt = time.Now()
+	result.UpdatedBy = userID
 	if result.PredictedAt.IsZero() {
 		result.PredictedAt = time.Now()
 	}
@@ -316,6 +317,9 @@ func (s *AnalyticsServiceImpl) UpdatePredictionResult(ctx context.Context, id st
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdatePredictionResult(ctx, id, updates)
 }
 
@@ -349,6 +353,7 @@ func (s *AnalyticsServiceImpl) CreateAnalyticsJob(ctx context.Context, job *mode
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if job.ID == "" {
 		job.ID = uuid.New().String()
@@ -356,12 +361,10 @@ func (s *AnalyticsServiceImpl) CreateAnalyticsJob(ctx context.Context, job *mode
 	if job.Status == "" {
 		job.Status = "pending"
 	}
-	if job.CreatedAt.IsZero() {
-		job.CreatedAt = time.Now()
-	}
-	if job.UpdatedAt.IsZero() {
-		job.UpdatedAt = time.Now()
-	}
+	job.CreatedAt = time.Now()
+	job.CreatedBy = userID
+	job.UpdatedAt = time.Now()
+	job.UpdatedBy = userID
 
 	return s.repo.CreateAnalyticsJob(ctx, job)
 }
@@ -383,6 +386,9 @@ func (s *AnalyticsServiceImpl) UpdateAnalyticsJob(ctx context.Context, id string
 	if len(updates) == 0 {
 		return errors.New("updates are required")
 	}
+
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
 
 	return s.repo.UpdateAnalyticsJob(ctx, id, updates)
 }
@@ -417,6 +423,7 @@ func (s *AnalyticsServiceImpl) CreateFleetAnalytics(ctx context.Context, analyti
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if analytics.ID == "" {
 		analytics.ID = uuid.New().String()
@@ -424,12 +431,10 @@ func (s *AnalyticsServiceImpl) CreateFleetAnalytics(ctx context.Context, analyti
 	if analytics.GeneratedAt.IsZero() {
 		analytics.GeneratedAt = time.Now()
 	}
-	if analytics.CreatedAt.IsZero() {
-		analytics.CreatedAt = time.Now()
-	}
-	if analytics.UpdatedAt.IsZero() {
-		analytics.UpdatedAt = time.Now()
-	}
+	analytics.CreatedAt = time.Now()
+	analytics.CreatedBy = userID
+	analytics.UpdatedAt = time.Now()
+	analytics.UpdatedBy = userID
 
 	return s.repo.CreateFleetAnalytics(ctx, analytics)
 }
@@ -467,6 +472,9 @@ func (s *AnalyticsServiceImpl) UpdateFleetAnalytics(ctx context.Context, id stri
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateFleetAnalytics(ctx, id, updates)
 }
 
@@ -500,6 +508,7 @@ func (s *AnalyticsServiceImpl) CreateDriverBehaviorAnalytics(ctx context.Context
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if analytics.ID == "" {
 		analytics.ID = uuid.New().String()
@@ -507,12 +516,10 @@ func (s *AnalyticsServiceImpl) CreateDriverBehaviorAnalytics(ctx context.Context
 	if analytics.GeneratedAt.IsZero() {
 		analytics.GeneratedAt = time.Now()
 	}
-	if analytics.CreatedAt.IsZero() {
-		analytics.CreatedAt = time.Now()
-	}
-	if analytics.UpdatedAt.IsZero() {
-		analytics.UpdatedAt = time.Now()
-	}
+	analytics.CreatedAt = time.Now()
+	analytics.CreatedBy = userID
+	analytics.UpdatedAt = time.Now()
+	analytics.UpdatedBy = userID
 
 	return s.repo.CreateDriverBehaviorAnalytics(ctx, analytics)
 }
@@ -565,6 +572,9 @@ func (s *AnalyticsServiceImpl) UpdateDriverBehaviorAnalytics(ctx context.Context
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateDriverBehaviorAnalytics(ctx, id, updates)
 }
 
@@ -598,6 +608,7 @@ func (s *AnalyticsServiceImpl) CreatePredictiveMaintenanceAnalytics(ctx context.
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if analytics.ID == "" {
 		analytics.ID = uuid.New().String()
@@ -605,12 +616,10 @@ func (s *AnalyticsServiceImpl) CreatePredictiveMaintenanceAnalytics(ctx context.
 	if analytics.GeneratedAt.IsZero() {
 		analytics.GeneratedAt = time.Now()
 	}
-	if analytics.CreatedAt.IsZero() {
-		analytics.CreatedAt = time.Now()
-	}
-	if analytics.UpdatedAt.IsZero() {
-		analytics.UpdatedAt = time.Now()
-	}
+	analytics.CreatedAt = time.Now()
+	analytics.CreatedBy = userID
+	analytics.UpdatedAt = time.Now()
+	analytics.UpdatedBy = userID
 
 	return s.repo.CreatePredictiveMaintenanceAnalytics(ctx, analytics)
 }
@@ -648,6 +657,9 @@ func (s *AnalyticsServiceImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdatePredictiveMaintenanceAnalytics(ctx, id, updates)
 }
 
@@ -673,6 +685,19 @@ func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Co
 	}
 
 	return s.repo.ListPredictiveMaintenanceAnalytics(ctx, orgID, vehicleID, limit, offset)
+}
+
+func (s *AnalyticsServiceImpl) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 // HealthCheck performs a health check on the service and its dependencies

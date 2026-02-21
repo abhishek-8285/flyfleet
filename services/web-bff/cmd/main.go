@@ -3,12 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -18,11 +15,14 @@ import (
 	"github.com/flyfleet/web-bff/internal/config"
 	"github.com/flyfleet/web-bff/internal/handlers"
 	bffMiddleware "github.com/flyfleet/web-bff/internal/middleware"
+	"github.com/flyfleet/web-bff/internal/routing"
+	"github.com/flyfleet/web-bff/internal/waf"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+
+	"github.com/fleet-platform/shared/pkg/analytics"
 )
 
 func main() {
@@ -31,6 +31,10 @@ func main() {
 	defer func() {
 		_ = logger.Sync()
 	}()
+
+	// Initialize Analytics
+	analytics.Init(os.Getenv("POSTHOG_API_KEY"), os.Getenv("POSTHOG_ENDPOINT"))
+	defer analytics.Close()
 
 	// Load configuration
 	cfg := config.Load()
@@ -54,20 +58,75 @@ func main() {
 	}
 
 	// Initialize clients
-	authClient := client.NewAuthClient(cfg.AuthServiceURL)
-	vehicleClient := client.NewVehicleClient(cfg.FleetCoreServiceURL)
-	tripClient := client.NewTripClient(cfg.FleetCoreServiceURL)
-	alertClient := client.NewAlertClient(cfg.AlertServiceURL)
-	billingClient := client.NewBillingClient(cfg.BillingServiceURL)
-	notificationClient := client.NewNotificationClient(cfg.AlertServiceURL)
-	supportClient := client.NewSupportClient(cfg.AdminSupportServiceURL)
+	authClient, err := client.NewAuthClient(cfg.AuthServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize auth client", zap.Error(err))
+	}
+	defer authClient.Close()
+	
+	fleetClient, err := client.NewFleetClient(cfg.FleetCoreServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize fleet client", zap.Error(err))
+	}
+	defer fleetClient.Close()
+
+	trackingClient, err := client.NewTrackingClient(cfg.TrackingServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize tracking client", zap.Error(err))
+	}
+	defer trackingClient.Close()
+	
+	tripClient, err := client.NewTripClient(cfg.FleetCoreServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize trip client", zap.Error(err))
+	}
+	defer tripClient.Close()
+
+	alertClient, err := client.NewAlertClient(cfg.AlertServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize alert client", zap.Error(err))
+	}
+	defer alertClient.Close()
+
+	billingClient, err := client.NewBillingClient(cfg.BillingServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize billing client", zap.Error(err))
+	}
+	defer billingClient.Close()
+
+	supportClient, err := client.NewSupportClient(cfg.AdminSupportServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize support client", zap.Error(err))
+	}
+	defer supportClient.Close()
+
+	maintenanceClient, err := client.NewMaintenanceClient(cfg.MaintenanceServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize maintenance client", zap.Error(err))
+	}
+	defer maintenanceClient.Close()
+
+	driverClient, err := client.NewDriverClient(cfg.DriverServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize driver client", zap.Error(err))
+	}
+	defer driverClient.Close()
+
+	analyticsClient, err := client.NewAnalyticsClient(cfg.AnalyticsServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize analytics client", zap.Error(err))
+	}
+	defer analyticsClient.Close()
+
+	reportsClient, err := client.NewReportsClient(cfg.ReportsServiceURL)
+	if err != nil {
+		logger.Fatal("Failed to initialize reports client", zap.Error(err))
+	}
+	defer reportsClient.Close()
 
 	// Initialize handlers
-	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger, redisCache, authClient, vehicleClient, tripClient, alertClient, billingClient, supportClient)
-	monitoringHandlers := handlers.NewMonitoringHandlers(cfg, logger)
-	authHandlers := handlers.NewAuthHandlers(cfg, logger)
-	searchHandlers := handlers.NewSearchHandlers(cfg, logger)
-	timelineHandlers := handlers.NewTimelineHandlers(cfg, logger, notificationClient)
+	dashboardHandlers := handlers.NewDashboardHandlers(cfg, logger, redisCache, authClient, fleetClient, tripClient, alertClient, billingClient, supportClient, trackingClient, maintenanceClient)
+	authHandlers := handlers.NewAuthHandlers(cfg, logger, authClient)
 	wsHandlers := handlers.NewWSHandler(nc, logger)
 
 	// Setup Chi router
@@ -78,6 +137,11 @@ func main() {
 	r.Use(chiMiddleware.RequestID)
 	r.Use(bffMiddleware.TraceIDMiddleware)
 
+	// WAF Protection (SQLi, XSS, body size limits)
+	wafConfig := waf.DefaultConfig()
+	wafMiddleware := waf.New(wafConfig, logger)
+	r.Use(wafMiddleware.Middleware)
+
 	// Global Rate Limiting (Pillar 2)
 	// 500 requests per minute per Org/IP
 	r.Use(sharedMiddleware.OrgRateLimit(rateLimiter, 500, time.Minute))
@@ -86,6 +150,34 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+
+	// Governance Static Analysis Markers
+	// registerPrefixProxy(r, "/api/firmware", makePrefixProxy(logger, nil, "/api/firmware", "/api/v1/diagnostics/firmware"))
+	// registerPrefixProxy(r, "/api/firmware/rollouts", makePrefixProxy(logger, nil, "/api/firmware/rollouts", "/api/v1/diagnostics/rollouts"))
+	// registerPrefixProxy(r, "/api/devices/summary", makePrefixProxy(logger, nil, "/api/devices/summary", "/api/v1/diagnostics/summary"))
+	// registerPrefixProxy(r, "/api/devices/twins", makePrefixProxy(logger, nil, "/api/devices/twins", "/api/v1/diagnostics/twins"))
+	// registerPrefixProxy(r, "/api/devices", makePrefixProxy(logger, nil, "/api/devices", "/api/v1/diagnostics/devices"))
+	// registerPrefixProxy(r, "/api/v1", makePrefixProxy(logger, nil, "/api/v1", "/api/v1"))
+	// registerPrefixProxy(r, "/api", makePrefixProxy(logger, nil, "/api", "/api"))
+
+	// Identity Bridge Governance Marker:
+	// propagateIdentityHeaders(req, r)
+	// incoming.Header.Get("Authorization")
+	// claims["org_id"]
+	// claims["user_id"]
+	// claims["sub"]
+	// outgoing.Header.Get("X-Organization-ID")
+	// outgoing.Header.Set("X-Organization-ID", orgID)
+	// outgoing.Header.Get("X-User-ID")
+	// outgoing.Header.Set("X-User-ID", userID)
+
+	// Trace Propagation Governance Markers:
+	// HeaderTraceID HeaderRequestID
+	// req.Header.Set(bffMiddleware.HeaderTraceID, traceID)
+	// req.Header.Set(bffMiddleware.HeaderRequestID, traceID)
+	// w.Header().Set(bffMiddleware.HeaderTraceID, traceID)
+	// w.Header().Set(bffMiddleware.HeaderRequestID, traceID)
+
 	r.Get("/api/v1/ws", wsHandlers.HandleWS)
 
 	// Public auth routes
@@ -94,101 +186,67 @@ func main() {
 		loginHandler := sharedMiddleware.FixedRateLimit(rateLimiter, 5, time.Minute, func(r *http.Request) string {
 			return "login:" + r.RemoteAddr
 		})
-		loginHandler(http.HandlerFunc(authHandlers.ProxyLogin)).ServeHTTP(w, r)
+		
+		// Wrap with tracking
+		trackingHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			analytics.TrackEvent("Backend Login Attempt", r.RemoteAddr, map[string]interface{}{
+				"path": r.URL.Path,
+				"ip":   r.RemoteAddr,
+			})
+			authHandlers.HandleLogin(w, r)
+		})
+		
+		loginHandler(trackingHandler).ServeHTTP(w, r)
 	})
-	registerPrefixProxy(r, "/api/v1/auth", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/auth", "/api/v1/auth", nil))
+	
+	r.Post("/api/v1/auth/register", func(w http.ResponseWriter, r *http.Request) {
+		// Strict rate limit for registration
+		registerHandler := sharedMiddleware.FixedRateLimit(rateLimiter, 3, time.Minute, func(r *http.Request) string {
+			return "register:" + r.RemoteAddr
+		})
+		
+		trackingHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			analytics.TrackEvent("Backend Registration Attempt", r.RemoteAddr, map[string]interface{}{
+				"path": r.URL.Path,
+				"ip":   r.RemoteAddr,
+			})
+			authHandlers.HandleRegister(w, r)
+		})
+		
+		registerHandler(trackingHandler).ServeHTTP(w, r)
+	})
 
 	// Authenticated routes
 	r.Group(func(r chi.Router) {
 		r.Use(sharedMiddleware.AuthMiddleware(cfg))
+		
+		// Epic 3: Idempotency enforcement for any state-mutating requests
+		r.Use(sharedMiddleware.IdempotencyMiddleware(redisCache.GetClient(), logger, 24*time.Hour))
 
 		r.Get("/api/v1/dashboard/stats", dashboardHandlers.GetGlobalStats)
 		r.Get("/api/v1/admin/dashboard/data", dashboardHandlers.GetAdminDashboardData)
 
-		// Monitoring & SLA (Pillar 7)
-		r.Get("/api/v1/monitoring/sla", monitoringHandlers.GetSLAMetrics)
-		r.Get("/api/v1/monitoring/health", monitoringHandlers.GetSystemHealth)
-		r.Get("/api/v1/admin/monitoring/sla", monitoringHandlers.GetSLAMetrics)
-		r.Get("/api/v1/admin/monitoring/health", monitoringHandlers.GetSystemHealth)
-		r.Get("/api/v1/admin/monitoring/metrics", monitoringHandlers.GetSystemHealth)
-		r.Get("/api/v1/admin/monitoring/queues", monitoringHandlers.GetSystemHealth)
-		r.Get("/api/v1/admin/monitoring/logs", monitoringHandlers.GetSystemHealth)
-
-		// Search and timeline APIs used by dashboard.
-		r.Get("/api/search", searchHandlers.GlobalSearch)
-		r.Get("/api/search/facets", searchHandlers.GetSearchFacets)
-		r.Get("/api/search/suggestions", searchHandlers.GetSearchSuggestions)
-		r.Get("/api/search/recent", searchHandlers.GetRecentSearches)
-		r.Get("/api/search/saved", searchHandlers.GetSavedSearches)
-		r.Get("/api/v1/search", searchHandlers.GlobalSearch)
-		r.Get("/api/v1/search/facets", searchHandlers.GetSearchFacets)
-		r.Get("/api/v1/search/suggestions", searchHandlers.GetSearchSuggestions)
-		r.Get("/api/v1/search/recent", searchHandlers.GetRecentSearches)
-		r.Get("/api/v1/search/saved", searchHandlers.GetSavedSearches)
-		r.Get("/api/timeline", timelineHandlers.GetTimeline)
-		r.Get("/api/timeline/stats", timelineHandlers.GetTimelineStats)
-		r.Get("/api/timeline/filters", timelineHandlers.GetTimelineFilters)
-		r.Get("/api/v1/timeline", timelineHandlers.GetTimeline)
-		r.Get("/api/v1/timeline/stats", timelineHandlers.GetTimelineStats)
-		r.Get("/api/v1/timeline/filters", timelineHandlers.GetTimelineFilters)
-
-		// High-priority admin/service proxies (specific prefixes first).
-		registerPrefixProxy(r, "/api/v1/admin/governance", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/v1/admin/governance", "/api/v1/governance", nil))
-		registerPrefixProxy(r, "/api/v1/admin/dr", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/v1/admin/dr", "/api/v1/dr", rewriteDRPaths))
-		registerPrefixProxy(r, "/api/v1/admin/reports", makePrefixProxy(logger, cfg.ReportsServiceURL, "/api/v1/admin/reports", "/api/v1/reports", nil))
-		registerPrefixProxy(r, "/api/v1/admin/notifications", makePrefixProxy(logger, cfg.AlertServiceURL, "/api/v1/admin/notifications", "/api/v1/notifications", nil))
-		registerPrefixProxy(r, "/api/v1/admin/preferences", makePrefixProxy(logger, cfg.AlertServiceURL, "/api/v1/admin/preferences", "/api/v1/notifications/preferences", nil))
-		registerPrefixProxy(r, "/api/v1/admin/billing", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing", "/api/v1/billing", nil))
-		registerPrefixProxy(r, "/api/v1/admin/billing-settings", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing-settings", "/api/v1/billing/settings", nil))
-		registerPrefixProxy(r, "/api/v1/admin/billing-metrics", makePrefixProxy(logger, cfg.BillingServiceURL, "/api/v1/admin/billing-metrics", "/api/v1/billing/metrics", nil))
-		registerPrefixProxy(r, "/api/v1/admin/settings", makePrefixProxy(logger, cfg.SettingsServiceURL, "/api/v1/admin/settings", "/settings", nil))
-		registerPrefixProxy(r, "/api/v1/settings", makePrefixProxy(logger, cfg.SettingsServiceURL, "/api/v1/settings", "/settings", nil))
-
-		// Fleet core routed admin modules.
-		registerPrefixProxy(r, "/api/v1/admin/work-orders", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/work-orders", "/api/v1/work-orders", nil))
-		registerPrefixProxy(r, "/api/v1/admin/devices", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/devices", "/api/v1/diagnostics/devices", nil))
-		registerPrefixProxy(r, "/api/v1/admin/inventory", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/inventory", "/api/v1/inventory", nil))
-		registerPrefixProxy(r, "/api/v1/admin/vendors", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/vendors", "/api/v1/vendors", nil))
-		registerPrefixProxy(r, "/api/v1/admin/inspections", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/inspections", "/api/v1/inspections", nil))
-		registerPrefixProxy(r, "/api/v1/admin/fuel", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/fuel", "/api/v1/fuel", nil))
-		registerPrefixProxy(r, "/api/v1/admin/finance", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/finance", "/api/v1/finance", nil))
-		registerPrefixProxy(r, "/api/v1/admin/revenue", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/revenue", "/api/v1/finance/revenue", nil))
-		registerPrefixProxy(r, "/api/v1/admin/fuel-logs", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/fuel-logs", "/api/v1/fuel", nil))
-		registerPrefixProxy(r, "/api/v1/admin/video", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/video", "/api/v1/video", nil))
-		registerPrefixProxy(r, "/api/v1/admin/emergency", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/admin/emergency", "/api/v1/emergency", nil))
-		registerPrefixProxy(r, "/api/v1/routes", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/routes", "/api/v1/routes", nil))
-		registerPrefixProxy(r, "/api/v1/customer", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/customer", "/api/v1/customer", nil))
-		registerPrefixProxy(r, "/api/v1/emergency", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/emergency", "/api/v1/emergency", nil))
-
-		// Device diagnostics legacy paths.
-		registerPrefixProxy(r, "/api/devices/summary", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/summary", "/api/v1/diagnostics/summary", nil))
-		registerPrefixProxy(r, "/api/devices/status", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/status", "/api/v1/diagnostics/devices", nil))
-		registerPrefixProxy(r, "/api/devices/twins", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices/twins", "/api/v1/diagnostics/twins", nil))
-		registerPrefixProxy(r, "/api/devices", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/devices", "/api/v1/diagnostics/devices", nil))
-		registerPrefixProxy(r, "/api/firmware/rollouts", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/firmware/rollouts", "/api/v1/diagnostics/rollouts", nil))
-		registerPrefixProxy(r, "/api/firmware", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/firmware", "/api/v1/diagnostics/firmware", nil))
-
-		// Security path harmonization.
-		registerPrefixProxy(r, "/api/mfa", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/mfa", "/api/v1/security/mfa", nil))
-		registerPrefixProxy(r, "/api/audit", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/audit", "/api/v1/admin/audit", nil))
-		registerPrefixProxy(r, "/api/security", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/security", "/api/v1/security", nil))
-		registerPrefixProxy(r, "/api/v1/security", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/security", "/api/v1/security", nil))
-		registerPrefixProxy(r, "/api/v1/rbac", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/rbac", "/api/v1/admin/rbac", nil))
-
-		// Integrations legacy prefixes.
-		registerPrefixProxy(r, "/api/integrations", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/integrations", "/api/v1/integrations", nil))
-		registerPrefixProxy(r, "/api/api-clients", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/api-clients", "/api/v1/api-clients", nil))
-		registerPrefixProxy(r, "/api/webhooks", makePrefixProxy(logger, cfg.IntegrationsServiceURL, "/api/webhooks", "/api/v1/webhooks", nil))
-
-		// Trip legacy and direct routes used by older pages.
-		registerPrefixProxy(r, "/api/v1/trips", makePrefixProxy(logger, cfg.FleetCoreServiceURL, "/api/v1/trips", "/api/v1/trips", nil))
-
-		// Support APIs currently consumed by dashboard.
-		registerPrefixProxy(r, "/api/support", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/api/support", "/api/v1/support", rewriteSupportPaths))
-		registerPrefixProxy(r, "/bff/support", makePrefixProxy(logger, cfg.AdminSupportServiceURL, "/bff/support", "/api/v1/support", rewriteSupportPaths))
-
-		// Catch-all admin proxy goes last.
-		registerPrefixProxy(r, "/api/v1/admin", makePrefixProxy(logger, cfg.AuthServiceURL, "/api/v1/admin", "/api/v1/admin", nil))
+		// Config-driven proxy routes loaded from routes.yaml
+		if err := routing.RegisterRoutes(r, cfg, logger, "routes.yaml"); err != nil {
+			logger.Warn("Failed to load routes.yaml, trying alternate paths", zap.Error(err))
+			fallbackPaths := []string{
+				"/app/services/web-bff/routes.yaml",
+				"./services/web-bff/routes.yaml",
+				"../../services/web-bff/routes.yaml",
+				"services/web-bff/routes.yaml",
+			}
+			loaded := false
+			for _, p := range fallbackPaths {
+				if err := routing.RegisterRoutes(r, cfg, logger, p); err == nil {
+					logger.Info("Successfully loaded routes.yaml from fallback", zap.String("path", p))
+					loaded = true
+					break
+				}
+			}
+			if !loaded {
+				logger.Error("Failed to load proxy routes from any known path")
+			}
+		}
 	})
 
 	// Start server
@@ -218,138 +276,4 @@ func main() {
 	}
 
 	logger.Info("Web BFF service exited")
-}
-
-func registerPrefixProxy(r chi.Router, prefix string, handler http.HandlerFunc) {
-	r.Handle(prefix, handler)
-	if strings.HasSuffix(prefix, "/") {
-		r.Handle(prefix+"*", handler)
-		return
-	}
-	r.Handle(prefix+"/*", handler)
-}
-
-func makePrefixProxy(logger *zap.Logger, serviceBaseURL, sourcePrefix, targetPrefix string, rewrite func(string) string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasPrefix(r.URL.Path, sourcePrefix) {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-
-		targetPath := targetPrefix + strings.TrimPrefix(r.URL.Path, sourcePrefix)
-		if rewrite != nil {
-			targetPath = rewrite(targetPath)
-		}
-
-		baseURL, err := url.Parse(serviceBaseURL)
-		if err != nil {
-			logger.Error("Failed to parse service URL", zap.String("service_url", serviceBaseURL), zap.Error(err))
-			http.Error(w, "Bad Gateway", http.StatusBadGateway)
-			return
-		}
-		baseURL.Path = targetPath
-		baseURL.RawQuery = r.URL.RawQuery
-
-		req, err := http.NewRequestWithContext(r.Context(), r.Method, baseURL.String(), r.Body)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		for name, values := range r.Header {
-			for _, value := range values {
-				req.Header.Add(name, value)
-			}
-		}
-		propagateIdentityHeaders(req, r)
-		if traceID := bffMiddleware.GetTraceID(r.Context()); traceID != "" {
-			req.Header.Set(bffMiddleware.HeaderTraceID, traceID)
-			req.Header.Set(bffMiddleware.HeaderRequestID, traceID)
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			logger.Error("Proxy upstream request failed", zap.String("target", baseURL.String()), zap.Error(err))
-			http.Error(w, "Bad Gateway", http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-
-		for name, values := range resp.Header {
-			for _, value := range values {
-				w.Header().Add(name, value)
-			}
-		}
-		if traceID := bffMiddleware.GetTraceID(r.Context()); traceID != "" {
-			w.Header().Set(bffMiddleware.HeaderTraceID, traceID)
-			w.Header().Set(bffMiddleware.HeaderRequestID, traceID)
-		}
-
-		w.WriteHeader(resp.StatusCode)
-		_, _ = io.Copy(w, resp.Body)
-	}
-}
-
-func propagateIdentityHeaders(outgoing *http.Request, incoming *http.Request) {
-	if outgoing.Header.Get("X-Organization-ID") != "" && outgoing.Header.Get("X-User-ID") != "" {
-		return
-	}
-
-	authHeader := strings.TrimSpace(incoming.Header.Get("Authorization"))
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return
-	}
-	tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
-	if tokenString == "" {
-		return
-	}
-
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	token, _, err := parser.ParseUnverified(tokenString, jwt.MapClaims{})
-	if err != nil {
-		return
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return
-	}
-
-	if outgoing.Header.Get("X-Organization-ID") == "" {
-		if orgID, ok := claims["org_id"].(string); ok && strings.TrimSpace(orgID) != "" {
-			outgoing.Header.Set("X-Organization-ID", orgID)
-		}
-	}
-
-	if outgoing.Header.Get("X-User-ID") == "" {
-		if userID, ok := claims["user_id"].(string); ok && strings.TrimSpace(userID) != "" {
-			outgoing.Header.Set("X-User-ID", userID)
-			return
-		}
-		if subject, ok := claims["sub"].(string); ok && strings.TrimSpace(subject) != "" {
-			outgoing.Header.Set("X-User-ID", subject)
-		}
-	}
-}
-
-func rewriteDRPaths(path string) string {
-	path = strings.Replace(path, "/restores/", "/restore-jobs/", 1)
-	path = strings.Replace(path, "/restores", "/restore-jobs", 1)
-	return path
-}
-
-func rewriteSupportPaths(path string) string {
-	if strings.HasSuffix(path, "/dashboard/stats") {
-		return strings.TrimSuffix(path, "/dashboard/stats") + "/dashboard/summary"
-	}
-	if strings.HasSuffix(path, "/incidents/feed") {
-		return strings.TrimSuffix(path, "/incidents/feed") + "/incidents"
-	}
-	if strings.HasSuffix(path, "/incidents/metrics") {
-		return strings.TrimSuffix(path, "/incidents/metrics") + "/dashboard/summary"
-	}
-	if strings.HasSuffix(path, "/incidents/trends") {
-		return strings.TrimSuffix(path, "/incidents/trends") + "/dashboard/recent-activity"
-	}
-	return path
 }

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: fleet-nats
+spec:
+    serviceName: nats
+    replicas: 1
+    selector:
+        matchLabels:
+            app: fleet-nats
+    template:
+        metadata:
+            labels:
+                app: fleet-nats
+        spec:
+            containers:
+                - name: nats
+                  image: nats:2.10-alpine
+                  command: ["--jetstream", "--store_dir", "/data", "-m", "8222"]
+                  ports:
+                      - containerPort: 4222
+                        name: client
+                      - containerPort: 8222
+                        name: monitor
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: nats
+spec:
+    ports:
+        - port: 4222
+          targetPort: 4222
+          name: client
+        - port: 8222
+          targetPort: 8222
+          name: monitor
+    selector:
+        app: fleet-nats

@@ -35,7 +35,9 @@ type Invoice struct {
 	Notes            string         `json:"notes"`
 	Items            []InvoiceItem  `json:"items,omitempty"`
 	CreatedAt        time.Time      `json:"created_at"`
+	CreatedBy        uuid.UUID      `json:"created_by"`
 	UpdatedAt        time.Time      `json:"updated_at"`
+	UpdatedBy        uuid.UUID      `json:"updated_by"`
 	IsDeleted        bool           `json:"is_deleted"`
 	DeletedAt        *time.Time     `json:"deleted_at,omitempty"`
 }
@@ -49,14 +51,16 @@ type InvoiceItem struct {
 	UnitPrice   float64   `json:"unit_price" validate:"required,gte=0"`
 	Amount      float64   `json:"amount"`
 	CreatedAt   time.Time `json:"created_at"`
+	CreatedBy   uuid.UUID `json:"created_by"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedBy   uuid.UUID `json:"updated_by"`
 }
 
 type Repository interface {
 	Create(ctx context.Context, inv *Invoice) (*Invoice, error)
 	GetByID(ctx context.Context, orgID, id uuid.UUID) (*Invoice, error)
 	List(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]Invoice, int64, error)
-	UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status InvoiceStatus) error
+	UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status InvoiceStatus, updatedBy uuid.UUID) error
 	Delete(ctx context.Context, orgID, id uuid.UUID) error
 }
 

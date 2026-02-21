@@ -22,6 +22,8 @@ type SupportTicket struct {
 	SLADeadline *time.Time `json:"sla_deadline,omitempty" db:"sla_deadline"`
 	Tags        []string  `json:"tags" db:"tags"`
 	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
+	CreatedBy   uuid.UUID              `json:"created_by" db:"created_by"`
+	UpdatedBy   uuid.UUID              `json:"updated_by" db:"updated_by"`
 }
 
 type CreateTicketRequest struct {
@@ -70,7 +72,9 @@ type IncidentComment struct {
 	Content     string    `json:"content" db:"content"`
 	IsPrivate   bool      `json:"is_private" db:"is_private"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy   uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 type OrgSupportMetrics struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,15 +16,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 
 	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/alert-service/internal/config"
 	"github.com/flyfleet/alert-service/internal/providers"
 
+	alertgrpc "github.com/flyfleet/alert-service/internal/grpc"
 	alertHandlers "github.com/flyfleet/alert-service/internal/domains/alerts/handlers"
 	alertRepo "github.com/flyfleet/alert-service/internal/domains/alerts/repository"
 	alertRule "github.com/flyfleet/alert-service/internal/domains/alerts/rule_engine"
 	alertService "github.com/flyfleet/alert-service/internal/domains/alerts/service"
+	pb "github.com/flyfleet/proto/alert/v1"
 
 	notifyHandlers "github.com/flyfleet/alert-service/internal/domains/notifications/handlers"
 	notifyRepo "github.com/flyfleet/alert-service/internal/domains/notifications/repository"
@@ -81,6 +85,27 @@ func main() {
 	nRepo := notifyRepo.NewNotificationRepository(db)
 	nService := notifyService.NewNotificationService(nRepo, logger)
 	nHandler := notifyHandlers.NewNotificationHandlers(nService, logger)
+
+	// Start gRPC Server
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "50054"
+	}
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		alertServer := alertgrpc.NewAlertServer(aService, logger)
+		pb.RegisterAlertServiceServer(grpcServer, alertServer)
+		
+		logger.Info("Starting alert gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
 
 	// Subscribe to NATS topics for real-time alert processing
 	subscribeToTelemetryEvents(nc, aRuleEngine, logger)

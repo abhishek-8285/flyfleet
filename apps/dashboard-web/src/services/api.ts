@@ -265,179 +265,179 @@ class ApiService {
 
   // MFA Security (Routed through BFF)
   async getMFADashboard(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/dashboard', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/dashboard', { params: { org_id: orgId } });
   }
 
   async getMFAAdoptionTrend(orgId: string, days: number = 30): Promise<any> {
-    return this.bffClient.get('/api/mfa/adoption-trend', { params: { org_id: orgId, days } });
+    return this.bffClient.get('/api/v1/security/mfa/adoption-trend', { params: { org_id: orgId, days } });
   }
 
   async getMFAMethodDistribution(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/method-distribution', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/method-distribution', { params: { org_id: orgId } });
   }
 
   async getMFAEvents(orgId: string, page: number = 1, pageSize: number = 20): Promise<any> {
-    return this.bffClient.get('/api/mfa/events', { params: { org_id: orgId, page, page_size: pageSize } });
+    return this.bffClient.get('/api/v1/security/mfa/events', { params: { org_id: orgId, page, page_size: pageSize } });
   }
 
   async getMFAFailureLocations(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/failures/locations', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/failures/locations', { params: { org_id: orgId } });
   }
 
   async getMFAFailureUsers(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/failures/users', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/failures/users', { params: { org_id: orgId } });
   }
 
   async getLockedUsers(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/locked-users', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/locked-users', { params: { org_id: orgId } });
   }
 
   async unlockUser(userId: string): Promise<any> {
-    return this.bffClient.post('/api/mfa/unlock', { userId });
+    return this.bffClient.post('/api/v1/security/mfa/unlock', { userId });
   }
 
   async resetMFA(userId: string): Promise<any> {
-    return this.bffClient.post('/api/mfa/reset', { userId });
+    return this.bffClient.post('/api/v1/security/mfa/reset', { userId });
   }
 
   async getMFAPolicy(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/policy', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/policy', { params: { org_id: orgId } });
   }
 
   async updateMFAPolicy(data: { policy: any, reason: string }): Promise<any> {
-    return this.bffClient.put('/api/mfa/policy', data);
+    return this.bffClient.put('/api/v1/security/mfa/policy', data);
   }
 
   async getMFAPolicyHistory(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/policy/history', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/policy/history', { params: { org_id: orgId } });
   }
 
   async rollbackMFAPolicy(historyId: string): Promise<any> {
-    return this.bffClient.post('/api/mfa/policy/rollback', { historyId });
+    return this.bffClient.post('/api/v1/security/mfa/policy/rollback', { historyId });
   }
 
   async getMFAOrgOverride(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/overrides', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/overrides', { params: { org_id: orgId } });
   }
 
   async updateMFAOrgOverride(data: any): Promise<any> {
-    return this.bffClient.put('/api/mfa/overrides', data);
+    return this.bffClient.put('/api/v1/security/mfa/overrides', data);
   }
 
   // Audit Module
   async getAuditLogs(params: { org_id: string; page?: number; action?: string; severity?: string; user_id?: string }): Promise<any> {
-    return this.bffClient.get('/api/audit/logs', { params });
+    return this.bffClient.get('/api/v1/admin/audit/logs', { params });
   }
 
   async getAuditLogDetails(id: string, org_id: string): Promise<any> {
-    return this.bffClient.get(`/api/audit/logs/${id}`, { params: { org_id } });
+    return this.bffClient.get(`/api/v1/admin/audit/logs/${id}`, { params: { org_id } });
   }
 
   async getAuditSettings(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/audit/settings', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/admin/audit/settings', { params: { org_id: orgId } });
   }
 
   async updateAuditSettings(data: any): Promise<any> {
-    return this.bffClient.put('/api/audit/settings', data);
+    return this.bffClient.put('/api/v1/admin/audit/settings', data);
   }
 
   async getMFAExceptions(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/mfa/exceptions', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/mfa/exceptions', { params: { org_id: orgId } });
   }
 
   async addMFAException(data: { userId: string, orgId: string, reason: string, days: number }): Promise<any> {
-    return this.bffClient.post('/api/mfa/exceptions', data);
+    return this.bffClient.post('/api/v1/security/mfa/exceptions', data);
   }
 
   async deleteMFAException(id: string): Promise<any> {
-    return this.bffClient.delete(`/api/mfa/exceptions/${id}`);
+    return this.bffClient.delete(`/api/v1/security/mfa/exceptions/${id}`);
   }
 
   // Security Operations Expansion
   async getLoginActivityLogs(params: { page?: number; size?: number; status?: string }): Promise<any> {
-    return this.bffClient.get('/api/security/logins', { params });
+    return this.bffClient.get('/api/v1/security/logins', { params });
   }
 
   async getThreatAlerts(params: { page?: number; size?: number; severity?: string; status?: string }): Promise<any> {
-    return this.bffClient.get('/api/security/alerts', { params });
+    return this.bffClient.get('/api/v1/security/alerts', { params });
   }
 
   async updateThreatAlertStatus(id: string, status: string): Promise<any> {
-    return this.bffClient.patch(`/api/security/alerts/${id}/status`, { status });
+    return this.bffClient.patch(`/api/v1/security/alerts/${id}/status`, { status });
   }
 
   async getSecuritySessions(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/security/sessions', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/sessions', { params: { org_id: orgId } });
   }
 
   async revokeSecuritySession(sessionId: string): Promise<any> {
-    return this.bffClient.delete(`/api/security/sessions/${sessionId}`);
+    return this.bffClient.delete(`/api/v1/security/sessions/${sessionId}`);
   }
 
   async getIPRules(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/security/ip-rules', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/security/ip-rules', { params: { org_id: orgId } });
   }
 
   async createIPRule(data: any): Promise<any> {
-    return this.bffClient.post('/api/security/ip-rules', data);
+    return this.bffClient.post('/api/v1/security/ip-rules', data);
   }
 
   // Audit & Compliance Extensions
   async getEntityHistory(type: string, id: string): Promise<any> {
-    return this.bffClient.get('/api/audit/entity-history', { params: { type, id } });
+    return this.bffClient.get('/api/v1/admin/audit/entity-history', { params: { type, id } });
   }
 
   async createEvidenceExport(data: { org_id: string; module: string; date_range_start: string; date_range_end: string; format: string }): Promise<any> {
-    return this.bffClient.post('/api/audit/evidence-exports', data);
+    return this.bffClient.post('/api/v1/admin/audit/evidence-exports', data);
   }
 
   async getEvidenceExports(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/audit/evidence-exports', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/admin/audit/evidence-exports', { params: { org_id: orgId } });
   }
 
   async getEvidenceExportDetails(id: string): Promise<any> {
-    return this.bffClient.get(`/api/audit/evidence-exports/${id}`);
+    return this.bffClient.get(`/api/v1/admin/audit/evidence-exports/${id}`);
   }
 
   async getAuditPolicy(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/audit/policy', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/admin/audit/policy', { params: { org_id: orgId } });
   }
 
   async updateAuditPolicy(data: any): Promise<any> {
-    return this.bffClient.put('/api/audit/policy', data);
+    return this.bffClient.put('/api/v1/admin/audit/policy', data);
   }
 
   // Integrations Module
   async getIntegrations(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/integrations/', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/integrations/', { params: { org_id: orgId } });
   }
 
   async createIntegration(data: any): Promise<any> {
-    return this.bffClient.post('/api/integrations/', data);
+    return this.bffClient.post('/api/v1/integrations/', data);
   }
 
   async updateIntegration(id: string, data: any): Promise<any> {
-    return this.bffClient.put(`/api/integrations/${id}`, data);
+    return this.bffClient.put(`/api/v1/integrations/${id}`, data);
   }
 
   async testIntegration(id: string): Promise<any> {
-    return this.bffClient.post(`/api/integrations/${id}/test`);
+    return this.bffClient.post(`/api/v1/integrations/${id}/test`);
   }
 
   async getApiClients(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/api-clients/', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/api-clients/', { params: { org_id: orgId } });
   }
 
   async createApiClient(data: any): Promise<any> {
-    return this.bffClient.post('/api/api-clients/', data);
+    return this.bffClient.post('/api/v1/api-clients/', data);
   }
 
   async getWebhooks(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/webhooks/', { params: { org_id: orgId } });
+    return this.bffClient.get('/api/v1/webhooks/', { params: { org_id: orgId } });
   }
 
   async getIntegrationLogs(params: { org_id: string; integration_id?: string; limit?: number; offset?: number }): Promise<any> {
-    return this.bffClient.get('/api/integrations/logs', { params });
+    return this.bffClient.get('/api/v1/integrations/logs', { params });
   }
   // Route Optimization
   async createOptimizationRequest(data: any): Promise<any> {

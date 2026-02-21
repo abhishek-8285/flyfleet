@@ -27,6 +27,7 @@ func (s *TripService) generateTripID() string {
 }
 
 func (s *TripService) CreateTrip(ctx context.Context, orgID uuid.UUID, req *models.CreateTripRequest) (*models.Trip, error) {
+	userID := s.getUserID(ctx)
 	trip := &models.Trip{
 		ID:             uuid.New(),
 		TripID:         s.generateTripID(),
@@ -37,6 +38,8 @@ func (s *TripService) CreateTrip(ctx context.Context, orgID uuid.UUID, req *mode
 		StartTime:      req.StartTime,
 		Status:         "scheduled",
 		OrganizationID: orgID,
+		CreatedBy:      userID,
+		UpdatedBy:      userID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -47,6 +50,19 @@ func (s *TripService) CreateTrip(ctx context.Context, orgID uuid.UUID, req *mode
 	}
 
 	return trip, nil
+}
+
+func (s *TripService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *TripService) GetTrip(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
@@ -68,6 +84,9 @@ func (s *TripService) ListTrips(ctx context.Context, params models.TripListParam
 }
 
 func (s *TripService) UpdateTrip(ctx context.Context, id uuid.UUID, req *models.UpdateTripRequest) (*models.Trip, error) {
+	// We need to update the repo method to accept updated_by or extract it internally.
+	// Since I fixed the repo to use uuid.Nil as placeholder, let's fix it properly.
+	// But first finish the service logic.
 	if err := s.repo.Update(ctx, id, req); err != nil {
 		return nil, err
 	}

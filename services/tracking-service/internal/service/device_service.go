@@ -82,6 +82,7 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 		return nil, err
 	}
 
+	userID := s.getUserID(ctx)
 	device := &models.Device{
 		ID:                  uuid.New(),
 		DeviceID:            req.DeviceID,
@@ -93,6 +94,8 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 		JWTToken:            jwtToken,
 		RefreshToken:        refreshToken,
 		TokenExpiresAt:      time.Unix(expiresAt, 0),
+		CreatedBy:           userID,
+		UpdatedBy:           userID,
 	}
 
 	// Parse optional IDs
@@ -120,6 +123,22 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 		RefreshToken: refreshToken,
 		ExpiresAt:    expiresAt,
 	}, nil
+}
+
+func (s *DeviceService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, err := uuid.Parse(uidStr)
+	if err != nil {
+		return uuid.Nil
+	}
+	return uid
 }
 
 // UpdateHeartbeat processes device heartbeat

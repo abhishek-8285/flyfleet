@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "github.com/flyfleet/proto/billing/v1;billingv1";
+
+import "google/protobuf/timestamp.proto";
+
+service BillingService {
+  rpc GetMetrics (GetMetricsRequest) returns (GetMetricsResponse);
+  rpc ListInvoices (ListInvoicesRequest) returns (ListInvoicesResponse);
+  rpc GetSubscription (GetSubscriptionRequest) returns (GetSubscriptionResponse);
+}
+
+message BillingMetrics {
+  double total_revenue = 1;
+  double pending_payments = 2;
+  double risk_score = 3;
+}
+
+message Invoice {
+  string id = 1;
+  string org_id = 2;
+  double amount = 3;
+  string currency = 4;
+  string status = 5;
+  google.protobuf.Timestamp due_date = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message Subscription {
+  string id = 1;
+  string org_id = 2;
+  string plan = 3;
+  string status = 4;
+  google.protobuf.Timestamp current_period_end = 5;
+}
+
+message GetMetricsRequest {
+  string org_id = 1;
+}
+
+message GetMetricsResponse {
+  BillingMetrics metrics = 1;
+}
+
+message ListInvoicesRequest {
+  string org_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListInvoicesResponse {
+  repeated Invoice invoices = 1;
+  int32 total = 2;
+}
+
+message GetSubscriptionRequest {
+  string org_id = 1;
+}
+
+message GetSubscriptionResponse {
+  Subscription subscription = 1;
+}

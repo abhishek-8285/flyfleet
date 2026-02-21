@@ -28,7 +28,9 @@ type Invoice struct {
 	BalanceDue    float64       `json:"balance_due"`
 	Items         []InvoiceItem `json:"items,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`
+	CreatedBy     uuid.UUID     `json:"created_by"`
 	UpdatedAt     time.Time     `json:"updated_at"`
+	UpdatedBy     uuid.UUID     `json:"updated_by"`
 }
 
 type InvoiceItem struct {
@@ -50,7 +52,9 @@ type BillingSettings struct {
 	GracePeriodDays       int       `json:"grace_period_days"`
 	AutoInvoicingEnabled  bool      `json:"auto_invoicing_enabled"`
 	CreatedAt             time.Time `json:"created_at"`
+	CreatedBy             uuid.UUID `json:"created_by"`
 	UpdatedAt             time.Time `json:"updated_at"`
+	UpdatedBy             uuid.UUID `json:"updated_by"`
 }
 
 type BillingMetrics struct {

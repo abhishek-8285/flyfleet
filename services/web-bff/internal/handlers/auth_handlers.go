@@ -1,74 +1,86 @@
 package handlers
 
 import (
-	"io"
+	"encoding/json"
 	"net/http"
-	"net/url"
 
+	"github.com/flyfleet/web-bff/internal/client"
 	"github.com/flyfleet/web-bff/internal/config"
 	"go.uber.org/zap"
 )
 
-// AuthHandlers handles authentication-related proxying
+// AuthHandlers handles authentication HTTP requests
 type AuthHandlers struct {
-	cfg    *config.Config
-	logger *zap.Logger
+	cfg        *config.Config
+	logger     *zap.Logger
+	authClient *client.AuthClient
 }
 
-func NewAuthHandlers(cfg *config.Config, logger *zap.Logger) *AuthHandlers {
+func NewAuthHandlers(cfg *config.Config, logger *zap.Logger, authClient *client.AuthClient) *AuthHandlers {
 	return &AuthHandlers{
-		cfg:    cfg,
-		logger: logger,
+		cfg:        cfg,
+		logger:     logger,
+		authClient: authClient,
 	}
 }
 
-// ProxyLogin proxies /api/v1/auth/login to auth-service
-func (h *AuthHandlers) ProxyLogin(w http.ResponseWriter, r *http.Request) {
-	targetURL, err := url.Parse(h.cfg.AuthServiceURL)
-	if err != nil {
-		h.logger.Error("Failed to parse auth service URL", zap.Error(err))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type RegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+}
+
+// HandleLogin decodes the JSON request and calls the AuthService gRPC endpoint
+func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	targetURL.Path = "/api/v1/auth/login"
-	targetURL.RawQuery = r.URL.RawQuery
+	ip := r.RemoteAddr
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		ip = forwardedFor
+	}
 
-	h.logger.Info("Proxying login request",
-		zap.String("method", r.Method),
-		zap.String("target", targetURL.String()),
-	)
-
-	req, err := http.NewRequest(r.Method, targetURL.String(), r.Body)
+	resp, err := h.authClient.Login(r.Context(), req.Email, req.Password, ip, r.UserAgent())
 	if err != nil {
-		h.logger.Error("Failed to create request", zap.Error(err))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		h.logger.Error("Failed to login via gRPC", zap.Error(err))
+		// More granular errors should be handled if mapped from gRPC status codes
+		http.Error(w, "Authentication failed", http.StatusUnauthorized)
 		return
 	}
 
-	// Copy headers
-	for name, values := range r.Header {
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
-	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		h.logger.Error("Failed to call auth service", zap.Error(err))
-		http.Error(w, "Bad Gateway", http.StatusBadGateway)
+// HandleRegister decodes the JSON request and calls the AuthService gRPC endpoint
+func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	defer resp.Body.Close()
 
-	// Copy response headers
-	for name, values := range resp.Header {
-		for _, value := range values {
-			w.Header().Add(name, value)
-		}
+	ip := r.RemoteAddr
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		ip = forwardedFor
 	}
 
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+	resp, err := h.authClient.Register(r.Context(), req.Email, req.Password, req.Name, ip, r.UserAgent())
+	if err != nil {
+		h.logger.Error("Failed to register via gRPC", zap.Error(err))
+		http.Error(w, "Registration failed", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }

@@ -162,10 +162,10 @@ func (r *NotificationRepository) UpdateSettings(ctx context.Context, s *models.N
 
 func (r *NotificationRepository) CreateLog(ctx context.Context, l *models.NotificationLog) error {
 	l.ID = uuid.New()
-	query := `INSERT INTO notification_logs (id, correlation_id, user_id, user_email, channel, type, subject, body, status, provider, max_retries, metadata) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING created_at, updated_at`
+	query := `INSERT INTO notification_logs (id, correlation_id, user_id, user_email, channel, type, subject, body, status, provider, max_retries, metadata, created_at, created_by, updated_at, updated_by) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, $13, CURRENT_TIMESTAMP, $14) RETURNING created_at, updated_at`
 	
-	return r.db.QueryRow(ctx, query, l.ID, l.CorrelationID, l.UserID, l.UserEmail, l.Channel, l.Type, l.Subject, l.Body, l.Status, l.Provider, l.MaxRetries, l.Metadata).Scan(&l.CreatedAt, &l.UpdatedAt)
+	return r.db.QueryRow(ctx, query, l.ID, l.CorrelationID, l.UserID, l.UserEmail, l.Channel, l.Type, l.Subject, l.Body, l.Status, l.Provider, l.MaxRetries, l.Metadata, l.CreatedBy, l.UpdatedBy).Scan(&l.CreatedAt, &l.UpdatedAt)
 }
 func (r *NotificationRepository) AddEvent(ctx context.Context, e *models.NotificationEvent) error {
 	e.ID = uuid.New()

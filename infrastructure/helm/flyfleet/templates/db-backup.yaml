@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+    name: fleet-db-backup
+spec:
+    schedule: "@daily"
+    jobTemplate:
+        spec:
+            template:
+                spec:
+                    containers:
+                        - name: db-backup
+                          image: prodrigestivill/postgres-backup-local:16-alpine
+                          env:
+                              - name: POSTGRES_HOST
+                                value: "postgres"
+                              - name: POSTGRES_DB
+                                value: "{{ .Values.global.postgres.db }}"
+                              - name: POSTGRES_USER
+                                value: "{{ .Values.global.postgres.user }}"
+                              - name: POSTGRES_PASSWORD
+                                value: "{{ .Values.global.postgres.password }}"
+                              - name: BACKUP_KEEP_DAYS
+                                value: "7"
+                          volumeMounts:
+                              - name: backups
+                                mountPath: /backups
+                    volumes:
+                        - name: backups
+                          persistentVolumeClaim:
+                              claimName: fleet-db-backup-pvc
+                    restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: fleet-db-backup-pvc
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 10Gi

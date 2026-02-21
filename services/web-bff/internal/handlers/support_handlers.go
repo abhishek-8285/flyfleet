@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/api"
 	"github.com/flyfleet/web-bff/internal/config"
 	"go.uber.org/zap"
 )
@@ -664,6 +665,9 @@ func (h *SupportHandlers) GetSystemLogs(w http.ResponseWriter, r *http.Request) 
 func (h *SupportHandlers) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	h.logger.Info("Searching users", zap.String("query", query))
+
+	pagination := api.ParsePagination(r)
+
 	// Mock search result
 	users := []map[string]interface{}{
 		{
@@ -672,8 +676,12 @@ func (h *SupportHandlers) SearchUsers(w http.ResponseWriter, r *http.Request) {
 			"email":  "sarah.j@fleetcorp.com",
 		},
 	}
+
+	// For mock demo, we assume total is 1 for this query
+	resp := api.NewPaginatedResponse(users, 1, pagination.Page, pagination.Limit)
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *SupportHandlers) GetUserFullProfile(w http.ResponseWriter, r *http.Request) {

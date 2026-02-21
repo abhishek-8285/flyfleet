@@ -2,55 +2,51 @@ package client
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"time"
+
+	"github.com/fleet-platform/shared/pkg/grpcclient"
+	pb "github.com/flyfleet/proto/trip/v1"
+	"google.golang.org/grpc"
 )
 
 type TripClient struct {
-	BaseURL    string
-	HTTPClient *http.Client
+	conn   *grpc.ClientConn
+	client pb.TripServiceClient
 }
 
-func NewTripClient(baseURL string) *TripClient {
-	return &TripClient{
-		BaseURL: baseURL,
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
+func NewTripClient(baseURL string) (*TripClient, error) {
+	baseClient, err := grpcclient.NewClient(baseURL, 5*time.Second)
+	if err != nil {
+		return nil, err
 	}
+
+	return &TripClient{
+		conn:   baseClient.Conn,
+		client: pb.NewTripServiceClient(baseClient.Conn),
+	}, nil
+}
+
+func (c *TripClient) Close() error {
+	return c.conn.Close()
 }
 
 type TripStats struct {
-	ActiveTrips int `json:"active_trips"`
+	ActiveTrips int
+	TotalTrips  int
+	Distance    float64
 }
 
-func (c *TripClient) GetStats(ctx context.Context, token string) (*TripStats, error) {
-	url := fmt.Sprintf("%s/api/v1/stats/summary", c.BaseURL)
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+func (c *TripClient) GetStats(ctx context.Context, orgID string) (*TripStats, error) {
+	resp, err := c.client.GetTripStats(ctx, &pb.GetTripStatsRequest{
+		OrgId: orgID,
+	})
 	if err != nil {
-		return nil, err
+		return &TripStats{}, err
 	}
 
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return &TripStats{ActiveTrips: 0}, fmt.Errorf("trip service returned status %d", resp.StatusCode)
-	}
-
-	var result TripStats
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
+	return &TripStats{
+		ActiveTrips: int(resp.ActiveTrips),
+		TotalTrips:  int(resp.TotalTrips),
+		Distance:    resp.TotalDistance,
+	}, nil
 }

@@ -31,7 +31,9 @@ type Vehicle struct {
 	LastService  *time.Time `json:"last_service" db:"last_service"`
 	Odometer     *int64     `json:"odometer" db:"odometer"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy    uuid.UUID  `json:"created_by" db:"created_by"`
 	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy    uuid.UUID  `json:"updated_by" db:"updated_by"`
 	DeletedAt    *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 

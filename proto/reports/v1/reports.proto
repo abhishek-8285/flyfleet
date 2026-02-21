@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package reports.v1;
+
+option go_package = "github.com/flyfleet/proto/reports/v1;reportsv1";
+
+import "google/protobuf/timestamp.proto";
+
+service ReportsService {
+  rpc CreateReport (CreateReportRequest) returns (CreateReportResponse);
+  rpc GetReport (GetReportRequest) returns (GetReportResponse);
+  rpc ListReports (ListReportsRequest) returns (ListReportsResponse);
+  rpc DownloadReport (DownloadReportRequest) returns (DownloadReportResponse);
+}
+
+message Report {
+  string id = 1;
+  string org_id = 2;
+  string type = 3;
+  string format = 4;
+  string status = 5;
+  string url = 6;
+  google.protobuf.Timestamp created_at = 7;
+  string created_by = 8;
+}
+
+message CreateReportRequest {
+  string type = 1;
+  string format = 2;
+  map<string, string> parameters = 3;
+}
+
+message CreateReportResponse {
+  Report report = 1;
+}
+
+message GetReportRequest {
+  string id = 1;
+}
+
+message GetReportResponse {
+  Report report = 1;
+}
+
+message ListReportsRequest {
+  string org_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListReportsResponse {
+  repeated Report reports = 1;
+  int32 total = 2;
+}
+
+message DownloadReportRequest {
+  string id = 1;
+}
+
+message DownloadReportResponse {
+  string download_url = 1;
+  int64 expiry_seconds = 2;
+}

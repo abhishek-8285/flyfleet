@@ -32,6 +32,7 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 	insurance := req.Insurance
 	odometer := int64(0)
 
+	userID := s.getUserID(ctx)
 	vehicle := &models.Vehicle{
 		ID:           uuid.New(),
 		OrgID:        orgID,
@@ -47,6 +48,8 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		Insurance:    &insurance,
 		Status:       "active",
 		Odometer:     &odometer,
+		CreatedBy:    userID,
+		UpdatedBy:    userID,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
@@ -60,6 +63,19 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 	}
 
 	return vehicle, nil
+}
+
+func (s *VehicleService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *VehicleService) GetVehicle(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
@@ -124,6 +140,8 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	if req.Odometer != nil {
 		vehicle.Odometer = req.Odometer
 	}
+
+	vehicle.UpdatedBy = s.getUserID(ctx)
 
 	if err := s.repo.Update(ctx, vehicle); err != nil {
 		return nil, fmt.Errorf("failed to update vehicle: %w", err)

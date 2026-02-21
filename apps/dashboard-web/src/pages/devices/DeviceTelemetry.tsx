@@ -45,7 +45,7 @@ const DeviceTelemetry: React.FC = () => {
   const fetchDevices = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch('/api/devices/status?limit=100', {
+      const res = await fetch('/api/v1/devices/status?limit=100', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -62,7 +62,7 @@ const DeviceTelemetry: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch(`/api/devices/${selectedDevice}/telemetry?limit=100`, {
+      const res = await fetch(`/api/v1/devices/${selectedDevice}/telemetry?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

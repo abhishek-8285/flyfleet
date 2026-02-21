@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 
@@ -9,10 +10,13 @@ import (
 	"github.com/flyfleet/reports-service/internal/queue"
 	"github.com/flyfleet/reports-service/internal/repository"
 	"github.com/flyfleet/reports-service/internal/service"
+	reportsgrpc "github.com/flyfleet/reports-service/internal/grpc"
+	pb "github.com/flyfleet/proto/reports/v1"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 )
 
 func main() {
@@ -47,6 +51,27 @@ func main() {
 
 	svc := service.NewReportService(repo, queueClient, logger)
 	h := handlers.NewReportHandler(svc, logger)
+
+	// Start gRPC Server
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "50060"
+	}
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		rServer := reportsgrpc.NewReportsServer(svc, logger)
+		pb.RegisterReportsServiceServer(grpcServer, rServer)
+		
+		logger.Info("Starting reports gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
 
 	r := chi.NewRouter()
 	r.Use(chiMiddleware.Logger)

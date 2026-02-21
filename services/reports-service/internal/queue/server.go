@@ -62,7 +62,7 @@ func (ws *WorkerServer) HandleReportGenerationTask(ctx context.Context, t *asynq
 	ws.logger.Info("Processing report generation task", zap.String("exec_id", execID.String()), zap.String("report_id", reportID.String()))
 
 	// 1. Update Status to RUNNING
-	if err := ws.repo.UpdateExecutionStatus(ctx, execID, "RUNNING", nil, nil); err != nil {
+	if err := ws.repo.UpdateExecutionStatus(ctx, execID, "RUNNING", nil, nil, payload.UserID); err != nil {
 		ws.logger.Error("Failed to update execution status to RUNNING", zap.Error(err))
 	}
 	
@@ -94,7 +94,7 @@ func (ws *WorkerServer) HandleReportGenerationTask(ctx context.Context, t *asynq
 	ws.logger.Info("Report generation completed", zap.String("exec_id", execID.String()))
 
 	// 5. Update Status to COMPLETED
-	if err := ws.repo.UpdateExecutionStatus(ctx, execID, "COMPLETED", nil, &mockFileURL); err != nil {
+	if err := ws.repo.UpdateExecutionStatus(ctx, execID, "COMPLETED", nil, &mockFileURL, payload.UserID); err != nil {
 		ws.logger.Error("Failed to update execution status to COMPLETED", zap.Error(err))
 		return fmt.Errorf("failed to update status: %w", err)
 	}

@@ -53,9 +53,9 @@ const DeviceDiagnostics: React.FC = () => {
       };
 
       const [deviceRes, sensorsRes, logsRes] = await Promise.all([
-        fetch(`/api/devices/${id}`, { headers }),
-        fetch(`/api/devices/${id}/sensors`, { headers }),
-        fetch(`/api/devices/${id}/logs?limit=50`, { headers })
+        fetch(`/api/v1/devices/${id}`, { headers }),
+        fetch(`/api/v1/devices/${id}/sensors`, { headers }),
+        fetch(`/api/v1/devices/${id}/logs?limit=50`, { headers })
       ]);
 
       if (deviceRes.ok) setDevice(await deviceRes.json());

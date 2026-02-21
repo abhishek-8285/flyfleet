@@ -23,12 +23,14 @@ func (r *pgGovernanceRepository) CreateRequest(ctx context.Context, req *models.
 	query := `
 		INSERT INTO governance_requests (
 			id, organization_id, requester_id, request_type, data_scope,
-			purpose, format, delivery_method, status, expiry_date, comments
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			purpose, format, delivery_method, status, expiry_date, comments,
+			created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err := r.db.Exec(ctx, query,
 		req.ID, req.OrganizationID, req.RequesterID, req.RequestType, req.DataScope,
 		req.Purpose, req.Format, req.DeliveryMethod, req.Status, req.ExpiryDate, req.Comments,
+		req.CreatedBy, req.UpdatedBy,
 	)
 	return err
 }
@@ -38,7 +40,7 @@ func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUI
 		SELECT 
 			id, organization_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
-			created_at, updated_at
+			created_at, created_by, updated_at, updated_by
 		FROM governance_requests
 		WHERE id = $1 AND organization_id = $2
 	`
@@ -46,7 +48,7 @@ func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUI
 	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
 		&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
 		&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
-		&req.CreatedAt, &req.UpdatedAt,
+		&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -96,7 +98,7 @@ func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models
 		SELECT 
 			id, organization_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
-			created_at, updated_at
+			created_at, created_by, updated_at, updated_by
 		FROM governance_requests
 		WHERE %s
 		ORDER BY created_at DESC
@@ -116,7 +118,7 @@ func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models
 		err := rows.Scan(
 			&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
 			&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
-			&req.CreatedAt, &req.UpdatedAt,
+			&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
 		)
 		if err != nil {
 			return nil, err
@@ -163,17 +165,19 @@ func (r *pgGovernanceRepository) GetSettings(ctx context.Context, orgID uuid.UUI
 func (r *pgGovernanceRepository) UpsertSettings(ctx context.Context, s *models.GovernanceSettings) error {
 	query := `
 		INSERT INTO governance_settings (
-			organization_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours, updated_at
-		) VALUES ($1, $2, $3, $4, $5, NOW())
+			organization_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours, updated_at, created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7)
 		ON CONFLICT (organization_id) DO UPDATE SET
 			retention_policies = EXCLUDED.retention_policies,
 			masking_rules = EXCLUDED.masking_rules,
 			auto_expiry_enabled = EXCLUDED.auto_expiry_enabled,
 			download_ttl_hours = EXCLUDED.download_ttl_hours,
-			updated_at = NOW()
+			updated_at = NOW(),
+			updated_by = EXCLUDED.updated_by
 	`
 	_, err := r.db.Exec(ctx, query,
 		s.OrganizationID, s.RetentionPolicies, s.MaskingRules, s.AutoExpiryEnabled, s.DownloadTTLHours,
+		s.CreatedBy, s.UpdatedBy,
 	)
 	return err
 }

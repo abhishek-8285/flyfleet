@@ -24,11 +24,11 @@ const SupportDashboard: React.FC = () => {
 
         try {
             const [metricsRes, trendsRes, errorsRes, ticketsRes] = await Promise.all([
-                fetch('/bff/support/dashboard/metrics', { headers }),
-                fetch('/bff/support/dashboard/trends', { headers }),
-                fetch('/bff/support/dashboard/top-errors', { headers }),
-                fetch('/bff/support/tickets/recent', { headers }),
-                fetch('/bff/support/dashboard/live', { headers })
+                fetch('/api/v1/support/dashboard/metrics', { headers }),
+                fetch('/api/v1/support/dashboard/trends', { headers }),
+                fetch('/api/v1/support/dashboard/top-errors', { headers }),
+                fetch('/api/v1/support/tickets/recent', { headers }),
+                fetch('/api/v1/support/dashboard/live', { headers })
             ]);
 
             if (metricsRes.ok) setMetrics(await metricsRes.json());

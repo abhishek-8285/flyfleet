@@ -26,8 +26,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 	query := `
 		INSERT INTO vehicles (
 			id, org_id, license_plate, model, make, year, color, status, capacity, fuel_type, 
-			vin, registration, insurance, odometer, last_service, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
+			vin, registration, insurance, odometer, last_service, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), $16, NOW(), $17)
 		RETURNING id, created_at, updated_at`
 
 	err := r.db.QueryRow(ctx, query,
@@ -46,6 +46,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.Insurance,
 		vehicle.Odometer,
 		vehicle.LastService,
+		vehicle.CreatedBy,
+		vehicle.UpdatedBy,
 	).Scan(&vehicle.ID, &vehicle.CreatedAt, &vehicle.UpdatedAt)
 
 	if err != nil {
@@ -59,7 +61,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
 		SELECT id, org_id, license_plate, model, make, year, color, status, capacity, fuel_type, 
-		       vin, registration, insurance, odometer, last_service, created_at, updated_at
+		       vin, registration, insurance, odometer, last_service, created_at, created_by, updated_at, updated_by
 		FROM vehicles 
 		WHERE id = $1`
 
@@ -81,7 +83,9 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&vehicle.Odometer,
 		&vehicle.LastService,
 		&vehicle.CreatedAt,
+		&vehicle.CreatedBy,
 		&vehicle.UpdatedAt,
+		&vehicle.UpdatedBy,
 	)
 
 	if err != nil {
@@ -108,7 +112,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 	// Get vehicles
 	query := `
 		SELECT id, org_id, license_plate, model, make, year, color, status, capacity, fuel_type, 
-		       vin, registration, insurance, odometer, last_service, created_at, updated_at
+		       vin, registration, insurance, odometer, last_service, created_at, created_by, updated_at, updated_by
 		FROM vehicles 
 		WHERE org_id = $1
 		ORDER BY created_at DESC
@@ -141,7 +145,9 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 			&vehicle.Odometer,
 			&vehicle.LastService,
 			&vehicle.CreatedAt,
+			&vehicle.CreatedBy,
 			&vehicle.UpdatedAt,
+			&vehicle.UpdatedBy,
 		)
 		if err != nil {
 			r.logger.Error("failed to scan vehicle", zap.Error(err))
@@ -169,8 +175,9 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 			insurance = COALESCE($11, insurance),
 			odometer = COALESCE($12, odometer),
 			last_service = COALESCE($13, last_service),
-			updated_at = NOW()
-		WHERE id = $14
+			updated_at = NOW(),
+			updated_by = $14
+		WHERE id = $15
 		RETURNING updated_at`
 
 	err := r.db.QueryRow(ctx, query,
@@ -187,6 +194,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.Insurance,
 		vehicle.Odometer,
 		vehicle.LastService,
+		vehicle.UpdatedBy,
 		vehicle.ID,
 	).Scan(&vehicle.UpdatedAt)
 

@@ -32,8 +32,8 @@ func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule
 	query := `
 		INSERT INTO alert_rules (
 			id, org_id, name, type, description, conditions, severity,
-			actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -48,7 +48,7 @@ func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule
 	err := r.db.QueryRow(ctx, query,
 		id, rule.OrgID, rule.Name, rule.Type, rule.Description,
 		conditionsJSON, rule.Severity, actionsJSON, vehiclesJSON,
-		driverIDsJSON, rule.Enabled, now, now, rule.CreatedBy,
+		driverIDsJSON, rule.Enabled, now, now, rule.CreatedBy, rule.UpdatedBy,
 	).Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
 
 	return err
@@ -58,7 +58,7 @@ func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule
 func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.AlertRule, error) {
 	query := `
 		SELECT id, org_id, name, type, description, conditions, severity,
-		       actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by
+		       actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by, updated_by
 		FROM alert_rules WHERE id = $1`
 
 	var rule models.AlertRule
@@ -67,7 +67,7 @@ func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.A
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
 		&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
-		&driverIDsJSON, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt, &rule.CreatedBy,
+		&driverIDsJSON, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt, &rule.CreatedBy, &rule.UpdatedBy,
 	)
 
 	if err != nil {
@@ -246,8 +246,8 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 		INSERT INTO alerts (
 			id, org_id, rule_id, type, severity, vehicle_id, driver_id,
 			location, timestamp, details, status, dedup_key, 
-			escalation_level, sla_deadline, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+			escalation_level, sla_deadline, created_at, updated_at, created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -261,7 +261,7 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 		id, alert.OrgID, alert.RuleID, alert.Type, alert.Severity,
 		alert.VehicleID, alert.DriverID, locationJSON, alert.Timestamp,
 		detailsJSON, alert.Status, alert.DedupKey, 
-		alert.EscalationLevel, alert.SLADeadline, now, now,
+		alert.EscalationLevel, alert.SLADeadline, now, now, alert.CreatedBy, alert.UpdatedBy,
 	).Scan(&alert.ID, &alert.CreatedAt, &alert.UpdatedAt)
 
 	return err

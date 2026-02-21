@@ -136,8 +136,8 @@ const FirmwareManager: React.FC = () => {
     try {
       const headers = getAuthHeaders();
       const [firmwareRes, rolloutsRes] = await Promise.all([
-        fetch('/api/firmware?limit=100', { headers }),
-        fetch('/api/firmware/rollouts?limit=100', { headers }),
+        fetch('/api/v1/firmware?limit=100', { headers }),
+        fetch('/api/v1/firmware/rollouts?limit=100', { headers }),
       ]);
 
       if (!firmwareRes.ok) {
@@ -211,7 +211,7 @@ const FirmwareManager: React.FC = () => {
         throw new Error('Version, target, file URL, and file size are required.');
       }
 
-      const res = await fetch('/api/firmware', {
+      const res = await fetch('/api/v1/firmware', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
@@ -255,7 +255,7 @@ const FirmwareManager: React.FC = () => {
         throw new Error('Firmware, rollout name, device group, and total devices are required.');
       }
 
-      const res = await fetch('/api/firmware/rollouts', {
+      const res = await fetch('/api/v1/firmware/rollouts', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -292,7 +292,7 @@ const FirmwareManager: React.FC = () => {
         const input = window.prompt(`Optional reason for marking rollout ${nextStatus}:`, '');
         reason = input?.trim() || undefined;
       }
-      const res = await fetch(`/api/firmware/rollouts/${rolloutId}/status`, {
+      const res = await fetch(`/api/v1/firmware/rollouts/${rolloutId}/status`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: nextStatus, reason }),
@@ -316,7 +316,7 @@ const FirmwareManager: React.FC = () => {
     async (rolloutId: string) => {
       setRolloutDetailLoading(true);
       try {
-        const res = await fetch(`/api/firmware/rollouts/${rolloutId}`, {
+        const res = await fetch(`/api/v1/firmware/rollouts/${rolloutId}`, {
           headers: getAuthHeaders(),
         });
         if (!res.ok) {
@@ -341,7 +341,7 @@ const FirmwareManager: React.FC = () => {
       if (eventFilter !== 'all') {
         params.set('event_type', eventFilter);
       }
-      const res = await fetch(`/api/firmware/rollouts/${rolloutId}/events?${params.toString()}`, {
+      const res = await fetch(`/api/v1/firmware/rollouts/${rolloutId}/events?${params.toString()}`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) {
@@ -364,7 +364,7 @@ const FirmwareManager: React.FC = () => {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`/api/firmware/rollouts/${selectedRolloutId}/events`, {
+      const res = await fetch(`/api/v1/firmware/rollouts/${selectedRolloutId}/events`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({

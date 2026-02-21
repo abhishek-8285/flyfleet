@@ -54,6 +54,7 @@ type WorkOrder struct {
 	CreatedBy       uuid.UUID           `json:"created_by" db:"created_by"`
 	CreatedAt       time.Time           `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time           `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID           `json:"updated_by" db:"updated_by"`
 
 	// Joined data
 	Parts         []WorkOrderPart `json:"parts,omitempty"`
@@ -88,6 +89,7 @@ type WorkOrderPart struct {
 	UnitCost    float64   `json:"unit_cost" db:"unit_cost"`
 	TotalCost   float64   `json:"total_cost" db:"total_cost"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	CreatedBy   uuid.UUID `json:"created_by" db:"created_by"`
 
 	// Joined data
 	PartInfo *InventoryPart `json:"part,omitempty"`
@@ -105,7 +107,9 @@ type InventoryPart struct {
 	ReorderLevel      int       `json:"reorder_level" db:"reorder_level"`
 	UnitCost          float64   `json:"unit_price" db:"unit_cost"`
 	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // MaintenanceSettings represents org maintenance configuration
@@ -119,7 +123,9 @@ type MaintenanceSettings struct {
 	AutoAssignEnabled bool      `json:"auto_assign_enabled" db:"auto_assign_enabled"`
 	NotificationEnabled bool    `json:"notification_enabled" db:"notification_enabled"`
 	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // --- Request DTOs ---

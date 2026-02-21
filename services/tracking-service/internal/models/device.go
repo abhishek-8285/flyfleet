@@ -22,7 +22,9 @@ type Device struct {
 	TokenExpiresAt    time.Time  `json:"token_expires_at" db:"token_expires_at"`
 	LastHeartbeat     *time.Time `json:"last_heartbeat" db:"last_heartbeat"`
 	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID  `json:"created_by" db:"created_by"`
 	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // DeviceRegisterRequest is the request payload for device registration

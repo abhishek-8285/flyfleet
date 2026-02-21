@@ -2,8 +2,8 @@
 
 # Configuration
 API_URL="http://localhost:8081/api/v1"
-ADMIN_EMAIL="admin@delta.io"
-ADMIN_PASSWORD="test123"
+ADMIN_EMAIL="admin@flyfleet.com"
+ADMIN_PASSWORD="admin123"
 
 echo "============================================"
 echo "  FlyFleet Full Flow Verification Script"
@@ -28,24 +28,24 @@ echo "✅ Login Successful"
 # 2. Get Organizations (Check for Delta Logistics)
 echo ""
 echo "[2] Fetching Organizations (Looking for 'Delta Logistics')..."
-ORGS_RESPONSE=$(curl -sL -X GET "$API_URL/admin/organizations/" \
+ORGS_RESPONSE=$(curl -sL -X GET "$API_URL/admin/organizations" \
   -H "Authorization: Bearer $TOKEN")
 
 # Check if Delta exists in response
-if echo "$ORGS_RESPONSE" | grep -q "Delta Logistics"; then
-  echo "✅ Found 'Delta Logistics' in organization list"
-  # Extract Org ID for Delta
-  DELTA_ORG_ID="00000000-0000-0000-0000-000000000012" 
+if echo "$ORGS_RESPONSE" | grep -q "FlyFleet Global"; then
+  echo "✅ Found 'FlyFleet Global' in organization list"
+  # Extract Org ID
+  DELTA_ORG_ID="00000000-0000-0000-0000-000000000001" 
 else
-  echo "❌ 'Delta Logistics' NOT found in response"
+  echo "❌ 'FlyFleet Global' NOT found in response"
   echo "Response Preview: ${ORGS_RESPONSE:0:200}..."
   exit 1
 fi
 
-# 3. Get Vehicles for Delta
+# 3. Get Vehicles
 echo ""
 echo "[3] Fetching Vehicles (Org: $DELTA_ORG_ID)..."
-VEHICLES_RESPONSE=$(curl -sL -X GET "$API_URL/admin/vehicles/?org_id=$DELTA_ORG_ID" \
+VEHICLES_RESPONSE=$(curl -sL -X GET "$API_URL/vehicles?org_id=$DELTA_ORG_ID" \
   -H "Authorization: Bearer $TOKEN")
 
 if echo "$VEHICLES_RESPONSE" | grep -q "DLT-001"; then
@@ -55,10 +55,10 @@ else
   echo "Response: $VEHICLES_RESPONSE"
 fi
 
-# 4. Get Drivers for Delta
+# 4. Get Drivers
 echo ""
 echo "[4] Fetching Drivers (Org: $DELTA_ORG_ID)..."
-DRIVERS_RESPONSE=$(curl -sL -X GET "$API_URL/admin/drivers/?org_id=$DELTA_ORG_ID" \
+DRIVERS_RESPONSE=$(curl -sL -X GET "$API_URL/drivers?org_id=$DELTA_ORG_ID" \
   -H "Authorization: Bearer $TOKEN")
 
 if echo "$DRIVERS_RESPONSE" | grep -q "Delta Driver 1"; then
@@ -67,10 +67,10 @@ else
   echo "❌ Driver 'Delta Driver 1' NOT found"
 fi
 
-# 5. Get Trips (Check for Active Trip)
+# 5. Get Trips
 echo ""
 echo "[5] Fetching Trips (Org: $DELTA_ORG_ID)..."
-TRIPS_RESPONSE=$(curl -sL -X GET "$API_URL/admin/trips/?org_id=$DELTA_ORG_ID" \
+TRIPS_RESPONSE=$(curl -sL -X GET "$API_URL/trips?org_id=$DELTA_ORG_ID" \
   -H "Authorization: Bearer $TOKEN")
 
 if echo "$TRIPS_RESPONSE" | grep -q "Bangalore to Mysore Logistics"; then
@@ -80,10 +80,10 @@ else
   echo "Response: $TRIPS_RESPONSE"
 fi
 
-# 6. Get Alerts (Check for Overspeed)
+# 6. Get Alerts
 echo ""
 echo "[6] Fetching Alerts (Org: $DELTA_ORG_ID)..."
-ALERTS_RESPONSE=$(curl -sL -X GET "$API_URL/admin/alerts/?org_id=$DELTA_ORG_ID" \
+ALERTS_RESPONSE=$(curl -sL -X GET "$API_URL/alerts?org_id=$DELTA_ORG_ID" \
   -H "Authorization: Bearer $TOKEN")
 
 # Check for specific alert message

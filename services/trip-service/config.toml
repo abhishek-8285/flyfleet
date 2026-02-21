@@ -8,7 +8,7 @@ write_timeout = "30s"
 host = "postgres"
 port = 5432
 user = "fleet_user"
-password = "fleet_password"
+password = ""
 dbname = "fleet_db"
 sslmode = "disable"
 max_open_conns = 100
@@ -25,7 +25,7 @@ min_idle_conns = 5
 pool_timeout = "30s"
 
 [security]
-jwt_secret = "your-jwt-secret-key-here"
+jwt_secret = ""
 token_expiry = "24h"
 
 [logging]

@@ -16,7 +16,9 @@ type Integration struct {
 	Config    any       `json:"config" db:"config"`
 	LastSync  *time.Time `json:"last_sync" db:"last_sync"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	CreatedBy uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 type APIClient struct {
@@ -29,7 +31,9 @@ type APIClient struct {
 	Expiry     *time.Time `json:"expiry" db:"expiry"`
 	Status     string    `json:"status" db:"status"`
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	CreatedBy  uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy  uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 type Webhook struct {
@@ -40,7 +44,9 @@ type Webhook struct {
 	Secret    string    `json:"secret" db:"secret"`
 	Status    string    `json:"status" db:"status"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	CreatedBy uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 type IntegrationLog struct {

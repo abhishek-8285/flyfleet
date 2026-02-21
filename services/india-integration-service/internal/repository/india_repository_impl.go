@@ -31,8 +31,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateFASTagTransaction(ctx context.Con
 			id, tag_number, vehicle_id, driver_id, organization_id, transaction_id, transaction_type,
 			amount, toll_plaza, toll_plaza_id, lane_id, transaction_time, transaction_date,
 			settlement_date, status, error_code, error_description, reconciled,
-			reconciliation_date, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`
+			reconciliation_date, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
 
 	_, err := r.db.Exec(ctx, query,
 		transaction.ID,
@@ -55,7 +55,9 @@ func (r *IndiaIntegrationRepositoryImpl) CreateFASTagTransaction(ctx context.Con
 		transaction.Reconciled,
 		transaction.ReconciliationDate,
 		transaction.CreatedAt,
+		transaction.CreatedBy,
 		transaction.UpdatedAt,
+		transaction.UpdatedBy,
 	)
 
 	return err
@@ -67,7 +69,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetFASTagTransaction(ctx context.Contex
 		SELECT id, tag_number, vehicle_id, driver_id, organization_id, transaction_id, transaction_type,
 		       amount, toll_plaza, toll_plaza_id, lane_id, transaction_time, transaction_date,
 		       settlement_date, status, error_code, error_description, reconciled,
-		       reconciliation_date, created_at, updated_at
+		       reconciliation_date, created_at, created_by, updated_at, updated_by
 		FROM fastag_transactions
 		WHERE id = $1`
 
@@ -95,7 +97,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetFASTagTransaction(ctx context.Contex
 		&transaction.Reconciled,
 		&transaction.ReconciliationDate,
 		&transaction.CreatedAt,
+		&transaction.CreatedBy,
 		&transaction.UpdatedAt,
+		&transaction.UpdatedBy,
 	)
 
 	if err != nil {
@@ -229,7 +233,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListFASTagTransactions(ctx context.Cont
 			&transaction.Reconciled,
 			&transaction.ReconciliationDate,
 			&transaction.CreatedAt,
+			&transaction.CreatedBy,
 			&transaction.UpdatedAt,
+			&transaction.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan fastag transaction: %w", err)
@@ -251,8 +257,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateEWayBill(ctx context.Context, bil
 			transporter_id, transporter_name, transport_mode, transport_document_number, 
 			transport_document_date, transit_type, vehicle_number, vehicle_type, remaining_distance,
 			user_gstin, recipient_gstin, generated_by, generated_at, cancelled, cancelled_by, 
-			cancelled_on, cancelled_reason, updated_by, updated_at, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37)`
+			cancelled_on, cancelled_reason, created_by, updated_by, updated_at, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39)`
 
 	_, err := r.db.Exec(ctx, query,
 		bill.ID,
@@ -290,6 +296,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateEWayBill(ctx context.Context, bil
 		bill.CancelledBy,
 		bill.CancelledOn,
 		bill.CancelledReason,
+		bill.CreatedBy,
 		bill.UpdatedBy,
 		bill.UpdatedAt,
 		bill.CreatedAt,
@@ -307,7 +314,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id str
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
 		       transport_document_date, transit_type, vehicle_number, vehicle_type, remaining_distance,
 		       user_gstin, recipient_gstin, generated_by, generated_at, cancelled, cancelled_by,
-		       cancelled_on, cancelled_reason, updated_by, updated_at, created_at
+		       cancelled_on, cancelled_reason, created_by, updated_by, updated_at, created_at
 		FROM e_way_bills
 		WHERE id = $1`
 
@@ -350,6 +357,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id str
 		&bill.CancelledBy,
 		&bill.CancelledOn,
 		&bill.CancelledReason,
+		&bill.CreatedBy,
 		&bill.UpdatedBy,
 		&bill.UpdatedAt,
 		&bill.CreatedAt,
@@ -374,7 +382,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBillByNumber(ctx context.Context
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
 		       transport_document_date, transit_type, vehicle_number, vehicle_type, remaining_distance,
 		       user_gstin, recipient_gstin, generated_by, generated_at, cancelled, cancelled_by,
-		       cancelled_on, cancelled_reason, updated_by, updated_at, created_at
+		       cancelled_on, cancelled_reason, created_by, updated_by, updated_at, created_at
 		FROM e_way_bills
 		WHERE eway_bill_number = $1`
 
@@ -417,6 +425,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBillByNumber(ctx context.Context
 		&bill.CancelledBy,
 		&bill.CancelledOn,
 		&bill.CancelledReason,
+		&bill.CreatedBy,
 		&bill.UpdatedBy,
 		&bill.UpdatedAt,
 		&bill.CreatedAt,
@@ -517,7 +526,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListEWayBills(ctx context.Context, vehi
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
 		       transport_document_date, transit_type, vehicle_number, vehicle_type, remaining_distance,
 		       user_gstin, recipient_gstin, generated_by, generated_at, cancelled, cancelled_by,
-		       cancelled_on, cancelled_reason, updated_by, updated_at, created_at
+		       cancelled_on, cancelled_reason, created_by, updated_by, updated_at, created_at
 		FROM e_way_bills
 		%s
 		ORDER BY generated_at DESC
@@ -571,6 +580,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListEWayBills(ctx context.Context, vehi
 			&bill.CancelledBy,
 			&bill.CancelledOn,
 			&bill.CancelledReason,
+			&bill.CreatedBy,
 			&bill.UpdatedBy,
 			&bill.UpdatedAt,
 			&bill.CreatedAt,
@@ -594,8 +604,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateVehicleVerification(ctx context.C
 			cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 			owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,
 			insurance_company, insurance_policy, insurance_expiry, puc_number, puc_expiry,
-			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`
+			created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)`
 
 	_, err := r.db.Exec(ctx, query,
 		verification.ID,
@@ -627,7 +637,9 @@ func (r *IndiaIntegrationRepositoryImpl) CreateVehicleVerification(ctx context.C
 		verification.PUCNumber,
 		verification.PUCExpiry,
 		verification.CreatedAt,
+		verification.CreatedBy,
 		verification.UpdatedAt,
+		verification.UpdatedBy,
 	)
 
 	return err
@@ -641,7 +653,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Cont
 		       cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 		       owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,
 		       insurance_company, insurance_policy, insurance_expiry, puc_number, puc_expiry,
-		       created_at, updated_at
+		       created_at, created_by, updated_at, updated_by
 		FROM vehicle_verifications
 		WHERE id = $1`
 
@@ -678,7 +690,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Cont
 		&verification.PUCNumber,
 		&verification.PUCExpiry,
 		&verification.CreatedAt,
+		&verification.CreatedBy,
 		&verification.UpdatedAt,
+		&verification.UpdatedBy,
 	)
 
 	if err != nil {
@@ -871,7 +885,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListVehicleVerifications(ctx context.Co
 			&verification.PUCNumber,
 			&verification.PUCExpiry,
 			&verification.CreatedAt,
+			&verification.CreatedBy,
 			&verification.UpdatedAt,
+			&verification.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan vehicle verification: %w", err)
@@ -890,8 +906,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateDriverVerification(ctx context.Co
 			id, driver_id, organization_id, license_number, status, verification_date,
 			name, father_name, date_of_birth, gender, address, city, district, state, pin,
 			license_class, issue_date, validity_from, validity_to, last_transaction,
-			enrollment_number, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
+			enrollment_number, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`
 
 	licenseClassJSON, err := json.Marshal(verification.LicenseClass)
 	if err != nil {
@@ -921,7 +937,9 @@ func (r *IndiaIntegrationRepositoryImpl) CreateDriverVerification(ctx context.Co
 		verification.LastTransaction,
 		verification.EnrollmentNumber,
 		verification.CreatedAt,
+		verification.CreatedBy,
 		verification.UpdatedAt,
+		verification.UpdatedBy,
 	)
 
 	return err
@@ -933,7 +951,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Conte
 		SELECT id, driver_id, organization_id, license_number, status, verification_date,
 		       name, father_name, date_of_birth, gender, address, city, district, state, pin,
 		       license_class, issue_date, validity_from, validity_to, last_transaction,
-		       enrollment_number, created_at, updated_at
+		       enrollment_number, created_at, created_by, updated_at, updated_by
 		FROM driver_verifications
 		WHERE id = $1`
 
@@ -964,7 +982,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Conte
 		&verification.LastTransaction,
 		&verification.EnrollmentNumber,
 		&verification.CreatedAt,
+		&verification.CreatedBy,
 		&verification.UpdatedAt,
+		&verification.UpdatedBy,
 	)
 
 	if err != nil {
@@ -988,7 +1008,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerificationByLicenseNumber(ct
 		SELECT id, driver_id, organization_id, license_number, status, verification_date,
 		       name, father_name, date_of_birth, gender, address, city, district, state, pin,
 		       license_class, issue_date, validity_from, validity_to, last_transaction,
-		       enrollment_number, created_at, updated_at
+		       enrollment_number, created_at, created_by, updated_at, updated_by
 		FROM driver_verifications
 		WHERE license_number = $1`
 
@@ -1019,7 +1039,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerificationByLicenseNumber(ct
 		&verification.LastTransaction,
 		&verification.EnrollmentNumber,
 		&verification.CreatedAt,
+		&verification.CreatedBy,
 		&verification.UpdatedAt,
+		&verification.UpdatedBy,
 	)
 
 	if err != nil {
@@ -1161,7 +1183,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListDriverVerifications(ctx context.Con
 			&verification.LastTransaction,
 			&verification.EnrollmentNumber,
 			&verification.CreatedAt,
+			&verification.CreatedBy,
 			&verification.UpdatedAt,
+			&verification.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan driver verification: %w", err)
@@ -1185,8 +1209,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateLocalPermit(ctx context.Context, 
 			id, vehicle_id, driver_id, organization_id, permit_number, permit_type, permit_category,
 			permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 			number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
-			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`
+			created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`
 
 	_, err := r.db.Exec(ctx, query,
 		permit.ID,
@@ -1209,7 +1233,9 @@ func (r *IndiaIntegrationRepositoryImpl) CreateLocalPermit(ctx context.Context, 
 		permit.Status,
 		permit.Remarks,
 		permit.CreatedAt,
+		permit.CreatedBy,
 		permit.UpdatedAt,
+		permit.UpdatedBy,
 	)
 
 	return err
@@ -1221,7 +1247,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermit(ctx context.Context, id 
 		SELECT id, vehicle_id, driver_id, organization_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
-		       created_at, updated_at
+		       created_at, created_by, updated_at, updated_by
 		FROM local_permits
 		WHERE id = $1`
 
@@ -1249,7 +1275,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermit(ctx context.Context, id 
 		&permit.Status,
 		&permit.Remarks,
 		&permit.CreatedAt,
+		&permit.CreatedBy,
 		&permit.UpdatedAt,
+		&permit.UpdatedBy,
 	)
 
 	if err != nil {
@@ -1268,7 +1296,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermitByNumber(ctx context.Cont
 		SELECT id, vehicle_id, driver_id, organization_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
-		       created_at, updated_at
+		       created_at, created_by, updated_at, updated_by
 		FROM local_permits
 		WHERE permit_number = $1`
 
@@ -1296,7 +1324,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermitByNumber(ctx context.Cont
 		&permit.Status,
 		&permit.Remarks,
 		&permit.CreatedAt,
+		&permit.CreatedBy,
 		&permit.UpdatedAt,
+		&permit.UpdatedBy,
 	)
 
 	if err != nil {
@@ -1386,7 +1416,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListLocalPermits(ctx context.Context, v
 		SELECT id, vehicle_id, driver_id, organization_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
-		       created_at, updated_at
+		       created_at, created_by, updated_at, updated_by
 		FROM local_permits
 		%s
 		ORDER BY valid_from DESC
@@ -1425,7 +1455,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListLocalPermits(ctx context.Context, v
 			&permit.Status,
 			&permit.Remarks,
 			&permit.CreatedAt,
+			&permit.CreatedBy,
 			&permit.UpdatedAt,
+			&permit.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan local permit: %w", err)
@@ -1658,7 +1690,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context,
 			&compliance.ReturnFilingStatus,
 			&compliance.PaymentStatus,
 			&compliance.CreatedAt,
+			&compliance.CreatedBy,
 			&compliance.UpdatedAt,
+			&compliance.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan gst compliance: %w", err)
@@ -1676,8 +1710,8 @@ func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationConfig(ctx context.Con
 		INSERT INTO integration_configs (
 			id, organization_id, service_type, api_endpoint, api_key, username, password,
 			client_id, client_secret, environment, active, last_sync_at, next_sync_at,
-			sync_interval, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
+			sync_interval, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`
 
 	_, err := r.db.Exec(ctx, query,
 		config.ID,
@@ -1695,7 +1729,9 @@ func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationConfig(ctx context.Con
 		config.NextSyncAt,
 		config.SyncInterval,
 		config.CreatedAt,
+		config.CreatedBy,
 		config.UpdatedAt,
+		config.UpdatedBy,
 	)
 
 	return err
@@ -1706,7 +1742,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 	query := `
 		SELECT id, organization_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
-		       sync_interval, created_at, updated_at
+		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs
 		WHERE id = $1`
 
@@ -1729,7 +1765,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 		&config.NextSyncAt,
 		&config.SyncInterval,
 		&config.CreatedAt,
+		&config.CreatedBy,
 		&config.UpdatedAt,
+		&config.UpdatedBy,
 	)
 
 	if err != nil {
@@ -1747,7 +1785,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx c
 	query := `
 		SELECT id, organization_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
-		       sync_interval, created_at, updated_at
+		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs
 		WHERE organization_id = $1 AND service_type = $2`
 
@@ -1770,7 +1808,9 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx c
 		&config.NextSyncAt,
 		&config.SyncInterval,
 		&config.CreatedAt,
+		&config.CreatedBy,
 		&config.UpdatedAt,
+		&config.UpdatedBy,
 	)
 
 	if err != nil {
@@ -1854,7 +1894,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Cont
 	query := fmt.Sprintf(`
 		SELECT id, organization_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
-		       sync_interval, created_at, updated_at
+		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs
 		%s
 		ORDER BY service_type, created_at DESC
@@ -1888,7 +1928,9 @@ func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Cont
 			&config.NextSyncAt,
 			&config.SyncInterval,
 			&config.CreatedAt,
+			&config.CreatedBy,
 			&config.UpdatedAt,
+			&config.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan integration config: %w", err)

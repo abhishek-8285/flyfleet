@@ -5,6 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/flyfleet/admin-support-service/internal/domains/dr/models"
@@ -44,12 +47,18 @@ func NewDrService(repo repository.DrRepository, logger *zap.Logger) DrService {
 }
 
 func (s *drService) InitiateBackup(ctx context.Context, backupType models.BackupType, createdBy uuid.UUID) (*models.Backup, error) {
+	userID := createdBy
+	if userID == uuid.Nil {
+		userID = s.getUserID(ctx)
+	}
 	backup := &models.Backup{
 		ID:        uuid.New(),
 		Type:      backupType,
 		Status:    models.BackupStatusPending,
-		CreatedBy: createdBy,
+		CreatedBy: userID,
+		UpdatedBy: userID,
 		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 		Metadata:  make(map[string]interface{}),
 	}
 
@@ -62,24 +71,53 @@ func (s *drService) InitiateBackup(ctx context.Context, backupType models.Backup
 	s.logger.Info("Backup initiated", zap.String("id", backup.ID.String()), zap.String("type", string(backupType)))
 
 	// Simulate immediate start for demonstration
-	go s.processBackup(backup.ID)
+	go s.processBackup(backup.ID, userID)
 
 	return backup, nil
 }
 
-func (s *drService) processBackup(id uuid.UUID) {
-	// Simulate background work
+func (s *drService) processBackup(id uuid.UUID, updatedBy uuid.UUID) {
 	ctx := context.Background()
-	time.Sleep(2 * time.Second)
+	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusInProgress, "", 0, updatedBy)
 
-	// Start
-	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusInProgress, "", 0)
+	backupDir := os.Getenv("BACKUP_DIR")
+	if backupDir == "" {
+		backupDir = "/backups"
+	}
 
-	time.Sleep(5 * time.Second)
+	// We'll call the backup script
+	cmd := exec.Command("/bin/bash", "/app/scripts/db/backup.sh")
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("BACKUP_DIR=%s", backupDir),
+	)
 
-	// Complete
-	s3Key := fmt.Sprintf("backups/%s/%s.tar.gz", time.Now().Format("2006-01-02"), id.String())
-	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusCompleted, s3Key, 1024*1024*500) // 500MB dummy
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		s.logger.Error("Backup script failed", zap.Error(err), zap.String("output", string(output)))
+		_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusFailed, "", 0, updatedBy)
+		return
+	}
+
+	// The script outputs the backup file path at the end: "Backup successful: /backups/fleet_db-2026-02-21_19-00-00.sql.gz"
+	// We should ideally parse this or have the script output just the path.
+	// For now, let's assume standard naming if we can't parse easily.
+	s.logger.Info("Backup script completed", zap.String("output", string(output)))
+
+	// Find the most recent file in backupDir starting with fleet_db-
+	files, err := os.ReadDir(backupDir)
+	var latestFile string
+	if err == nil {
+		for _, f := range files {
+			if !f.IsDir() && filepath.Ext(f.Name()) == ".gz" {
+				if latestFile == "" || f.Name() > latestFile {
+					latestFile = f.Name()
+				}
+			}
+		}
+	}
+
+	s3Key := latestFile
+	_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusCompleted, s3Key, 0, updatedBy)
 }
 
 func (s *drService) GetBackup(ctx context.Context, id uuid.UUID) (*models.Backup, error) {
@@ -100,13 +138,20 @@ func (s *drService) InitiateRestore(ctx context.Context, backupID uuid.UUID, tar
 		return nil, fmt.Errorf("cannot restore from incomplete backup (status: %s)", backup.Status)
 	}
 
+	userID := performedBy
+	if userID == uuid.Nil {
+		userID = s.getUserID(ctx)
+	}
+
 	job := &models.RestoreJob{
 		ID:                uuid.New(),
 		BackupID:          backupID,
 		Status:            models.RestoreStatusPending,
 		TargetEnvironment: targetEnv,
-		PerformedBy:       performedBy,
+		PerformedBy:       userID,
+		UpdatedBy:         userID,
 		StartedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	if err := s.repo.CreateRestoreJob(ctx, job); err != nil {
@@ -116,20 +161,44 @@ func (s *drService) InitiateRestore(ctx context.Context, backupID uuid.UUID, tar
 	s.logger.Info("Restore job initiated", zap.String("id", job.ID.String()), zap.String("env", targetEnv))
 
 	// Simulate
-	go s.processRestore(job.ID)
+	go s.processRestore(job.ID, userID)
 
 	return job, nil
 }
 
-func (s *drService) processRestore(id uuid.UUID) {
+func (s *drService) processRestore(id uuid.UUID, updatedBy uuid.UUID) {
 	ctx := context.Background()
-	time.Sleep(2 * time.Second)
+	job, err := s.repo.GetRestoreJob(ctx, id)
+	if err != nil {
+		return
+	}
 
-	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusInProgress, "Starting restore process...")
+	backup, err := s.repo.GetBackup(ctx, job.BackupID)
+	if err != nil {
+		_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusFailed, "Backup record not found", updatedBy)
+		return
+	}
 
-	time.Sleep(5 * time.Second)
+	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusInProgress, "Starting restore process...", updatedBy)
 
-	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusCompleted, "Restore completed successfully.")
+	backupDir := os.Getenv("BACKUP_DIR")
+	if backupDir == "" {
+		backupDir = "/backups"
+	}
+	backupPath := filepath.Join(backupDir, backup.S3Key)
+
+	cmd := exec.Command("/bin/bash", "/app/scripts/db/restore.sh", backupPath)
+	cmd.Env = os.Environ()
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		s.logger.Error("Restore script failed", zap.Error(err), zap.String("output", string(output)))
+		_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusFailed, fmt.Sprintf("Script failed: %v\nOutput: %s", err, string(output)), updatedBy)
+		return
+	}
+
+	s.logger.Info("Restore script completed", zap.String("output", string(output)))
+	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusCompleted, "Restore completed successfully.", updatedBy)
 }
 
 func (s *drService) GetRestoreJob(ctx context.Context, id uuid.UUID) (*models.RestoreJob, error) {
@@ -151,13 +220,18 @@ func (s *drService) VerifyBackup(ctx context.Context, backupID uuid.UUID, verifi
 		return nil, fmt.Errorf("cannot verify incomplete backup (status: %s)", backup.Status)
 	}
 
+	userID := verifiedBy
+	if userID == uuid.Nil {
+		userID = s.getUserID(ctx)
+	}
+
 	// Create verification record
 	verification := &models.BackupVerification{
 		ID:         uuid.New(),
 		BackupID:   backupID,
 		Status:     "VERIFIED",
 		VerifiedAt: time.Now(),
-		VerifiedBy: verifiedBy,
+		VerifiedBy: userID,
 	}
 
 	// Simulate checksum calculation
@@ -228,6 +302,11 @@ func (s *drService) CreateDRTest(ctx context.Context, test *models.DRTest) (*mod
 	test.CreatedAt = now
 	test.UpdatedAt = now
 	test.ProgressPercent = 0
+	
+	userID := s.getUserID(ctx)
+	test.CreatedBy = userID
+	test.UpdatedBy = userID
+
 	if test.ScheduledAt != nil && test.ScheduledAt.After(now) {
 		test.Status = "SCHEDULED"
 	} else {
@@ -308,20 +387,23 @@ func (s *drService) runDRTestSimulation(testID uuid.UUID) {
 			ID:        uuid.New(),
 			TestID:    testID,
 			Timestamp: completed,
-			Level:     "INFO",
-			Message:   fmt.Sprintf("Step %d completed", step.StepOrder),
+			Level:     "RUN",
+			Message:   fmt.Sprintf("Step %d passed: %s", step.StepOrder, step.StepName),
 		})
 	}
+}
 
-	completed := time.Now()
-	_ = s.repo.UpdateDRTestStatus(ctx, testID, "PASSED", 100, &completed)
-	_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
-		ID:        uuid.New(),
-		TestID:    testID,
-		Timestamp: completed,
-		Level:     "INFO",
-		Message:   "DR test completed successfully",
-	})
+func (s *drService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *drService) ListDRTests(ctx context.Context, limit, offset int) ([]*models.DRTest, int, error) {

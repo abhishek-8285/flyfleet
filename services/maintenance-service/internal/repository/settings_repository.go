@@ -26,7 +26,7 @@ func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 		SELECT organization_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			   low_stock_threshold, approval_threshold,
 			   auto_assign_enabled, notification_enabled,
-			   created_at, updated_at
+			   created_at, created_by, updated_at, updated_by
 		FROM maintenance_settings WHERE organization_id = $1
 	`
 	settings := &models.MaintenanceSettings{}
@@ -34,7 +34,7 @@ func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 		&settings.OrganizationID, &settings.SLAP1Hours, &settings.SLAP2Hours, &settings.SLAP3Hours,
 		&settings.LowStockThreshold, &settings.ApprovalThreshold,
 		&settings.AutoAssignEnabled, &settings.NotificationEnabled,
-		&settings.CreatedAt, &settings.UpdatedAt,
+		&settings.CreatedAt, &settings.CreatedBy, &settings.UpdatedAt, &settings.UpdatedBy,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -48,8 +48,9 @@ func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.Mainte
 		INSERT INTO maintenance_settings (
 			organization_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			low_stock_threshold, approval_threshold,
-			auto_assign_enabled, notification_enabled
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			auto_assign_enabled, notification_enabled,
+			created_by, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (organization_id) DO UPDATE SET
 			sla_p1_hours = EXCLUDED.sla_p1_hours,
 			sla_p2_hours = EXCLUDED.sla_p2_hours,
@@ -57,13 +58,15 @@ func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.Mainte
 			low_stock_threshold = EXCLUDED.low_stock_threshold,
 			approval_threshold = EXCLUDED.approval_threshold,
 			auto_assign_enabled = EXCLUDED.auto_assign_enabled,
-			notification_enabled = EXCLUDED.notification_enabled
+			notification_enabled = EXCLUDED.notification_enabled,
+			updated_by = EXCLUDED.updated_by
 		RETURNING created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
 		settings.OrganizationID, settings.SLAP1Hours, settings.SLAP2Hours, settings.SLAP3Hours,
 		settings.LowStockThreshold, settings.ApprovalThreshold,
 		settings.AutoAssignEnabled, settings.NotificationEnabled,
+		settings.CreatedBy, settings.UpdatedBy,
 	).Scan(&settings.CreatedAt, &settings.UpdatedAt)
 }
 

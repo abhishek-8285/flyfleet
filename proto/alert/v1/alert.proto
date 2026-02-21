@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package alert.v1;
+
+option go_package = "github.com/flyfleet/proto/alert/v1;alertv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AlertService {
+  rpc ListAlerts (ListAlertsRequest) returns (ListAlertsResponse);
+  rpc GetAlert (GetAlertRequest) returns (GetAlertResponse);
+  rpc UpdateAlertStatus (UpdateAlertStatusRequest) returns (UpdateAlertStatusResponse);
+  rpc GetAlertStats (GetAlertStatsRequest) returns (GetAlertStatsResponse);
+}
+
+message Alert {
+  string id = 1;
+  string org_id = 2;
+  string vehicle_id = 3;
+  string type = 4;
+  string severity = 5;
+  string message = 6;
+  string status = 7;
+  google.protobuf.Timestamp timestamp = 8;
+  map<string, string> metadata = 9;
+}
+
+message ListAlertsRequest {
+  string org_id = 1;
+  string vehicle_id = 2;
+  string type = 3;
+  string severity = 4;
+  string status = 5;
+  int32 limit = 6;
+  int32 offset = 7;
+}
+
+message ListAlertsResponse {
+  repeated Alert alerts = 1;
+  int32 total = 2;
+}
+
+message GetAlertRequest {
+  string id = 1;
+}
+
+message GetAlertResponse {
+  Alert alert = 1;
+}
+
+message UpdateAlertStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateAlertStatusResponse {
+  Alert alert = 1;
+}
+
+message GetAlertStatsRequest {
+  string org_id = 1;
+}
+
+message GetAlertStatsResponse {
+  int32 total_alerts = 1;
+  int32 critical_alerts = 2;
+  int32 open_alerts = 3;
+}

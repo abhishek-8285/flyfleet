@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+    name: fleet-postgres
+spec:
+    serviceName: postgres
+    replicas: 1
+    selector:
+        matchLabels:
+            app: fleet-postgres
+    template:
+        metadata:
+            labels:
+                app: fleet-postgres
+        spec:
+            containers:
+                - name: postgres
+                  image: timescale/timescaledb:latest-pg15
+                  command:
+                      - postgres
+                      - -c
+                      - shared_preload_libraries=pg_stat_statements,timescaledb
+                  ports:
+                      - containerPort: 5432
+                        name: postgres
+                  env:
+                      - name: POSTGRES_DB
+                        value: "{{ .Values.global.postgres.db }}"
+                      - name: POSTGRES_USER
+                        value: "{{ .Values.global.postgres.user }}"
+                      - name: POSTGRES_PASSWORD
+                        value: "{{ .Values.global.postgres.password }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: postgres
+spec:
+    ports:
+        - port: 5432
+          targetPort: 5432
+    selector:
+        app: fleet-postgres

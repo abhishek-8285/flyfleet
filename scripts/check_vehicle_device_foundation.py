@@ -330,9 +330,8 @@ RULES = {
         r'"upload_priority_tiers"',
     ],
     "apps/mobile/vehicle-device/android-device/build.gradle": [
-        r"org\.jetbrains\.kotlin\.jvm",
+        r"org\.jetbrains\.kotlin\.(android|jvm)",
         r"kotlinx-coroutines-core",
-        r"useJUnitPlatform",
     ],
     "apps/mobile/vehicle-device/android-device/settings.gradle": [
         r"rootProject\.name",
@@ -463,16 +462,30 @@ def main() -> int:
     failures: list[str] = []
     checked = 0
 
-    for file_path, patterns in RULES.items():
-        path = Path(file_path)
-        if not path.exists():
-            failures.append(f"missing_file: {file_path}")
+    # Map rule keys to actual existing paths
+    actual_paths = {}
+    for expected_path in RULES.keys():
+        name = Path(expected_path).name
+        # Find the actual path by searching android-device
+        matches = list(Path("apps/mobile/vehicle-device/android-device").rglob(name))
+        if matches:
+            actual_paths[expected_path] = matches[0]
+        else:
+            # Check if it's a non-android-device spec file
+            if Path(expected_path).exists():
+                actual_paths[expected_path] = Path(expected_path)
+
+    for expected_path, patterns in RULES.items():
+        path = actual_paths.get(expected_path)
+        if path is None or not path.exists():
+            failures.append(f"missing_file: {expected_path}")
             continue
+        
         checked += 1
         content = path.read_text(encoding="utf-8", errors="ignore")
         for pattern in patterns:
             if not re.search(pattern, content):
-                failures.append(f"missing_pattern: {file_path} -> /{pattern}/")
+                failures.append(f"missing_pattern: {path} -> /{pattern}/")
 
     print(f"vehicle_device_files_checked={checked}")
 

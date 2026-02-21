@@ -1,8 +1,8 @@
 module github.com/flyfleet/india-integration-service
 
-go 1.24.0
+replace github.com/fleet-platform/shared => ../../packages/common/go
 
-toolchain go1.24.13
+go 1.26
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5
@@ -21,3 +21,4 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 )
+replace github.com/flyfleet/proto => ../../proto

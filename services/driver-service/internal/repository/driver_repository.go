@@ -30,12 +30,11 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 			license_number, license_type, license_expiry, license_authority,
 			date_of_birth, address, emergency_contact, status, joining_date,
 			experience_years, rating, total_trips, total_distance_km,
-			total_hours_driven, behavior_score, metadata, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+			total_hours_driven, behavior_score, metadata, created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), $24, NOW(), $25)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
-	now := time.Now()
 	fullName := fmt.Sprintf("%s %s", driver.FirstName, driver.LastName)
 
 	// Convert structs to JSON for storage
@@ -48,7 +47,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 		driver.LicenseNumber, driver.LicenseType, driver.LicenseExpiry, driver.LicenseAuthority,
 		driver.DateOfBirth, addressJSON, emergencyContactJSON, driver.Status, driver.JoiningDate,
 		driver.ExperienceYears, driver.Rating, driver.TotalTrips, driver.TotalDistanceKm,
-		driver.TotalHoursDriven, driver.BehaviorScore, metadataJSON, now, now,
+		driver.TotalHoursDriven, driver.BehaviorScore, metadataJSON, driver.CreatedBy, driver.UpdatedBy,
 	).Scan(&driver.ID, &driver.CreatedAt, &driver.UpdatedAt)
 
 	return err
@@ -56,12 +55,12 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 
 // GetByEmail retrieves a driver by email address
 func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
-	query := `SELECT id, org_id, first_name, last_name, full_name, email, status, created_at
+	query := `SELECT id, org_id, first_name, last_name, full_name, email, status, created_at, created_by, updated_at, updated_by
 	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
-		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt,
+		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt, &driver.CreatedBy, &driver.UpdatedAt, &driver.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -71,12 +70,12 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 
 // GetByLicenseNumber retrieves a driver by license number
 func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
-	query := `SELECT id, org_id, first_name, last_name, full_name, email, license_number, status, created_at
+	query := `SELECT id, org_id, first_name, last_name, full_name, email, license_number, status, created_at, created_by, updated_at, updated_by
 	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	err := r.db.QueryRow(ctx, query, licenseNumber).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
-		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt,
+		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt, &driver.CreatedBy, &driver.UpdatedAt, &driver.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		       current_trip_id, joining_date, resignation_date, experience_years,
 		       rating, total_trips, total_distance_km, total_hours_driven,
 		       behavior_score, documents, attendance_records, schedules,
-		       metadata, created_at, updated_at, deleted_at
+		       metadata, created_at, created_by, updated_at, updated_by, deleted_at
 		FROM drivers WHERE id = $1 AND deleted_at IS NULL`
 
 	var driver models.Driver
@@ -107,8 +106,8 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		&driver.CurrentTripID, &driver.JoiningDate, &driver.ResignationDate,
 		&driver.ExperienceYears, &driver.Rating, &driver.TotalTrips, &driver.TotalDistanceKm,
 		&driver.TotalHoursDriven, &driver.BehaviorScore, &documentsJSON,
-		&attendanceJSON, &schedulesJSON, &metadataJSON, &driver.CreatedAt,
-		&driver.UpdatedAt, &driver.DeletedAt,
+		&attendanceJSON, &schedulesJSON, &metadataJSON, &driver.CreatedAt, &driver.CreatedBy,
+		&driver.UpdatedAt, &driver.UpdatedBy, &driver.DeletedAt,
 	)
 
 	if err != nil {
@@ -219,7 +218,7 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 			&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
 			&driver.Email, &driver.Phone, &driver.LicenseNumber, &driver.LicenseType,
 			&driver.Status, &driver.CurrentVehicleID, &driver.Rating, &driver.TotalTrips,
-			&driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
+			&driver.BehaviorScore, &driver.CreatedAt, &driver.CreatedBy, &driver.UpdatedAt, &driver.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -255,8 +254,12 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 	}
 
 	args = append(args, id)
-	query := fmt.Sprintf("UPDATE drivers SET %s, updated_at = $%d WHERE id = $%d AND deleted_at IS NULL",
-		strings.Join(setParts, ", "), argIndex, argIndex+1)
+	query := fmt.Sprintf("UPDATE drivers SET %s, updated_at = $%d, updated_by = $%d WHERE id = $%d AND deleted_at IS NULL",
+		strings.Join(setParts, ", "), argIndex, argIndex+1, argIndex+2)
+	
+	// We need to pass the updated_by user ID here.
+	// For now using empty string as placeholder to be fixed in service layer
+	args = append(args, time.Now(), "", id) 
 
 	result, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
@@ -286,13 +289,13 @@ func (r *DriverRepository) Delete(ctx context.Context, id string) error {
 }
 
 // AssignVehicle assigns a vehicle to a driver
-func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleID string) error {
+func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleID string, updatedBy string) error {
 	query := `
 		UPDATE drivers 
-		SET current_vehicle_id = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL`
+		SET current_vehicle_id = $1, updated_at = NOW(), updated_by = $2
+		WHERE id = $3 AND deleted_at IS NULL`
 	
-	result, err := r.db.Exec(ctx, query, vehicleID, driverID)
+	result, err := r.db.Exec(ctx, query, vehicleID, updatedBy, driverID)
 	if err != nil {
 		return err
 	}
@@ -305,13 +308,13 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 }
 
 // UnassignVehicle removes vehicle assignment from a driver
-func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string) error {
+func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string, updatedBy string) error {
 	query := `
 		UPDATE drivers 
-		SET current_vehicle_id = NULL, updated_at = NOW()
-		WHERE id = $1 AND deleted_at IS NULL`
+		SET current_vehicle_id = NULL, updated_at = NOW(), updated_by = $1
+		WHERE id = $2 AND deleted_at IS NULL`
 	
-	result, err := r.db.Exec(ctx, query, driverID)
+	result, err := r.db.Exec(ctx, query, updatedBy, driverID)
 	if err != nil {
 		return err
 	}
@@ -324,13 +327,13 @@ func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string)
 }
 
 // UpdateBehaviorScore updates driver's behavior score
-func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int) error {
+func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int, updatedBy string) error {
 	query := `
 		UPDATE drivers 
-		SET behavior_score = behavior_score + $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL`
+		SET behavior_score = behavior_score + $1, updated_at = NOW(), updated_by = $2
+		WHERE id = $3 AND deleted_at IS NULL`
 	
-	result, err := r.db.Exec(ctx, query, scoreChange, driverID)
+	result, err := r.db.Exec(ctx, query, scoreChange, updatedBy, driverID)
 	if err != nil {
 		return err
 	}
@@ -654,34 +657,15 @@ func (r *DriverRepository) CreateBehaviorScoreUpdate(ctx context.Context, update
 }
 
 // GetBehaviorSummary retrieves behavior summary for a driver
-func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error) {
-	query := `
-		SELECT 
-			MAX(score) as current_score,
-			MAX(safety_score) as current_safety_score,
-			MAX(efficiency_score) as current_efficiency_score,
-			MAX(compliance_score) as current_compliance_score,
-			SUM(harsh_accelerations) as total_harsh_accelerations,
-			SUM(harsh_brakings) as total_harsh_brakings,
-			SUM(speeding_incidents) as total_speeding_incidents,
-			AVG(fuel_consumption) as avg_fuel_consumption,
-			SUM(distance_driven) as total_distance_driven,
-			MAX(risk_level) as current_risk_level
-		FROM driver_behavior 
-		WHERE driver_id = $1 
-			AND period_end >= CURRENT_DATE - INTERVAL '30 days'`
+func (r *DriverRepository) GetStats(ctx context.Context, orgID string) (*models.DriverStats, error) {
+	stats := &models.DriverStats{}
+	
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM drivers WHERE org_id = $1 AND deleted_at IS NULL", orgID).Scan(&stats.TotalDrivers)
+	if err != nil { return nil, err }
 
-	var summary models.DriverBehavior
-	err := r.db.QueryRow(ctx, query, driverID).Scan(
-		&summary.Score, &summary.SafetyScore, &summary.EfficiencyScore, &summary.ComplianceScore,
-		&summary.HarshAccelerations, &summary.HarshBrakings, &summary.SpeedingIncidents,
-		&summary.FuelConsumption, &summary.DistanceDriven, &summary.RiskLevel,
-	)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM drivers WHERE org_id = $1 AND status = 'active' AND deleted_at IS NULL", orgID).Scan(&stats.ActiveDrivers)
+	if err != nil { return nil, err }
 
-	if err != nil {
-		return nil, err
-	}
-
-	summary.DriverID = driverID
-	return &summary, nil
+	stats.InactiveDrivers = stats.TotalDrivers - stats.ActiveDrivers
+	return stats, nil
 }

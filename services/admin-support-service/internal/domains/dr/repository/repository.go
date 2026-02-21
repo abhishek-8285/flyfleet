@@ -16,11 +16,11 @@ type DrRepository interface {
 	CreateBackup(ctx context.Context, backup *models.Backup) error
 	GetBackup(ctx context.Context, id uuid.UUID) (*models.Backup, error)
 	ListBackups(ctx context.Context, limit, offset int) ([]*models.Backup, int, error)
-	UpdateBackupStatus(ctx context.Context, id uuid.UUID, status models.BackupStatus, s3Key string, sizeBytes int64) error
+	UpdateBackupStatus(ctx context.Context, id uuid.UUID, status models.BackupStatus, s3Key string, sizeBytes int64, updatedBy uuid.UUID) error
 
 	CreateRestoreJob(ctx context.Context, job *models.RestoreJob) error
 	GetRestoreJob(ctx context.Context, id uuid.UUID) (*models.RestoreJob, error)
-	UpdateRestoreJobStatus(ctx context.Context, id uuid.UUID, status models.RestoreStatus, logs string) error
+	UpdateRestoreJobStatus(ctx context.Context, id uuid.UUID, status models.RestoreStatus, logs string, updatedBy uuid.UUID) error
 	ListRestoreJobs(ctx context.Context, limit, offset int) ([]*models.RestoreJob, int, error)
 
 	ListStoragePools(ctx context.Context) ([]*models.StoragePool, error)
@@ -57,8 +57,8 @@ func NewDrRepository(db *pgxpool.Pool, logger *zap.Logger) DrRepository {
 
 func (r *drRepository) CreateBackup(ctx context.Context, backup *models.Backup) error {
 	query := `
-		INSERT INTO backups (id, type, status, s3_key, size_bytes, created_by, created_at, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO backups (id, type, status, s3_key, size_bytes, created_by, updated_by, created_at, metadata)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id`
 
 	if backup.CreatedAt.IsZero() {
@@ -67,7 +67,7 @@ func (r *drRepository) CreateBackup(ctx context.Context, backup *models.Backup) 
 
 	err := r.db.QueryRow(ctx, query,
 		backup.ID, backup.Type, backup.Status, backup.S3Key, backup.SizeBytes,
-		backup.CreatedBy, backup.CreatedAt, backup.Metadata,
+		backup.CreatedBy, backup.UpdatedBy, backup.CreatedAt, backup.Metadata,
 	).Scan(&backup.ID)
 
 	if err != nil {
@@ -78,11 +78,11 @@ func (r *drRepository) CreateBackup(ctx context.Context, backup *models.Backup) 
 }
 
 func (r *drRepository) GetBackup(ctx context.Context, id uuid.UUID) (*models.Backup, error) {
-	query := `SELECT id, type, status, s3_key, size_bytes, created_by, created_at, completed_at, metadata FROM backups WHERE id = $1`
+	query := `SELECT id, type, status, s3_key, size_bytes, created_by, updated_by, created_at, completed_at, metadata FROM backups WHERE id = $1`
 	var backup models.Backup
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&backup.ID, &backup.Type, &backup.Status, &backup.S3Key, &backup.SizeBytes,
-		&backup.CreatedBy, &backup.CreatedAt, &backup.CompletedAt, &backup.Metadata,
+		&backup.CreatedBy, &backup.UpdatedBy, &backup.CreatedAt, &backup.CompletedAt, &backup.Metadata,
 	)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (r *drRepository) ListBackups(ctx context.Context, limit, offset int) ([]*m
 	}
 
 	query := `
-		SELECT id, type, status, s3_key, size_bytes, created_by, created_at, completed_at, metadata
+		SELECT id, type, status, s3_key, size_bytes, created_by, updated_by, created_at, completed_at, metadata
 		FROM backups
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
@@ -114,7 +114,7 @@ func (r *drRepository) ListBackups(ctx context.Context, limit, offset int) ([]*m
 		var b models.Backup
 		if err := rows.Scan(
 			&b.ID, &b.Type, &b.Status, &b.S3Key, &b.SizeBytes,
-			&b.CreatedBy, &b.CreatedAt, &b.CompletedAt, &b.Metadata,
+			&b.CreatedBy, &b.UpdatedBy, &b.CreatedAt, &b.CompletedAt, &b.Metadata,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -123,16 +123,16 @@ func (r *drRepository) ListBackups(ctx context.Context, limit, offset int) ([]*m
 	return backups, total, nil
 }
 
-func (r *drRepository) UpdateBackupStatus(ctx context.Context, id uuid.UUID, status models.BackupStatus, s3Key string, sizeBytes int64) error {
-	query := `UPDATE backups SET status = $1, s3_key = $2, size_bytes = $3, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END WHERE id = $4`
-	_, err := r.db.Exec(ctx, query, status, s3Key, sizeBytes, id)
+func (r *drRepository) UpdateBackupStatus(ctx context.Context, id uuid.UUID, status models.BackupStatus, s3Key string, sizeBytes int64, updatedBy uuid.UUID) error {
+	query := `UPDATE backups SET status = $1, s3_key = $2, size_bytes = $3, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END, updated_by = $4, updated_at = NOW() WHERE id = $5`
+	_, err := r.db.Exec(ctx, query, status, s3Key, sizeBytes, updatedBy, id)
 	return err
 }
 
 func (r *drRepository) CreateRestoreJob(ctx context.Context, job *models.RestoreJob) error {
 	query := `
-		INSERT INTO restore_jobs (id, backup_id, status, target_environment, started_at, performed_by, logs)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO restore_jobs (id, backup_id, status, target_environment, started_at, performed_by, updated_by, logs)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id`
 
 	if job.StartedAt.IsZero() {
@@ -141,7 +141,7 @@ func (r *drRepository) CreateRestoreJob(ctx context.Context, job *models.Restore
 
 	err := r.db.QueryRow(ctx, query,
 		job.ID, job.BackupID, job.Status, job.TargetEnvironment,
-		job.StartedAt, job.PerformedBy, job.Logs,
+		job.StartedAt, job.PerformedBy, job.UpdatedBy, job.Logs,
 	).Scan(&job.ID)
 
 	if err != nil {
@@ -151,11 +151,11 @@ func (r *drRepository) CreateRestoreJob(ctx context.Context, job *models.Restore
 }
 
 func (r *drRepository) GetRestoreJob(ctx context.Context, id uuid.UUID) (*models.RestoreJob, error) {
-	query := `SELECT id, backup_id, status, target_environment, started_at, completed_at, performed_by, logs FROM restore_jobs WHERE id = $1`
+	query := `SELECT id, backup_id, status, target_environment, started_at, completed_at, performed_by, updated_by, updated_at, logs FROM restore_jobs WHERE id = $1`
 	var job models.RestoreJob
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&job.ID, &job.BackupID, &job.Status, &job.TargetEnvironment,
-		&job.StartedAt, &job.CompletedAt, &job.PerformedBy, &job.Logs,
+		&job.StartedAt, &job.CompletedAt, &job.PerformedBy, &job.UpdatedBy, &job.UpdatedAt, &job.Logs,
 	)
 	if err != nil {
 		return nil, err
@@ -163,9 +163,9 @@ func (r *drRepository) GetRestoreJob(ctx context.Context, id uuid.UUID) (*models
 	return &job, nil
 }
 
-func (r *drRepository) UpdateRestoreJobStatus(ctx context.Context, id uuid.UUID, status models.RestoreStatus, logs string) error {
-	query := `UPDATE restore_jobs SET status = $1, logs = $2, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END WHERE id = $3`
-	_, err := r.db.Exec(ctx, query, status, logs, id)
+func (r *drRepository) UpdateRestoreJobStatus(ctx context.Context, id uuid.UUID, status models.RestoreStatus, logs string, updatedBy uuid.UUID) error {
+	query := `UPDATE restore_jobs SET status = $1, logs = $2, completed_at = CASE WHEN $1 IN ('COMPLETED', 'FAILED') THEN NOW() ELSE completed_at END, updated_by = $3, updated_at = NOW() WHERE id = $4`
+	_, err := r.db.Exec(ctx, query, status, logs, updatedBy, id)
 	return err
 }
 
@@ -177,7 +177,7 @@ func (r *drRepository) ListRestoreJobs(ctx context.Context, limit, offset int) (
 	}
 
 	query := `
-		SELECT id, backup_id, status, target_environment, started_at, completed_at, performed_by, logs
+		SELECT id, backup_id, status, target_environment, started_at, completed_at, performed_by, updated_by, updated_at, logs
 		FROM restore_jobs
 		ORDER BY started_at DESC
 		LIMIT $1 OFFSET $2`
@@ -193,7 +193,7 @@ func (r *drRepository) ListRestoreJobs(ctx context.Context, limit, offset int) (
 		var j models.RestoreJob
 		if err := rows.Scan(
 			&j.ID, &j.BackupID, &j.Status, &j.TargetEnvironment,
-			&j.StartedAt, &j.CompletedAt, &j.PerformedBy, &j.Logs,
+			&j.StartedAt, &j.CompletedAt, &j.PerformedBy, &j.UpdatedBy, &j.UpdatedAt, &j.Logs,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -204,7 +204,7 @@ func (r *drRepository) ListRestoreJobs(ctx context.Context, limit, offset int) (
 
 func (r *drRepository) ListStoragePools(ctx context.Context) ([]*models.StoragePool, error) {
 	query := `
-		SELECT id, name, status, total_bytes, used_bytes, available_bytes, location, backup_count, created_at, updated_at
+		SELECT id, name, status, total_bytes, used_bytes, available_bytes, location, backup_count, created_at, created_by, updated_at, updated_by
 		FROM storage_pools
 		ORDER BY name ASC`
 
@@ -219,7 +219,7 @@ func (r *drRepository) ListStoragePools(ctx context.Context) ([]*models.StorageP
 		var p models.StoragePool
 		if err := rows.Scan(
 			&p.ID, &p.Name, &p.Status, &p.TotalBytes, &p.UsedBytes,
-			&p.AvailableBytes, &p.Location, &p.BackupCount, &p.CreatedAt, &p.UpdatedAt,
+			&p.AvailableBytes, &p.Location, &p.BackupCount, &p.CreatedAt, &p.CreatedBy, &p.UpdatedAt, &p.UpdatedBy,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan storage pool: %w", err)
 		}
@@ -260,14 +260,14 @@ func (r *drRepository) CreateDRTest(ctx context.Context, test *models.DRTest) er
 	query := `
 		INSERT INTO dr_tests (
 			id, test_id, name, description, test_type, target_env, status, progress_percent,
-			initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+			initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, created_by, updated_at, updated_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8,
-			$9, $10, $11, $12, $13, $14, $15
+			$9, $10, $11, $12, $13, $14, $15, $16, $17
 		)`
 	_, err := r.db.Exec(ctx, query,
 		test.ID, test.TestID, test.Name, test.Description, test.TestType, test.TargetEnv, test.Status, test.ProgressPercent,
-		test.InitiatedBy, test.SuccessCriteria, test.ScheduledAt, test.StartedAt, test.CompletedAt, test.CreatedAt, test.UpdatedAt,
+		test.InitiatedBy, test.SuccessCriteria, test.ScheduledAt, test.StartedAt, test.CompletedAt, test.CreatedAt, test.CreatedBy, test.UpdatedAt, test.UpdatedBy,
 	)
 	return err
 }
@@ -281,7 +281,7 @@ func (r *drRepository) ListDRTests(ctx context.Context, limit, offset int) ([]*m
 
 	query := `
 		SELECT id, test_id, name, description, test_type, target_env, status, progress_percent,
-		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, created_by, updated_at, updated_by
 		FROM dr_tests
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
@@ -296,7 +296,7 @@ func (r *drRepository) ListDRTests(ctx context.Context, limit, offset int) ([]*m
 		var t models.DRTest
 		if err := rows.Scan(
 			&t.ID, &t.TestID, &t.Name, &t.Description, &t.TestType, &t.TargetEnv, &t.Status, &t.ProgressPercent,
-			&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt,
+			&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.CreatedBy, &t.UpdatedAt, &t.UpdatedBy,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -308,12 +308,12 @@ func (r *drRepository) ListDRTests(ctx context.Context, limit, offset int) ([]*m
 func (r *drRepository) GetDRTest(ctx context.Context, id uuid.UUID) (*models.DRTest, error) {
 	query := `
 		SELECT id, test_id, name, description, test_type, target_env, status, progress_percent,
-		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, updated_at
+		       initiated_by, success_criteria, scheduled_at, started_at, completed_at, created_at, created_by, updated_at, updated_by
 		FROM dr_tests WHERE id = $1`
 	var t models.DRTest
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&t.ID, &t.TestID, &t.Name, &t.Description, &t.TestType, &t.TargetEnv, &t.Status, &t.ProgressPercent,
-		&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.UpdatedAt,
+		&t.InitiatedBy, &t.SuccessCriteria, &t.ScheduledAt, &t.StartedAt, &t.CompletedAt, &t.CreatedAt, &t.CreatedBy, &t.UpdatedAt, &t.UpdatedBy,
 	)
 	if err != nil {
 		return nil, err

@@ -1,3 +1,6 @@
+# Deployment Strategy for FlyFleet Tracking Service
+# Rolling update with automated rollback via health checks
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,8 +8,16 @@ metadata:
   namespace: flyfleet
   labels:
     app: tracking-service
+    version: v2.0.0
+  annotations:
+    deployment.kubernetes.io/revision: "1"
 spec:
   replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: tracking-service
@@ -14,44 +25,86 @@ spec:
     metadata:
       labels:
         app: tracking-service
+        version: v2.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8082"
     spec:
+      terminationGracePeriodSeconds: 45
       containers:
-      - name: tracking-service
-        image: flyfleet/tracking-service:latest
-        ports:
-        - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: flyfleet-config
-        - secretRef:
-            name: flyfleet-secrets
-        env:
-        - name: NATS_URL
-          value: nats://nats-headless.flyfleet.svc.cluster.local:4222
-        - name: DB_HOST
-          value: timescaledb-service.flyfleet.svc.cluster.local
-        - name: DB_NAME
-          value: "telemetry"
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 10
-          periodSeconds: 15
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 20
-          periodSeconds: 40
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "1000m"
-          limits:
-            memory: "1Gi"
-            cpu: "2000m"
+        - name: tracking-service
+          image: flyfleet/tracking-service:latest
+          ports:
+            - name: http
+              containerPort: 8082
+            - name: grpc
+              containerPort: 50053
+          env:
+            - name: PORT
+              value: "8082"
+            - name: GRPC_PORT
+              value: "50053"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flyfleet-secrets
+                  key: tracking-database-url
+            - name: NATS_URL
+              value: "nats://nats:4222"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: flyfleet-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          # Startup probe — allows up to 30s for initialization
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 6
+            periodSeconds: 5
+          # Readiness — service can accept traffic
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+          # Liveness — restart if unhealthy
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
 ---
+# gRPC Service (headless for client-side load balancing)
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracking-service-grpc
+  namespace: flyfleet
+spec:
+  selector:
+    app: tracking-service
+  ports:
+    - name: grpc
+      protocol: TCP
+      port: 50053
+      targetPort: 50053
+  clusterIP: None
+---
+# HTTP Service (for BFF proxy and device REST)
 apiVersion: v1
 kind: Service
 metadata:
@@ -61,34 +114,16 @@ spec:
   selector:
     app: tracking-service
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 8080
+    - name: http
+      protocol: TCP
+      port: 8082
+      targetPort: 8082
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: tracking-service-hpa
-  namespace: flyfleet
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: tracking-service
-  minReplicas: 3
-  maxReplicas: 15
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 65
----
+# PodDisruptionBudget — ensure at least 2 replicas during disruptions
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: tracking-pdb
+  name: tracking-service-pdb
   namespace: flyfleet
 spec:
   minAvailable: 2

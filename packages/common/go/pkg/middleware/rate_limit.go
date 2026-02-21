@@ -102,3 +102,20 @@ func OrgRateLimit(limiter RateLimiter, limit int, window time.Duration) func(htt
 		return "ip:" + r.RemoteAddr
 	})
 }
+
+// UserRateLimit enforces a per-user rate limit
+func UserRateLimit(limiter RateLimiter, limit int, window time.Duration) func(http.Handler) http.Handler {
+	return FixedRateLimit(limiter, limit, window, func(r *http.Request) string {
+		if userID, ok := r.Context().Value("user_id").(string); ok && userID != "" {
+			return "user:" + userID
+		}
+		return "ip:" + r.RemoteAddr
+	})
+}
+
+// GlobalRateLimit enforces a global IP-based rate limit
+func GlobalRateLimit(limiter RateLimiter, limit int, window time.Duration) func(http.Handler) http.Handler {
+	return FixedRateLimit(limiter, limit, window, func(r *http.Request) string {
+		return "global:" + r.RemoteAddr
+	})
+}

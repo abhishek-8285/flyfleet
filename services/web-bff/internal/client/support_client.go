@@ -2,63 +2,55 @@ package client
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"time"
+
+	"github.com/fleet-platform/shared/pkg/grpcclient"
+	pb "github.com/flyfleet/proto/admin/v1"
+	"google.golang.org/grpc"
 )
 
 type SupportClient struct {
-	baseURL string
+	conn   *grpc.ClientConn
+	client pb.AdminSupportServiceClient
 }
 
-func NewSupportClient(baseURL string) *SupportClient {
-	return &SupportClient{baseURL: baseURL}
+func NewSupportClient(baseURL string) (*SupportClient, error) {
+	baseClient, err := grpcclient.NewClient(baseURL, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SupportClient{
+		conn:   baseClient.Conn,
+		client: pb.NewAdminSupportServiceClient(baseClient.Conn),
+	}, nil
+}
+
+func (c *SupportClient) Close() error {
+	return c.conn.Close()
 }
 
 func (c *SupportClient) GetDashboardStats(ctx context.Context, token string) (map[string]interface{}, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/api/v1/dashboard/stats", nil)
+	resp, err := c.client.GetDashboardStats(ctx, &pb.GetDashboardStatsRequest{})
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+	res := make(map[string]interface{})
+	for k, v := range resp.Stats {
+		res[k] = v
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	var res map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, err
-	}
-	return res, nil
+	return map[string]interface{}{"data": res}, nil
 }
 
 func (c *SupportClient) GetOrganizationStats(ctx context.Context, token string) (map[string]interface{}, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/api/v1/organizations/stats", nil)
+	resp, err := c.client.GetOrganizationStats(ctx, &pb.GetOrganizationStatsRequest{})
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	var res map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return nil, err
-	}
-	return res, nil
+	return map[string]interface{}{
+		"total_orgs":  resp.TotalOrgs,
+		"active_orgs": resp.ActiveOrgs,
+	}, nil
 }

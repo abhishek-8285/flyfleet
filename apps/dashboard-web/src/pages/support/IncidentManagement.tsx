@@ -19,10 +19,10 @@ const IncidentManagement: React.FC = () => {
         try {
             setError(null);
             const [metricsRes, trendsRes, feedRes, listRes] = await Promise.all([
-                fetch('/bff/support/incidents/metrics', { headers }),
-                fetch('/bff/support/incidents/trends', { headers }),
-                fetch('/bff/support/incidents/feed', { headers }),
-                fetch('/bff/support/incidents', { headers })
+                fetch('/api/v1/support/incidents/metrics', { headers }),
+                fetch('/api/v1/support/incidents/trends', { headers }),
+                fetch('/api/v1/support/incidents/feed', { headers }),
+                fetch('/api/v1/support/incidents', { headers })
             ]);
 
             if (metricsRes.ok) {

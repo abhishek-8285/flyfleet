@@ -1,17 +1,19 @@
 module github.com/flyfleet/trip-service
 
-go 1.24.0
+go 1.26
 
-toolchain go1.24.13
+toolchain go1.26.0
 
 require (
 	github.com/fleet-platform/shared v0.0.0
+	github.com/flyfleet/proto v0.0.0-00010101000000-000000000000
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/nats-io/nats.go v1.48.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.1
+	google.golang.org/grpc v1.79.1
 	gopkg.in/go-playground/validator.v9 v9.31.0
 )
 
@@ -33,9 +35,14 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/flyfleet/proto => ../../proto

@@ -19,13 +19,13 @@ const OrganizationHub: React.FC = () => {
 
         try {
             const [sumRes, statRes, healthRes, fleetRes, diagRes, alertRes, contactRes] = await Promise.all([
-                fetch(`/bff/support/orgs/${id}/summary`, { headers }),
-                fetch(`/bff/support/orgs/${id}/devices/stats`, { headers }),
-                fetch(`/bff/support/orgs/${id}/integration/health`, { headers }),
-                fetch(`/bff/support/orgs/${id}/fleet/locations`, { headers }),
-                fetch(`/bff/support/orgs/${id}/diagnostics/recent`, { headers }),
-                fetch(`/bff/support/orgs/${id}/alerts`, { headers }),
-                fetch(`/bff/support/orgs/${id}/contacts`, { headers })
+                fetch(`/api/v1/support/orgs/${id}/summary`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/devices/stats`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/integration/health`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/fleet/locations`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/diagnostics/recent`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/alerts`, { headers }),
+                fetch(`/api/v1/support/orgs/${id}/contacts`, { headers })
             ]);
 
             if (sumRes.ok) setSummary(await sumRes.json());
@@ -51,7 +51,7 @@ const OrganizationHub: React.FC = () => {
     const handleImpersonate = async () => {
         const token = localStorage.getItem('access_token');
         try {
-            const res = await fetch(`/bff/support/orgs/${id}/impersonate`, {
+            const res = await fetch(`/api/v1/support/orgs/${id}/impersonate`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });

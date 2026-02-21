@@ -68,7 +68,7 @@ const RemoteCommands: React.FC = () => {
 
   const fetchDevices = useCallback(async () => {
     try {
-      const res = await fetch('/api/devices?limit=100', {
+      const res = await fetch('/api/v1/devices?limit=100', {
         headers: getAuthHeaders(),
       });
       if (!res.ok) {
@@ -85,7 +85,7 @@ const RemoteCommands: React.FC = () => {
     if (!selectedDevice) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/devices/${selectedDevice}/commands?limit=50`, {
+      const res = await fetch(`/api/v1/devices/${selectedDevice}/commands?limit=50`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) {
@@ -127,7 +127,7 @@ const RemoteCommands: React.FC = () => {
     setSendingCommand(preset.command);
 
     try {
-      const res = await fetch(`/api/devices/${selectedDevice}/commands`, {
+      const res = await fetch(`/api/v1/devices/${selectedDevice}/commands`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -178,7 +178,7 @@ const RemoteCommands: React.FC = () => {
     setSuccess(null);
     setTransitioningCommand(commandId);
     try {
-      const res = await fetch(`/api/devices/${selectedDevice}/commands/${commandId}/status`, {
+      const res = await fetch(`/api/v1/devices/${selectedDevice}/commands/${commandId}/status`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({

@@ -52,7 +52,9 @@ type Trip struct {
 	CustomerEmail        string             `json:"customer_email" db:"customer_email"`
 	CancellationReason   string             `json:"cancellation_reason" db:"cancellation_reason"`
 	CreatedAt            time.Time          `json:"created_at" db:"created_at"`
+	CreatedBy            string             `json:"created_by" db:"created_by"`
 	UpdatedAt            time.Time          `json:"updated_at" db:"updated_at"`
+	UpdatedBy            string             `json:"updated_by" db:"updated_by"`
 }
 
 // Waypoint represents a location along a route
@@ -242,5 +244,7 @@ type OptimizedRoute struct {
 }
 
 type TripStats struct {
-	ActiveTrips int `json:"active_trips"`
+	ActiveTrips   int     `json:"active_trips"`
+	TotalTrips    int     `json:"total_trips"`
+	TotalDistance float64 `json:"total_distance"`
 }

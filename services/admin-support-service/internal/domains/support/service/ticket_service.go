@@ -36,6 +36,7 @@ func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTick
 	// Generate ticket ID
 	ticketID := fmt.Sprintf("INC-%d", s.generateTicketNumber())
 
+	userID := s.getUserID(ctx)
 	ticket := &models.SupportTicket{
 		ID:          uuid.New(),
 		TicketID:    ticketID,
@@ -46,6 +47,8 @@ func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTick
 		Priority:    req.Priority,
 		Category:    req.Category,
 		ReporterID:  reporterID,
+		CreatedBy:   userID,
+		UpdatedBy:   userID,
 		Tags:        req.Tags,
 		Metadata:    make(map[string]interface{}),
 	}
@@ -122,6 +125,8 @@ func (s *ticketService) AddComment(ctx context.Context, ticketID, userID uuid.UU
 		CommentType: "INTERNAL",
 		Content:     req.Content,
 		IsPrivate:   req.IsPrivate,
+		CreatedBy:   userID,
+		UpdatedBy:   userID,
 	}
 
 	err := s.repo.AddComment(ctx, comment)
@@ -131,6 +136,19 @@ func (s *ticketService) AddComment(ctx context.Context, ticketID, userID uuid.UU
 	}
 
 	return nil
+}
+
+func (s *ticketService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *ticketService) GetTicketComments(ctx context.Context, ticketID uuid.UUID) ([]*models.IncidentComment, error) {

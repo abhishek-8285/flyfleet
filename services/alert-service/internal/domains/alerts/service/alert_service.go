@@ -36,7 +36,7 @@ func NewAlertService(
 }
 
 // CreateRule creates a new alert rule
-func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *models.CreateRuleRequest, createdBy uuid.UUID) (*models.AlertRule, error) {
+func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *models.CreateRuleRequest) (*models.AlertRule, error) {
 	// Validate rule type
 	validTypes := map[string]bool{
 		models.AlertTypeOverspeed:          true,
@@ -77,6 +77,7 @@ func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *mod
 		return nil, fmt.Errorf("at least one action is required")
 	}
 
+	userID := s.getUserID(ctx)
 	rule := &models.AlertRule{
 		ID:          uuid.New().String(),
 		OrgID:       orgID,
@@ -89,7 +90,8 @@ func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *mod
 		Vehicles:    req.Vehicles,
 		DriverIDs:   req.DriverIDs,
 		Enabled:     true,
-		CreatedBy:   createdBy,
+		CreatedBy:   userID,
+		UpdatedBy:   userID,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -101,6 +103,19 @@ func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *mod
 
 	s.logger.Info("alert rule created", zap.String("rule_id", rule.ID))
 	return rule, nil
+}
+
+func (s *AlertService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 // GetRule retrieves an alert rule by ID
@@ -170,11 +185,11 @@ func (s *AlertService) UpdateRule(ctx context.Context, id string, req *models.Up
 		updates["enabled"] = *req.Enabled
 	}
 
-	if len(updates) > 0 {
-		updates["updated_at"] = time.Now()
-
-		if err := s.repo.UpdateRule(ctx, id, updates); err != nil {
-			s.logger.Error("failed to update alert rule", zap.String("rule_id", id), zap.Error(err))
+		if len(updates) > 0 {
+			updates["updated_at"] = time.Now()
+			updates["updated_by"] = s.getUserID(ctx)
+	
+			if err := s.repo.UpdateRule(ctx, id, updates); err != nil {			s.logger.Error("failed to update alert rule", zap.String("rule_id", id), zap.Error(err))
 			return nil, fmt.Errorf("failed to update alert rule: %w", err)
 		}
 	}
@@ -260,6 +275,12 @@ func (s *AlertService) CreateAlert(ctx context.Context, alert *models.Alert) err
 	}
 
 	// 3. Persist alert
+	userID := s.getUserID(ctx)
+	alert.CreatedBy = userID
+	alert.UpdatedBy = userID
+	alert.CreatedAt = time.Now()
+	alert.UpdatedAt = time.Now()
+
 	if err := s.repo.CreateAlert(ctx, alert); err != nil {
 		s.logger.Error("failed to create alert", zap.Error(err))
 		return fmt.Errorf("failed to create alert: %w", err)

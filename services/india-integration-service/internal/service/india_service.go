@@ -233,16 +233,15 @@ func (s *IndiaIntegrationServiceImpl) CreateFASTagTransaction(ctx context.Contex
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if transaction.ID == "" {
 		transaction.ID = uuid.New().String()
 	}
-	if transaction.CreatedAt.IsZero() {
-		transaction.CreatedAt = time.Now()
-	}
-	if transaction.UpdatedAt.IsZero() {
-		transaction.UpdatedAt = time.Now()
-	}
+	transaction.CreatedAt = time.Now()
+	transaction.CreatedBy = userID
+	transaction.UpdatedAt = time.Now()
+	transaction.UpdatedBy = userID
 
 	return s.repo.CreateFASTagTransaction(ctx, transaction)
 }
@@ -271,6 +270,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateFASTagTransaction(ctx context.Contex
 			return errors.New("amount must be a positive number")
 		}
 	}
+
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
 
 	return s.repo.UpdateFASTagTransaction(ctx, id, updates)
 }
@@ -302,17 +304,15 @@ func (s *IndiaIntegrationServiceImpl) CreateEWayBill(ctx context.Context, bill *
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if bill.ID == "" {
 		bill.ID = uuid.New().String()
 	}
-	if bill.CreatedAt.IsZero() {
-		bill.CreatedAt = time.Now()
-	}
-	if bill.UpdatedAt == nil || bill.UpdatedAt.IsZero() {
-		updatedAt := time.Now()
-		bill.UpdatedAt = &updatedAt
-	}
+	bill.CreatedAt = time.Now()
+	bill.CreatedBy = userID
+	bill.UpdatedAt = time.Now()
+	bill.UpdatedBy = userID
 
 	return s.repo.CreateEWayBill(ctx, bill)
 }
@@ -351,6 +351,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateEWayBill(ctx context.Context, id str
 		}
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx).String()
+
 	return s.repo.UpdateEWayBill(ctx, id, updates)
 }
 
@@ -381,6 +384,7 @@ func (s *IndiaIntegrationServiceImpl) CreateVehicleVerification(ctx context.Cont
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if verification.ID == "" {
 		verification.ID = uuid.New().String()
@@ -388,12 +392,10 @@ func (s *IndiaIntegrationServiceImpl) CreateVehicleVerification(ctx context.Cont
 	if verification.VerificationDate.IsZero() {
 		verification.VerificationDate = time.Now()
 	}
-	if verification.CreatedAt.IsZero() {
-		verification.CreatedAt = time.Now()
-	}
-	if verification.UpdatedAt.IsZero() {
-		verification.UpdatedAt = time.Now()
-	}
+	verification.CreatedAt = time.Now()
+	verification.CreatedBy = userID
+	verification.UpdatedAt = time.Now()
+	verification.UpdatedBy = userID
 
 	return s.repo.CreateVehicleVerification(ctx, verification)
 }
@@ -425,6 +427,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateVehicleVerification(ctx context.Cont
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateVehicleVerification(ctx, id, updates)
 }
 
@@ -455,6 +460,7 @@ func (s *IndiaIntegrationServiceImpl) CreateDriverVerification(ctx context.Conte
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if verification.ID == "" {
 		verification.ID = uuid.New().String()
@@ -462,12 +468,10 @@ func (s *IndiaIntegrationServiceImpl) CreateDriverVerification(ctx context.Conte
 	if verification.VerificationDate.IsZero() {
 		verification.VerificationDate = time.Now()
 	}
-	if verification.CreatedAt.IsZero() {
-		verification.CreatedAt = time.Now()
-	}
-	if verification.UpdatedAt.IsZero() {
-		verification.UpdatedAt = time.Now()
-	}
+	verification.CreatedAt = time.Now()
+	verification.CreatedBy = userID
+	verification.UpdatedAt = time.Now()
+	verification.UpdatedBy = userID
 
 	return s.repo.CreateDriverVerification(ctx, verification)
 }
@@ -499,6 +503,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateDriverVerification(ctx context.Conte
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateDriverVerification(ctx, id, updates)
 }
 
@@ -529,16 +536,15 @@ func (s *IndiaIntegrationServiceImpl) CreateLocalPermit(ctx context.Context, per
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if permit.ID == "" {
 		permit.ID = uuid.New().String()
 	}
-	if permit.CreatedAt.IsZero() {
-		permit.CreatedAt = time.Now()
-	}
-	if permit.UpdatedAt.IsZero() {
-		permit.UpdatedAt = time.Now()
-	}
+	permit.CreatedAt = time.Now()
+	permit.CreatedBy = userID
+	permit.UpdatedAt = time.Now()
+	permit.UpdatedBy = userID
 
 	return s.repo.CreateLocalPermit(ctx, permit)
 }
@@ -581,6 +587,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateLocalPermit(ctx context.Context, id 
 		}
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateLocalPermit(ctx, id, updates)
 }
 
@@ -611,6 +620,7 @@ func (s *IndiaIntegrationServiceImpl) CreateGSTCompliance(ctx context.Context, c
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if compliance.ID == "" {
 		compliance.ID = uuid.New().String()
@@ -618,12 +628,10 @@ func (s *IndiaIntegrationServiceImpl) CreateGSTCompliance(ctx context.Context, c
 	if compliance.LastUpdated.IsZero() {
 		compliance.LastUpdated = time.Now()
 	}
-	if compliance.CreatedAt.IsZero() {
-		compliance.CreatedAt = time.Now()
-	}
-	if compliance.UpdatedAt.IsZero() {
-		compliance.UpdatedAt = time.Now()
-	}
+	compliance.CreatedAt = time.Now()
+	compliance.CreatedBy = userID
+	compliance.UpdatedAt = time.Now()
+	compliance.UpdatedBy = userID
 
 	return s.repo.CreateGSTCompliance(ctx, compliance)
 }
@@ -655,6 +663,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateGSTCompliance(ctx context.Context, i
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateGSTCompliance(ctx, id, updates)
 }
 
@@ -685,16 +696,15 @@ func (s *IndiaIntegrationServiceImpl) CreateIntegrationConfig(ctx context.Contex
 		return fmt.Errorf("validation failed: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Set default values if not provided
 	if config.ID == "" {
 		config.ID = uuid.New().String()
 	}
-	if config.CreatedAt.IsZero() {
-		config.CreatedAt = time.Now()
-	}
-	if config.UpdatedAt.IsZero() {
-		config.UpdatedAt = time.Now()
-	}
+	config.CreatedAt = time.Now()
+	config.CreatedBy = userID
+	config.UpdatedAt = time.Now()
+	config.UpdatedBy = userID
 
 	return s.repo.CreateIntegrationConfig(ctx, config)
 }
@@ -729,6 +739,9 @@ func (s *IndiaIntegrationServiceImpl) UpdateIntegrationConfig(ctx context.Contex
 		return errors.New("updates are required")
 	}
 
+	updates["updated_at"] = time.Now()
+	updates["updated_by"] = s.getUserID(ctx)
+
 	return s.repo.UpdateIntegrationConfig(ctx, id, updates)
 }
 
@@ -754,6 +767,19 @@ func (s *IndiaIntegrationServiceImpl) ListIntegrationConfigs(ctx context.Context
 	}
 
 	return s.repo.ListIntegrationConfigs(ctx, orgID, serviceType, active, limit, offset)
+}
+
+func (s *IndiaIntegrationServiceImpl) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 // HealthCheck performs a health check on the service and its dependencies

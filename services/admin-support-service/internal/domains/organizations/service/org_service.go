@@ -42,9 +42,22 @@ func (s *organizationService) GetDashboardStats(ctx context.Context) (models.Das
 }
 
 func (s *organizationService) CreateOrganization(ctx context.Context, req models.CreateOrganizationRequest) (models.CreateOrganizationResponse, error) {
-	return s.repo.CreateOrganization(ctx, req)
+	return s.repo.CreateOrganization(ctx, req, s.getUserID(ctx))
 }
 
 func (s *organizationService) DeleteOrganization(ctx context.Context, id uuid.UUID) error {
-	return s.repo.DeleteOrganization(ctx, id)
+	return s.repo.DeleteOrganization(ctx, id, s.getUserID(ctx))
+}
+
+func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }

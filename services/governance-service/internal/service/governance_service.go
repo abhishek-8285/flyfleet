@@ -25,7 +25,7 @@ type GovernanceService interface {
 	RejectRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error
 	
 	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error)
-	UpdateSettings(ctx context.Context, orgID uuid.UUID, settings *models.GovernanceSettings) error
+	UpdateSettings(ctx context.Context, orgID, userID uuid.UUID, settings *models.GovernanceSettings) error
 }
 
 type governanceService struct {
@@ -48,6 +48,8 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 		Format:         req.Format,
 		DeliveryMethod: req.DeliveryMethod,
 		Status:         models.RequestStatusPending,
+		CreatedBy:      userID,
+		UpdatedBy:      userID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -150,7 +152,22 @@ func (s *governanceService) GetSettings(ctx context.Context, orgID uuid.UUID) (*
 	return settings, nil
 }
 
-func (s *governanceService) UpdateSettings(ctx context.Context, orgID uuid.UUID, settings *models.GovernanceSettings) error {
+func (s *governanceService) UpdateSettings(ctx context.Context, orgID, userID uuid.UUID, settings *models.GovernanceSettings) error {
 	settings.OrganizationID = orgID
+	settings.CreatedBy = userID // Fallback if record is new
+	settings.UpdatedBy = userID
 	return s.repo.UpsertSettings(ctx, settings)
+}
+
+func (s *governanceService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }

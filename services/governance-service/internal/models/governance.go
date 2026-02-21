@@ -38,7 +38,9 @@ type GovernanceRequest struct {
 	ExpiryDate     *time.Time              `json:"expiry_date,omitempty" db:"expiry_date"`
 	Comments       *string                 `json:"comments,omitempty" db:"comments"`
 	CreatedAt      time.Time               `json:"created_at" db:"created_at"`
+	CreatedBy      uuid.UUID               `json:"created_by" db:"created_by"`
 	UpdatedAt      time.Time               `json:"updated_at" db:"updated_at"`
+	UpdatedBy      uuid.UUID               `json:"updated_by" db:"updated_by"`
 }
 
 type GovernanceSettings struct {
@@ -48,7 +50,9 @@ type GovernanceSettings struct {
 	AutoExpiryEnabled bool            `json:"auto_expiry_enabled" db:"auto_expiry_enabled"`
 	DownloadTTLHours  int             `json:"download_ttl_hours" db:"download_ttl_hours"`
 	CreatedAt         time.Time       `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID       `json:"created_by" db:"created_by"`
 	UpdatedAt         time.Time       `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID       `json:"updated_by" db:"updated_by"`
 }
 
 type GovernanceAuditLog struct {

@@ -19,9 +19,9 @@ type ScheduledReport struct {
 	Filters        map[string]any `json:"filters" db:"filters"`
 	Status         string         `json:"status" db:"status"`
 	CreatedBy      uuid.UUID      `json:"created_by" db:"created_by"`
-	UpdatedBy      *uuid.UUID     `json:"updated_by" db:"updated_by"`
+	UpdatedBy      uuid.UUID      `json:"updated_by" db:"updated_by"`
 	CreatedAt      time.Time      `json:"created_at" db:"created_at"`
-	UpdatedAt      *time.Time     `json:"updated_at" db:"updated_at"`
+	UpdatedAt      time.Time      `json:"updated_at" db:"updated_at"`
 
 	Recipients []string `json:"recipients,omitempty"` // Joined from report_recipients
 }
@@ -37,6 +37,9 @@ type ReportExecution struct {
 	FileURL         *string    `json:"file_url" db:"file_url"`
 	FileSize        *int64     `json:"file_size" db:"file_size"`
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy       uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 type GlobalSettings struct {
@@ -47,5 +50,8 @@ type GlobalSettings struct {
 	SMTPHost         *string   `json:"smtp_host" db:"smtp_host"`
 	SMTPPort         *int      `json:"smtp_port" db:"smtp_port"`
 	SMTPUser         *string   `json:"smtp_user" db:"smtp_user"`
+	CreatedAt        time.Time `json:"created_at" db:"created_at"`
+	CreatedBy        uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy        uuid.UUID `json:"updated_by" db:"updated_by"`
 }

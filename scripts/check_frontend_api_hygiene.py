@@ -17,7 +17,7 @@ EXTENSIONS = {".ts", ".tsx", ".js", ".jsx"}
 ABSOLUTE_LOCAL_RE = re.compile(
     r"(?P<quote>['\"`])(?P<url>(?:https?://|wss?://)(?:localhost|127\.0\.0\.1)(?::\d+)?/[^'\"`\s]*)"
 )
-API_V1_RE = re.compile(r"['\"`](/api/v1/[^'\"`]*)")
+API_V1_RE = re.compile(r"['\"`](/api/v1(?:/[^'\"`]*)?)")
 API_RE = re.compile(r"['\"`](/api/[^'\"`]*)")
 BFF_RE = re.compile(r"['\"`](/bff/[^'\"`]*)")
 FIRMWARE_MANAGER_PATH = Path("apps/dashboard-web/src/pages/devices/FirmwareManager.tsx")

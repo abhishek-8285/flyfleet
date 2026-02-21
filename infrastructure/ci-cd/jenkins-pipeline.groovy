@@ -104,12 +104,21 @@ pipeline {
             }
             steps {
                 script {
-                    dir('infrastructure/k8s') {
-                        sh '''
-                            kubectl config use-context staging
-                            envsubst < deployment-staging.yaml | kubectl apply -f -
-                            kubectl rollout status deployment/flyfleet-api-gateway
-                        '''
+                    def services = ['api-gateway', 'auth-service', 'vehicle-service', 'driver-service', 
+                                  'trip-service', 'maintenance-service', 'tracking-service', 
+                                  'alert-service', 'geofencing-service']
+                    
+                    dir('infrastructure/helm/flyfleet-service') {
+                        sh 'kubectl config use-context staging'
+                        services.each { service ->
+                            sh """
+                                helm upgrade --install ${service} . \\
+                                  --namespace flyfleet-staging \\
+                                  --create-namespace \\
+                                  --set image.repository=\${DOCKER_REGISTRY}/${service} \\
+                                  --set image.tag=\${GIT_COMMIT_SHORT}
+                            """
+                        }
                     }
                 }
             }
@@ -134,12 +143,21 @@ pipeline {
                 }
                 
                 script {
-                    dir('infrastructure/k8s') {
-                        sh '''
-                            kubectl config use-context production
-                            envsubst < deployment-production.yaml | kubectl apply -f -
-                            kubectl rollout status deployment/flyfleet-api-gateway
-                        '''
+                    def services = ['api-gateway', 'auth-service', 'vehicle-service', 'driver-service', 
+                                  'trip-service', 'maintenance-service', 'tracking-service', 
+                                  'alert-service', 'geofencing-service']
+                    
+                    dir('infrastructure/helm/flyfleet-service') {
+                        sh 'kubectl config use-context production'
+                        services.each { service ->
+                            sh """
+                                helm upgrade --install ${service} . \\
+                                  --namespace flyfleet-prod \\
+                                  --create-namespace \\
+                                  --set image.repository=\${DOCKER_REGISTRY}/${service} \\
+                                  --set image.tag=\${GIT_COMMIT_SHORT}
+                            """
+                        }
                     }
                 }
             }

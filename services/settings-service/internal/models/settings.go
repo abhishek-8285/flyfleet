@@ -19,7 +19,9 @@ type PlatformSettings struct {
 	WhiteLabel      bool       `json:"white_label_enabled" db:"white_label_enabled"`
 	SMTPConfigID    *uuid.UUID `json:"smtp_config_id,omitempty" db:"smtp_config_id"`
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy       uuid.UUID  `json:"created_by" db:"created_by"`
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // FeatureFlag represents a feature toggle
@@ -30,8 +32,10 @@ type FeatureFlag struct {
 	Scope       string    `json:"scope" db:"scope"` // GLOBAL, ORG
 	Enabled     bool      `json:"enabled" db:"enabled"`
 	Tags        []string  `json:"tags" db:"tags"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	CreatedBy   uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy   uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // LocalizationSettings represents language configuration
@@ -40,6 +44,10 @@ type LocalizationSettings struct {
 	LanguageCode string    `json:"language_code" db:"language_code"`
 	IsActive     bool      `json:"is_active" db:"is_active"`
 	IsDefault    bool      `json:"is_default" db:"is_default"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	CreatedBy    uuid.UUID `json:"created_by" db:"created_by"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy    uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // Template represents communication templates (Email/SMS)
@@ -50,8 +58,10 @@ type Template struct {
 	Subject   string    `json:"subject" db:"subject"`
 	Body      string    `json:"body" db:"body"`
 	Variables []string  `json:"variables" db:"variables"`
-	UpdatedBy uuid.UUID `json:"updated_by" db:"updated_by"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	CreatedBy uuid.UUID `json:"created_by" db:"created_by"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // NotificationChannel represents external provider config
@@ -61,7 +71,10 @@ type NotificationChannel struct {
 	Provider    string         `json:"provider" db:"provider"`         // SendGrid, Twilio
 	Config      map[string]any `json:"config" db:"config"`             // Encrypted in DB
 	Enabled     bool           `json:"enabled" db:"enabled"`
+	CreatedAt   time.Time      `json:"created_at" db:"created_at"`
+	CreatedBy   uuid.UUID      `json:"created_by" db:"created_by"`
 	UpdatedAt   time.Time      `json:"updated_at" db:"updated_at"`
+	UpdatedBy   uuid.UUID      `json:"updated_by" db:"updated_by"`
 }
 
 // SystemLimit represents global rate limits and retention policies
@@ -71,6 +84,10 @@ type SystemLimit struct {
 	BurstLimit        int       `json:"burst_limit" db:"burst_limit"`
 	AuditRetention    string    `json:"audit_retention" db:"audit_retention"`       // e.g. "1y"
 	ActivityRetention string    `json:"activity_retention" db:"activity_retention"` // e.g. "180d"
+	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by" db:"created_by"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
 // AuditLog represents a change record

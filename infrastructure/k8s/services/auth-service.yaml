@@ -16,39 +16,39 @@ spec:
         app: auth-service
     spec:
       containers:
-      - name: auth-service
-        image: flyfleet/auth-service:latest # Example image tag
-        ports:
-        - containerPort: 8080
-        envFrom:
-        - configMapRef:
-            name: flyfleet-config
-        - secretRef:
-            name: flyfleet-secrets
-        env:
-        - name: DB_HOST
-          value: postgres-service.flyfleet.svc.cluster.local
-        - name: DB_PORT
-          value: "5432"
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
+        - name: auth-service
+          image: flyfleet/auth-service:latest # Example image tag
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: flyfleet-config
+            - secretRef:
+                name: flyfleet-secrets
+          env:
+            - name: DB_HOST
+              value: postgres-service.flyfleet.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -59,32 +59,12 @@ spec:
   selector:
     app: auth-service
   ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 8080
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: auth-service-hpa
-  namespace: flyfleet
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: auth-service
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
 ---
 apiVersion: policy/v1
-kind: PodDisruptionBudget
 metadata:
   name: auth-service-pdb
   namespace: flyfleet

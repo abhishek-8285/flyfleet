@@ -2,105 +2,105 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/cache"
 	"github.com/fleet-platform/shared/pkg/database"
 	"github.com/fleet-platform/shared/pkg/messaging"
 	sharedMiddleware "github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/fleet-platform/shared/pkg/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/flyfleet/tracking-service/internal/analytics"
 	"github.com/flyfleet/tracking-service/internal/config"
+	trackinggrpc "github.com/flyfleet/tracking-service/internal/grpc"
 	"github.com/flyfleet/tracking-service/internal/handlers"
 	"github.com/flyfleet/tracking-service/internal/processor"
 	"github.com/flyfleet/tracking-service/internal/repository"
-	"github.com/flyfleet/tracking-service/internal/service"
+	trackingservice "github.com/flyfleet/tracking-service/internal/service"
+	pb "github.com/flyfleet/tracking-service/proto/tracking/v1"
 )
 
 func main() {
-	// Initialize logger
-	logger, err := zap.NewProduction()
+	// 1. Initialize Base Service (Config, Logger, DB, Graceful Shutdown)
+	base, err := service.NewBase("tracking-service", service.Config{
+		DatabaseURL: "", // Gets from env
+		LogLevel:    "info",
+		GRPCPort:    "50052",
+		Port:        "8081",
+	})
 	if err != nil {
-		fmt.Printf("Failed to initialize logger: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("Fatal: failed to initialize base service: %v\n", err)
+		return
 	}
-	defer func() {
-		_ = logger.Sync()
-	}()
 
-	// Load configuration
+	// 2. Load custom config overlays (JWT, Nats, ML URL)
+	// We can bind them to base config or keep using custom config struct
 	cfg := config.Load()
 
-	// Database connection (using the standardized Postgres wrapper)
-	db, err := database.NewPostgres(cfg.DatabaseURL, logger)
-	if err != nil {
-		logger.Fatal("Failed to connect to database", zap.Error(err))
-	}
-	defer db.Close()
+	base.Logger.Info("Base service connected and database pool established")
+	zlogger := base.Logger.WithContext(context.Background())
 
-	logger.Info("Connected to database")
-
-	// NATS connection via common messaging bridge (JetStream enabled)
-	mb, err := messaging.NewNATSClient(cfg.NatsURL, logger)
+	// 3. NATS connection
+	mb, err := messaging.NewNATSClient(cfg.NatsURL, zlogger)
 	if err != nil {
-		logger.Fatal("Failed to connect to NATS", zap.Error(err))
+		base.Logger.Fatal("Failed to connect to NATS", zap.Error(err))
 	}
 	defer mb.Close()
 
-	// Initialize Analytics Service
-	analyticsService := analytics.NewTelemetryAnalytics(db, logger)
-
-	// Initialize Device Repository and Service
-	pg := db.(*database.Postgres)
-	deviceRepo := repository.NewDeviceRepository(pg.GetPool(), logger)
-	deviceService := service.NewDeviceService(deviceRepo, cfg.JWTSecret, nil, logger)
-	deviceHandler := handlers.NewDeviceHandler(deviceService, logger)
-
-	// Initialize Processor
-	telemetryProcessor := processor.NewTelemetryProcessor(db, analyticsService, logger)
-
-	// Subscribe to NATS subjects (Core NATS for now, migrate to JetStream consumer next)
-	if err := mb.Subscribe("telemetry.>", func(data []byte) {
-		// Shim to match HandleTelemetry signature
-		// Since mb.Subscribe abstract away the nats.Msg, we create a mock msg if needed
-		// or just call the processor logic directly if we refactor it.
-		// For now, let's just make sure it's used.
-		msg := &nats.Msg{
-			Subject: "telemetry.gps", // This is a bit brittle, better to refactor processor
-			Data:    data,
-		}
-		telemetryProcessor.HandleTelemetry(msg)
-	}); err != nil {
-		logger.Error("Failed to subscribe to telemetry", zap.Error(err))
+	// 4. Initialize Redis Cache
+	redisCache, err := cache.NewRedisCache(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, zlogger)
+	if err != nil {
+		base.Logger.Warn("Failed to connect to Redis, caching will be disabled", zap.Error(err))
+	} else {
+		defer redisCache.Close()
 	}
 
-	// Initialize handlers
-	telemetryHandler := handlers.NewTelemetryHandler(db, mb, logger)
-	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService, logger)
+	// 5. Initialize Domain Services & Repositories
+	analyticsService := analytics.NewTelemetryAnalytics(base.DB, zlogger)
 
-	// Setup Chi router
+	// tracking-service uses raw PGX pool directly for some high-performance bulk operations
+	pg := base.DB.(*database.Postgres)
+	deviceRepo := repository.NewDeviceRepository(pg.GetPool(), zlogger)
+	deviceService := trackingservice.NewDeviceService(deviceRepo, cfg.JWTSecret, nil, zlogger)
+	deviceHandler := handlers.NewDeviceHandler(deviceService, zlogger)
+
+	// Initialize Processor
+	telemetryProcessor := processor.NewTelemetryProcessor(base.DB, redisCache, analyticsService, zlogger)
+
+	// Subscribe to telemetry subjects
+	subjects := []string{"telemetry.gps", "telemetry.obd", "telemetry.fuel", "telemetry.heartbeat"}
+	for _, sub := range subjects {
+		subject := sub // capture variable
+		if err := mb.Subscribe(subject, func(data []byte) {
+			msg := &nats.Msg{
+				Subject: subject,
+				Data:    data,
+			}
+			telemetryProcessor.HandleTelemetry(msg)
+		}); err != nil {
+			base.Logger.Error("Failed to subscribe to subject", zap.String("subject", subject), zap.Error(err))
+		}
+	}
+
+	// 5. Initialize Handlers
+	telemetryHandler := handlers.NewTelemetryHandler(base.DB, mb, zlogger)
+	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService, zlogger)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
 
-	// Health check endpoint (public)
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "healthy",
-			"service":   "tracking-service",
-			"timestamp": time.Now().Unix(),
-		})
-	})
+	// Let base service handle health endpoints on standard port (exposes /health)
+	base.ServeHealth("8080") // Note: tracking HTTP acts on its own port, but health can be uniform
 
 	// Public device routes (registration doesn't require auth)
 	r.Post("/device/register", deviceHandler.Register)
@@ -120,31 +120,62 @@ func main() {
 		analyticsHandler.RegisterRoutes(r)
 	})
 
-	// Start server
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.Port),
-		Handler: r,
-	}
-
-	go func() {
-		logger.Info("Starting tracking service", zap.String("port", cfg.Port))
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", zap.Error(err))
+	// 6. Define API and gRPC Runners
+	httpRunner := func(ctx context.Context) error {
+		srv := &http.Server{
+			Addr:    fmt.Sprintf(":%s", cfg.Port),
+			Handler: r,
 		}
-	}()
 
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			srv.Shutdown(shutdownCtx)
+		}()
 
-	logger.Info("Shutting down tracking service...")
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown", zap.Error(err))
+		base.Logger.Info("Starting tracking HTTP server", zap.String("port", cfg.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return err
+		}
+		return nil
 	}
 
-	logger.Info("Tracking service exited")
+	grpcRunner := func(ctx context.Context) error {
+		trackingServer := trackinggrpc.NewTrackingServer(base.DB, mb, analyticsService, cfg.MLServiceURL, zlogger)
+		
+		grpcServerOptions := []google_grpc.ServerOption{}
+		creds, err := base.GetTLSCredentials()
+		if err != nil {
+			base.Logger.Fatal("Failed to load TLS credentials", zap.Error(err))
+		}
+		if creds != nil {
+			grpcServerOptions = append(grpcServerOptions, google_grpc.Creds(creds))
+			base.Logger.Info("gRPC Server configured with mTLS auth")
+		}
+		
+		grpcServer := google_grpc.NewServer(grpcServerOptions...)
+		pb.RegisterTrackingServiceServer(grpcServer, trackingServer)
+		reflection.Register(grpcServer)
+
+		grpcPort := cfg.GRPCPort
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+		if err != nil {
+			return fmt.Errorf("failed to listen for gRPC: %w", err)
+		}
+
+		go func() {
+			<-ctx.Done()
+			grpcServer.GracefulStop()
+			base.Logger.Info("gRPC server stopped gracefully")
+		}()
+
+		base.Logger.Info("Starting tracking gRPC server", zap.String("port", grpcPort))
+		return grpcServer.Serve(lis)
+	}
+
+	// 7. Execute context blocks
+	if err := base.RunWithContext(context.Background(), httpRunner, grpcRunner); err != nil {
+		base.Logger.Fatal("Service exited with error", zap.Error(err))
+	}
 }

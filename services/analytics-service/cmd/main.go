@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,10 +14,13 @@ import (
 	"github.com/flyfleet/analytics-service/internal/handlers"
 	"github.com/flyfleet/analytics-service/internal/repository"
 	"github.com/flyfleet/analytics-service/internal/service"
+	analyticsgrpc "github.com/flyfleet/analytics-service/internal/grpc"
+	pb "github.com/flyfleet/proto/analytics/v1"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 )
 
 func main() {
@@ -53,6 +57,24 @@ func main() {
 	repo := repository.NewAnalyticsRepository(db)
 	analyticsService := service.NewAnalyticsService(repo)
 	handler := handlers.NewAnalyticsHandler(analyticsService, logger)
+
+	// Start gRPC Server
+	grpcPort := getEnv("GRPC_PORT", "50059")
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		aServer := analyticsgrpc.NewAnalyticsServer(analyticsService, logger)
+		pb.RegisterAnalyticsServiceServer(grpcServer, aServer)
+		
+		logger.Info("Starting analytics gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
 
 	// Setup Chi router
 	r := chi.NewRouter()

@@ -1,13 +1,9 @@
-# auth-service
+# Auth Service
 
-## Purpose
-auth-service runtime component in FlyFleet platform.
+Provides authentication and authorization for the FlyFleet platform.
 
-## Run
-Use the root docker compose stack or run the service binary from cmd/main.go.
-
-## Health
-- Endpoint: /health.
-
-## Ownership
-See docs/SERVICE_OWNERSHIP.md for domain responsibility.
+## Features
+- gRPC API for login, registration and token validation
+- MFA support
+- Multi-tenant isolation
+- Audit trail

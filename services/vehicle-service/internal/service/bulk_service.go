@@ -60,6 +60,7 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		return nil, fmt.Errorf("failed to save uploaded file: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	job := &models.BulkJob{
 		ID:             jobID,
 		OrganizationID: orgID,
@@ -69,7 +70,8 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		SuccessCount:   0,
 		FailedCount:    0,
 		RetryCount:     0,
-		CreatedBy:      uuid.Nil, // Should get from context if available but for now nil
+		CreatedBy:      userID,
+		UpdatedBy:      userID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -91,7 +93,7 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 				// Update job status to failed
 				// Create a background context as the request context might be cancelled
 				bgCtx := context.Background()
-				s.repo.UpdateJobStatus(bgCtx, job.ID, "failed", 0, 0)
+				s.repo.UpdateJobStatus(bgCtx, job.ID, "failed", 0, 0, userID)
 			}
 		}()
 
@@ -123,8 +125,9 @@ func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.
 		return nil, fmt.Errorf("original file not found: %w", err)
 	}
 
+	userID := s.getUserID(ctx)
 	// Increment Retry Count in DB
-	if err := s.repo.IncrementRetryCount(ctx, jobID); err != nil {
+	if err := s.repo.IncrementRetryCount(ctx, jobID, userID); err != nil {
 		s.logger.Error("Failed to increment retry count", zap.Error(err))
 		// Non-fatal, continue with retry
 	}
@@ -137,7 +140,7 @@ func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.
 					zap.String("job_id", job.ID.String()), 
 					zap.Any("recover", r))
 				bgCtx := context.Background()
-				s.repo.UpdateJobStatus(bgCtx, job.ID, "failed", 0, 0)
+				s.repo.UpdateJobStatus(bgCtx, job.ID, "failed", 0, 0, userID)
 			}
 		}()
 		
@@ -146,6 +149,19 @@ func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.
 	}()
 
 	return job, nil
+}
+
+func (s *BulkService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *BulkService) ListJobs(ctx context.Context, orgID uuid.UUID, status string, page, limit int) ([]models.BulkJob, int, error) {

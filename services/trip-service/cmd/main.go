@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,10 +15,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
+	google_grpc "google.golang.org/grpc"
 
+	tripgrpc "github.com/flyfleet/trip-service/internal/grpc"
 	"github.com/flyfleet/trip-service/internal/handlers"
 	"github.com/flyfleet/trip-service/internal/repository"
 	"github.com/flyfleet/trip-service/internal/service"
+	pb "github.com/flyfleet/proto/trip/v1"
 )
 
 func main() {
@@ -60,6 +64,24 @@ func main() {
 	settingsRepo := repository.NewSettingsRepository(db)
 	settingsService := service.NewSettingsService(settingsRepo, logger)
 	settingsHandler := handlers.NewSettingsHandler(settingsService, logger)
+
+	// Start gRPC Server
+	grpcPort := getEnv("GRPC_PORT", "50053")
+	go func() {
+		lis, err := net.Listen("tcp", ":"+grpcPort)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+		
+		grpcServer := google_grpc.NewServer()
+		tripServer := tripgrpc.NewTripServer(tripService, logger)
+		pb.RegisterTripServiceServer(grpcServer, tripServer)
+		
+		logger.Info("Starting trip gRPC server", zap.String("port", grpcPort))
+		if err := grpcServer.Serve(lis); err != nil {
+			logger.Fatal("Failed to serve gRPC", zap.Error(err))
+		}
+	}()
 
 	// Setup Chi router
 	r := chi.NewRouter()

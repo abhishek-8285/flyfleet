@@ -40,7 +40,9 @@ type NotificationLog struct {
 	MaxRetries       int                 `json:"max_retries"`
 	Metadata         map[string]any      `json:"metadata"`
 	CreatedAt        time.Time           `json:"created_at"`
+	CreatedBy        uuid.UUID           `json:"created_by"`
 	UpdatedAt        time.Time           `json:"updated_at"`
+	UpdatedBy        uuid.UUID           `json:"updated_by"`
 	Items            []NotificationEvent `json:"items,omitempty"` // For detail view
 }
 
@@ -50,6 +52,7 @@ type NotificationEvent struct {
 	EventType      string    `json:"event_type"`
 	Message        string    `json:"message"`
 	CreatedAt      time.Time `json:"created_at"`
+	CreatedBy      uuid.UUID `json:"created_by"`
 }
 
 type NotificationSettings struct {
@@ -59,7 +62,10 @@ type NotificationSettings struct {
 	MaxRetries      int                 `json:"max_retries" binding:"min=0,max=10"`
 	Priority        string              `json:"priority" binding:"oneof=HIGH STANDARD LOW"`
 	RetentionMonths int                 `json:"retention_months" binding:"min=1,max=24"`
+	CreatedAt       time.Time           `json:"created_at"`
+	CreatedBy       uuid.UUID           `json:"created_by"`
 	UpdatedAt       time.Time           `json:"updated_at"`
+	UpdatedBy       uuid.UUID           `json:"updated_by"`
 }
 
 type NotificationTemplate struct {
@@ -69,7 +75,10 @@ type NotificationTemplate struct {
 	Language  string    `json:"language"`
 	Subject   string    `json:"subject"`
 	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy uuid.UUID `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedBy uuid.UUID `json:"updated_by"`
 }
 type UserNotificationPreference struct {
 	ID             uuid.UUID `json:"id"`

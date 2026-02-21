@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	bffMiddleware "github.com/flyfleet/web-bff/internal/middleware"
+	"github.com/flyfleet/web-bff/internal/routing"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -58,7 +59,7 @@ func TestMakePrefixProxy_ForwardsFirmwareRolloutEventFilterAndHeaders(t *testing
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/firmware/rollouts",
@@ -106,7 +107,7 @@ func TestMakePrefixProxy_LeavesExistingIdentityHeadersUntouched(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/firmware/rollouts",
@@ -155,7 +156,7 @@ func TestMakePrefixProxy_ForwardsRolloutNotePostBody(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/firmware/rollouts",
@@ -187,7 +188,7 @@ func TestMakePrefixProxy_ForwardsRolloutNotePostBody(t *testing.T) {
 }
 
 func TestMakePrefixProxy_ReturnsNotFoundForNonMatchingPrefix(t *testing.T) {
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://example.invalid",
 		"/api/firmware/rollouts",
@@ -219,7 +220,7 @@ func TestMakePrefixProxy_UsesRequestIDAsTraceFallback(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	baseHandler := makePrefixProxy(
+	baseHandler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/firmware/rollouts",
@@ -262,7 +263,7 @@ func TestMakePrefixProxy_ForwardsAdminSettingsExport(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://settings-service.test",
 		"/api/v1/admin/settings",
@@ -307,7 +308,7 @@ func TestMakePrefixProxy_ForwardsAdminSettingsImportBody(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://settings-service.test",
 		"/api/v1/admin/settings",
@@ -349,7 +350,7 @@ func TestMakePrefixProxy_ForwardsAdminSettingsAuditQuery(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://settings-service.test",
 		"/api/v1/admin/settings",
@@ -383,7 +384,7 @@ func TestMakePrefixProxy_ForwardsAdminFinanceReportsQuery(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/v1/admin/finance",
@@ -415,7 +416,7 @@ func TestMakePrefixProxy_ForwardsAdminRevenueForecast(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/v1/admin/revenue",
@@ -447,7 +448,7 @@ func TestMakePrefixProxy_ForwardsAdminReportsSchedulesQuery(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://reports-service.test",
 		"/api/v1/admin/reports",
@@ -479,7 +480,7 @@ func TestMakePrefixProxy_ForwardsAdminReportsExecutionsQuery(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://reports-service.test",
 		"/api/v1/admin/reports",
@@ -511,7 +512,7 @@ func TestMakePrefixProxy_ForwardsAdminDeviceTelemetry(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://fleet-core.test",
 		"/api/v1/admin/devices",
@@ -543,12 +544,12 @@ func TestMakePrefixProxy_ForwardsAdminDRTestsMetrics(t *testing.T) {
 	})
 	t.Cleanup(func() { http.DefaultClient.Transport = originalTransport })
 
-	handler := makePrefixProxy(
+	handler := routing.MakeProxyHandler(
 		zap.NewNop(),
 		"http://admin-support.test",
 		"/api/v1/admin/dr",
 		"/api/v1/dr",
-		rewriteDRPaths,
+		routing.GetRewriteFunc("dr"),
 	)
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/dr/tests/metrics?window=30d", nil)
 	rec := httptest.NewRecorder()

@@ -64,6 +64,8 @@ type Backup struct {
 	SizeBytes   int64        `json:"size_bytes" db:"size_bytes"`
 	CreatedBy   uuid.UUID    `json:"created_by" db:"created_by"`
 	CreatedAt   time.Time    `json:"created_at" db:"created_at"`
+	UpdatedBy   uuid.UUID    `json:"updated_by" db:"updated_by"`
+	UpdatedAt   time.Time    `json:"updated_at" db:"updated_at"`
 	CompletedAt *time.Time   `json:"completed_at,omitempty" db:"completed_at"`
 	Metadata    JSONB        `json:"metadata,omitempty" db:"metadata"`
 }
@@ -77,6 +79,8 @@ type RestoreJob struct {
 	StartedAt         time.Time     `json:"started_at" db:"started_at"`
 	CompletedAt       *time.Time    `json:"completed_at,omitempty" db:"completed_at"`
 	PerformedBy       uuid.UUID     `json:"performed_by" db:"performed_by"`
+	UpdatedBy         uuid.UUID     `json:"updated_by" db:"updated_by"`
+	UpdatedAt         time.Time     `json:"updated_at" db:"updated_at"`
 	Logs              string        `json:"logs,omitempty" db:"logs"`
 }
 
@@ -101,7 +105,9 @@ type StoragePool struct {
 	Location       string            `json:"location" db:"location"`
 	BackupCount    int               `json:"backup_count" db:"backup_count"`
 	CreatedAt      time.Time         `json:"created_at" db:"created_at"`
+	CreatedBy      uuid.UUID         `json:"created_by" db:"created_by"`
 	UpdatedAt      time.Time         `json:"updated_at" db:"updated_at"`
+	UpdatedBy      uuid.UUID         `json:"updated_by" db:"updated_by"`
 }
 
 // BackupVerification represents the result of a backup verification
@@ -131,7 +137,9 @@ type DRTest struct {
 	StartedAt       *time.Time `json:"started_at,omitempty" db:"started_at"`
 	CompletedAt     *time.Time `json:"completed_at,omitempty" db:"completed_at"`
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy       uuid.UUID  `json:"created_by" db:"created_by"`
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy       uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 type DRTestStep struct {

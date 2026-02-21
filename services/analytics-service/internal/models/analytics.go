@@ -26,7 +26,9 @@ type PredictiveModel struct {
 	TrainedAt         time.Time `json:"trained_at"`
 	ExpiresAt         time.Time `json:"expires_at"`          // when model should be retrained
 	CreatedAt         time.Time `json:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by"`
 }
 
 // PredictionResult stores the result of a model prediction
@@ -45,7 +47,9 @@ type PredictionResult struct {
 	RequestID           string                 `json:"request_id"`     // ID of the prediction request
 	PredictedAt         time.Time              `json:"predicted_at"`
 	CreatedAt           time.Time              `json:"created_at"`
+	CreatedBy           uuid.UUID              `json:"created_by"`
 	UpdatedAt           time.Time              `json:"updated_at"`
+	UpdatedBy           uuid.UUID              `json:"updated_by"`
 }
 
 // AnalyticsJob represents an analytics job (batch or real-time)
@@ -67,6 +71,7 @@ type AnalyticsJob struct {
 	CreatedBy        uuid.UUID `json:"created_by"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	UpdatedBy        uuid.UUID `json:"updated_by"`
 }
 
 // FleetAnalytics represents aggregated analytics for fleet operations
@@ -101,7 +106,9 @@ type FleetAnalytics struct {
 	ProcessingTime        float64   `json:"processing_time"`         // in seconds
 	GeneratedAt           time.Time `json:"generated_at"`
 	CreatedAt             time.Time `json:"created_at"`
+	CreatedBy             uuid.UUID `json:"created_by"`
 	UpdatedAt             time.Time `json:"updated_at"`
+	UpdatedBy             uuid.UUID `json:"updated_by"`
 }
 
 // DriverBehaviorAnalytics represents driver behavior analysis
@@ -128,7 +135,9 @@ type DriverBehaviorAnalytics struct {
 	BehaviorTrend             string  `json:"behavior_trend"`          // improving, declining, stable
 	GeneratedAt               time.Time `json:"generated_at"`
 	CreatedAt                 time.Time `json:"created_at"`
+	CreatedBy                 uuid.UUID `json:"created_by"`
 	UpdatedAt                 time.Time `json:"updated_at"`
+	UpdatedBy                 uuid.UUID `json:"updated_by"`
 }
 
 // PredictiveMaintenanceAnalytics represents predictive maintenance insights
@@ -149,7 +158,9 @@ type PredictiveMaintenanceAnalytics struct {
 	Recommendations       []string  `json:"recommendations"`     // maintenance recommendations
 	GeneratedAt           time.Time `json:"generated_at"`
 	CreatedAt             time.Time `json:"created_at"`
+	CreatedBy             uuid.UUID `json:"created_by"`
 	UpdatedAt             time.Time `json:"updated_at"`
+	UpdatedBy             uuid.UUID `json:"updated_by"`
 }
 
 // FailurePrediction represents a predicted component failure

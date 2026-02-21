@@ -30,8 +30,8 @@ func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
 			id, organization_id, vehicle_id, driver_id, status, title, description,
 			planned_route, waypoints, estimated_distance_km, estimated_duration_min,
 			cargo_details, scheduled_start, customer_name, customer_phone, customer_email,
-			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+			created_at, created_by, updated_at, updated_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -46,7 +46,7 @@ func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
 		id, trip.OrgID, trip.VehicleID, trip.DriverID, trip.Status, trip.Title, trip.Description,
 		plannedRouteJSON, waypointsJSON, trip.EstimatedDistanceKm, trip.EstimatedDurationMin,
 		cargoDetailsJSON, trip.ScheduledStart, trip.CustomerName, trip.CustomerPhone, trip.CustomerEmail,
-		now, now,
+		now, trip.CreatedBy, now, trip.UpdatedBy,
 	).Scan(&trip.ID, &trip.CreatedAt, &trip.UpdatedAt)
 
 	return err
@@ -60,7 +60,7 @@ func (r *TripRepository) GetByID(ctx context.Context, id string) (*models.Trip, 
 		       estimated_duration_min, actual_duration_min, cargo_details, scheduled_start,
 		       started_at, ended_at, start_location, end_location, fuel_consumed_liters,
 		       idling_time_minutes, events, pod_documents, customer_name, customer_phone,
-		       customer_email, cancellation_reason, created_at, updated_at
+		       customer_email, cancellation_reason, created_at, created_by, updated_at, updated_by
 		FROM trips WHERE id = $1`
 
 	var trip models.Trip
@@ -74,7 +74,7 @@ func (r *TripRepository) GetByID(ctx context.Context, id string) (*models.Trip, 
 		&trip.EstimatedDurationMin, &trip.ActualDurationMin, &cargoDetailsJSON, &trip.ScheduledStart,
 		&trip.StartedAt, &trip.EndedAt, &startLocJSON, &endLocJSON, &trip.FuelConsumedLiters,
 		&trip.IdlingTimeMinutes, &eventsJSON, &podDocsJSON, &trip.CustomerName, &trip.CustomerPhone,
-		&trip.CustomerEmail, &cancellationReason, &trip.CreatedAt, &trip.UpdatedAt,
+		&trip.CustomerEmail, &cancellationReason, &trip.CreatedAt, &trip.CreatedBy, &trip.UpdatedAt, &trip.UpdatedBy,
 	)
 
 	if err != nil {
@@ -103,7 +103,7 @@ func (r *TripRepository) List(ctx context.Context, filter models.TripListFilter)
 		SELECT id, organization_id, vehicle_id, driver_id, status, title, description,
 		       estimated_distance_km, actual_distance_km, estimated_duration_min,
 		       actual_duration_min, scheduled_start, started_at, ended_at,
-		       customer_name, created_at, updated_at
+		       customer_name, created_at, created_by, updated_at, updated_by
 		FROM trips`
 
 	countQuery := `SELECT COUNT(*) FROM trips`
@@ -203,7 +203,7 @@ func (r *TripRepository) List(ctx context.Context, filter models.TripListFilter)
 			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
 			&trip.Title, &trip.Description, &trip.EstimatedDistanceKm, &trip.ActualDistanceKm,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
-			&trip.StartedAt, &trip.EndedAt, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
+			&trip.StartedAt, &trip.EndedAt, &trip.CustomerName, &trip.CreatedAt, &trip.CreatedBy, &trip.UpdatedAt, &trip.UpdatedBy,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -304,10 +304,10 @@ func (r *TripRepository) AddPODDocument(ctx context.Context, tripID string, pod 
 // GetActiveTripsForVehicle retrieves active trips for a vehicle
 func (r *TripRepository) GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, driver_id, status, title, description,
+		SELECT id, organization_id, vehicle_id, driver_id, status, title, description,
 		       estimated_distance_km, actual_distance_km, estimated_duration_min,
 		       actual_duration_min, scheduled_start, started_at, ended_at,
-		       customer_name, created_at, updated_at
+		       customer_name, created_at, created_by, updated_at, updated_by
 		FROM trips 
 		WHERE vehicle_id = $1 AND status IN ('planned', 'in_progress', 'paused')
 		ORDER BY scheduled_start ASC`
@@ -325,7 +325,7 @@ func (r *TripRepository) GetActiveTripsForVehicle(ctx context.Context, vehicleID
 			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
 			&trip.Title, &trip.Description, &trip.EstimatedDistanceKm, &trip.ActualDistanceKm,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
-			&trip.StartedAt, &trip.EndedAt, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
+			&trip.StartedAt, &trip.EndedAt, &trip.CustomerName, &trip.CreatedAt, &trip.CreatedBy, &trip.UpdatedAt, &trip.UpdatedBy,
 		)
 		if err != nil {
 			return nil, err

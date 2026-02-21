@@ -33,6 +33,7 @@ func (s *NotificationService) GetLogDetail(ctx context.Context, id uuid.UUID) (*
 }
 
 func (s *NotificationService) SendNotification(ctx context.Context, req dto.SendNotificationRequest) (uuid.UUID, error) {
+	userID := s.getUserID(ctx)
 	newLog := models.NotificationLog{
 		ID:         uuid.Nil, // Set by repo
 		UserEmail:  req.Recipient,
@@ -43,6 +44,9 @@ func (s *NotificationService) SendNotification(ctx context.Context, req dto.Send
 		RetryCount: 0,
 		Metadata:   req.Metadata,
 		CreatedAt:  time.Now(),
+		CreatedBy:  userID,
+		UpdatedAt:  time.Now(),
+		UpdatedBy:  userID,
 	}
 
 	if req.Priority == "HIGH" {
@@ -63,6 +67,7 @@ func (s *NotificationService) SendNotification(ctx context.Context, req dto.Send
 		NotificationID: newLog.ID,
 		EventType:      "QUEUED",
 		Message:        fmt.Sprintf("Notification queued via API. Subject: %s", req.Subject),
+		CreatedBy:      userID,
 	})
 	if err != nil {
 		s.logger.Error("Failed to add queue event", zap.Error(err))
@@ -72,6 +77,19 @@ func (s *NotificationService) SendNotification(ctx context.Context, req dto.Send
 	s.logger.Info("Notification queued", zap.String("id", newLog.ID.String()), zap.String("recipient", req.Recipient))
 
 	return newLog.ID, nil
+}
+
+func (s *NotificationService) getUserID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("user_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	uidStr, ok := val.(string)
+	if !ok {
+		return uuid.Nil
+	}
+	uid, _ := uuid.Parse(uidStr)
+	return uid
 }
 
 func (s *NotificationService) ResendNotification(ctx context.Context, id uuid.UUID, reason string, highPriority bool) (uuid.UUID, error) {

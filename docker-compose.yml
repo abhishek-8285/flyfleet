@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 networks:
   fleet-network:
@@ -9,12 +9,16 @@ volumes:
   redis-data:
   nats-data:
 
-
 services:
   # Database Services
   postgres:
     image: timescale/timescaledb:latest-pg15
-    command: [ "postgres", "-c", "shared_preload_libraries=pg_stat_statements,timescaledb" ]
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_preload_libraries=pg_stat_statements,timescaledb",
+      ]
     container_name: fleet-postgres
     environment:
       POSTGRES_DB: fleet_db
@@ -27,7 +31,7 @@ services:
     networks:
       - fleet-network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U fleet_user -d fleet_db" ]
+      test: ["CMD-SHELL", "pg_isready -U fleet_user -d fleet_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -47,7 +51,7 @@ services:
     networks:
       - fleet-network
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,9 +71,17 @@ services:
       - nats-data:/data
     networks:
       - fleet-network
-    command: [ "--jetstream", "--store_dir", "/data", "-m", "8222" ]
+    command: ["--jetstream", "--store_dir", "/data", "-m", "8222"]
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/varz" ]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8222/varz",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -108,7 +120,7 @@ services:
       context: .
       dockerfile: infrastructure/docker/GoService.Dockerfile
       args:
-        SERVICE_NAME: fleet-core-service
+        SERVICE_NAME: fleet-core-service-legacy
     container_name: fleet-core-service
     volumes:
       - ./config.toml:/app/config.toml
@@ -139,7 +151,7 @@ services:
     ports:
       - "8085:8085"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - NATS_URL=nats://nats:4222
       - PORT=8085
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -160,16 +172,27 @@ services:
     container_name: fleet-admin-support-service
     volumes:
       - ./config.toml:/app/config.toml
+      - ./backups:/backups
+      - ./scripts/db:/app/scripts/db
     ports:
       - "8086:8086"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - PORT=8086
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
+      - NATS_URL=nats://nats:4222
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-fleet_user}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-fleet_password}
+      - DB_NAME=${POSTGRES_DB:-fleet_db}
+      - BACKUP_DIR=/backups
     networks:
       - fleet-network
     depends_on:
       postgres:
+        condition: service_healthy
+      nats:
         condition: service_healthy
 
   billing-service:
@@ -184,7 +207,7 @@ services:
     ports:
       - "8087:8087"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${POSTGRES_USER:-fleet_user}
@@ -212,7 +235,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - NATS_URL=nats://nats:4222
       - PORT=8082
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -233,17 +256,23 @@ services:
     container_name: fleet-web-bff
     volumes:
       - ./config.toml:/app/config.toml
+      - ./services/web-bff/routes.yaml:/routes.yaml
     ports:
       - "8081:8081"
     environment:
       - PORT=8081
-      - AUTH_SERVICE_URL=http://auth-service:8080
+      - AUTH_SERVICE_URL=auth-service:50051
       - FLEET_CORE_SERVICE_URL=http://fleet-core-service:8084
       - ALERT_SERVICE_URL=http://alert-service:8085
-      - ADMIN_SUPPORT_SERVICE_URL=http://admin-support-service:8086
+      - ADMIN_SUPPORT_SERVICE_URL=http://fleet-admin-support-service:8080
       - BILLING_SERVICE_URL=http://billing-service:8087
       - TRACKING_SERVICE_URL=http://tracking-service:8082
+      - VEHICLE_SERVICE_URL=http://vehicle-service:8093
+      - TRIP_SERVICE_URL=http://trip-service:8095
+      - MAINTENANCE_SERVICE_URL=http://maintenance-service:8092
+      - GOVERNANCE_SERVICE_URL=http://governance-service:8088
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
+      - ML_SERVICE_URL=http://fleet-ml-service:8090
     networks:
       - fleet-network
     depends_on:
@@ -267,7 +296,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - NOTIFICATION_SERVICE_URL=http://alert-service:8085
       - PORT=8083
@@ -292,7 +321,7 @@ services:
     ports:
       - "8088:8088"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - PORT=8088
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
     networks:
@@ -313,7 +342,7 @@ services:
     ports:
       - "8089:8089"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8089
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -337,7 +366,7 @@ services:
     ports:
       - "8090:8090"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8090
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -361,7 +390,7 @@ services:
     ports:
       - "8091:8091"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8091
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -385,7 +414,7 @@ services:
     ports:
       - "8092:8092"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8092
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -409,7 +438,7 @@ services:
     ports:
       - "8093:8093"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8093
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -433,7 +462,7 @@ services:
     ports:
       - "8094:8094"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - PORT=8094
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
@@ -457,7 +486,7 @@ services:
     ports:
       - "8095:8095"
     environment:
-      - DATABASE_URL=postgres://fleet_user:fleet_password@postgres:5432/fleet_db?sslmode=disable
+      - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - REDIS_ADDR=redis:6379
       - NATS_URL=nats://nats:4222
       - PORT=8095
@@ -480,7 +509,7 @@ services:
     environment:
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER:-fleet_user}
-      - POSTGRES_PASSWORD=fleet_password
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fleet_password}
       - POSTGRES_DB=${POSTGRES_DB:-fleet_db}
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
     networks:
@@ -499,8 +528,8 @@ services:
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_DB=fleet_db
-      - POSTGRES_USER=fleet_user
-      - POSTGRES_PASSWORD=fleet_password
+      - POSTGRES_USER=${POSTGRES_USER:-fleet_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fleet_password}
       - SCHEDULE=@daily
       - BACKUP_KEEP_DAYS=7
     networks:
