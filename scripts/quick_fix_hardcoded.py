@@ -7,7 +7,7 @@ import re
 
 # Critical files to fix (highest priority)
 critical_files = [
-    ("/home/abhishek/Desktop/flyfleet/services/auth-service/internal/config/config.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/auth-service/internal/config/config.go", [
         ('"postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"', '"$DATABASE_URL"'),
         ('"your-super-secret-jwt-key-change-in-production"', '"$JWT_SECRET"'),
         ('"http://localhost:8083/api/v1"', '"$DRIVER_SERVICE_URL"'),

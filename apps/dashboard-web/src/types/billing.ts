@@ -1,4 +1,4 @@
-export type InvoiceStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'PARTIAL';
+export type InvoiceStatus = "PAID" | "PENDING" | "OVERDUE" | "PARTIAL";
 
 export interface InvoiceItem {
   id: string;
@@ -40,8 +40,12 @@ export interface BillingSettings {
 
 export interface BillingMetrics {
   total_invoiced_mtd: number;
+  total_invoiced_trend?: string;
+  total_invoiced_trend_up?: boolean;
   pending_payment: number;
   overdue_amount: number;
   paid_count: number;
   open_count: number;
+  subtitle_overdue?: string;
+  subtitle_paid?: string;
 }

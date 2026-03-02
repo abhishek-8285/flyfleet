@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.*
 import com.fleet.driver.data.remote.model.Vehicle
 import com.fleet.driver.presentation.vehicle.viewmodel.VehicleViewModel
 
@@ -86,180 +88,181 @@ fun VehicleListScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.searchVehicles(it) },
-                label = { Text("Search vehicles...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearSearch() }) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear"
-                            )
-                        }
-                    }
-                },
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                singleLine = true
-            )
-            
-            // My Vehicles Section
-            if (myVehicles.isNotEmpty()) {
-                Card(
+                    .fillMaxSize()
+            ) {
+                // Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.searchVehicles(it) },
+                    label = { Text("Search vehicles...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search"
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.clearSearch() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "Clear"
+                                )
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "My Assigned Vehicles",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${myVehicles.size}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        LazyColumn(
-                            modifier = Modifier.height(120.dp)
-                        ) {
-                            items(myVehicles.take(3)) { vehicle ->
-                                MyVehicleItem(
-                                    vehicle = vehicle,
-                                    onClick = { onVehicleSelected(vehicle.id) }
+                        .padding(16.dp),
+                    singleLine = true
+                )
+                
+                // My Vehicles Section
+                if (myVehicles.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "My Assigned Vehicles",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                if (vehicle != myVehicles.take(3).last()) {
-                                    Divider()
+                                Text(
+                                    text = "${myVehicles.size}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            LazyColumn(
+                                modifier = Modifier.height(120.dp)
+                            ) {
+                                items(myVehicles.take(3)) { vehicle ->
+                                    MyVehicleItem(
+                                        vehicle = vehicle,
+                                        onClick = { onVehicleSelected(vehicle.id) }
+                                    )
+                                    if (vehicle != myVehicles.take(3).last()) {
+                                        Divider()
+                                    }
+                                }
+                            }
+                            
+                            if (myVehicles.size > 3) {
+                                TextButton(
+                                    onClick = { showAssignedOnly = true },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("View All (${myVehicles.size})")
                                 }
                             }
                         }
-                        
-                        if (myVehicles.size > 3) {
-                            TextButton(
-                                onClick = { showAssignedOnly = true },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Text("View All (${myVehicles.size})")
-                            }
+                    }
+                }
+                
+                // Filters Sheet
+                if (showFilters) {
+                    FilterSheet(
+                        currentStatus = selectedStatusFilter,
+                        currentType = selectedTypeFilter,
+                        onStatusSelected = { status ->
+                            selectedStatusFilter = status
+                            viewModel.filterByStatus(status)
+                        },
+                        onTypeSelected = { type ->
+                            selectedTypeFilter = type
+                            viewModel.filterByType(type)
+                        },
+                        onDismiss = { showFilters = false }
+                    )
+                }
+                
+                // Vehicle List
+                val displayedVehicles = if (showAssignedOnly) {
+                    vehicles.filter { v -> viewModel.isVehicleAssignedToMe(v.id) }
+                } else {
+                    vehicles
+                }
+
+                if (showAssignedOnly) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Showing assigned vehicles only",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = { showAssignedOnly = false }) {
+                            Text("Show all fleet")
+                        }
+                    }
+                }
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (displayedVehicles.isEmpty()) {
+                    EmptyState(
+                        onRetry = { viewModel.refresh() }
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(displayedVehicles) { vehicle ->
+                            VehicleListItem(
+                                vehicle = vehicle,
+                                isAssignedToMe = viewModel.isVehicleAssignedToMe(vehicle.id),
+                                onClick = { onVehicleSelected(vehicle.id) }
+                            )
                         }
                     }
                 }
             }
             
-            // Filters Sheet
-            if (showFilters) {
-                FilterSheet(
-                    currentStatus = selectedStatusFilter,
-                    currentType = selectedTypeFilter,
-                    onStatusSelected = { status ->
-                        selectedStatusFilter = status
-                        viewModel.filterByStatus(status)
-                    },
-                    onTypeSelected = { type ->
-                        selectedTypeFilter = type
-                        viewModel.filterByType(type)
-                    },
-                    onDismiss = { showFilters = false }
-                )
-            }
-            
-            // Vehicle List
-            val displayedVehicles = if (showAssignedOnly) {
-                vehicles.filter { v -> viewModel.isVehicleAssignedToMe(v.id) }
-            } else {
-                vehicles
-            }
-
-            if (showAssignedOnly) {
-                Row(
+            // Error Snackbar
+            errorMessage?.let { message ->
+                Snackbar(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
                 ) {
-                    Text(
-                        text = "Showing assigned vehicles only",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TextButton(onClick = { showAssignedOnly = false }) {
-                        Text("Show all fleet")
-                    }
+                    Text(text = message)
                 }
-            }
-
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                
+                LaunchedEffect(errorMessage) {
+                    kotlinx.coroutines.delay(5000)
+                    viewModel.clearError()
                 }
-            } else if (displayedVehicles.isEmpty()) {
-                EmptyState(
-                    onRetry = { viewModel.refresh() }
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(displayedVehicles) { vehicle ->
-                        VehicleListItem(
-                            vehicle = vehicle,
-                            isAssignedToMe = viewModel.isVehicleAssignedToMe(vehicle.id),
-                            onClick = { onVehicleSelected(vehicle.id) }
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Error Snackbar
-        errorMessage?.let { message ->
-            Snackbar(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                containerColor = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
-            ) {
-                Text(text = message)
-            }
-            
-            LaunchedEffect(errorMessage) {
-                kotlinx.coroutines.delay(5000)
-                viewModel.clearError()
             }
         }
     }
@@ -407,13 +410,6 @@ private fun MyVehicleItem(
                 text = "${vehicle.make} ${vehicle.model}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (vehicle.currentLocation?.speed ?: 0.0 > 0) {
-            Text(
-                text = "${vehicle.currentLocation?.speed?.toInt()} km/h",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
             )
         }
     }

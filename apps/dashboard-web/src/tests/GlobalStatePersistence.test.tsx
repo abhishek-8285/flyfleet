@@ -20,25 +20,37 @@ import { AuthProvider, useAuth } from "../context/AuthProvider";
 jest.mock("../services/apiClient", () => ({
   __esModule: true,
   default: {
-    get: jest.fn().mockResolvedValue({
-      user: {
-        id: "test-user-id",
-        name: "Test User",
-        email: "test@flyfleet.io",
-        theme: "light",
-        language: "en",
-        sidebar_collapsed: false,
-        permissions: [],
-      },
-      permissions: [],
-      orgs: [],
-    }),
-    put: jest.fn().mockResolvedValue({}),
+    get: jest.fn(),
+    put: jest.fn(),
   },
 }));
 
+import { RBACProvider } from "../context/RBACProvider";
+import apiClient from "../services/apiClient";
+
+// Mock window.location
+const originalLocation = window.location;
+beforeAll(() => {
+  delete (window as any).location;
+  window.location = {
+    ...originalLocation,
+    assign: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+  } as any;
+  Object.defineProperty(window.location, "href", {
+    writable: true,
+    value: "http://localhost/",
+  });
+});
+
+afterAll(() => {
+  window.location = originalLocation;
+});
+
 const PreferencesReadout: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div data-testid="loading">Loading...</div>;
   return (
     <div>
       <span data-testid="theme">{user?.theme ?? "none"}</span>
@@ -85,34 +97,64 @@ const NavigatingApp: React.FC = () => {
   return (
     <MemoryRouter>
       <AuthProvider>
-        <button data-testid="go-b" onClick={() => setRoute("b")}>
-          Go B
-        </button>
-        <button data-testid="go-a" onClick={() => setRoute("a")}>
-          Go A
-        </button>
-        {route === "a" ? <RouteA /> : <RouteB />}
+        <RBACProvider>
+          <button data-testid="go-b" onClick={() => setRoute("b")}>
+            Go B
+          </button>
+          <button data-testid="go-a" onClick={() => setRoute("a")}>
+            Go A
+          </button>
+          {route === "a" ? <RouteA /> : <RouteB />}
+        </RBACProvider>
       </AuthProvider>
     </MemoryRouter>
   );
 };
 
 const renderAndWait = async () => {
+  // Clear any existing state
+  localStorage.clear();
   // Pre-seed a session token so AuthProvider hydrates user from mock
   localStorage.setItem("access_token", "test-token");
+  // Seed defaults to avoid race conditions with local storage fallbacks
+  localStorage.setItem("theme", "light");
+  localStorage.setItem("flyfleet_language", "en");
+  localStorage.setItem("flyfleet_sidebar_collapsed", "false");
+
   const utils = render(<NavigatingApp />);
-  // Wait for the async initAuth to resolve
-  await waitFor(() => screen.getByTestId("theme"));
+
+  // Wait for the async initAuth to resolve (isLoading goes false)
+  await waitFor(
+    () => {
+      expect(screen.queryByTestId("loading")).not.toBeInTheDocument();
+    },
+    { timeout: 3000 },
+  );
+
   return utils;
 };
 
 describe("Multi-Route Global State Persistence", () => {
   beforeEach(() => {
-    localStorage.clear();
-    document.documentElement.classList.remove("dark");
-  });
+    (apiClient.get as jest.Mock).mockImplementation(() =>
+      Promise.resolve({
+        user: {
+          id: "test-user-id",
+          name: "Test User",
+          email: "test@flyfleet.io",
+          theme: "light",
+          language: "en",
+          sidebar_collapsed: false,
+        },
+        permissions: [],
+        orgs: [],
+      }),
+    );
+    (apiClient.put as jest.Mock).mockResolvedValue({});
 
-  afterEach(() => {
+    localStorage.clear();
+    localStorage.setItem("access_token", "test-token");
+    document.documentElement.classList.remove("dark");
     jest.clearAllMocks();
   });
 
@@ -128,8 +170,11 @@ describe("Multi-Route Global State Persistence", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-theme"));
     });
-    expect(screen.getByTestId("theme").textContent).toBe("dark");
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("theme").textContent).toBe("dark");
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+    });
 
     // Navigate to Route B
     await act(async () => {
@@ -138,7 +183,6 @@ describe("Multi-Route Global State Persistence", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("route-b")).toBeInTheDocument();
-      // Theme must still be dark — context is shared, not re-created
       expect(screen.getByTestId("theme").textContent).toBe("dark");
     });
   });
@@ -149,7 +193,10 @@ describe("Multi-Route Global State Persistence", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-lang"));
     });
-    expect(screen.getByTestId("language").textContent).toBe("fr");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("language").textContent).toBe("fr");
+    });
 
     // Navigate to Route B
     await act(async () => {
@@ -174,7 +221,10 @@ describe("Multi-Route Global State Persistence", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-sidebar"));
     });
-    expect(screen.getByTestId("sidebar").textContent).toBe("true");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sidebar").textContent).toBe("true");
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("go-b"));
@@ -190,16 +240,22 @@ describe("Multi-Route Global State Persistence", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-theme"));
     });
-    expect(localStorage.getItem("theme")).toBe("dark");
+    await waitFor(() => {
+      expect(localStorage.getItem("theme")).toBe("dark");
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-lang"));
     });
-    expect(localStorage.getItem("flyfleet_language")).toBe("fr");
+    await waitFor(() => {
+      expect(localStorage.getItem("flyfleet_language")).toBe("fr");
+    });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-sidebar"));
     });
-    expect(localStorage.getItem("flyfleet_sidebar_collapsed")).toBe("true");
+    await waitFor(() => {
+      expect(localStorage.getItem("flyfleet_sidebar_collapsed")).toBe("true");
+    });
   });
 });

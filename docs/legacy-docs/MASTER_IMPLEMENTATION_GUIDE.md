@@ -213,7 +213,7 @@ SELECT * FROM gps_locations WHERE time > NOW() - INTERVAL '1 hour';
 
 #### Task 2.2: GPS Telemetry Ingestion API
 **Priority:** CRITICAL  
-**File:** `services/tracking-service/internal/handlers/telemetry_handler.go`
+**File:** `services/microservices/tracking-service/internal/handlers/telemetry_handler.go`
 
 ```go
 package handlers

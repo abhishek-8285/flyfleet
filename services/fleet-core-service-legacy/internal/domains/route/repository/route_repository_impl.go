@@ -165,6 +165,9 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationRequest(ctx context.
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -173,10 +176,13 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationRequest(ctx context.
 		argIndex++
 	}
 
-	setClause += ", updated_at = $%d"
+	if setClause != "" {
+		setClause += ", "
+	}
+	setClause += fmt.Sprintf("updated_at = $%d", argIndex)
 	args = append(args, time.Now())
 
-	query := fmt.Sprintf("UPDATE route_optimization_requests SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE route_optimization_requests SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -420,6 +426,9 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationResult(ctx context.C
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -428,7 +437,7 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationResult(ctx context.C
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE route_optimization_results SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE route_optimization_results SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -572,6 +581,9 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJob(ctx context.Cont
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -580,7 +592,7 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJob(ctx context.Cont
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE optimization_jobs SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE optimization_jobs SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)

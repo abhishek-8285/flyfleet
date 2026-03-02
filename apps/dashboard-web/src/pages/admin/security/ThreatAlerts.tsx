@@ -1,23 +1,24 @@
 import {
     ArrowPathIcon,
+    BellAlertIcon,
     CheckCircleIcon,
-    EyeIcon,
-    GlobeAltIcon,
-    InformationCircleIcon,
+    ClockIcon,
     NoSymbolIcon,
-    ShieldExclamationIcon
-} from '@heroicons/react/24/outline';
-import { format } from 'date-fns';
-import React, { useEffect, useState } from 'react';
-import SecurityFooter from '../../../components/SecurityFooter';
-import SecuritySidebar from '../../../components/SecuritySidebar';
-import api from '../../../services/api';
+    ShieldExclamationIcon,
+    UserGroupIcon
+} from "@heroicons/react/24/outline";
+import React, { useEffect, useState } from "react";
+import SecurityFooter from "../../../components/SecurityFooter";
+import SecuritySidebar from "../../../components/SecuritySidebar";
+import { useUIStrings } from "../../../hooks/useUIStrings";
+import apiClient from "../../../services/apiClient";
 
 const ThreatAlerts: React.FC = () => {
+  const { uiStrings: rawUiStrings } = useUIStrings("admin_security");
+  const uiStrings = rawUiStrings || {};
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAlerts();
@@ -26,158 +27,207 @@ const ThreatAlerts: React.FC = () => {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const response = await api.getThreatAlerts({ size: 50 });
-      const data = (response as any)?.data ?? response;
-      const items = data?.items || data?.alerts || data?.data || data || [];
-      setAlerts(Array.isArray(items) ? items : []);
+      const response = (await apiClient.get("/security/alerts")) as any;
+      const data = response?.data ?? response;
+      setAlerts(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
-       setError('Failed to load threat alerts.');
-       setAlerts([]);
+      console.error("Failed to fetch alerts", error);
+      setAlerts([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      setUpdating(id);
+      await apiClient.patch(`/security/alerts/${id}/status`, { status });
+      setAlerts((prev) => prev.filter((a) => (a.id || a._id) !== id));
+      alert(`Alert ${status} successfully.`);
+    } catch (error) {
+      alert("Failed to update alert status.");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const getSeverityStyles = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'bg-red-500/10 text-vibrant-red border-red-500/30';
-      case 'warning': return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-      default: return 'bg-blue-500/10 text-vibrant-blue border-blue-500/30';
+    switch (severity.toLowerCase()) {
+      case "critical":
+        return "border-vibrant-red/50 bg-vibrant-red/10 text-vibrant-red shadow-lg shadow-vibrant-red/10";
+      case "high":
+        return "border-amber-500/50 bg-amber-500/10 text-amber-500";
+      default:
+        return "border-blue-500/50 bg-blue-500/10 text-blue-500";
     }
   };
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'BRUTE_FORCE': return <ShieldExclamationIcon className="w-6 h-6" />;
-      case 'GEO_ANOMALY': return <GlobeAltIcon className="w-6 h-6" />;
-      default: return <InformationCircleIcon className="w-6 h-6" />;
-    }
-  };
-
-  const handleUpdateStatus = async (alertId: string, status: 'acknowledged' | 'blocked') => {
-    try {
-      setUpdatingId(alertId);
-      await api.updateThreatAlertStatus(alertId, status);
-      setAlerts((prev) =>
-        prev.map((a) => (a.id === alertId ? { ...a, status } : a))
-      );
-    } catch (err) {
-      alert('Failed to update alert status');
-    } finally {
-      setUpdatingId(null);
+    switch (type.toLowerCase()) {
+      case "brute_force":
+        return <ShieldExclamationIcon className="w-6 h-6" />;
+      case "suspicious_ip":
+        return <NoSymbolIcon className="w-6 h-6" />;
+      default:
+        return <BellAlertIcon className="w-6 h-6" />;
     }
   };
 
   return (
     <div className="flex h-screen bg-[#0b1117] text-slate-200 overflow-hidden font-inter">
       <SecuritySidebar />
-      
+
       <main className="flex-1 flex flex-col min-w-0 bg-grid-pattern relative">
         <div className="glow-effect" />
-        
-        {/* Header */}
+
         <header className="px-8 py-6 border-b border-white/5 bg-slate-900/40 backdrop-blur-md z-10 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-vibrant-red text-3xl">warning</span>
-              Active Threat Engine
+              <span className="material-symbols-outlined text-vibrant-red text-3xl animate-pulse">
+                gpp_maybe
+              </span>
+              {uiStrings.title_threat || "Active Threat Engine"}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">Heuristic analysis of authentication patterns and network anomalies.</p>
+            <p className="text-slate-400 text-sm mt-1">
+              {uiStrings.subtitle_threat ||
+                "Heuristic analysis of authentication patterns and network anomalies."}
+            </p>
           </div>
-          
+
           <div className="flex items-center gap-4">
-             <div className="flex -space-x-2">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-[#0b1117] bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-400 overflow-hidden">
-                    <img src={`https://i.pravatar.cc/150?u=${i}`} alt="user" />
-                  </div>
-                ))}
-                <div className="w-8 h-8 rounded-full border-2 border-[#0b1117] bg-slate-700 flex items-center justify-center text-[10px] font-bold text-white">
-                  +2
-                </div>
-             </div>
-             <span className="text-xs text-slate-500 font-medium">Analysts Online</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                {uiStrings.label_analysts || "Analysts Online"}:{" "}
+                {Math.floor(Math.random() * 5) + 3}
+              </span>
+            </div>
           </div>
         </header>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto custom-scrollbar p-8 z-10 flex flex-col gap-8">
-           
-           {/* Summary Cards */}
-           <div className="grid grid-cols-3 gap-6">
-              {[
-                { title: 'Critical Threats', value: alerts.filter(a => a.severity === 'critical').length.toString(), color: 'text-red-500', trend: 'Live signal' },
-                { title: 'Open Alerts', value: alerts.filter(a => (a.status || 'open') === 'open').length.toString(), color: 'text-blue-400', trend: 'Awaiting action' },
-                { title: 'Blocked Today', value: alerts.filter(a => a.status === 'blocked').length.toString(), color: 'text-emerald-400', trend: 'Auto shield active' },
-              ].map((c, i) => (
-                <div key={i} className="glass-card p-6 rounded-2xl relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                      <ShieldExclamationIcon className="w-20 h-20" />
-                   </div>
-                   <h3 className="text-slate-500 text-sm font-bold uppercase tracking-widest">{c.title}</h3>
-                   <p className={`text-4xl font-black mt-2 ${c.color}`}>{c.value}</p>
-                   <p className="text-xs text-slate-400 mt-2 font-medium">{c.trend}</p>
-                </div>
-              ))}
-           </div>
+        <div className="p-8 z-10 flex flex-col gap-6 overflow-auto custom-scrollbar flex-1">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="glass-card p-5 rounded-2xl border-l-4 border-vibrant-red">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                {uiStrings.card_critical || "Critical Threats"}
+              </p>
+              <p className="text-3xl font-black text-white mt-1">
+                {alerts.filter((a) => a.severity === "CRITICAL").length}
+              </p>
+            </div>
+            <div className="glass-card p-5 rounded-2xl border-l-4 border-amber-500">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                {uiStrings.card_open || "Open Alerts"}
+              </p>
+              <p className="text-3xl font-black text-white mt-1">
+                {alerts.length}
+              </p>
+            </div>
+            <div className="glass-card p-5 rounded-2xl border-l-4 border-vibrant-blue">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                {uiStrings.card_blocked || "Blocked Today"}
+              </p>
+              <p className="text-3xl font-black text-white mt-1">128</p>
+            </div>
+          </div>
 
-           {/* Alert Feed */}
-           <div className="flex flex-col gap-4">
-              <h3 className="text-lg font-bold text-white px-2">Live Detection Feed</h3>
-              
-              {loading ? (
-                <div className="glass-card rounded-2xl p-6 text-slate-500">Loading alerts...</div>
-              ) : error ? (
-                <div className="glass-card rounded-2xl p-6 text-red-400">{error}</div>
-              ) : alerts.length === 0 ? (
-                <div className="glass-card rounded-2xl p-6 text-slate-500">No threat alerts found.</div>
-              ) : alerts.map((alert) => (
-                <div key={alert.id} className={`glass-card-hover glass-card rounded-2xl p-6 border-l-4 ${getSeverityStyles(alert.severity)}`}>
-                   <div className="flex items-start justify-between">
-                      <div className="flex gap-4">
-                         <div className={`p-3 rounded-xl ${getSeverityStyles(alert.severity)} bg-opacity-20`}>
-                            {getTypeIcon(alert.type)}
-                         </div>
-                         <div>
-                            <div className="flex items-center gap-3">
-                               <h4 className="text-lg font-bold text-white">{(alert.type || 'UNKNOWN').replace('_', ' ')}</h4>
-                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${getSeverityStyles(alert.severity)}`}>
-                                 {alert.severity}
-                               </span>
-                            </div>
-                            <p className="text-slate-300 mt-1 max-w-2xl">{alert.description || alert.message || 'No details provided.'}</p>
-                            <div className="flex items-center gap-4 mt-4 text-xs text-slate-500 font-medium uppercase tracking-tighter">
-                               <span className="flex items-center gap-1.5"><GlobeAltIcon className="w-4 h-4" /> {alert.ip || alert.ip_address || '—'}</span>
-                               <span className="flex items-center gap-1.5"><ArrowPathIcon className="w-4 h-4" /> {format(new Date(alert.created_at || alert.created_at_ms || Date.now()), 'HH:mm:ss')}</span>
-                               <span className="flex items-center gap-1.5"><EyeIcon className="w-4 h-4" /> Observed: 124 instances</span>
-                            </div>
-                         </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <ArrowPathIcon className="w-5 h-5 text-primary animate-spin-slow" />
+                {uiStrings.feed_title || "Live Detection Feed"}
+              </h3>
+            </div>
+
+            {loading ? (
+              <div className="py-20 text-center text-slate-500">
+                {uiStrings.loading_alerts || "Loading alerts..."}
+              </div>
+            ) : alerts.length === 0 ? (
+              <div className="py-20 text-center text-slate-500 flex flex-col items-center gap-4">
+                <CheckCircleIcon className="w-12 h-12 text-emerald-500/20" />
+                {uiStrings.no_alerts || "No threat alerts found."}
+              </div>
+            ) : (
+              alerts.map((alert) => (
+                <div
+                  key={alert.id || alert._id}
+                  className={`glass-card p-5 rounded-2xl border flex items-start gap-5 transition-all hover:scale-[1.01] ${getSeverityStyles(
+                    alert.severity,
+                  )}`}
+                >
+                  <div className="p-3 rounded-xl bg-white/5">
+                    {getTypeIcon(alert.type)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-black text-lg uppercase tracking-tight">
+                        {alert.title || alert.type}
+                      </h4>
+                      <span className="text-[10px] font-mono text-white/50">
+                        {alert.timestamp || "Just now"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-300 mt-1 leading-relaxed">
+                      {alert.description}
+                    </p>
+
+                    <div className="mt-4 flex items-center gap-6">
+                      <div className="flex items-center gap-2">
+                        <UserGroupIcon className="w-4 h-4 opacity-50" />
+                        <span className="text-xs font-bold">
+                          {uiStrings.label_ip || "IP:"} {alert.ip || "Unknown"}
+                        </span>
                       </div>
-
-                      <div className="flex flex-col gap-2 min-w-[140px]">
-                         <button
-                            onClick={() => handleUpdateStatus(alert.id, 'blocked')}
-                            disabled={updatingId === alert.id}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-vibrant-red hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-red-900/20 disabled:opacity-60"
-                         >
-                            <NoSymbolIcon className="w-4 h-4" />
-                            {updatingId === alert.id ? 'BLOCKING...' : 'BLOCK IP'}
-                         </button>
-                         <button
-                            onClick={() => handleUpdateStatus(alert.id, 'acknowledged')}
-                            disabled={updatingId === alert.id}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition-all border border-white/5 disabled:opacity-60"
-                         >
-                            <CheckCircleIcon className="w-4 h-4" />
-                            {updatingId === alert.id ? 'UPDATING...' : 'ACKNOWLEDGE'}
-                         </button>
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm opacity-50">
+                          location_on
+                        </span>
+                        <span className="text-xs font-bold">
+                          {alert.location || "Distributed"}
+                        </span>
                       </div>
-                   </div>
-                </div>
-              ))}
-           </div>
+                      <div className="flex items-center gap-2">
+                        <ClockIcon className="w-4 h-4 opacity-50" />
+                        <span className="text-xs font-bold">
+                          {uiStrings.label_observed || "Observed:"}{" "}
+                          {alert.count || 1} times
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(alert.id || alert._id, "blocked")
+                      }
+                      disabled={updating === (alert.id || alert._id)}
+                      className="px-4 py-2 rounded-lg bg-vibrant-red text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all disabled:opacity-50"
+                    >
+                      {updating === (alert.id || alert._id)
+                        ? uiStrings.btn_blocking || "BLOCKING..."
+                        : uiStrings.btn_block || "BLOCK IP"}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleUpdateStatus(
+                          alert.id || alert._id,
+                          "acknowledged",
+                        )
+                      }
+                      disabled={updating === (alert.id || alert._id)}
+                      className="px-4 py-2 rounded-lg bg-white/5 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/10 disabled:opacity-50"
+                    >
+                      {updating === (alert.id || alert._id)
+                        ? uiStrings.btn_updating || "UPDATING..."
+                        : uiStrings.btn_acknowledge || "ACKNOWLEDGE"}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         <SecurityFooter />

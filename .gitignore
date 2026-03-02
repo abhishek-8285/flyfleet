@@ -111,3 +111,16 @@ untracked_files.txt
 .gemini/
 .agent/
 brain/
+.agents/
+.temp_api_extract/
+
+
+soul/
+stitch_screens/
+stitch_project_data/
+
+*.py
+
+
+
+

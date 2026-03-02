@@ -6,6 +6,7 @@ import {
 } from "@heroicons/react/24/outline";
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useUIStrings } from "../hooks/useUIStrings";
 import { AppDispatch, RootState } from "../store";
 import { acknowledgeAlert, fetchAlerts } from "../store/alertsSlice";
 import { Alert } from "../types";
@@ -13,9 +14,15 @@ import { Alert } from "../types";
 const Insights: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { alerts, loading } = useSelector((state: RootState) => state.alerts);
+  const [systemMeta, setSystemMeta] = React.useState<any>(null);
+  const { uiStrings } = useUIStrings("insights");
 
   useEffect(() => {
     dispatch(fetchAlerts({}) as any);
+    fetch("/api/v1/ui/global_config")
+      .then((res) => res.json())
+      .then((data) => setSystemMeta(data.system_metadata))
+      .catch((err) => console.error("Global config fetch failed", err));
   }, [dispatch]);
 
   const handleAcknowledge = (id: string) => {
@@ -34,7 +41,9 @@ const Insights: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-lg text-text-muted">Loading AI Insights...</div>
+        <div className="text-lg text-text-muted">
+          {uiStrings?.loading || "Loading AI Insights..."}
+        </div>
       </div>
     );
   }
@@ -44,7 +53,7 @@ const Insights: React.FC = () => {
       <div className="flex items-center gap-3 mb-6">
         <CpuChipIcon className="w-8 h-8 text-primary" />
         <h1 className="text-3xl font-bold text-white">
-          Diagnostics & AI Insights
+          {uiStrings?.title || "Diagnostics & AI Insights"}
         </h1>
       </div>
 
@@ -53,7 +62,9 @@ const Insights: React.FC = () => {
         <div className="bg-card-bg p-6 rounded-xl border border-border-color shadow-sm">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm text-text-muted mb-1">Active AI Warnings</p>
+              <p className="text-sm text-text-muted mb-1">
+                {uiStrings?.card_warnings || "Active AI Warnings"}
+              </p>
               <h3 className="text-3xl font-bold text-white">
                 {activeAiAlerts.length}
               </h3>
@@ -74,7 +85,7 @@ const Insights: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <p className="text-sm text-text-muted mb-1">
-                Total Predictions (30d)
+                {uiStrings?.card_predictions || "Total Predictions (30d)"}
               </p>
               <h3 className="text-3xl font-bold text-white">1,245</h3>
             </div>
@@ -87,8 +98,12 @@ const Insights: React.FC = () => {
         <div className="bg-card-bg p-6 rounded-xl border border-border-color shadow-sm">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm text-text-muted mb-1">Model Accuracy</p>
-              <h3 className="text-3xl font-bold text-white">94.2%</h3>
+              <p className="text-sm text-text-muted mb-1">
+                {uiStrings?.card_accuracy || "Model Accuracy"}
+              </p>
+              <h3 className="text-3xl font-bold text-white">
+                {systemMeta?.success_rate || "--%"}
+              </h3>
             </div>
             <div className="p-3 rounded-lg bg-green-500/10 text-green-500">
               <CheckCircleIcon className="w-6 h-6" />
@@ -99,14 +114,17 @@ const Insights: React.FC = () => {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-white mb-4 border-b border-border-color pb-2">
-          Predictive Maintenance Alerts
+          {uiStrings?.title_alerts || "Predictive Maintenance Alerts"}
         </h2>
         {aiAlerts.length === 0 ? (
           <div className="bg-card-bg rounded-lg border border-border-color p-8 text-center text-text-muted">
             <CheckCircleIcon className="w-12 h-12 mx-auto mb-4 text-green-500 opacity-80" />
-            <p className="text-lg text-white font-medium">All systems normal</p>
+            <p className="text-lg text-white font-medium">
+              {uiStrings?.empty_title || "All systems normal"}
+            </p>
             <p>
-              The AI models predict normal operations for all tracked vehicles.
+              {uiStrings?.empty_desc ||
+                "The AI models predict normal operations for all tracked vehicles."}
             </p>
           </div>
         ) : (
@@ -127,7 +145,7 @@ const Insights: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-3">
                     <span className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                      AI PREDICTION
+                      {uiStrings?.badge_prediction || "AI PREDICTION"}
                     </span>
                     <span className="text-lg font-bold text-white tracking-tight">
                       {alert.type}
@@ -142,7 +160,7 @@ const Insights: React.FC = () => {
                   <div className="bg-body-bg rounded-lg p-4 border border-border-color/50">
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-text-muted font-medium">
-                        Failure Probability
+                        {uiStrings?.label_probability || "Failure Probability"}
                       </span>
                       <span
                         className={
@@ -165,7 +183,9 @@ const Insights: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col justify-center items-end border-t md:border-t-0 md:border-l border-border-color pt-4 md:pt-0 md:pl-6 min-w-[200px]">
-                  <p className="text-sm text-text-muted mb-2">Vehicle ID</p>
+                  <p className="text-sm text-text-muted mb-2">
+                    {uiStrings?.label_vehicle || "Vehicle ID"}
+                  </p>
                   <p className="font-mono text-white bg-[#0f151b] px-3 py-1.5 rounded text-sm mb-4 truncate max-w-[150px]">
                     {alert.vehicle_id || "Unknown"}
                   </p>
@@ -175,12 +195,12 @@ const Insights: React.FC = () => {
                       onClick={() => handleAcknowledge(alert.id)}
                       className="w-full px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-semibold text-sm rounded-lg transition-colors"
                     >
-                      Acknowledge Alert
+                      {uiStrings?.btn_acknowledge || "Acknowledge Alert"}
                     </button>
                   ) : (
                     <div className="w-full px-4 py-2.5 bg-green-500/10 text-green-500 font-semibold text-sm rounded-lg text-center flex items-center justify-center gap-2">
                       <CheckCircleIcon className="w-4 h-4" />
-                      Viewed
+                      {uiStrings?.status_viewed || "Viewed"}
                     </div>
                   )}
                 </div>

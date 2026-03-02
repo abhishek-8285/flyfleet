@@ -5,7 +5,7 @@
 ### 1. Maintenance Service Test Improvements
 
 #### Integration Test Constants
-**File:** `/services/maintenance-service/integration_tests/work_order_integration_test.go`
+**File:** `/services/microservices/maintenance-service/integration_tests/work_order_integration_test.go`
 **Lines 38, 147, 270:** Magic numbers replaced with named constants
 
 **Added constants:**

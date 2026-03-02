@@ -8,9 +8,9 @@ pkill -f admin-support-service || true
 
 # Build Services (Ensure binaries are fresh)
 echo "Building Services..."
-(cd services/web-bff && go build -o web-bff cmd/main.go)
+(cd services/microservices/web-bff && go build -o web-bff cmd/main.go)
 (cd services/fleet-core-service && go build -o fleet-core-service cmd/main.go)
-(cd services/admin-support-service && go build -o admin-support-service cmd/main.go)
+(cd services/microservices/admin-support-service && go build -o admin-support-service cmd/main.go)
 
 
 # Run Database Migrations
@@ -27,7 +27,7 @@ export ALERT_SERVICE_URL="http://localhost:8085"
 export BILLING_SERVICE_URL="http://localhost:8087"
 export AUTH_SERVICE_URL="http://localhost:8080" # Not running, but avoids DNS lookup delay
 
-cd services/web-bff
+cd services/microservices/web-bff
 ./web-bff > web-bff.log 2>&1 &
 PID=$!
 echo "Web-BFF PID: $PID"

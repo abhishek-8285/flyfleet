@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import apiClient from '../../services/apiClient';
+import React, { useEffect, useState } from "react";
+import { useUIStrings } from "../../hooks/useUIStrings";
+import apiClient from "../../services/apiClient";
 
 interface Column<T> {
   field: keyof T | string;
@@ -21,7 +22,7 @@ interface DataGridProps<T> {
 interface FilterConfig {
   field: string;
   label: string;
-  type: 'text' | 'select' | 'date' | 'date-range' | 'multi-select';
+  type: "text" | "select" | "date" | "date-range" | "multi-select";
   options?: { value: string; label: string }[];
   placeholder?: string;
 }
@@ -33,16 +34,25 @@ interface PaginationMeta {
   total_page: number;
 }
 
-export function DataGrid<T extends { id: string | number }>({ endpoint, columns, title, actions, refreshTrigger, filters = [], onFiltersChange }: DataGridProps<T>) {
+export function DataGrid<T extends { id: string | number }>({
+  endpoint,
+  columns,
+  title,
+  actions,
+  refreshTrigger,
+  filters = [],
+  onFiltersChange,
+}: DataGridProps<T>) {
+  const { uiStrings } = useUIStrings("common_datagrid");
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Pagination State
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
-  
+
   // Filter State
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -52,11 +62,11 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
     setError(null);
     try {
       const params: Record<string, any> = { page, size: pageSize };
-      
+
       // Add filter parameters
       Object.entries(filterValues).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          if (key === 'dateRange') {
+        if (value !== undefined && value !== null && value !== "") {
+          if (key === "dateRange") {
             if (value.from) params.start_date = value.from;
             if (value.to) params.end_date = value.to;
           } else {
@@ -64,13 +74,13 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
           }
         }
       });
-      
-      const response = await apiClient.get(endpoint, { params }) as any;
+
+      const response = (await apiClient.get(endpoint, { params })) as any;
       // Response structure matches our AdminMiddleware: { data: [], meta: {} }
       setData(response.data || []);
       setMeta(response.meta);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch data');
+      setError(err.message || "Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -79,21 +89,21 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
   useEffect(() => {
     fetchData();
   }, [page, pageSize, endpoint, refreshTrigger, filterValues]);
-  
+
   const handleFilterChange = (field: string, value: any) => {
-    setFilterValues(prev => ({
+    setFilterValues((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
-    
+
     if (onFiltersChange) {
       onFiltersChange({
         ...filterValues,
-        [field]: value
+        [field]: value,
       });
     }
   };
-  
+
   const clearFilters = () => {
     setFilterValues({});
     if (onFiltersChange) {
@@ -102,11 +112,11 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
   };
 
   const handleNextPage = () => {
-    if (meta && page < meta.total_page) setPage(p => p + 1);
+    if (meta && page < meta.total_page) setPage((p) => p + 1);
   };
 
   const handlePrevPage = () => {
-    if (page > 1) setPage(p => p - 1);
+    if (page > 1) setPage((p) => p - 1);
   };
 
   return (
@@ -114,50 +124,74 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
       {/* Header */}
       <div className="px-6 py-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
         <div>
-          {title && <h2 className="text-lg font-semibold text-white">{title}</h2>}
-          {meta && <p className="text-xs text-text-muted mt-1">Total: {meta.total} records</p>}
+          {title && (
+            <h2 className="text-lg font-semibold text-white">{title}</h2>
+          )}
+          {meta && (
+            <p className="text-xs text-text-muted mt-1">
+              {(uiStrings?.total_records || "Total: {{count}} records").replace(
+                "{{count}}",
+                meta.total.toString(),
+              )}
+            </p>
+          )}
         </div>
         <div className="flex space-x-3">
           {filters.length > 0 && (
-            <button 
+            <button
               onClick={() => setShowFilters(!showFilters)}
               className="p-2 text-text-muted hover:text-primary transition-colors flex items-center gap-1 border border-border-color rounded hover:bg-border-color"
-              title="Filters"
+              title={uiStrings?.label_filters || "Filters"}
             >
-              <span className="material-symbols-outlined text-[18px]">filter_list</span>
-              <span className="text-xs">Filters</span>
-              {Object.keys(filterValues).filter(k => filterValues[k] !== undefined && filterValues[k] !== '').length > 0 && (
+              <span className="material-symbols-outlined text-[18px]">
+                filter_list
+              </span>
+              <span className="text-xs">
+                {uiStrings?.label_filters || "Filters"}
+              </span>
+              {Object.keys(filterValues).filter(
+                (k) => filterValues[k] !== undefined && filterValues[k] !== "",
+              ).length > 0 && (
                 <span className="ml-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                  {Object.keys(filterValues).filter(k => filterValues[k] !== undefined && filterValues[k] !== '').length}
+                  {
+                    Object.keys(filterValues).filter(
+                      (k) =>
+                        filterValues[k] !== undefined && filterValues[k] !== "",
+                    ).length
+                  }
                 </span>
               )}
             </button>
           )}
-          <button 
-             onClick={fetchData} 
-             data-testid="refresh-btn"
-             className="p-2 text-text-muted hover:text-primary transition-colors"
-             title="Refresh"
+          <button
+            onClick={fetchData}
+            data-testid="refresh-btn"
+            className="p-2 text-text-muted hover:text-primary transition-colors"
+            title={uiStrings?.btn_refresh || "Refresh"}
           >
-            <span className="material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}">refresh</span>
+            <span className="material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}">
+              {uiStrings?.btn_refresh || "refresh"}
+            </span>
           </button>
-          
+
           {/* External Actions (Create Button, etc) */}
           {actions}
         </div>
       </div>
-      
+
       {/* Filters Panel */}
       {showFilters && filters.length > 0 && (
         <div className="p-4 border-b border-border-color bg-surface-darker">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-white">Filters</h3>
+            <h3 className="text-sm font-semibold text-white">
+              {uiStrings?.label_filters || "Filters"}
+            </h3>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={clearFilters}
                 className="text-xs text-text-muted hover:text-white transition-colors"
               >
-                Clear All
+                {uiStrings?.btn_clear_all || "Clear All"}
               </button>
             </div>
           </div>
@@ -167,19 +201,29 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
                 <label className="text-xs text-text-muted uppercase tracking-wider font-medium">
                   {filter.label}
                 </label>
-                {filter.type === 'text' && (
+                {filter.type === "text" && (
                   <input
                     type="text"
-                    value={filterValues[filter.field] || ''}
-                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
-                    placeholder={filter.placeholder || `Filter by ${filter.label.toLowerCase()}...`}
+                    value={filterValues[filter.field] || ""}
+                    onChange={(e) =>
+                      handleFilterChange(filter.field, e.target.value)
+                    }
+                    placeholder={
+                      filter.placeholder ||
+                      (
+                        uiStrings?.placeholder_filter ||
+                        "Filter by {{label}}..."
+                      ).replace("{{label}}", filter.label.toLowerCase())
+                    }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   />
                 )}
-                {filter.type === 'select' && (
+                {filter.type === "select" && (
                   <select
-                    value={filterValues[filter.field] || ''}
-                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
+                    value={filterValues[filter.field] || ""}
+                    onChange={(e) =>
+                      handleFilterChange(filter.field, e.target.value)
+                    }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   >
                     <option value="">All {filter.label}</option>
@@ -190,45 +234,57 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
                     ))}
                   </select>
                 )}
-                {filter.type === 'date' && (
+                {filter.type === "date" && (
                   <input
                     type="date"
-                    value={filterValues[filter.field] || ''}
-                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
+                    value={filterValues[filter.field] || ""}
+                    onChange={(e) =>
+                      handleFilterChange(filter.field, e.target.value)
+                    }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   />
                 )}
-                {filter.type === 'date-range' && (
+                {filter.type === "date-range" && (
                   <div className="flex gap-2">
                     <input
                       type="date"
-                      value={filterValues[filter.field]?.from || ''}
-                      onChange={(e) => handleFilterChange(filter.field, { 
-                        ...filterValues[filter.field], 
-                        from: e.target.value 
-                      })}
-                      placeholder="From"
+                      value={filterValues[filter.field]?.from || ""}
+                      onChange={(e) =>
+                        handleFilterChange(filter.field, {
+                          ...filterValues[filter.field],
+                          from: e.target.value,
+                        })
+                      }
+                      placeholder={uiStrings?.label_from || "From"}
                       className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none flex-1"
                     />
                     <input
                       type="date"
-                      value={filterValues[filter.field]?.to || ''}
-                      onChange={(e) => handleFilterChange(filter.field, { 
-                        ...filterValues[filter.field], 
-                        to: e.target.value 
-                      })}
-                      placeholder="To"
+                      value={filterValues[filter.field]?.to || ""}
+                      onChange={(e) =>
+                        handleFilterChange(filter.field, {
+                          ...filterValues[filter.field],
+                          to: e.target.value,
+                        })
+                      }
+                      placeholder={uiStrings?.label_to || "To"}
                       className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none flex-1"
                     />
                   </div>
                 )}
-                {filter.type === 'multi-select' && (
+                {filter.type === "multi-select" && (
                   <select
                     multiple
                     value={filterValues[filter.field] || []}
-                    onChange={(e) => handleFilterChange(filter.field, 
-                      Array.from(e.target.selectedOptions, option => option.value)
-                    )}
+                    onChange={(e) =>
+                      handleFilterChange(
+                        filter.field,
+                        Array.from(
+                          e.target.selectedOptions,
+                          (option) => option.value,
+                        ),
+                      )
+                    }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none h-24"
                   >
                     {filter.options?.map((option) => (
@@ -246,11 +302,13 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
 
       {/* Loading / Error States */}
       {loading && data.length === 0 && (
-         <div className="p-8 text-center text-text-muted">Loading data...</div>
+        <div className="p-8 text-center text-text-muted">
+          {uiStrings?.msg_loading || "Loading data..."}
+        </div>
       )}
-      
+
       {error && (
-         <div className="p-8 text-center text-error bg-error/10">{error}</div>
+        <div className="p-8 text-center text-error bg-error/10">{error}</div>
       )}
 
       {/* Table */}
@@ -260,7 +318,11 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
             <thead>
               <tr className="bg-surface-darker text-text-muted text-xs uppercase tracking-wider font-semibold border-b border-border-color">
                 {columns.map((col, idx) => (
-                  <th key={idx} className="px-6 py-3" style={{ width: col.width }}>
+                  <th
+                    key={idx}
+                    className="px-6 py-3"
+                    style={{ width: col.width }}
+                  >
                     {col.header}
                   </th>
                 ))}
@@ -268,20 +330,31 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
             </thead>
             <tbody className="divide-y divide-border-color">
               {data.map((row) => (
-                <tr key={row.id} className="hover:bg-surface-light/10 transition-colors">
+                <tr
+                  key={row.id}
+                  className="hover:bg-surface-light/10 transition-colors"
+                >
                   {columns.map((col, idx) => (
-                    <td key={idx} className="px-6 py-4 text-sm text-text-muted whitespace-nowrap">
-                      {col.render ? col.render(row) : (row[col.field as keyof T] as React.ReactNode)}
+                    <td
+                      key={idx}
+                      className="px-6 py-4 text-sm text-text-muted whitespace-nowrap"
+                    >
+                      {col.render
+                        ? col.render(row)
+                        : (row[col.field as keyof T] as React.ReactNode)}
                     </td>
                   ))}
                 </tr>
               ))}
               {data.length === 0 && (
-                 <tr>
-                    <td colSpan={columns.length} className="px-6 py-8 text-center text-text-muted italic">
-                        No records found
-                    </td>
-                 </tr>
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-6 py-8 text-center text-text-muted italic"
+                  >
+                    No records found
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -292,34 +365,43 @@ export function DataGrid<T extends { id: string | number }>({ endpoint, columns,
       {meta && (
         <div className="px-6 py-3 border-t border-border-color flex items-center justify-between text-sm text-text-muted bg-surface-darker">
           <div>
-             Page {meta.page} of {meta.total_page}
+            {(uiStrings?.label_page || "Page {{current}} of {{total}}")
+              .replace("{{current}}", meta.page.toString())
+              .replace("{{total}}", meta.total_page.toString())}
           </div>
           <div className="flex items-center space-x-2">
-            <select 
-               value={pageSize} 
-               onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-               className="border border-border-color rounded px-2 py-1 text-xs bg-surface-light focus:ring-2 focus:ring-primary outline-none text-text-muted"
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="border border-border-color rounded px-2 py-1 text-xs bg-surface-light focus:ring-2 focus:ring-primary outline-none text-text-muted"
             >
-               <option value={10}>10 / page</option>
-               <option value={20}>20 / page</option>
-               <option value={50}>50 / page</option>
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
             </select>
-            
+
             <div className="flex rounded-md">
-                <button
-                    onClick={handlePrevPage}
-                    disabled={page === 1}
-                    className="px-3 py-1 border border-border-color rounded-l-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
-                >
-                    <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                </button>
-                <button
-                    onClick={handleNextPage}
-                    disabled={page >= meta.total_page}
-                    className="px-3 py-1 border-l-0 border border-border-color rounded-r-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
-                >
-                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                </button>
+              <button
+                onClick={handlePrevPage}
+                disabled={page === 1}
+                className="px-3 py-1 border border-border-color rounded-l-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  chevron_left
+                </span>
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={page >= meta.total_page}
+                className="px-3 py-1 border-l-0 border border-border-color rounded-r-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  chevron_right
+                </span>
+              </button>
             </div>
           </div>
         </div>

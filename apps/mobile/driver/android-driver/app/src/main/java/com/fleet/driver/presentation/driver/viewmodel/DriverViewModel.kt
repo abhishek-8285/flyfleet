@@ -69,6 +69,7 @@ class DriverViewModel @Inject constructor(
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -82,6 +83,7 @@ class DriverViewModel @Inject constructor(
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -90,11 +92,12 @@ class DriverViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = driverRepository.getBehaviorEvents(fromDate, toDate)) {
                 is Resource.Success -> {
-                    _behaviorEvents.value = result.data
+                    _behaviorEvents.value = result.data ?: emptyList()
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -103,11 +106,12 @@ class DriverViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = driverRepository.getAttendanceRecords(fromDate, toDate)) {
                 is Resource.Success -> {
-                    _attendanceRecords.value = result.data
+                    _attendanceRecords.value = result.data ?: emptyList()
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -116,11 +120,12 @@ class DriverViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = driverRepository.getWorkSchedules()) {
                 is Resource.Success -> {
-                    _workSchedules.value = result.data
+                    _workSchedules.value = result.data ?: emptyList()
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -129,11 +134,12 @@ class DriverViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = driverRepository.getDocuments()) {
                 is Resource.Success -> {
-                    _documents.value = result.data
+                    _documents.value = result.data ?: emptyList()
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -150,7 +156,7 @@ class DriverViewModel @Inject constructor(
         return when {
             score >= 80 -> androidx.compose.ui.graphics.Color.Green
             score >= 60 -> androidx.compose.ui.graphics.Color.Yellow
-            score >= 40 -> androidx.compose.ui.graphics.Color.Orange
+            score >= 40 -> androidx.compose.ui.graphics.Color(0xFFFFA500) // Orange
             else -> androidx.compose.ui.graphics.Color.Red
         }
     }

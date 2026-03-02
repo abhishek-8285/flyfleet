@@ -42,6 +42,7 @@ service FleetService {
   // Telemetry RPCs
   rpc ReportTelemetry (ReportTelemetryRequest) returns (ReportTelemetryResponse);
   rpc GetLatestTelemetry (GetLatestTelemetryRequest) returns (GetLatestTelemetryResponse);
+  rpc GetFleetStats (GetFleetStatsRequest) returns (GetFleetStatsResponse);
 }
 
 message Vehicle {
@@ -428,4 +429,15 @@ message GetLatestTelemetryRequest {
 
 message GetLatestTelemetryResponse {
   Telemetry telemetry = 1;
+}
+
+message GetFleetStatsRequest {
+  string org_id = 1;
+}
+
+message GetFleetStatsResponse {
+  int32 total_vehicles = 1;
+  int32 active_vehicles = 2;
+  double total_distance = 3;
+  double total_fuel = 4;
 }

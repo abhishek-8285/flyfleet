@@ -5,7 +5,7 @@ on:
     branches: [master, main, develop]
     paths:
       - 'apps/dashboard-web/**'
-      - 'services/web-bff/**'
+      - 'services/microservices/web-bff/**'
       - 'scripts/check_bff_contract.py'
       - 'scripts/check_frontend_api_hygiene.py'
       - 'Makefile'
@@ -14,7 +14,7 @@ on:
     branches: [master, main, develop]
     paths:
       - 'apps/dashboard-web/**'
-      - 'services/web-bff/**'
+      - 'services/microservices/web-bff/**'
       - 'scripts/check_bff_contract.py'
       - 'scripts/check_frontend_api_hygiene.py'
       - 'Makefile'

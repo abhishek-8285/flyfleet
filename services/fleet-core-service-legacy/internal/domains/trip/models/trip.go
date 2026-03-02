@@ -269,3 +269,21 @@ type TripOffer struct {
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at" db:"updated_at"`
 }
+// DriverPerformance represents performance metrics for a driver
+type DriverPerformance struct {
+	DriverID       string  `json:"driver_id"`
+	Name           string  `json:"name"`
+	TotalDistance  float64 `json:"total_distance"`
+	SafetyScore    int     `json:"safety_score"`
+	TripsCompleted int     `json:"trips_completed"`
+	TotalTrips     int     `json:"total_trips"`
+	OnTimeRate     float64 `json:"on_time_rate"`
+}
+
+// DailyTripTrend represents trip metrics for a single day
+type DailyTripTrend struct {
+	Date            string  `json:"date"`
+	TotalTrips      int     `json:"total_trips"`
+	TotalDistance   float64 `json:"total_distance"`
+	ActiveTimeHours float64 `json:"active_time_hours"`
+}

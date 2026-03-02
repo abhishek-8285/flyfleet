@@ -71,13 +71,14 @@ class VehicleViewModel @Inject constructor(
             
             when (val result = vehicleRepository.getVehicles(filter)) {
                 is Resource.Success -> {
-                    _vehicles.value = result.data.vehicles
+                    result.data?.let { _vehicles.value = it.vehicles }
                     _isLoading.value = false
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -91,13 +92,14 @@ class VehicleViewModel @Inject constructor(
             
             when (val result = vehicleRepository.getMyVehicles()) {
                 is Resource.Success -> {
-                    _myVehicles.value = result.data
+                    _myVehicles.value = result.data ?: emptyList()
                     _isLoading.value = false
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -109,12 +111,15 @@ class VehicleViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = vehicleRepository.getVehicle(vehicleId)) {
                 is Resource.Success -> {
-                    _selectedVehicle.value = result.data
-                    loadVehicleDetails(result.data)
+                    result.data?.let {
+                        _selectedVehicle.value = it
+                        loadVehicleDetails(it)
+                    }
                 }
                 is Resource.Error -> {
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -138,11 +143,12 @@ class VehicleViewModel @Inject constructor(
     private suspend fun loadVehicleTelemetry(vehicleId: String) {
         when (val result = vehicleRepository.getVehicleTelemetry(vehicleId)) {
             is Resource.Success -> {
-                _vehicleTelemetry.value = result.data
+                _vehicleTelemetry.value = result.data ?: emptyList()
             }
             is Resource.Error -> {
                 _errorMessage.value = result.message
             }
+            else -> {}
         }
     }
     
@@ -152,11 +158,12 @@ class VehicleViewModel @Inject constructor(
     private suspend fun loadAssignmentHistory(vehicleId: String) {
         when (val result = vehicleRepository.getVehicleAssignments(vehicleId)) {
             is Resource.Success -> {
-                _assignmentHistory.value = result.data
+                _assignmentHistory.value = result.data ?: emptyList()
             }
             is Resource.Error -> {
                 _errorMessage.value = result.message
             }
+            else -> {}
         }
     }
     
@@ -178,6 +185,7 @@ class VehicleViewModel @Inject constructor(
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -201,6 +209,7 @@ class VehicleViewModel @Inject constructor(
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -216,7 +225,7 @@ class VehicleViewModel @Inject constructor(
                 is Resource.Success -> {
                     _isLoading.value = false
                     // Update local state
-                    _selectedVehicle.value = result.data
+                    result.data?.let { _selectedVehicle.value = it }
                     // Refresh lists
                     loadMyVehicles()
                     loadVehicles(_currentFilter.value)
@@ -225,6 +234,7 @@ class VehicleViewModel @Inject constructor(
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -254,6 +264,7 @@ class VehicleViewModel @Inject constructor(
                     _errorMessage.value = result.message
                     _isLoading.value = false
                 }
+                else -> {}
             }
         }
     }
@@ -269,13 +280,14 @@ class VehicleViewModel @Inject constructor(
                 
                 when (val result = vehicleRepository.searchVehicles(query)) {
                     is Resource.Success -> {
-                        _vehicles.value = result.data
+                        _vehicles.value = result.data ?: emptyList()
                         _isLoading.value = false
                     }
                     is Resource.Error -> {
                         _errorMessage.value = result.message
                         _isLoading.value = false
                     }
+                    else -> {}
                 }
             }
         } else {

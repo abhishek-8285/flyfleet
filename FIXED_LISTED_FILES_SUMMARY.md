@@ -4,8 +4,8 @@
 
 ### 1. Analytics Service
 **Files:**
-- `/services/analytics-service/internal/handlers/analytics_handler.go`
-- `/services/analytics-service/cmd/main.go`
+- `/services/microservices/analytics-service/internal/handlers/analytics_handler.go`
+- `/services/microservices/analytics-service/cmd/main.go`
 
 **Issues Fixed:**
 - Added `MaxQueryLimit = 100` constant
@@ -14,12 +14,12 @@
 
 ### 2. Alert Service
 **Files:**
-- `/services/alert-service/cmd/main.go`
-- `/services/alert-service/integration_tests/alert_integration_test.go`
-- `/services/alert-service/internal/notifications/notification_service.go`
-- `/services/alert-service/internal/repository/alert_repository.go`
-- `/services/alert-service/internal/rule_engine/rule_engine.go`
-- `/services/alert-service/internal/service/alert_service.go`
+- `/services/microservices/alert-service/cmd/main.go`
+- `/services/microservices/alert-service/integration_tests/alert_integration_test.go`
+- `/services/microservices/alert-service/internal/notifications/notification_service.go`
+- `/services/microservices/alert-service/internal/repository/alert_repository.go`
+- `/services/microservices/alert-service/internal/rule_engine/rule_engine.go`
+- `/services/microservices/alert-service/internal/service/alert_service.go`
 
 **Issues Fixed:**
 - Database credentials already removed from main.go
@@ -30,12 +30,12 @@
 
 ### 3. Vehicle Service
 **Files:**
-- `/services/vehicle-service/internal/models/vehicle.go`
-- `/services/vehicle-service/internal/processor/bulk_processor.go`
-- `/services/vehicle-service/internal/repository/interface.go`
-- `/services/vehicle-service/internal/repository/vehicle_repository.go`
-- `/services/vehicle-service/internal/service/vehicle_service.go`
-- `/services/vehicle-service/tests/contract_test.go`
+- `/services/microservices/vehicle-service/internal/models/vehicle.go`
+- `/services/microservices/vehicle-service/internal/processor/bulk_processor.go`
+- `/services/microservices/vehicle-service/internal/repository/interface.go`
+- `/services/microservices/vehicle-service/internal/repository/vehicle_repository.go`
+- `/services/microservices/vehicle-service/internal/service/vehicle_service.go`
+- `/services/microservices/vehicle-service/tests/contract_test.go`
 
 **Issues Fixed:**
 - Added vehicle validation constants (`MinVehicleYear`, `MaxVehicleYear`, etc.)
@@ -45,7 +45,7 @@
 
 ### 4. Web BFF Service
 **Files:**
-- `/services/web-bff/internal/middleware/cors.go`
+- `/services/microservices/web-bff/internal/middleware/cors.go`
 
 **Issues Fixed:**
 - Added missing `os` import for `os.Getenv()` calls
@@ -53,7 +53,7 @@
 
 ### 5. Maintenance Service
 **Files:**
-- `/services/maintenance-service/integration_tests/work_order_integration_test.go`
+- `/services/microservices/maintenance-service/integration_tests/work_order_integration_test.go`
 
 **Issues Fixed:**
 - Added multiple test constants for numeric values

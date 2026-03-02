@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthProvider";
+import { useUIStrings } from "../../hooks/useUIStrings";
 
 export const GlobalAdminSidebar: React.FC = () => {
   const location = useLocation();
   const { user, toggleSidebar } = useAuth();
+  const { uiStrings } = useUIStrings("layout_sidebar");
   const collapsed = user?.sidebar_collapsed ?? false;
 
   const isActive = (path: string) => {
@@ -13,65 +15,13 @@ export const GlobalAdminSidebar: React.FC = () => {
     );
   };
 
-  const menuItems = [
-    {
-      title: "Dashboard",
-      icon: "dashboard",
-      path: "/admin/dashboard",
-      items: [],
-    },
-    {
-      title: "Organizations",
-      icon: "corporate_fare",
-      path: "/admin/organizations",
-      items: [],
-    },
-    {
-      title: "Users",
-      icon: "group",
-      path: "/admin/users",
-      items: [],
-    },
-    {
-      title: "Billing",
-      icon: "payments",
-      path: "/admin/billing",
-      items: [],
-    },
-    {
-      title: "Security",
-      icon: "security",
-      path: "/admin/security",
-      items: [
-        { title: "Access Review", path: "/admin/security/access-review" },
-        { title: "Active Sessions", path: "/admin/security/sessions" },
-        { title: "Login Activity", path: "/admin/security/login-activity" },
-        { title: "Threat Alerts", path: "/admin/security/threats" },
-      ],
-    },
-    {
-      title: "Monitoring",
-      icon: "monitoring",
-      path: "/admin/monitoring",
-      items: [
-        { title: "System Health", path: "/admin/monitoring/health" },
-        { title: "Performance", path: "/admin/monitoring/performance" },
-        { title: "Logs", path: "/admin/monitoring/logs" },
-        { title: "Alerts", path: "/admin/monitoring/alerts" },
-      ],
-    },
-    {
-      title: "Settings",
-      icon: "settings",
-      path: "/admin/settings",
-      items: [
-        { title: "Platform Config", path: "/admin/settings/platform" },
-        { title: "Notifications", path: "/admin/settings/notifications" },
-        { title: "Integrations", path: "/admin/settings/integrations" },
-        { title: "Audit Settings", path: "/admin/settings/audit" },
-      ],
-    },
-  ];
+  const [menuItems, setMenuitems] = useState<any[]>([]);
+  useEffect(() => {
+    fetch("/api/v1/ui/menus/menuItems")
+      .then((res) => res.json())
+      .then((data) => setMenuitems(data))
+      .catch((err) => console.error(err));
+  }, []);
 
   return (
     <aside
@@ -89,9 +39,11 @@ export const GlobalAdminSidebar: React.FC = () => {
               </span>
             </div>
             <div>
-              <h1 className="text-white font-bold text-sm">Global Admin</h1>
+              <h1 className="text-white font-bold text-sm">
+                {uiStrings?.global_admin || "Global Admin"}
+              </h1>
               <p className="text-text-muted text-[10px] uppercase tracking-wider">
-                Enterprise Portal
+                {uiStrings?.enterprise_portal || "Enterprise Portal"}
               </p>
             </div>
           </div>
@@ -137,7 +89,7 @@ export const GlobalAdminSidebar: React.FC = () => {
               {/* Sub-items */}
               {!collapsed && item.items.length > 0 && isActive(item.path) && (
                 <ul className="mt-1 ml-8 space-y-1">
-                  {item.items.map((subItem) => (
+                  {item.items.map((subItem: any) => (
                     <li key={subItem.path}>
                       <Link
                         to={subItem.path}
@@ -173,10 +125,10 @@ export const GlobalAdminSidebar: React.FC = () => {
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-medium truncate">
-                Admin User
+                {uiStrings?.user_admin || "Admin User"}
               </p>
               <p className="text-text-muted text-xs truncate">
-                System Administrator
+                {uiStrings?.system_admin || "System Administrator"}
               </p>
             </div>
           )}

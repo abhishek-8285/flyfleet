@@ -1,5 +1,5 @@
 // AUTO-GENERATED from OpenAPI spec - DO NOT EDIT MANUALLY
-// Source: services/vehicle-service/api/openapi/trips.yaml
+// Source: services/microservices/vehicle-service/api/openapi/trips.yaml
 
 // Trip status values
 export type TripStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';

@@ -121,7 +121,7 @@ services:
   # Auth Service
   auth-service:
     build:
-      context: ./services/auth-service
+      context: ./services/microservices/auth-service
       dockerfile: Dockerfile
     container_name: flyfleet-auth-service
     environment:
@@ -146,7 +146,7 @@ services:
   # Vehicle Service
   vehicle-service:
     build:
-      context: ./services/vehicle-service
+      context: ./services/microservices/vehicle-service
       dockerfile: Dockerfile
     container_name: flyfleet-vehicle-service
     environment:
@@ -171,7 +171,7 @@ services:
   # Tracking Service
   tracking-service:
     build:
-      context: ./services/tracking-service
+      context: ./services/microservices/tracking-service
       dockerfile: Dockerfile
     container_name: flyfleet-tracking-service
     environment:
@@ -195,7 +195,7 @@ services:
   # Driver Service
   driver-service:
     build:
-      context: ./services/driver-service
+      context: ./services/microservices/driver-service
       dockerfile: Dockerfile
     container_name: flyfleet-driver-service
     environment:
@@ -220,7 +220,7 @@ services:
   # Trip Service
   trip-service:
     build:
-      context: ./services/trip-service
+      context: ./services/microservices/trip-service
       dockerfile: Dockerfile
     container_name: flyfleet-trip-service
     environment:
@@ -246,7 +246,7 @@ services:
   # Alert Service
   alert-service:
     build:
-      context: ./services/alert-service
+      context: ./services/microservices/alert-service
       dockerfile: Dockerfile
     container_name: flyfleet-alert-service
     environment:

@@ -5,7 +5,7 @@ on:
     branches: [master, main, develop]
     paths:
       - 'apps/dashboard-web/**'
-      - 'services/web-bff/**'
+      - 'services/microservices/web-bff/**'
       - 'scripts/check_web_bundle_budget.py'
       - 'scripts/check_api_latency_smoke.sh'
       - '.github/workflows/performance-gates.yml'
@@ -15,7 +15,7 @@ on:
     branches: [master, main, develop]
     paths:
       - 'apps/dashboard-web/**'
-      - 'services/web-bff/**'
+      - 'services/microservices/web-bff/**'
       - 'scripts/check_web_bundle_budget.py'
       - 'scripts/check_api_latency_smoke.sh'
       - '.github/workflows/performance-gates.yml'
@@ -66,7 +66,7 @@ jobs:
           go-version: '1.25.x'
 
       - name: Build web-bff
-        run: cd services/web-bff && go build -o /tmp/web-bff-run ./cmd/main.go
+        run: cd services/microservices/web-bff && go build -o /tmp/web-bff-run ./cmd/main.go
 
       - name: Start web-bff
         run: |

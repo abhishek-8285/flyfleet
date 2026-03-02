@@ -5,7 +5,7 @@
 ### 1. Alert Service Improvements
 
 #### Notification Sender Email
-**File:** `/services/alert-service/internal/notifications/notification_service.go`
+**File:** `/services/microservices/alert-service/internal/notifications/notification_service.go`
 **Line 99:** Hardcoded email address fixed
 
 **Before:**
@@ -19,7 +19,7 @@ from: os.Getenv("NOTIFICATION_SENDER_EMAIL")
 ```
 
 #### Repository Magic Numbers
-**File:** `/services/alert-service/internal/repository/alert_repository.go`
+**File:** `/services/microservices/alert-service/internal/repository/alert_repository.go`
 **Lines 138, 382:** Page size magic numbers replaced
 
 **Added constants:**
@@ -49,7 +49,7 @@ if pageSize > MaxPageSize {
 ### 2. Analytics Service Improvement
 
 #### Query Limit Magic Number
-**File:** `/services/analytics-service/internal/handlers/analytics_handler.go`
+**File:** `/services/microservices/analytics-service/internal/handlers/analytics_handler.go`
 **Line 1156:** Query limit magic number replaced
 
 **Added constant:**

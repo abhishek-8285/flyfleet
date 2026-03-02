@@ -1,46 +1,52 @@
 import {
-    ArrowDownTrayIcon,
     ArrowPathIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
     ComputerDesktopIcon,
     DevicePhoneMobileIcon,
-    MapPinIcon
-} from '@heroicons/react/24/outline';
-import { format } from 'date-fns';
-import React, { useEffect, useState } from 'react';
-import SecurityFooter from '../../../components/SecurityFooter';
-import SecuritySidebar from '../../../components/SecuritySidebar';
-import api from '../../../services/api';
+    FingerPrintIcon,
+    FunnelIcon,
+    MagnifyingGlassIcon,
+    PauseIcon,
+    PlayIcon,
+} from "@heroicons/react/24/outline";
+import React, { useEffect, useState } from "react";
+import SecurityFooter from "../../../components/SecurityFooter";
+import SecuritySidebar from "../../../components/SecuritySidebar";
+import { useUIStrings } from "../../../hooks/useUIStrings";
+import apiClient from "../../../services/apiClient";
 
 const LoginActivityLogs: React.FC = () => {
+  const { uiStrings: rawUiStrings } = useUIStrings("admin_security");
+  const uiStrings = rawUiStrings || {};
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isLive, setIsLive] = useState(true);
-  const [filter, setFilter] = useState('ALL');
-  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [isLive, setIsLive] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const orgId = localStorage.getItem("org_id") || "default";
 
   useEffect(() => {
     fetchLogs();
+
     let interval: any;
     if (isLive) {
       interval = setInterval(fetchLogs, 5000);
     }
     return () => clearInterval(interval);
-  }, [isLive, filter]);
+  }, [isLive, page, orgId]);
 
   const fetchLogs = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await api.getLoginActivityLogs({ 
-        status: filter === 'ALL' ? undefined : filter,
-        size: 50 
-      });
-      const data = (response as any)?.data ?? response;
-      const items = data?.events || data?.items || data?.logs || data || [];
-      setLogs(Array.isArray(items) ? items : []);
+      if (!isLive) setLoading(true);
+      const response = (await apiClient.get("/security/logins", {
+        params: { org_id: orgId, page, size: 20 },
+      })) as any;
+      const data = response?.data ?? response;
+      setLogs(Array.isArray(data) ? data : data?.items || []);
     } catch (error) {
-      console.error('Failed to fetch logs', error);
-      setError('Failed to fetch logs.');
+      console.error("Failed to fetch login logs", error);
       setLogs([]);
     } finally {
       setLoading(false);
@@ -48,166 +54,256 @@ const LoginActivityLogs: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SUCCESS': return 'text-vibrant-green bg-emerald-500/10';
-      case 'FAILED': return 'text-vibrant-red bg-red-500/10';
-      case 'CHALLENGED': return 'text-vibrant-blue bg-blue-500/10';
-      default: return 'text-slate-400 bg-slate-500/10';
+    switch (status.toUpperCase()) {
+      case "SUCCESS":
+        return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
+      case "FAILED":
+        return "text-vibrant-red bg-vibrant-red/10 border-vibrant-red/20";
+      case "CHALLENGED":
+        return "text-amber-400 bg-amber-500/10 border-amber-500/20";
+      default:
+        return "text-slate-400 bg-slate-500/10 border-slate-500/20";
     }
   };
 
-  const getRiskBadge = (risk: string) => {
-    switch (risk) {
-      case 'high': return <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-500 text-white animate-pulse">High Risk</span>;
-      case 'medium': return <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500 text-white">Medium Risk</span>;
-      default: return <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-500/20 text-slate-400">Low Risk</span>;
+  const getRiskLabel = (risk: string) => {
+    switch (risk.toLowerCase()) {
+      case "high":
+        return (
+          <span className="text-vibrant-red font-bold">
+            {uiStrings.risk_high || "High Risk"}
+          </span>
+        );
+      case "medium":
+        return (
+          <span className="text-amber-400 font-bold">
+            {uiStrings.risk_medium || "Medium Risk"}
+          </span>
+        );
+      default:
+        return (
+          <span className="text-emerald-400 font-bold">
+            {uiStrings.risk_low || "Low Risk"}
+          </span>
+        );
     }
   };
 
   return (
     <div className="flex h-screen bg-[#0b1117] text-slate-200 overflow-hidden font-inter">
       <SecuritySidebar />
-      
+
       <main className="flex-1 flex flex-col min-w-0 bg-grid-pattern relative">
         <div className="glow-effect" />
-        
-        {/* Header */}
-        <header className="px-8 py-6 flex items-center justify-between border-b border-white/5 bg-slate-900/40 backdrop-blur-md z-10">
+
+        <header className="px-8 py-6 border-b border-white/5 bg-slate-900/40 backdrop-blur-md z-10 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-3xl">history</span>
-              Login Activity Logs
+              <span className="material-symbols-outlined text-primary text-3xl">
+                history
+              </span>
+              {uiStrings.title_logs || "Login Activity Logs"}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">Real-time authentication monitoring across the enterprise fleet.</p>
+            <p className="text-slate-400 text-sm mt-1">
+              {uiStrings.subtitle_logs ||
+                "Real-time authentication monitoring across the enterprise fleet."}
+            </p>
           </div>
-          
-          <div className="flex items-center gap-4">
-            <button 
+
+          <div className="flex items-center gap-3">
+            <button
               onClick={() => setIsLive(!isLive)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
-                isLive 
-                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400 pulse-live' 
-                : 'bg-slate-800 border-white/10 text-slate-400'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all border ${isLive ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-slate-800 text-slate-400 border-white/10"}`}
             >
-              <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-              <span className="text-sm font-semibold">{isLive ? 'LIVE STREAMING' : 'PAUSED'}</span>
+              {isLive ? (
+                <PauseIcon className="w-4 h-4" />
+              ) : (
+                <PlayIcon className="w-4 h-4" />
+              )}
+              {isLive
+                ? uiStrings.btn_live || "LIVE STREAMING"
+                : uiStrings.btn_paused || "PAUSED"}
             </button>
-            
-            <div className="h-8 w-[1px] bg-white/10" />
-            
-            <button className="p-2 rounded-lg bg-slate-800 border border-white/10 text-slate-300 hover:bg-slate-700 transition-colors">
-              <ArrowDownTrayIcon className="w-5 h-5" />
-            </button>
+            <div className="h-8 w-px bg-white/5 mx-2" />
+            <div className="text-right">
+              <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                {uiStrings.label_success_rate || "Success Rate"}
+              </p>
+              <p className="text-sm font-bold text-emerald-400">99.2%</p>
+            </div>
           </div>
         </header>
 
-        {/* Filters & Summary */}
-        <div className="px-8 py-4 bg-slate-900/20 border-b border-white/5 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2">
-            {['ALL', 'SUCCESS', 'FAILED', 'CHALLENGED'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  filter === f 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-          
-          <div className="text-xs text-slate-500 flex items-center gap-6">
-            <span>Showing last 50 attempts</span>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>98.2% Success Rate</span>
+        <div className="p-8 z-10 flex flex-col gap-6 overflow-hidden flex-1">
+          <div className="glass-card rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+              <div className="relative w-80">
+                <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Filter by identity or IP..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 text-slate-400 hover:text-white transition-colors">
+                  <FunnelIcon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={fetchLogs}
+                  className="p-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <ArrowPathIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Logs Table */}
-        <div className="flex-1 overflow-auto custom-scrollbar p-8 z-10">
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/5">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Timestamp</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Identity</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Context</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Location & IP</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-400">Risk</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center text-slate-500">
-                      <ArrowPathIcon className="w-8 h-8 animate-spin mx-auto mb-4 opacity-20" />
-                      Decrypting security logs...
-                    </td>
+            <div className="flex-1 overflow-auto custom-scrollbar">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5 bg-white/[0.02]">
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_timestamp || "Timestamp"}
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_identity || "Identity"}
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_device_context || "Device/Context"}
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_location || "Location"}
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_status || "Status"}
+                    </th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">
+                      {uiStrings.th_risk || "Risk"}
+                    </th>
                   </tr>
-                ) : error ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center text-red-400">
-                      {error}
-                    </td>
-                  </tr>
-                ) : logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center text-slate-500">
-                      No matching authentication events found.
-                    </td>
-                  </tr>
-                ) : (
-                  logs.map((log) => (
-                    <tr key={log.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-white">{format(new Date(log.created_at || log.timestamp || Date.now()), 'MMM dd, HH:mm:ss')}</div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{(log.id || '').slice(0, 8)}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-blue-600/40 flex items-center justify-center text-xs font-bold text-white border border-white/10 uppercase">
-                            {(log.email || log.user_email || 'U').charAt(0)}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-white">{log.email || log.user_email || 'Unknown user'}</span>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Enterprise User</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-300">
-                           {(log.device || '').toLowerCase().includes('mobile') ? <DevicePhoneMobileIcon className="w-4 h-4 text-slate-500" /> : <ComputerDesktopIcon className="w-4 h-4 text-slate-500" />}
-                           <span className="text-sm">{log.browser || log.user_agent || 'Unknown'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[150px]">{log.device || log.device_name || '—'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-slate-300">
-                          <MapPinIcon className="w-4 h-4 text-primary" />
-                          <span className="text-sm">{log.location || log.geo || 'Unknown'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{log.ip_address || log.ip || '—'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${getStatusColor(log.status || 'UNKNOWN')}`}>
-                          {log.status || 'UNKNOWN'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {getRiskBadge(log.risk_level || log.risk || 'low')}
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {loading && logs.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-10 text-center text-slate-500 italic bg-slate-900/20"
+                      >
+                        {uiStrings.loading_logs ||
+                          "Decrypting security logs..."}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : logs.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-10 text-center text-slate-500 italic"
+                      >
+                        {uiStrings.no_logs ||
+                          "No matching authentication events found."}
+                      </td>
+                    </tr>
+                  ) : (
+                    logs.map((log) => (
+                      <tr
+                        key={log.id || log._id}
+                        className="hover:bg-white/[0.02] transition-colors border-l-2 border-transparent hover:border-primary/30"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white">
+                              {log.timestamp || "Just now"}
+                            </span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-tighter">
+                              UTC OFFSET +00:00
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center border border-white/5">
+                              <FingerPrintIcon className="w-4 h-4 text-slate-400" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-bold text-white leading-tight">
+                                {log.user_name || log.email}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                                {log.user_id?.substring(0, 8)}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {log.device_type === "mobile" ? (
+                              <DevicePhoneMobileIcon className="w-3.5 h-3.5 opacity-50" />
+                            ) : (
+                              <ComputerDesktopIcon className="w-3.5 h-3.5 opacity-50" />
+                            )}
+                            <span className="text-xs text-slate-300">
+                              {log.browser || "Browser"} / {log.os || "OS"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                            {log.ip}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-xs text-slate-400 italic">
+                            <span className="material-symbols-outlined text-sm">
+                              location_on
+                            </span>
+                            {log.location || uiStrings.loc_unknown || "Unknown"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getStatusColor(log.status)}`}
+                          >
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest">
+                            {getRiskLabel(log.risk || "low")}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-4 border-t border-white/5 bg-white/5 flex items-center justify-between">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                {uiStrings.label_showing_events
+                  ?.replace("{start}", "1")
+                  .replace("{end}", "20")
+                  .replace("{total}", "1,240") ||
+                  "Showing 1-20 of 1,240 events"}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <ChevronLeftIcon className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-bold text-white px-2">
+                  {uiStrings.label_page || "PAGE"} {page}
+                </span>
+                <button
+                  onClick={() => setPage(page + 1)}
+                  className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <ChevronRightIcon className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

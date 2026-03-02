@@ -507,6 +507,7 @@ type GetAlertStatsResponse struct {
 	TotalAlerts    int32                  `protobuf:"varint,1,opt,name=total_alerts,json=totalAlerts,proto3" json:"total_alerts,omitempty"`
 	CriticalAlerts int32                  `protobuf:"varint,2,opt,name=critical_alerts,json=criticalAlerts,proto3" json:"critical_alerts,omitempty"`
 	OpenAlerts     int32                  `protobuf:"varint,3,opt,name=open_alerts,json=openAlerts,proto3" json:"open_alerts,omitempty"`
+	NewAlerts      int32                  `protobuf:"varint,4,opt,name=new_alerts,json=newAlerts,proto3" json:"new_alerts,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -562,6 +563,13 @@ func (x *GetAlertStatsResponse) GetOpenAlerts() int32 {
 	return 0
 }
 
+func (x *GetAlertStatsResponse) GetNewAlerts() int32 {
+	if x != nil {
+		return x.NewAlerts
+	}
+	return 0
+}
+
 var File_proto_alert_v1_alert_proto protoreflect.FileDescriptor
 
 const file_proto_alert_v1_alert_proto_rawDesc = "" +
@@ -603,12 +611,14 @@ const file_proto_alert_v1_alert_proto_rawDesc = "" +
 	"\x19UpdateAlertStatusResponse\x12%\n" +
 	"\x05alert\x18\x01 \x01(\v2\x0f.alert.v1.AlertR\x05alert\"-\n" +
 	"\x14GetAlertStatsRequest\x12\x15\n" +
-	"\x06org_id\x18\x01 \x01(\tR\x05orgId\"\x84\x01\n" +
+	"\x06org_id\x18\x01 \x01(\tR\x05orgId\"\xa3\x01\n" +
 	"\x15GetAlertStatsResponse\x12!\n" +
 	"\ftotal_alerts\x18\x01 \x01(\x05R\vtotalAlerts\x12'\n" +
 	"\x0fcritical_alerts\x18\x02 \x01(\x05R\x0ecriticalAlerts\x12\x1f\n" +
 	"\vopen_alerts\x18\x03 \x01(\x05R\n" +
-	"openAlerts2\xca\x02\n" +
+	"openAlerts\x12\x1d\n" +
+	"\n" +
+	"new_alerts\x18\x04 \x01(\x05R\tnewAlerts2\xca\x02\n" +
 	"\fAlertService\x12G\n" +
 	"\n" +
 	"ListAlerts\x12\x1b.alert.v1.ListAlertsRequest\x1a\x1c.alert.v1.ListAlertsResponse\x12A\n" +

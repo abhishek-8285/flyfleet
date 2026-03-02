@@ -18,10 +18,10 @@ jobs:
     strategy:
       matrix:
         service:
-          - services/auth-service
-          - services/fleet-core-service-new
-          - services/tracking-service
-          - services/web-bff
+          - services/microservices/auth-service
+          - services/microservices/fleet-core-service-new
+          - services/microservices/tracking-service
+          - services/microservices/web-bff
           - packages/common/go
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
 
       - name: Build services
         run: |
-          cd services/fleet-core-service-new && go build -o /dev/null ./cmd/...
+          cd services/microservices/fleet-core-service-new && go build -o /dev/null ./cmd/...
           cd ../tracking-service && go build -o /dev/null ./cmd/...
           cd ../web-bff && go build -o /dev/null ./cmd/...
 
@@ -126,10 +126,10 @@ jobs:
     strategy:
       matrix:
         service:
-          - services/auth-service
-          - services/fleet-core-service-new
-          - services/tracking-service
-          - services/web-bff
+          - services/microservices/auth-service
+          - services/microservices/fleet-core-service-new
+          - services/microservices/tracking-service
+          - services/microservices/web-bff
     steps:
       - uses: actions/checkout@v4
 

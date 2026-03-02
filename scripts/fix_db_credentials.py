@@ -8,22 +8,22 @@ import re
 # Service files with hardcoded database credentials
 service_configs = [
     # Alert Service
-    ("/home/abhishek/Desktop/flyfleet/services/alert-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/alert-service/cmd/main.go", [
         ('"postgres://fleet:fleet123@localhost:5432/fleetdb"', '""'),
     ]),
     
     # Analytics Service  
-    ("/home/abhishek/Desktop/flyfleet/services/analytics-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/analytics-service/cmd/main.go", [
         ('"postgres://user:password@localhost:5432/analytics_db?sslmode=disable"', '""'),
     ]),
     
     # Billing Service
-    ("/home/abhishek/Desktop/flyfleet/services/billing-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/billing-service/cmd/main.go", [
         ('"postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"', '""'),
     ]),
     
     # Driver Service
-    ("/home/abhishek/Desktop/flyfleet/services/driver-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/driver-service/cmd/main.go", [
         ('"postgres://fleet:fleet123@localhost:5432/fleetdb"', '""'),
     ]),
     
@@ -38,12 +38,12 @@ service_configs = [
     ]),
     
     # Governance Service
-    ("/home/abhishek/Desktop/flyfleet/services/governance-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/governance-service/cmd/main.go", [
         ('"postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"', '""'),
     ]),
     
     # Maintenance Service
-    ("/home/abhishek/Desktop/flyfleet/services/maintenance-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/maintenance-service/cmd/main.go", [
         ('"postgres://fleet:fleet123@localhost:5432/fleetdb"', '""'),
     ]),
     
@@ -53,7 +53,7 @@ service_configs = [
     ]),
     
     # Reports Service
-    ("/home/abhishek/Desktop/flyfleet/services/reports-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/reports-service/cmd/main.go", [
         ('"postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"', '""'),
     ]),
     
@@ -63,17 +63,17 @@ service_configs = [
     ]),
     
     # Tracking Service
-    ("/home/abhishek/Desktop/flyfleet/services/tracking-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/tracking-service/cmd/main.go", [
         ('"postgres://fleet:fleet@localhost:5433/fleetdb"', '""'),
     ]),
     
     # Trip Service
-    ("/home/abhishek/Desktop/flyfleet/services/trip-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/trip-service/cmd/main.go", [
         ('"postgres://fleet:fleet123@localhost:5432/fleetdb"', '""'),
     ]),
     
     # Vehicle Service
-    ("/home/abhishek/Desktop/flyfleet/services/vehicle-service/cmd/main.go", [
+    ("/home/abhishek/Desktop/flyfleet/services/microservices/vehicle-service/cmd/main.go", [
         ('"postgres://fleet:fleet@localhost:5433/fleetdb"', '""'),
     ]),
     

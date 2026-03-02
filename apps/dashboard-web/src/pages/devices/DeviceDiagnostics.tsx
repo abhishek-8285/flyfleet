@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useUIStrings } from "../../hooks/useUIStrings";
 
 interface DeviceDetails {
   id: string;
@@ -34,6 +35,9 @@ interface DiagnosticsLog {
 const DeviceDiagnostics: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { uiStrings: rawUiStrings } = useUIStrings("devices");
+  const uiStrings = rawUiStrings || {};
+
   const [device, setDevice] = useState<DeviceDetails | null>(null);
   const [sensors, setSensors] = useState<SensorReading[]>([]);
   const [logs, setLogs] = useState<DiagnosticsLog[]>([]);
@@ -46,23 +50,23 @@ const DeviceDiagnostics: React.FC = () => {
   const fetchDeviceData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
       const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       };
 
       const [deviceRes, sensorsRes, logsRes] = await Promise.all([
         fetch(`/api/v1/devices/${id}`, { headers }),
         fetch(`/api/v1/devices/${id}/sensors`, { headers }),
-        fetch(`/api/v1/devices/${id}/logs?limit=50`, { headers })
+        fetch(`/api/v1/devices/${id}/logs?limit=50`, { headers }),
       ]);
 
       if (deviceRes.ok) setDevice(await deviceRes.json());
-      if (sensorsRes.ok) setSensors(await sensorsRes.json() || []);
-      if (logsRes.ok) setLogs(await logsRes.json() || []);
+      if (sensorsRes.ok) setSensors((await sensorsRes.json()) || []);
+      if (logsRes.ok) setLogs((await logsRes.json()) || []);
     } catch (error) {
-      console.error('Failed to fetch device data:', error);
+      console.error("Failed to fetch device data:", error);
     } finally {
       setLoading(false);
     }
@@ -70,26 +74,36 @@ const DeviceDiagnostics: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'normal': return 'text-emerald-400';
-      case 'warning': return 'text-yellow-400';
-      case 'critical': return 'text-red-400';
-      default: return 'text-slate-400';
+      case "normal":
+        return "text-emerald-400";
+      case "warning":
+        return "text-yellow-400";
+      case "critical":
+        return "text-red-400";
+      default:
+        return "text-slate-400";
     }
   };
 
   const getLogTypeColor = (type: string) => {
     switch (type) {
-      case 'error': return 'bg-red-500/20 text-red-400';
-      case 'warning': return 'bg-yellow-500/20 text-yellow-400';
-      case 'info': return 'bg-blue-500/20 text-blue-400';
-      default: return 'bg-slate-500/20 text-slate-400';
+      case "error":
+        return "bg-red-500/20 text-red-400";
+      case "warning":
+        return "bg-yellow-500/20 text-yellow-400";
+      case "info":
+        return "bg-blue-500/20 text-blue-400";
+      default:
+        return "bg-slate-500/20 text-slate-400";
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <div className="animate-pulse text-slate-400">Loading device diagnostics...</div>
+        <div className="animate-pulse text-slate-400">
+          {uiStrings.msg_loading_diagnostics || "Loading device diagnostics..."}
+        </div>
       </div>
     );
   }
@@ -98,18 +112,26 @@ const DeviceDiagnostics: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="flex items-center gap-4 mb-8">
         <button
-          onClick={() => navigate('/admin/devices')}
+          onClick={() => navigate("/admin/devices")}
           className="p-2 rounded-lg bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
         >
-          ← Back
+          {uiStrings.btn_back || "← Back"}
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-white">{device?.serial_number}</h1>
-          <p className="text-slate-400">{device?.manufacturer} {device?.model}</p>
+          <h1 className="text-2xl font-bold text-white">
+            {device?.serial_number}
+          </h1>
+          <p className="text-slate-400">
+            {device?.manufacturer} {device?.model}
+          </p>
         </div>
-        <span className={`ml-auto px-4 py-2 rounded-lg text-sm font-medium ${
-          device?.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-        }`}>
+        <span
+          className={`ml-auto px-4 py-2 rounded-lg text-sm font-medium ${
+            device?.status === "active"
+              ? "bg-emerald-500/20 text-emerald-400"
+              : "bg-red-500/20 text-red-400"
+          }`}
+        >
           {device?.status?.toUpperCase()}
         </span>
       </div>
@@ -117,38 +139,77 @@ const DeviceDiagnostics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <span>📱</span> Device Info
+            <span>📱</span> {uiStrings.title_device_info || "Device Info"}
           </h2>
           <div className="space-y-3">
-            <InfoRow label="Serial" value={device?.serial_number} />
-            <InfoRow label="Type" value={device?.type?.toUpperCase()} />
-            <InfoRow label="Manufacturer" value={device?.manufacturer} />
-            <InfoRow label="Model" value={device?.model} />
-            <InfoRow label="Hardware Rev" value={device?.hardware_revision} />
-            <InfoRow label="Firmware" value={device?.firmware_version} />
-            <InfoRow label="Registered" value={device?.created_at ? new Date(device.created_at).toLocaleDateString() : '-'} />
+            <InfoRow
+              label={uiStrings.label_serial || "Serial"}
+              value={device?.serial_number}
+            />
+            <InfoRow
+              label={uiStrings.label_type || "Type"}
+              value={device?.type?.toUpperCase()}
+            />
+            <InfoRow
+              label={uiStrings.label_manufacturer || "Manufacturer"}
+              value={device?.manufacturer}
+            />
+            <InfoRow
+              label={uiStrings.label_model || "Model"}
+              value={device?.model}
+            />
+            <InfoRow
+              label={uiStrings.label_hardware_rev || "Hardware Rev"}
+              value={device?.hardware_revision}
+            />
+            <InfoRow
+              label={uiStrings.label_firmware || "Firmware"}
+              value={device?.firmware_version}
+            />
+            <InfoRow
+              label={uiStrings.label_registered || "Registered"}
+              value={
+                device?.created_at
+                  ? new Date(device.created_at).toLocaleDateString()
+                  : "-"
+              }
+            />
           </div>
         </div>
 
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <span>📊</span> Sensor Readings
+            <span>📊</span>{" "}
+            {uiStrings.title_sensor_readings || "Sensor Readings"}
           </h2>
           <div className="space-y-4">
             {sensors.length === 0 ? (
-              <p className="text-slate-400 text-sm">No sensor data available</p>
+              <p className="text-slate-400 text-sm">
+                {uiStrings.msg_no_sensor_data || "No sensor data available"}
+              </p>
             ) : (
               sensors.map((sensor, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg"
+                >
                   <span className="text-slate-300">{sensor.name}</span>
                   <div className="flex items-center gap-2">
-                    <span className={`font-bold ${getStatusColor(sensor.status)}`}>
-                      {sensor.value}{sensor.unit}
+                    <span
+                      className={`font-bold ${getStatusColor(sensor.status)}`}
+                    >
+                      {sensor.value}
+                      {sensor.unit}
                     </span>
-                    <span className={`w-2 h-2 rounded-full ${
-                      sensor.status === 'normal' ? 'bg-emerald-400' :
-                      sensor.status === 'warning' ? 'bg-yellow-400' : 'bg-red-400'
-                    }`}></span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        sensor.status === "normal"
+                          ? "bg-emerald-400"
+                          : sensor.status === "warning"
+                            ? "bg-yellow-400"
+                            : "bg-red-400"
+                      }`}
+                    ></span>
                   </div>
                 </div>
               ))
@@ -158,28 +219,49 @@ const DeviceDiagnostics: React.FC = () => {
 
         <div className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <span>⚡</span> Quick Actions
+            <span>⚡</span> {uiStrings.title_quick_actions || "Quick Actions"}
           </h2>
           <div className="space-y-3">
-            <ActionButton label="View Telemetry" onClick={() => navigate(`/admin/devices/telemetry?device=${id}`)} />
-            <ActionButton label="Send Command" onClick={() => navigate(`/admin/devices/commands?device=${id}`)} />
-            <ActionButton label="Update Firmware" onClick={() => navigate(`/admin/devices/firmware`)} />
-            <ActionButton label="Reboot Device" variant="warning" onClick={() => {}} />
+            <ActionButton
+              label={uiStrings.btn_view_telemetry || "View Telemetry"}
+              onClick={() => navigate(`/admin/devices/telemetry?device=${id}`)}
+            />
+            <ActionButton
+              label={uiStrings.btn_send_command || "Send Command"}
+              onClick={() => navigate(`/admin/devices/commands?device=${id}`)}
+            />
+            <ActionButton
+              label={uiStrings.btn_update_firmware || "Update Firmware"}
+              onClick={() => navigate(`/admin/devices/firmware`)}
+            />
+            <ActionButton
+              label={uiStrings.btn_reboot_device || "Reboot Device"}
+              variant="warning"
+              onClick={() => {}}
+            />
           </div>
         </div>
       </div>
 
       <div className="mt-6 bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-6">
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <span>📋</span> Diagnostics Logs
+          <span>📋</span>{" "}
+          {uiStrings.title_diagnostics_logs || "Diagnostics Logs"}
         </h2>
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {logs.length === 0 ? (
-            <p className="text-slate-400 text-sm">No logs available</p>
+            <p className="text-slate-400 text-sm">
+              {uiStrings.msg_no_logs_available || "No logs available"}
+            </p>
           ) : (
             logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg">
-                <span className={`px-2 py-1 rounded text-xs font-medium ${getLogTypeColor(log.log_type)}`}>
+              <div
+                key={log.id}
+                className="flex items-start gap-3 p-3 bg-slate-900/50 rounded-lg"
+              >
+                <span
+                  className={`px-2 py-1 rounded text-xs font-medium ${getLogTypeColor(log.log_type)}`}
+                >
                   {log.log_type.toUpperCase()}
                 </span>
                 <div className="flex-1">
@@ -197,24 +279,27 @@ const DeviceDiagnostics: React.FC = () => {
   );
 };
 
-const InfoRow: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
+const InfoRow: React.FC<{ label: string; value?: string }> = ({
+  label,
+  value,
+}) => (
   <div className="flex justify-between">
     <span className="text-slate-400 text-sm">{label}</span>
-    <span className="text-white text-sm font-medium">{value || '-'}</span>
+    <span className="text-white text-sm font-medium">{value || "-"}</span>
   </div>
 );
 
 const ActionButton: React.FC<{
   label: string;
   onClick: () => void;
-  variant?: 'default' | 'warning';
-}> = ({ label, onClick, variant = 'default' }) => (
+  variant?: "default" | "warning";
+}> = ({ label, onClick, variant = "default" }) => (
   <button
     onClick={onClick}
     className={`w-full py-3 rounded-lg text-sm font-medium transition-all ${
-      variant === 'warning'
-        ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30'
-        : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
+      variant === "warning"
+        ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30"
+        : "bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30"
     }`}
   >
     {label}

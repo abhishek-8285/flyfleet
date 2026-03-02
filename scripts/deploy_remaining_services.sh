@@ -4,7 +4,7 @@ echo "Deploying remaining services..."
 
 # Build and start trip service
 echo "Building trip-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_trip-service ./services/trip-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_trip-service ./services/microservices/trip-service
 echo "Starting trip-service..."
 docker run -d --name fleet-trip-service -p 8084:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
@@ -12,7 +12,7 @@ docker run -d --name fleet-trip-service -p 8084:8080 --network fleet-network \
 
 # Build and start tracking service
 echo "Building tracking-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_tracking-service ./services/tracking-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_tracking-service ./services/microservices/tracking-service
 echo "Starting tracking-service..."
 docker run -d --name fleet-tracking-service -p 8085:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
@@ -29,7 +29,7 @@ docker run -d --name fleet-route-service -p 8086:8080 --network fleet-network \
 
 # Build and start maintenance service
 echo "Building maintenance-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_maintenance-service ./services/maintenance-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_maintenance-service ./services/microservices/maintenance-service
 echo "Starting maintenance-service..."
 docker run -d --name fleet-maintenance-service -p 8087:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
@@ -45,7 +45,7 @@ docker run -d --name fleet-geofencing-service -p 8088:8080 --network fleet-netwo
 
 # Build and start alert service
 echo "Building alert-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_alert-service ./services/alert-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_alert-service ./services/microservices/alert-service
 echo "Starting alert-service..."
 docker run -d --name fleet-alert-service -p 8089:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
@@ -62,7 +62,7 @@ docker run -d --name fleet-video-service -p 8090:8080 --network fleet-network \
 
 # Build and start india integration service
 echo "Building india-integration-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_india-integration-service ./services/india-integration-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_india-integration-service ./services/microservices/india-integration-service
 echo "Starting india-integration-service..."
 docker run -d --name fleet-india-service -p 8091:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
@@ -70,7 +70,7 @@ docker run -d --name fleet-india-service -p 8091:8080 --network fleet-network \
 
 # Build and start analytics service
 echo "Building analytics-service..."
-cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_analytics-service ./services/analytics-service
+cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_analytics-service ./services/microservices/analytics-service
 echo "Starting analytics-service..."
 docker run -d --name fleet-analytics-service -p 8092:8080 --network fleet-network \
   -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \

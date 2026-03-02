@@ -17,7 +17,7 @@ docker exec -i fleet-postgres psql -U fleet -d fleetdb < migrations/003_tracking
 
 # Start tracking service
 echo "Starting tracking service..."
-cd services/tracking-service
+cd services/microservices/tracking-service
 go mod tidy
 
 # Run in background

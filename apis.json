@@ -1,0 +1,24 @@
+========= API COUNT =========
+Total REST APIs: 64
+Total RPC APIs: 82
+TOTAL APIs: 146
+
+===== REST per service =====
+{ go: 1, node: 52, 'fleet-ml-service': 5, 'optimization-service': 6 }
+
+===== RPC per service =====
+{
+  AdminSupportService: 3,
+  AlertService: 4,
+  AnalyticsService: 5,
+  AuthService: 9,
+  BillingService: 3,
+  ComplianceService: 7,
+  DriverService: 5,
+  FleetService: 25,
+  MaintenanceService: 7,
+  ReportsService: 4,
+  TelemetryService: 2,
+  TrackingService: 3,
+  TripService: 5
+}

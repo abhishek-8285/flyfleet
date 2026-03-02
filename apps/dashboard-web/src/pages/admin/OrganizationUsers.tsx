@@ -1,15 +1,22 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
+import React from "react";
+import { useUIStrings } from "../../hooks/useUIStrings";
 
 export const OrganizationUsers: React.FC = () => {
-  const { id } = useParams();
-  
+  const { uiStrings } = useUIStrings("admin_users");
   return (
     <div className="p-8">
-      <h1 className="text-white text-2xl font-bold mb-4">Organization Users</h1>
-      <p className="text-text-muted">Manage users for organization ID: {id}</p>
-      <div className="mt-8 bg-surface-dark rounded-xl border border-border-color p-6">
-        <p className="text-text-muted text-center">User management interface coming soon...</p>
+      <div className="mb-6">
+        <h1 className="text-white text-2xl font-bold mb-1">
+          {uiStrings?.title || "User Management"}
+        </h1>
+        <p className="text-text-muted text-sm">
+          {uiStrings?.subtitle || "Manage users within your organization"}
+        </p>
+      </div>
+      <div className="flex items-center justify-center h-64 border-2 border-dashed border-border-color rounded-xl">
+        <p className="text-text-muted italic">
+          {uiStrings?.coming_soon || "User management interface coming soon..."}
+        </p>
       </div>
     </div>
   );

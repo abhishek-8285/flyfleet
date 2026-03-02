@@ -1,8 +1,12 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
-import { createTraceId, REQUEST_ID_HEADER, TRACE_ID_HEADER } from '../utils/trace';
+import axios, { AxiosError, AxiosInstance } from "axios";
+import {
+    createTraceId,
+    REQUEST_ID_HEADER,
+    TRACE_ID_HEADER,
+} from "../utils/trace";
 
-const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
-const BFF_URL = process.env.REACT_APP_BFF_URL || '/';
+const API_URL = process.env.REACT_APP_API_URL || "/api/v1";
+const BFF_URL = process.env.REACT_APP_BFF_URL || "/";
 
 class ApiService {
   private client: AxiosInstance;
@@ -13,7 +17,7 @@ class ApiService {
       baseURL: API_URL,
       timeout: 10000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -21,14 +25,14 @@ class ApiService {
       baseURL: BFF_URL,
       timeout: 10000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     const setupInterceptors = (instance: AxiosInstance) => {
       instance.interceptors.request.use(
         (config) => {
-          const token = localStorage.getItem('access_token');
+          const token = localStorage.getItem("access_token");
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
@@ -37,18 +41,18 @@ class ApiService {
           config.headers[REQUEST_ID_HEADER] = traceId;
           return config;
         },
-        (error) => Promise.reject(error)
+        (error) => Promise.reject(error),
       );
 
       instance.interceptors.response.use(
         (response) => response.data,
         (error: AxiosError) => {
           if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
+            localStorage.removeItem("token");
+            window.location.href = "/login";
           }
           return Promise.reject(error);
-        }
+        },
       );
     };
 
@@ -56,23 +60,40 @@ class ApiService {
     setupInterceptors(this.bffClient);
   }
 
+  // Generic Methods
+  async get(url: string, config?: any): Promise<any> {
+    return this.client.get(url, config);
+  }
+
+  async post(url: string, data?: any, config?: any): Promise<any> {
+    return this.client.post(url, data, config);
+  }
+
+  async put(url: string, data?: any, config?: any): Promise<any> {
+    return this.client.put(url, data, config);
+  }
+
+  async delete(url: string, config?: any): Promise<any> {
+    return this.client.delete(url, config);
+  }
+
   // Auth
   async login(email: string, password: string): Promise<any> {
-    return this.client.post('/auth/login', { email, password });
+    return this.client.post("/auth/login", { email, password });
   }
 
   async refreshToken(): Promise<any> {
-    return this.client.post('/auth/refresh');
+    return this.client.post("/auth/refresh");
   }
 
   async logout() {
-    await this.client.post('/auth/logout');
-    localStorage.removeItem('token');
+    await this.client.post("/auth/logout");
+    localStorage.removeItem("token");
   }
 
   // Vehicles
   async getVehicles(params?: any): Promise<any> {
-    return this.client.get('/admin/vehicles', { params });
+    return this.client.get("/vehicles", { params });
   }
 
   async getVehicle(id: string): Promise<any> {
@@ -80,7 +101,7 @@ class ApiService {
   }
 
   async createVehicle(data: any): Promise<any> {
-    return this.client.post('/admin/vehicles', data);
+    return this.client.post("/admin/vehicles", data);
   }
 
   async updateVehicle(id: string, data: any): Promise<any> {
@@ -93,7 +114,7 @@ class ApiService {
 
   // Trips
   async getTrips(params?: any): Promise<any> {
-    return this.client.get('/admin/trips', { params });
+    return this.client.get("/dispatch/trips", { params });
   }
 
   async getTrip(id: string): Promise<any> {
@@ -101,7 +122,7 @@ class ApiService {
   }
 
   async createTrip(data: any): Promise<any> {
-    return this.client.post('/admin/trips', data);
+    return this.client.post("/admin/trips", data);
   }
 
   async updateTrip(id: string, data: any): Promise<any> {
@@ -113,25 +134,27 @@ class ApiService {
   }
 
   async getTripTelemetry(id: string, limit: number = 50): Promise<any> {
-    return this.client.get(`/admin/trips/${id}/telemetry`, { params: { limit } });
+    return this.client.get(`/admin/trips/${id}/telemetry`, {
+      params: { limit },
+    });
   }
 
   async getTripSettings(): Promise<any> {
-    return this.client.get('/admin/trips/settings');
+    return this.client.get("/admin/trips/settings");
   }
 
   async updateTripSettings(data: any): Promise<any> {
-    return this.client.put('/admin/trips/settings', data);
+    return this.client.put("/admin/trips/settings", data);
   }
 
   // Users
   async getUsers(orgId: string): Promise<any> {
-    return this.client.get('/admin/users', { params: { org_id: orgId } });
+    return this.client.get("/admin/users", { params: { org_id: orgId } });
   }
 
   // Organizations
   async getOrganizations(params?: any): Promise<any> {
-    return this.client.get('/admin/organizations', { params });
+    return this.client.get("/admin/organizations", { params });
   }
 
   async getOrganization(id: string): Promise<any> {
@@ -139,7 +162,7 @@ class ApiService {
   }
 
   async createOrganization(data: any): Promise<any> {
-    return this.client.post('/admin/organizations', data);
+    return this.client.post("/admin/organizations", data);
   }
 
   async updateOrganization(id: string, data: any): Promise<any> {
@@ -153,9 +176,9 @@ class ApiService {
   async getOrganizationStats(): Promise<any> {
     // Try to get stats, fallback to empty/default if backend doesn't support it yet
     try {
-      return await this.client.get('/admin/organizations/stats');
+      return await this.client.get("/admin/organizations/stats");
     } catch (error) {
-      console.warn('Organization stats API not available, using fallback');
+      console.warn("Organization stats API not available, using fallback");
       return {
         data: {
           total_orgs: 0,
@@ -165,15 +188,15 @@ class ApiService {
           total_users: 0,
           total_vehicles: 0,
           total_devices: 0,
-          active_alerts: 0
-        }
+          active_alerts: 0,
+        },
       };
     }
   }
 
   // Drivers
   async getDrivers(params?: any): Promise<any> {
-    return this.client.get('/admin/drivers', { params });
+    return this.client.get("/drivers", { params });
   }
 
   async getDriver(id: string): Promise<any> {
@@ -182,7 +205,7 @@ class ApiService {
 
   // Alerts
   async getAlerts(params?: any): Promise<any> {
-    return this.client.get('/admin/alerts', { params });
+    return this.client.get("/alerts", { params });
   }
 
   async acknowledgeAlert(id: string): Promise<any> {
@@ -191,11 +214,11 @@ class ApiService {
 
   // Geofences
   async getGeofences(): Promise<any> {
-    return this.client.get('/admin/geofences');
+    return this.client.get("/admin/geofences");
   }
 
   async createGeofence(data: any): Promise<any> {
-    return this.client.post('/admin/geofences', data);
+    return this.client.post("/admin/geofences", data);
   }
 
   async deleteGeofence(id: string): Promise<any> {
@@ -204,24 +227,30 @@ class ApiService {
 
   // Statistics
   async getStatistics(): Promise<any> {
-    return this.bffClient.get('/api/v1/dashboard/stats');
+    return this.bffClient.get("/api/v1/dashboard/stats");
   }
 
   async getAdminDashboardData(timeRange?: string): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/dashboard/data', { params: { time_range: timeRange } });
+    return this.bffClient.get("/api/v1/dashboard/data", {
+      params: { time_range: timeRange },
+    });
   }
 
   async getTimeline(): Promise<any> {
-    return this.bffClient.get('/api/v1/timeline');
+    return this.bffClient.get("/api/v1/timeline");
   }
 
   // Documents
   async getDocuments(vehicleId: string): Promise<any> {
-    return this.client.get('/admin/documents', { params: { vehicle_id: vehicleId } });
+    return this.client.get("/admin/documents", {
+      params: { vehicle_id: vehicleId },
+    });
   }
 
   async createDocument(vehicleId: string, data: any): Promise<any> {
-    return this.client.post('/admin/documents', data, { params: { vehicle_id: vehicleId } });
+    return this.client.post("/admin/documents", data, {
+      params: { vehicle_id: vehicleId },
+    });
   }
 
   async updateDocument(id: string, data: any): Promise<any> {
@@ -233,24 +262,24 @@ class ApiService {
   }
 
   async getDriverStats(): Promise<any> {
-    return this.client.get('/admin/analytics/drivers');
+    return this.client.get("/admin/analytics/drivers");
   }
 
   async getTripStats(): Promise<any> {
-    return this.client.get('/admin/analytics/trips');
+    return this.client.get("/admin/analytics/trips");
   }
 
   // Bulk Uploads
   async getBulkJobs(params?: any): Promise<any> {
-    return this.client.get('/admin/bulk-jobs', { params });
+    return this.client.get("/admin/bulk-jobs", { params });
   }
 
   async createBulkJob(file: File): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
-    return this.client.post('/admin/bulk-jobs', formData, {
+    formData.append("file", file);
+    return this.client.post("/admin/bulk-jobs", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
   }
@@ -265,88 +294,131 @@ class ApiService {
 
   // MFA Security (Routed through BFF)
   async getMFADashboard(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/dashboard', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/dashboard", {
+      params: { org_id: orgId },
+    });
   }
 
   async getMFAAdoptionTrend(orgId: string, days: number = 30): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/adoption-trend', { params: { org_id: orgId, days } });
+    return this.bffClient.get("/api/v1/security/mfa/adoption-trend", {
+      params: { org_id: orgId, days },
+    });
   }
 
   async getMFAMethodDistribution(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/method-distribution', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/method-distribution", {
+      params: { org_id: orgId },
+    });
   }
 
-  async getMFAEvents(orgId: string, page: number = 1, pageSize: number = 20): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/events', { params: { org_id: orgId, page, page_size: pageSize } });
+  async getMFAEvents(
+    orgId: string,
+    page: number = 1,
+    pageSize: number = 20,
+  ): Promise<any> {
+    return this.bffClient.get("/api/v1/security/mfa/events", {
+      params: { org_id: orgId, page, page_size: pageSize },
+    });
   }
 
   async getMFAFailureLocations(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/failures/locations', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/failures/locations", {
+      params: { org_id: orgId },
+    });
   }
 
   async getMFAFailureUsers(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/failures/users', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/failures/users", {
+      params: { org_id: orgId },
+    });
   }
 
   async getLockedUsers(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/locked-users', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/locked-users", {
+      params: { org_id: orgId },
+    });
   }
 
   async unlockUser(userId: string): Promise<any> {
-    return this.bffClient.post('/api/v1/security/mfa/unlock', { userId });
+    return this.bffClient.post("/api/v1/security/mfa/unlock", { userId });
   }
 
   async resetMFA(userId: string): Promise<any> {
-    return this.bffClient.post('/api/v1/security/mfa/reset', { userId });
+    return this.bffClient.post("/api/v1/security/mfa/reset", { userId });
   }
 
   async getMFAPolicy(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/policy', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/policy", {
+      params: { org_id: orgId },
+    });
   }
 
-  async updateMFAPolicy(data: { policy: any, reason: string }): Promise<any> {
-    return this.bffClient.put('/api/v1/security/mfa/policy', data);
+  async updateMFAPolicy(data: { policy: any; reason: string }): Promise<any> {
+    return this.bffClient.put("/api/v1/security/mfa/policy", data);
   }
 
   async getMFAPolicyHistory(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/policy/history', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/policy/history", {
+      params: { org_id: orgId },
+    });
   }
 
   async rollbackMFAPolicy(historyId: string): Promise<any> {
-    return this.bffClient.post('/api/v1/security/mfa/policy/rollback', { historyId });
+    return this.bffClient.post("/api/v1/security/mfa/policy/rollback", {
+      historyId,
+    });
   }
 
   async getMFAOrgOverride(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/overrides', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/overrides", {
+      params: { org_id: orgId },
+    });
   }
 
   async updateMFAOrgOverride(data: any): Promise<any> {
-    return this.bffClient.put('/api/v1/security/mfa/overrides', data);
+    return this.bffClient.put("/api/v1/security/mfa/overrides", data);
   }
 
   // Audit Module
-  async getAuditLogs(params: { org_id: string; page?: number; action?: string; severity?: string; user_id?: string }): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/audit/logs', { params });
+  async getAuditLogs(params: {
+    org_id: string;
+    page?: number;
+    action?: string;
+    severity?: string;
+    user_id?: string;
+  }): Promise<any> {
+    return this.bffClient.get("/api/v1/audit/logs", { params });
   }
 
   async getAuditLogDetails(id: string, org_id: string): Promise<any> {
-    return this.bffClient.get(`/api/v1/admin/audit/logs/${id}`, { params: { org_id } });
+    return this.bffClient.get(`/api/v1/audit/logs/${id}`, {
+      params: { org_id },
+    });
   }
 
   async getAuditSettings(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/audit/settings', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/audit/settings", {
+      params: { org_id: orgId },
+    });
   }
 
   async updateAuditSettings(data: any): Promise<any> {
-    return this.bffClient.put('/api/v1/admin/audit/settings', data);
+    return this.bffClient.put("/api/v1/audit/settings", data);
   }
 
   async getMFAExceptions(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/mfa/exceptions', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/mfa/exceptions", {
+      params: { org_id: orgId },
+    });
   }
 
-  async addMFAException(data: { userId: string, orgId: string, reason: string, days: number }): Promise<any> {
-    return this.bffClient.post('/api/v1/security/mfa/exceptions', data);
+  async addMFAException(data: {
+    userId: string;
+    orgId: string;
+    reason: string;
+    days: number;
+  }): Promise<any> {
+    return this.bffClient.post("/api/v1/security/mfa/exceptions", data);
   }
 
   async deleteMFAException(id: string): Promise<any> {
@@ -354,20 +426,33 @@ class ApiService {
   }
 
   // Security Operations Expansion
-  async getLoginActivityLogs(params: { page?: number; size?: number; status?: string }): Promise<any> {
-    return this.bffClient.get('/api/v1/security/logins', { params });
+  async getLoginActivityLogs(params: {
+    page?: number;
+    size?: number;
+    status?: string;
+  }): Promise<any> {
+    return this.bffClient.get("/api/v1/security/logins", { params });
   }
 
-  async getThreatAlerts(params: { page?: number; size?: number; severity?: string; status?: string }): Promise<any> {
-    return this.bffClient.get('/api/v1/security/alerts', { params });
+  async getThreatAlerts(params: {
+    page?: number;
+    size?: number;
+    severity?: string;
+    status?: string;
+  }): Promise<any> {
+    return this.bffClient.get("/api/v1/security/alerts", { params });
   }
 
   async updateThreatAlertStatus(id: string, status: string): Promise<any> {
-    return this.bffClient.patch(`/api/v1/security/alerts/${id}/status`, { status });
+    return this.bffClient.patch(`/api/v1/security/alerts/${id}/status`, {
+      status,
+    });
   }
 
   async getSecuritySessions(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/sessions', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/sessions", {
+      params: { org_id: orgId },
+    });
   }
 
   async revokeSecuritySession(sessionId: string): Promise<any> {
@@ -375,45 +460,61 @@ class ApiService {
   }
 
   async getIPRules(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/security/ip-rules', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/security/ip-rules", {
+      params: { org_id: orgId },
+    });
   }
 
   async createIPRule(data: any): Promise<any> {
-    return this.bffClient.post('/api/v1/security/ip-rules', data);
+    return this.bffClient.post("/api/v1/security/ip-rules", data);
   }
 
   // Audit & Compliance Extensions
   async getEntityHistory(type: string, id: string): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/audit/entity-history', { params: { type, id } });
+    return this.bffClient.get("/api/v1/audit/entity-history", {
+      params: { type, id },
+    });
   }
 
-  async createEvidenceExport(data: { org_id: string; module: string; date_range_start: string; date_range_end: string; format: string }): Promise<any> {
-    return this.bffClient.post('/api/v1/admin/audit/evidence-exports', data);
+  async createEvidenceExport(data: {
+    org_id: string;
+    module: string;
+    date_range_start: string;
+    date_range_end: string;
+    format: string;
+  }): Promise<any> {
+    return this.bffClient.post("/api/v1/audit/evidence-exports", data);
   }
 
   async getEvidenceExports(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/audit/evidence-exports', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/audit/evidence-exports", {
+      params: { org_id: orgId },
+    });
   }
 
   async getEvidenceExportDetails(id: string): Promise<any> {
-    return this.bffClient.get(`/api/v1/admin/audit/evidence-exports/${id}`);
+    return this.bffClient.get(`/api/v1/audit/evidence-exports/${id}`);
   }
 
   async getAuditPolicy(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/admin/audit/policy', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/audit/policy", {
+      params: { org_id: orgId },
+    });
   }
 
   async updateAuditPolicy(data: any): Promise<any> {
-    return this.bffClient.put('/api/v1/admin/audit/policy', data);
+    return this.bffClient.put("/api/v1/audit/policy", data);
   }
 
   // Integrations Module
   async getIntegrations(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/integrations/', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/integrations/", {
+      params: { org_id: orgId },
+    });
   }
 
   async createIntegration(data: any): Promise<any> {
-    return this.bffClient.post('/api/v1/integrations/', data);
+    return this.bffClient.post("/api/v1/integrations/", data);
   }
 
   async updateIntegration(id: string, data: any): Promise<any> {
@@ -425,23 +526,32 @@ class ApiService {
   }
 
   async getApiClients(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/api-clients/', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/api-clients/", {
+      params: { org_id: orgId },
+    });
   }
 
   async createApiClient(data: any): Promise<any> {
-    return this.bffClient.post('/api/v1/api-clients/', data);
+    return this.bffClient.post("/api/v1/api-clients/", data);
   }
 
   async getWebhooks(orgId: string): Promise<any> {
-    return this.bffClient.get('/api/v1/webhooks/', { params: { org_id: orgId } });
+    return this.bffClient.get("/api/v1/webhooks/", {
+      params: { org_id: orgId },
+    });
   }
 
-  async getIntegrationLogs(params: { org_id: string; integration_id?: string; limit?: number; offset?: number }): Promise<any> {
-    return this.bffClient.get('/api/v1/integrations/logs', { params });
+  async getIntegrationLogs(params: {
+    org_id: string;
+    integration_id?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<any> {
+    return this.bffClient.get("/api/v1/integrations/logs", { params });
   }
   // Route Optimization
   async createOptimizationRequest(data: any): Promise<any> {
-    return this.client.post('/routes/requests', data);
+    return this.client.post("/routes/requests", data);
   }
 
   async getOptimizationRequest(id: string): Promise<any> {
@@ -449,7 +559,7 @@ class ApiService {
   }
 
   async listOptimizationRequests(params?: any): Promise<any> {
-    return this.client.get('/routes/requests', { params });
+    return this.client.get("/routes/requests", { params });
   }
 
   async getOptimizationResult(id: string): Promise<any> {
@@ -457,17 +567,17 @@ class ApiService {
   }
 
   async listOptimizationResults(params?: any): Promise<any> {
-    return this.client.get('/routes/results', { params });
+    return this.client.get("/routes/results", { params });
   }
 
   async listOptimizationJobs(params?: any): Promise<any> {
-    return this.client.get('/routes/jobs', { params });
+    return this.client.get("/routes/jobs", { params });
   }
 
   // Video Telematics
   // Video Telematics
   async createVideoStream(data: any): Promise<any> {
-    return this.client.post('/admin/video/streams', data);
+    return this.client.post("/admin/video/streams", data);
   }
 
   async getVideoStream(id: string): Promise<any> {
@@ -475,53 +585,56 @@ class ApiService {
   }
 
   async listVideoStreams(params?: any): Promise<any> {
-    return this.client.get('/admin/video/streams', { params });
+    return this.client.get("/admin/video/streams", { params });
   }
 
   async listVideoRecordings(params?: any): Promise<any> {
-    return this.client.get('/admin/video/recordings', { params });
+    return this.client.get("/admin/video/recordings", { params });
   }
 
   async getVideoAnalytics(params?: any): Promise<any> {
-    return this.client.get('/admin/video/analytics', { params });
+    return this.client.get("/admin/video/analytics", { params });
   }
 
   // Advanced Analytics
   async getPredictiveMaintenance(params?: any): Promise<any> {
-    return this.client.get('/admin/analytics/maintenance', { params });
+    return this.client.get("/admin/analytics/maintenance", { params });
   }
 
   async getDriverBehaviorAnalytics(params?: any): Promise<any> {
-    return this.client.get('/admin/analytics/driver-behavior', { params });
+    return this.client.get("/admin/analytics/driver-behavior", { params });
   }
 
   async getFleetUtilization(params?: any): Promise<any> {
-    return this.client.get('/admin/analytics/utilization', { params });
+    return this.client.get("/admin/analytics/utilization", { params });
   }
 
   async listAnalyticsJobs(params?: any): Promise<any> {
-    return this.client.get('/admin/analytics/jobs', { params });
+    return this.client.get("/admin/analytics/jobs", { params });
   }
 
   async createAnalyticsJob(data: any): Promise<any> {
-    return this.client.post('/admin/analytics/jobs', data);
+    return this.client.post("/admin/analytics/jobs", data);
   }
 
   // Disaster Recovery
   async initiateBackup(type: string): Promise<any> {
-    return this.client.post('/admin/dr/backups', { type });
+    return this.client.post("/admin/dr/backups", { type });
   }
 
   async getBackups(params?: any): Promise<any> {
-    return this.client.get('/admin/dr/backups', { params });
+    return this.client.get("/admin/dr/backups", { params });
   }
 
   async initiateRestore(backupId: string, targetEnv: string): Promise<any> {
-    return this.client.post('/admin/dr/restore-jobs', { backup_id: backupId, target_environment: targetEnv });
+    return this.client.post("/admin/dr/restore-jobs", {
+      backup_id: backupId,
+      target_environment: targetEnv,
+    });
   }
 
   async getRestoreJobs(params?: any): Promise<any> {
-    return this.client.get('/admin/dr/restore-jobs', { params });
+    return this.client.get("/admin/dr/restore-jobs", { params });
   }
 }
 

@@ -3,26 +3,6 @@ go 1.26
 use (
 	./packages/common/go
 	./proto
-	./services/admin-support-service
-	./services/alert-service
-	./services/analytics-service
-	./services/auth-service
-	./services/billing-service
-	./services/driver-service
 	./services/fleet-core-service-legacy
-	./services/fleet-core-service-new
-	./services/fleet-ml-service
-	./services/governance-service
-	./services/india-integration-service
-	./services/ingestion-service
-	./services/integrations-service
-	./services/maintenance-service
-	./services/optimization-service
-	./services/reports-service
-	./services/settings-service
-	./services/tracking-service
-	./services/trip-service
-	./services/vehicle-service
-	./services/web-bff
-	./services/worker-service
+	./services/microservices/fleet-ml-service
 )

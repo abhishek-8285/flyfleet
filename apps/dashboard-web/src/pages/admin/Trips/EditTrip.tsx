@@ -1,21 +1,24 @@
-import { ChevronRightIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import api from '../../../services/api';
+import { ChevronRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useUIStrings } from "../../../hooks/useUIStrings";
+import api from "../../../services/api";
 
 export default function EditTrip() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { uiStrings: rawUiStrings } = useUIStrings("tracking");
+  const uiStrings = rawUiStrings || {};
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
-    status: '',
-    start_location: '',
-    end_location: '',
-    distance: '',
+    status: "",
+    start_location: "",
+    end_location: "",
+    distance: "",
   });
-  const [tripId, setTripId] = useState('');
+  const [tripId, setTripId] = useState("");
 
   useEffect(() => {
     loadTrip();
@@ -26,25 +29,27 @@ export default function EditTrip() {
       const data = await api.getTrip(id!);
       setTripId(data.trip_id);
       setFormData({
-        status: data.status || '',
-        start_location: data.start_location || '',
-        end_location: data.end_location || '',
-        distance: data.distance?.toString() || '',
+        status: data.status || "",
+        start_location: data.start_location || "",
+        end_location: data.end_location || "",
+        distance: data.distance?.toString() || "",
       });
     } catch (error) {
-      console.error('Failed to load trip:', error);
+      console.error("Failed to load trip:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSaving(true);
 
     try {
@@ -56,14 +61,22 @@ export default function EditTrip() {
       });
       navigate(`/admin/trips/${id}`);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update trip');
+      setError(
+        err.response?.data?.error ||
+          uiStrings.error_update_failed ||
+          "Failed to update trip",
+      );
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-center text-text-muted">Loading...</div>;
+    return (
+      <div className="p-6 text-center text-text-muted">
+        {uiStrings.msg_loading || "Loading..."}
+      </div>
+    );
   }
 
   return (
@@ -72,24 +85,37 @@ export default function EditTrip() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-            <Link to="/admin/trips" className="hover:text-white">Trips</Link>
+            <Link to="/admin/trips" className="hover:text-white">
+              {uiStrings.trips_title || "Trips"}
+            </Link>
             <ChevronRightIcon className="w-3 h-3" />
-            <Link to={`/admin/trips/${id}`} className="hover:text-white">{tripId}</Link>
+            <Link to={`/admin/trips/${id}`} className="hover:text-white">
+              {tripId}
+            </Link>
             <ChevronRightIcon className="w-3 h-3" />
-            <span className="text-white">Edit</span>
+            <span className="text-white">
+              {uiStrings.breadcrumb_edit || "Edit"}
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Edit Trip Details</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {uiStrings.title_edit_trip || "Edit Trip Details"}
+          </h1>
         </div>
         <div className="flex items-center gap-3">
-          <Link to={`/admin/trips/${id}`} className="px-4 py-2 bg-surface-dark border border-border-color text-text-muted hover:text-white text-sm rounded transition-colors">
-            Cancel
+          <Link
+            to={`/admin/trips/${id}`}
+            className="px-4 py-2 bg-surface-dark border border-border-color text-text-muted hover:text-white text-sm rounded transition-colors"
+          >
+            {uiStrings.btn_cancel || "Cancel"}
           </Link>
           <button
             onClick={handleSubmit}
             disabled={saving}
             className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {saving
+              ? uiStrings.msg_saving || "Saving..."
+              : uiStrings.btn_save_changes || "Save Changes"}
           </button>
         </div>
       </div>
@@ -105,12 +131,16 @@ export default function EditTrip() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
           <div className="p-4 border-b border-border-color bg-surface-darker">
-            <h3 className="text-white font-semibold">Trip Information</h3>
+            <h3 className="text-white font-semibold">
+              {uiStrings.section_trip_info || "Trip Information"}
+            </h3>
           </div>
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">Trip ID</label>
+                <label className="text-xs font-medium text-text-muted">
+                  {uiStrings.th_trip_id || "Trip ID"}
+                </label>
                 <input
                   type="text"
                   value={tripId}
@@ -119,23 +149,35 @@ export default function EditTrip() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">Status</label>
+                <label className="text-xs font-medium text-text-muted">
+                  {uiStrings.th_status || "Status"}
+                </label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
                   className="w-full bg-background-dark border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
                 >
-                  <option value="scheduled">Scheduled</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="scheduled">
+                    {uiStrings.filter_scheduled || "Scheduled"}
+                  </option>
+                  <option value="in_progress">
+                    {uiStrings.filter_in_progress || "In Progress"}
+                  </option>
+                  <option value="completed">
+                    {uiStrings.filter_completed || "Completed"}
+                  </option>
+                  <option value="cancelled">
+                    {uiStrings.filter_cancelled || "Cancelled"}
+                  </option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">Start Location</label>
+                <label className="text-xs font-medium text-text-muted">
+                  {uiStrings.th_start_location || "Start Location"}
+                </label>
                 <input
                   type="text"
                   name="start_location"
@@ -145,7 +187,9 @@ export default function EditTrip() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">End Location</label>
+                <label className="text-xs font-medium text-text-muted">
+                  {uiStrings.th_end_location || "End Location"}
+                </label>
                 <input
                   type="text"
                   name="end_location"
@@ -156,7 +200,10 @@ export default function EditTrip() {
               </div>
             </div>
             <div className="max-w-xs space-y-1.5">
-              <label className="text-xs font-medium text-text-muted">Distance (km)</label>
+              <label className="text-xs font-medium text-text-muted">
+                {uiStrings.th_distance || "Distance"} (
+                {uiStrings.miles_label || "km"})
+              </label>
               <input
                 type="number"
                 name="distance"

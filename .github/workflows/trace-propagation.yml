@@ -7,8 +7,8 @@ on:
       - 'apps/dashboard-web/src/index.tsx'
       - 'apps/dashboard-web/src/services/**'
       - 'apps/dashboard-web/src/utils/trace*.ts'
-      - 'services/web-bff/cmd/main.go'
-      - 'services/web-bff/internal/middleware/**'
+      - 'services/microservices/web-bff/cmd/main.go'
+      - 'services/microservices/web-bff/internal/middleware/**'
       - 'scripts/check_trace_propagation.py'
       - '.github/workflows/trace-propagation.yml'
   push:
@@ -17,8 +17,8 @@ on:
       - 'apps/dashboard-web/src/index.tsx'
       - 'apps/dashboard-web/src/services/**'
       - 'apps/dashboard-web/src/utils/trace*.ts'
-      - 'services/web-bff/cmd/main.go'
-      - 'services/web-bff/internal/middleware/**'
+      - 'services/microservices/web-bff/cmd/main.go'
+      - 'services/microservices/web-bff/internal/middleware/**'
       - 'scripts/check_trace_propagation.py'
       - '.github/workflows/trace-propagation.yml'
 

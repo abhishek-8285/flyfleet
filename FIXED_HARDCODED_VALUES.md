@@ -3,7 +3,7 @@
 ## Issues Fixed ✅
 
 ### 1. Auth Service Configuration Security Issues
-**File:** `/services/auth-service/internal/config/config.go`
+**File:** `/services/microservices/auth-service/internal/config/config.go`
 - Removed hardcoded database credentials fallback
 - Removed hardcoded JWT secret fallback  
 - Removed hardcoded service URLs
@@ -26,12 +26,12 @@ DriverServiceURL:  getEnv("DRIVER_SERVICE_URL", ""),
 ```
 
 ### 2. Web BFF Configuration Security Issue
-**File:** `/services/web-bff/internal/config/config.go`
+**File:** `/services/microservices/web-bff/internal/config/config.go`
 - Removed hardcoded JWT secret fallback
 - **Issues fixed:** 1 critical security vulnerability
 
 ### 3. Trip Service Code Quality Improvements
-**File:** `/services/trip-service/internal/models/trip.go`
+**File:** `/services/microservices/trip-service/internal/models/trip.go`
 - Added validation constants for magic numbers
 - Added TODO comments for replacing hardcoded validation values
 - **Issues fixed:** 9 magic number issues (converted to named constants)
@@ -51,7 +51,7 @@ const (
 ```
 
 ### 4. Web BFF Dashboard Handler Magic Numbers
-**File:** `/services/web-bff/internal/handlers/dashboard_handlers.go`
+**File:** `/services/microservices/web-bff/internal/handlers/dashboard_handlers.go`
 - Replaced hardcoded mock data values with named constants
 - **Issues fixed:** 7 magic number issues
 
@@ -103,8 +103,8 @@ TotalDrivers:       MockTotalDrivers,       // 156
 
 ## Files Still Needing Attention (Top Priority)
 
-1. `/services/alert-service/cmd/main.go` - Database credentials
-2. `/services/web-bff/cmd/main.go` - API keys
+1. `/services/microservices/alert-service/cmd/main.go` - Database credentials
+2. `/services/microservices/web-bff/cmd/main.go` - API keys
 3. `/services/video-service/cmd/main.go` - Database credentials
 4. `/services/*/internal/config/*.go` files - Various hardcoded values
 

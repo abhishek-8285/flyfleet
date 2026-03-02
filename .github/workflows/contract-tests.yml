@@ -4,12 +4,12 @@ on:
   push:
     branches: [master, main, develop]
     paths:
-      - 'services/vehicle-service/**'
+      - 'services/microservices/vehicle-service/**'
       - '.github/workflows/contract-tests.yml'
   pull_request:
     branches: [master, main, develop]
     paths:
-      - 'services/vehicle-service/**'
+      - 'services/microservices/vehicle-service/**'
       - '.github/workflows/contract-tests.yml'
 
 jobs:
@@ -26,14 +26,14 @@ jobs:
         with:
           go-version: '1.22'
           cache: true
-          cache-dependency-path: services/vehicle-service/go.sum
+          cache-dependency-path: services/microservices/vehicle-service/go.sum
 
       - name: Download dependencies
-        working-directory: services/vehicle-service
+        working-directory: services/microservices/vehicle-service
         run: go mod download
 
       - name: Verify OpenAPI spec is valid
-        working-directory: services/vehicle-service
+        working-directory: services/microservices/vehicle-service
         run: |
           echo "🔍 Validating OpenAPI specification..."
           go run -mod=readonly github.com/getkin/kin-openapi/cmd/validate-spec@latest api/openapi/trips.yaml || {
@@ -44,7 +44,7 @@ jobs:
           echo "✅ OpenAPI spec is valid"
 
       - name: Run contract tests
-        working-directory: services/vehicle-service
+        working-directory: services/microservices/vehicle-service
         run: |
           echo "🧪 Running contract tests..."
           go test -v ./tests/... -count=1 2>&1 | tee contract-test-results.txt
@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: contract-test-results
-          path: services/vehicle-service/contract-test-results.txt
+          path: services/microservices/vehicle-service/contract-test-results.txt
           retention-days: 30
 
   build-check:
@@ -87,10 +87,10 @@ jobs:
         with:
           go-version: '1.22'
           cache: true
-          cache-dependency-path: services/vehicle-service/go.sum
+          cache-dependency-path: services/microservices/vehicle-service/go.sum
 
       - name: Build vehicle-service
-        working-directory: services/vehicle-service
+        working-directory: services/microservices/vehicle-service
         run: |
           echo "🔨 Building vehicle-service..."
           go build -o /tmp/vehicle-service ./cmd/main.go

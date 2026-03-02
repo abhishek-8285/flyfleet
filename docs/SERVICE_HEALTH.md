@@ -14,17 +14,17 @@ All services are managed via `go.work` and verified for compilation.
 
 | Service Name | Path | Build Status | Key Dependency |
 | :--- | :--- | :--- | :--- |
-| Auth Service | `services/auth-service` | ✅ Success | PGX, JWT |
-| Vehicle Service | `services/vehicle-service` | ✅ Success | PGX, Validator |
-| Analytics Service | `services/analytics-service` | ✅ Success | Shared Redis |
+| Auth Service | `services/microservices/auth-service` | ✅ Success | PGX, JWT |
+| Vehicle Service | `services/microservices/vehicle-service` | ✅ Success | PGX, Validator |
+| Analytics Service | `services/microservices/analytics-service` | ✅ Success | Shared Redis |
 | Fleet Service | `services/fleet-service` | ✅ Success | Shared NATS |
-| Driver Service | `services/driver-service` | ✅ Success | Shared Common |
+| Driver Service | `services/microservices/driver-service` | ✅ Success | Shared Common |
 | Order Service | `services/order-service` | ✅ Success | Shared Common |
-| Tracking Service | `services/tracking-service` | ✅ Success | Redis, NATS |
-| Trip Service | `services/trip-service` | ✅ Success | Shared Common |
+| Tracking Service | `services/microservices/tracking-service` | ✅ Success | Redis, NATS |
+| Trip Service | `services/microservices/trip-service` | ✅ Success | Shared Common |
 | User Service | `services/user-service` | ✅ Success | Shared Common |
 | Report Service | `services/report-service` | ✅ Success | Shared Common |
-| Maintenance Service | `services/maintenance-service` | ✅ Success | Shared Common |
+| Maintenance Service | `services/microservices/maintenance-service` | ✅ Success | Shared Common |
 | Inventory Service | `services/inventory-service` | ✅ Success | Shared Common |
 
 ## Shared Packages

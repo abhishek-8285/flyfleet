@@ -134,14 +134,14 @@ docker exec -i fleet-postgres psql -U fleet -d fleetdb < migrations/002_timeseri
 
 3. **Run Authentication Service**
 ```bash
-cd services/auth-service
+cd services/microservices/auth-service
 go mod tidy
 go run cmd/main.go
 ```
 
 4. **Run Tracking Service**
 ```bash
-cd services/tracking-service
+cd services/microservices/tracking-service
 go mod tidy
 go run cmd/main.go
 ```

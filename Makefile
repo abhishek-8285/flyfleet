@@ -1,9 +1,9 @@
 SHELL := /bin/bash
 
-.PHONY: bff-build bff-contract-check bff-smoke frontend-api-check docs-governance operations-governance performance-web-budget api-latency-smoke api-clients-generate api-clients-check trace-propagation-check all-services-foundation-check identity-auth-foundation-check design-system-foundation-check observability-foundation-check mobile-sync-foundation-check mobile-sync-simulate firmware-ota-foundation-check firmware-ota-validate ota-rollout-simulate device-reliability-foundation-check device-command-simulate vehicle-device-foundation-check vehicle-device-tests runtime-service-matrix-check enterprise-foundation-check runtime-integration-gate workflow-coverage-check
+.PHONY: bff-build bff-contract-check bff-smoke frontend-api-check docs-governance operations-governance performance-web-budget api-latency-smoke api-clients-generate api-clients-check trace-propagation-check all-services-foundation-check identity-auth-foundation-check design-system-foundation-check observability-foundation-check mobile-sync-foundation-check mobile-sync-simulate firmware-ota-foundation-check firmware-ota-validate ota-rollout-simulate device-reliability-foundation-check device-command-simulate vehicle-device-foundation-check vehicle-device-tests runtime-service-matrix-check enterprise-foundation-check runtime-integration-gate workflow-coverage-check monolith-build monolith-api-counts monolith-api-registry monolith-api-report monolith-upstream-health monolith-overview monolith-governance-check monolith-migrations backend-api-deep-scan monolith-api-inventory web-bff-rewrite-parity bff-public-route-parity monolith-compat-matrix monolith-compat-gate monolith-status-bundle
 
 bff-build:
-	cd services/web-bff && GOCACHE=/tmp/go-build-cache go build ./...
+	cd services/microservices/web-bff && GOCACHE=/tmp/go-build-cache go build ./...
 
 bff-contract-check:
 	python3 scripts/check_bff_contract.py
@@ -85,3 +85,48 @@ runtime-integration-gate:
 
 workflow-coverage-check:
 	python3 scripts/check_workflow_coverage.py
+
+monolith-build:
+	cd services/fleet-core-service-legacy && GOCACHE=/tmp/go-build-cache go build ./...
+
+monolith-api-counts:
+	curl -sS http://localhost:8084/api/control/apis/counts | jq .
+
+monolith-api-registry:
+	bash scripts/generate_monolith_api_registry.sh http://localhost:8084 /home/abhishek/Desktop/flyfleet/tmp
+
+monolith-api-report:
+	curl -sS http://localhost:8084/api/control/apis/combined-report | jq .
+
+monolith-upstream-health:
+	curl -sS http://localhost:8084/api/control/upstreams/health | jq .
+
+monolith-overview:
+	curl -sS http://localhost:8084/api/control/overview | jq .
+
+monolith-governance-check:
+	bash scripts/check_monolith_governance.sh http://localhost:8084
+
+monolith-migrations:
+	curl -sS http://localhost:8084/api/control/migrations | jq .
+
+backend-api-deep-scan:
+	bash scripts/deep_backend_api_scan.sh /home/abhishek/Desktop/flyfleet/tmp
+
+monolith-api-inventory:
+	bash scripts/monolith_api_inventory.sh /home/abhishek/Desktop/flyfleet/tmp
+
+web-bff-rewrite-parity:
+	python3 scripts/check_web_bff_rewrite_parity.py
+
+bff-public-route-parity:
+	python3 scripts/check_bff_public_route_parity.py
+
+monolith-compat-matrix:
+	python3 scripts/generate_monolith_compat_matrix.py
+
+monolith-compat-gate:
+	bash scripts/check_monolith_compat_gate.sh
+
+monolith-status-bundle:
+	bash scripts/generate_monolith_status_bundle.sh /home/abhishek/Desktop/flyfleet/tmp

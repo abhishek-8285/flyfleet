@@ -19,8 +19,8 @@
 - Implemented graceful shutdown patterns
 - Added missing imports (`fmt`)
 **Files**: 
-- `/backend/services/auth-service/cmd/main.go`
-- `/backend/services/tracking-service/cmd/main.go`
+- `/backend/services/microservices/auth-service/cmd/main.go`
+- `/backend/services/microservices/tracking-service/cmd/main.go`
 
 ### 4. ✅ Added Missing Validations & Error Responses
 **Problem**: No standardized error handling across services

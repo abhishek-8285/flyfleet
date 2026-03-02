@@ -479,55 +479,13 @@ func (s *TripService) GetTripSummary(ctx context.Context, orgID string, startDat
 }
 
 // GetDriverStats retrieves driver performance metrics
-func (s *TripService) GetDriverStats(ctx context.Context, orgID string) ([]map[string]interface{}, error) {
-	// Mock implementation for now
-	// This would typically involve complex aggregation on the database
-	stats := []map[string]interface{}{
-		{
-			"driver_id":    "550e8400-e29b-41d4-a716-446655440001",
-			"name":         "Rajesh Kumar",
-			"total_distance": 1250.5,
-			"safety_score":   98,
-			"trips_completed": 45,
-			"on_time_rate":   95.5,
-		},
-		{
-			"driver_id":    "550e8400-e29b-41d4-a716-446655440003",
-			"name":         "Vikram Singh",
-			"total_distance": 980.2,
-			"safety_score":   92,
-			"trips_completed": 38,
-			"on_time_rate":   88.0,
-		},
-		{
-			"driver_id":    "550e8400-e29b-41d4-a716-446655440004",
-			"name":         "Amit Patel",
-			"total_distance": 850.0,
-			"safety_score":   96,
-			"trips_completed": 32,
-			"on_time_rate":   99.0,
-		},
-	}
-	return stats, nil
+func (s *TripService) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
+	return s.repo.ListDriverPerformance(ctx, orgID)
 }
 
 // GetTripStats retrieves daily trip statistics for the last 7 days
-func (s *TripService) GetTripStats(ctx context.Context, orgID string) ([]map[string]interface{}, error) {
-	// Mock implementation for 7-day trend
-	stats := make([]map[string]interface{}, 7)
-	now := time.Now()
-	
-	for i := 0; i < 7; i++ {
-		date := now.AddDate(0, 0, -i)
-		stats[6-i] = map[string]interface{}{
-			"date":           date.Format("2006-01-02"),
-			"total_trips":    15 + (i % 3) * 5, // Mock variance
-			"total_distance": 250.0 + float64(i*10),
-			"active_time_hours": 8.5 + float64(i%2),
-		}
-	}
-	
-	return stats, nil
+func (s *TripService) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
+	return s.repo.ListDailyTripTrends(ctx, orgID, 7)
 }
 func (s *TripService) GetStats(ctx context.Context) (*models.TripStats, error) {
 	stats, err := s.repo.GetStats(ctx)

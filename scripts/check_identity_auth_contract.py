@@ -54,10 +54,10 @@ def check_docs() -> None:
 
 def check_backend_claim_usage() -> None:
     checks = {
-        "services/auth-service/internal/service/auth_service.go": ["org_id", "role"],
-        "services/auth-service/internal/middleware/auth.go": ["org_id"],
-        "services/billing-service/internal/middleware/auth.go": ["org_id", "sub", "role"],
-        "services/web-bff/internal/middleware/rbac.go": ["org_id", "role"],
+        "services/microservices/auth-service/internal/service/auth_service.go": ["org_id", "role"],
+        "services/microservices/auth-service/internal/middleware/auth.go": ["org_id"],
+        "services/microservices/billing-service/internal/middleware/auth.go": ["org_id", "sub", "role"],
+        "services/microservices/web-bff/internal/middleware/rbac.go": ["org_id", "role"],
     }
     for path_str, tokens in checks.items():
         text = require_file(path_str).read_text(encoding="utf-8")
@@ -111,7 +111,7 @@ def check_openapi_auth_contract() -> None:
 
 
 def check_bff_identity_bridge() -> None:
-    text = require_file("services/web-bff/cmd/main.go").read_text(encoding="utf-8")
+    text = require_file("services/microservices/web-bff/cmd/main.go").read_text(encoding="utf-8")
     required_tokens = [
         "propagateIdentityHeaders(req, r)",
         'outgoing.Header.Get("X-Organization-ID")',

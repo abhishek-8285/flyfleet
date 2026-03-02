@@ -1,6 +1,7 @@
 package com.fleet.driver.data.remote.api
 
 import com.fleet.driver.data.remote.model.*
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 

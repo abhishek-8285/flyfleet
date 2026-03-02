@@ -100,7 +100,7 @@ docker-compose logs -f auth-service
 
 ```bash
 # Build all Go services
-cd services/auth-service && go build ./...
+cd services/microservices/auth-service && go build ./...
 cd services/fleet-core-service && go build ./...
 # ... repeat for other services
 
@@ -108,7 +108,7 @@ cd services/fleet-core-service && go build ./...
 ./migrate.sh
 
 # Start individual service
-cd services/auth-service
+cd services/microservices/auth-service
 go run cmd/main.go
 ```
 
@@ -190,7 +190,7 @@ make runtime-integration-gate
 
 ```bash
 # Run service tests
-cd services/auth-service && go test ./...
+cd services/microservices/auth-service && go test ./...
 
 # Run integration tests
 ./scripts/verify_all.sh

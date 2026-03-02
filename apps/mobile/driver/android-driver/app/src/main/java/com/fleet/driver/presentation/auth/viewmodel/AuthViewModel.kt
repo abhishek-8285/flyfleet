@@ -61,15 +61,18 @@ class AuthViewModel @Inject constructor(
             
             when (val result = authRepository.login(email, password)) {
                 is Resource.Success -> {
-                    _authState.value = AuthState.Authenticated(result.data.user)
+                    _authState.value = AuthState.Authenticated(result.data!!.user)
                     _isLoading.value = false
                     
                     // Register device for push notifications
                     registerDevice()
                 }
                 is Resource.Error -> {
-                    _authState.value = AuthState.Error(result.message)
+                    _authState.value = AuthState.Error(result.message ?: "Unknown error")
                     _errorMessage.value = result.message
+                    _isLoading.value = false
+                }
+                else -> {
                     _isLoading.value = false
                 }
             }
@@ -86,8 +89,8 @@ class AuthViewModel @Inject constructor(
             
             when (val result = authRepository.enrollDriver(enrollmentCode)) {
                 is Resource.Success -> {
-                    if (result.data.success) {
-                        _enrollmentState.value = EnrollmentState.Success(result.data.driverId)
+                    if (result.data!!.success) {
+                        _enrollmentState.value = EnrollmentState.Success(result.data!!.driverId)
                         
                         // Get user info and update auth state
                         val user = authRepository.getCurrentUser()
@@ -103,9 +106,10 @@ class AuthViewModel @Inject constructor(
                     }
                 }
                 is Resource.Error -> {
-                    _enrollmentState.value = EnrollmentState.Error(result.message)
+                    _enrollmentState.value = EnrollmentState.Error(result.message ?: "Unknown error")
                     _errorMessage.value = result.message
                 }
+                else -> {}
             }
         }
     }
@@ -123,6 +127,7 @@ class AuthViewModel @Inject constructor(
                     // Log error but don't block user flow
                     println("Device registration failed: ${result.message}")
                 }
+                else -> {}
             }
         }
     }
@@ -144,6 +149,9 @@ class AuthViewModel @Inject constructor(
                     _authState.value = AuthState.Unauthenticated
                     _isLoading.value = false
                 }
+                else -> {
+                    _isLoading.value = false
+                }
             }
         }
     }
@@ -155,11 +163,16 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = authRepository.refreshToken()) {
                 is Resource.Success -> {
-                    _authState.value = AuthState.Authenticated(result.data.user)
+                    result.data?.user?.let {
+                        _authState.value = AuthState.Authenticated(it)
+                    } ?: run {
+                        _authState.value = AuthState.Unauthenticated
+                    }
                 }
                 is Resource.Error -> {
                     _authState.value = AuthState.Unauthenticated
                 }
+                else -> {}
             }
         }
     }

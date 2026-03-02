@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useUIStrings } from "../../hooks/useUIStrings";
 import apiClient from "../../services/apiClient";
 
 interface WorkOrder {
@@ -67,6 +68,9 @@ const approvalStatusColors: Record<string, string> = {
 const WorkOrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { uiStrings: rawUiStrings } = useUIStrings("maintenance");
+  const uiStrings = rawUiStrings || {};
+
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -83,14 +87,18 @@ const WorkOrderDetail: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Failed to fetch work order:", err);
-      setError(err?.message || "Unable to load the work order.");
+      setError(
+        err?.message ||
+          uiStrings.error_load_wo ||
+          "Unable to load the work order.",
+      );
       if (err?.response?.status === 404) {
         navigate("/maintenance/work-orders");
       }
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, uiStrings]);
 
   useEffect(() => {
     fetchWorkOrder();
@@ -119,7 +127,9 @@ const WorkOrderDetail: React.FC = () => {
       fetchWorkOrder();
     } catch (error) {
       console.error("Failed to close work order:", error);
-      setError("Unable to close the work order right now.");
+      setError(
+        uiStrings.error_close_wo || "Unable to close the work order right now.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -133,7 +143,7 @@ const WorkOrderDetail: React.FC = () => {
       fetchWorkOrder();
     } catch (error) {
       console.error("Failed to approve work order:", error);
-      setError("Approval request failed.");
+      setError(uiStrings.error_approve_wo || "Approval request failed.");
     } finally {
       setActionLoading(false);
     }
@@ -147,7 +157,7 @@ const WorkOrderDetail: React.FC = () => {
       fetchWorkOrder();
     } catch (error) {
       console.error("Failed to reject work order:", error);
-      setError("Rejection request failed.");
+      setError(uiStrings.error_reject_wo || "Rejection request failed.");
     } finally {
       setActionLoading(false);
     }
@@ -174,7 +184,9 @@ const WorkOrderDetail: React.FC = () => {
   if (!workOrder) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background-dark">
-        <p className="text-text-muted">Work order not found</p>
+        <p className="text-text-muted">
+          {uiStrings.msg_wo_not_found || "Work order not found"}
+        </p>
       </div>
     );
   }
@@ -203,23 +215,30 @@ const WorkOrderDetail: React.FC = () => {
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded border ${statusColors[workOrder.status]}`}
                 >
-                  {workOrder.status.replace("_", " ")}
+                  {uiStrings[`status_${workOrder.status.toLowerCase()}`] ||
+                    workOrder.status.replace("_", " ")}
                 </span>
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded ${priorityColors[workOrder.priority]}`}
                 >
-                  {workOrder.priority}
+                  {uiStrings[`priority_${workOrder.priority.toLowerCase()}`] ||
+                    workOrder.priority}
                 </span>
                 <span
                   className={`px-2 py-1 text-xs font-medium rounded border ${approvalStatusColors[workOrder.approval_status]}`}
                 >
                   {workOrder.approval_status
-                    ? workOrder.approval_status.replace(/_/g, " ")
-                    : "NOT REQUIRED"}
+                    ? uiStrings[
+                        `approval_status_${workOrder.approval_status.toLowerCase()}`
+                      ] || workOrder.approval_status.replace(/_/g, " ")
+                    : uiStrings.approval_not_required || "NOT REQUIRED"}
                 </span>
               </div>
               <p className="text-sm text-text-muted mt-1">
-                Created {formatDate(workOrder.created_at)}
+                {(uiStrings.label_created_at || "Created {date}").replace(
+                  "{date}",
+                  formatDate(workOrder.created_at),
+                )}
               </p>
             </div>
           </div>
@@ -233,17 +252,20 @@ const WorkOrderDetail: React.FC = () => {
                   disabled={actionLoading}
                   className="px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  Approve
+                  {uiStrings.btn_approve || "Approve"}
                 </button>
                 <button
                   onClick={() => {
-                    const reason = prompt("Enter rejection reason:");
+                    const reason = prompt(
+                      uiStrings.prompt_rejection_reason ||
+                        "Enter rejection reason:",
+                    );
                     if (reason) rejectWorkOrder(reason);
                   }}
                   disabled={actionLoading}
                   className="px-4 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  Reject
+                  {uiStrings.btn_reject || "Reject"}
                 </button>
               </>
             )}
@@ -255,7 +277,7 @@ const WorkOrderDetail: React.FC = () => {
                   disabled={actionLoading}
                   className="px-4 py-2 text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  Start Work
+                  {uiStrings.btn_start_work || "Start Work"}
                 </button>
               )}
               {workOrder.status === "IN_PROGRESS" && (
@@ -264,7 +286,7 @@ const WorkOrderDetail: React.FC = () => {
                   disabled={actionLoading}
                   className="px-4 py-2 text-sm font-medium bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
                 >
-                  Complete
+                  {uiStrings.btn_complete || "Complete"}
                 </button>
               )}
             </>
@@ -274,7 +296,7 @@ const WorkOrderDetail: React.FC = () => {
             disabled={isCompleted}
             className="px-4 py-2 text-sm font-medium border border-border-color text-text-muted hover:text-white rounded-lg transition-colors disabled:opacity-50"
           >
-            Edit
+            {uiStrings.btn_edit || "Edit"}
           </button>
         </div>
       </div>
@@ -292,7 +314,7 @@ const WorkOrderDetail: React.FC = () => {
             {/* Description */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <h3 className="text-lg font-semibold text-white mb-4">
-                Description
+                {uiStrings.label_description || "Description"}
               </h3>
               <p className="text-text-muted whitespace-pre-wrap">
                 {workOrder.description}
@@ -302,7 +324,9 @@ const WorkOrderDetail: React.FC = () => {
             {/* Parts */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">Parts Used</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  {uiStrings.label_parts_used || "Parts Used"}
+                </h3>
                 {!isCompleted && (
                   <button
                     onClick={() =>
@@ -310,20 +334,28 @@ const WorkOrderDetail: React.FC = () => {
                     }
                     className="text-sm text-primary hover:text-primary/80"
                   >
-                    + Add Parts
+                    {uiStrings.btn_add_parts || "+ Add Parts"}
                   </button>
                 )}
               </div>
               {workOrder.parts.length === 0 ? (
-                <p className="text-text-muted text-sm">No parts assigned yet</p>
+                <p className="text-text-muted text-sm">
+                  {uiStrings.msg_no_parts_assigned || "No parts assigned yet"}
+                </p>
               ) : (
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-xs text-text-muted uppercase">
-                      <th className="pb-3">Part</th>
-                      <th className="pb-3">Quantity</th>
-                      <th className="pb-3 text-right">Unit Cost</th>
-                      <th className="pb-3 text-right">Total</th>
+                      <th className="pb-3">{uiStrings.th_part || "Part"}</th>
+                      <th className="pb-3">
+                        {uiStrings.th_quantity || "Quantity"}
+                      </th>
+                      <th className="pb-3 text-right">
+                        {uiStrings.th_unit_cost || "Unit Cost"}
+                      </th>
+                      <th className="pb-3 text-right">
+                        {uiStrings.th_total || "Total"}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-color">
@@ -331,7 +363,9 @@ const WorkOrderDetail: React.FC = () => {
                       <tr key={part.id}>
                         <td className="py-3">
                           <div className="text-sm text-white">
-                            {part.part?.name || "Unknown"}
+                            {part.part?.name ||
+                              uiStrings.label_unknown ||
+                              "Unknown"}
                           </div>
                           <div className="text-xs text-text-muted">
                             {part.part?.part_number}
@@ -355,7 +389,7 @@ const WorkOrderDetail: React.FC = () => {
                         colSpan={3}
                         className="pt-3 text-sm font-medium text-white text-right"
                       >
-                        Total Parts Cost
+                        {uiStrings.label_total_parts_cost || "Total Parts Cost"}
                       </td>
                       <td className="pt-3 text-sm font-bold text-primary text-right">
                         ${workOrder.total_parts_cost.toFixed(2)}
@@ -372,7 +406,7 @@ const WorkOrderDetail: React.FC = () => {
             {/* Vehicle */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <h3 className="text-sm font-medium text-text-muted mb-3">
-                Vehicle
+                {uiStrings.label_vehicle || "Vehicle"}
               </h3>
               {workOrder.vehicle ? (
                 <div>
@@ -393,7 +427,7 @@ const WorkOrderDetail: React.FC = () => {
             {/* Vendor */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <h3 className="text-sm font-medium text-text-muted mb-3">
-                Vendor
+                {uiStrings.label_vendor || "Vendor"}
               </h3>
               {workOrder.vendor ? (
                 <div>
@@ -412,7 +446,7 @@ const WorkOrderDetail: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-sm text-text-muted">
-                  No external vendor assigned
+                  {uiStrings.no_vendor_msg || "No external vendor assigned"}
                 </p>
               )}
             </div>
@@ -420,7 +454,7 @@ const WorkOrderDetail: React.FC = () => {
             {/* Assignee */}
             <div className="bg-surface-dark border border-border-color rounded-xl p-6">
               <h3 className="text-sm font-medium text-text-muted mb-3">
-                Assignee
+                {uiStrings.label_assignee || "Assignee"}
               </h3>
               {workOrder.assignee ? (
                 <div className="flex items-center gap-3">
@@ -430,7 +464,9 @@ const WorkOrderDetail: React.FC = () => {
                   <span className="text-white">{workOrder.assignee.name}</span>
                 </div>
               ) : (
-                <p className="text-sm text-text-muted">Unassigned</p>
+                <p className="text-sm text-text-muted">
+                  {uiStrings.unassigned || "Unassigned"}
+                </p>
               )}
             </div>
 
@@ -438,7 +474,7 @@ const WorkOrderDetail: React.FC = () => {
             <div className="bg-surface-dark border border-border-color rounded-xl p-6 space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-text-muted">
-                  Scheduled
+                  {uiStrings.label_scheduled || "Scheduled"}
                 </h4>
                 <p className="text-white">
                   {workOrder.scheduled_date
@@ -449,7 +485,7 @@ const WorkOrderDetail: React.FC = () => {
               {workOrder.completed_date && (
                 <div>
                   <h4 className="text-sm font-medium text-text-muted">
-                    Completed
+                    {uiStrings.label_completed || "Completed"}
                   </h4>
                   <p className="text-emerald-400">
                     {formatDate(workOrder.completed_date)}
@@ -462,7 +498,7 @@ const WorkOrderDetail: React.FC = () => {
             <div className="bg-surface-dark border border-border-color rounded-xl p-6 space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-text-muted">
-                  Estimated Cost
+                  {uiStrings.label_estimated_cost || "Estimated Cost"}
                 </h4>
                 <p className="text-2xl font-bold text-white">
                   ${workOrder.estimated_cost.toFixed(2)}
@@ -470,7 +506,7 @@ const WorkOrderDetail: React.FC = () => {
               </div>
               <div className="border-t border-border-color pt-4">
                 <h4 className="text-sm font-medium text-text-muted">
-                  Actual Cost
+                  {uiStrings.label_actual_cost || "Actual Cost"}
                 </h4>
                 <p className="text-2xl font-bold text-primary">
                   ${workOrder.actual_cost.toFixed(2)}

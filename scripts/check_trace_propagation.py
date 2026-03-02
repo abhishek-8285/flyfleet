@@ -19,7 +19,7 @@ RULES = {
     "apps/dashboard-web/src/index.tsx": [
         r"initializeTraceFetch\(\)",
     ],
-    "services/web-bff/internal/middleware/trace_id.go": [
+    "services/microservices/web-bff/internal/middleware/trace_id.go": [
         r"TraceIDMiddleware",
         r"GetTraceID",
         r"HeaderTraceID",
@@ -29,11 +29,11 @@ RULES = {
         r"w\.Header\(\)\.Set\(HeaderTraceID, traceID\)",
         r"w\.Header\(\)\.Set\(HeaderRequestID, traceID\)",
     ],
-    "services/web-bff/internal/middleware/cors.go": [
+    "services/microservices/web-bff/internal/middleware/cors.go": [
         r"X-Trace-ID",
         r"X-Request-ID",
     ],
-    "services/web-bff/cmd/main.go": [
+    "services/microservices/web-bff/cmd/main.go": [
         r"TraceIDMiddleware",
         r"HeaderTraceID",
         r"HeaderRequestID",
@@ -42,7 +42,7 @@ RULES = {
         r"w\.Header\(\)\.Set\(bffMiddleware\.HeaderTraceID, traceID\)",
         r"w\.Header\(\)\.Set\(bffMiddleware\.HeaderRequestID, traceID\)",
     ],
-    "services/web-bff/cmd/prefix_proxy_test.go": [
+    "services/microservices/web-bff/cmd/prefix_proxy_test.go": [
         r"seenTraceHeader",
         r"X-Trace-ID",
     ],

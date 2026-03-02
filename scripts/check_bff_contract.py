@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_DIR = ROOT / "apps" / "dashboard-web" / "src"
-BFF_MAIN = ROOT / "services" / "web-bff" / "cmd" / "main.go"
+BFF_MAIN = ROOT / "services" / "microservices" / "web-bff" / "cmd" / "main.go"
 
 
 FRONTEND_API_PATTERN = re.compile(r"""(?P<q>["'`])(?P<url>(?:https?://localhost:8081)?/(?:api|bff)[^"'`\s]*)""")

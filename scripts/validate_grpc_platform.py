@@ -8,7 +8,6 @@ from pathlib import Path
 
 SERVICES = {
     "Auth": 50051,
-    "Fleet": 50051,
     "Tracking": 50052,
     "Trip": 50053,
     "Alert": 50054,
@@ -18,6 +17,7 @@ SERVICES = {
     "Driver": 50058,
     "Analytics": 50059,
     "Reports": 50060,
+    "Fleet": 50061,
 }
 
 def check_port(port):

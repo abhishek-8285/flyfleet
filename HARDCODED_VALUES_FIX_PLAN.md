@@ -26,7 +26,7 @@ db, err := sql.Open("postgres", dsn)
 
 ### 2. API Keys and Secrets
 **Files affected:**
-- `/services/web-bff/cmd/main.go` (lines 118-119)
+- `/services/microservices/web-bff/cmd/main.go` (lines 118-119)
 - `/services/video-service/internal/handlers/video_handlers.go` (line 311)
 
 **Action:**

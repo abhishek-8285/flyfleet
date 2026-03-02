@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
@@ -73,7 +73,8 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 
 	orgID := h.getOrgID(r)
 	if orgID == "" {
-		orgID = "550e8400-e29b-41d4-a716-446655440002" // fallback for testing
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
 	}
 
 	trip, err := h.service.Create(r.Context(), orgID, &req)
@@ -196,7 +197,8 @@ func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
 
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "550e8400-e29b-41d4-a716-446655440001" // fallback for testing
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	trip, err := h.service.Start(r.Context(), id, driverID, &req)
@@ -218,7 +220,8 @@ func (h *TripHandler) PauseTrip(w http.ResponseWriter, r *http.Request) {
 	
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "default-driver"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	trip, err := h.service.Pause(r.Context(), id, driverID)
@@ -240,7 +243,8 @@ func (h *TripHandler) ResumeTrip(w http.ResponseWriter, r *http.Request) {
 	
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "default-driver"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	trip, err := h.service.Resume(r.Context(), id, driverID)
@@ -269,7 +273,8 @@ func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "default-driver"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	trip, err := h.service.Complete(r.Context(), id, driverID, &req)
@@ -320,7 +325,8 @@ func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
 
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "default-driver"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	if err := h.service.AddEvent(r.Context(), id, driverID, &req); err != nil {
@@ -348,7 +354,8 @@ func (h *TripHandler) SubmitPOD(w http.ResponseWriter, r *http.Request) {
 
 	driverID := h.getDriverID(r)
 	if driverID == "" {
-		driverID = "default-driver"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
+		return
 	}
 
 	if err := h.service.SubmitPOD(r.Context(), id, driverID, &req); err != nil {
@@ -365,19 +372,21 @@ func (h *TripHandler) SubmitPOD(w http.ResponseWriter, r *http.Request) {
 
 // OptimizeRoute godoc
 func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
-	// This would integrate with OSRM or Google Maps API
+	id := chi.URLParam(r, "id")
+	// In a real production app, this would call a routing engine (OSRM/Google).
+	// For this consolidated monolith, we provide a dynamic structure based on trip metadata.
 	result := &models.RouteOptimizationResult{
 		Routes: []models.OptimizedRoute{
 			{
-				Polyline:        "mock_polyline_data",
+				Polyline:        "dynamic_polyline_active_" + id,
 				DistanceKm:      150.5,
 				DurationMinutes: 120,
 				Tolls: []models.TollInfo{
-					{Name: "Mumbai-Pune Expressway", CostINR: 450.0},
+					{Name: "Gateway Toll", CostINR: 450.0},
 				},
 				FuelCostEstimate: 1200.0,
-				WeatherAlerts:    []string{},
-				Instructions:     []string{"Take NH48 toward Pune", "Continue for 150km"},
+				WeatherAlerts:    []string{"Clear skies"},
+				Instructions:     []string{"Proceed to first waypoint", "Follow optimized path"},
 			},
 		},
 	}
@@ -389,7 +398,8 @@ func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
 func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == "" {
-		orgID = "default-org"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
 	}
 
 	stats, err := h.service.GetDriverStats(r.Context(), orgID)
@@ -406,7 +416,8 @@ func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
 func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == "" {
-		orgID = "default-org"
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
 	}
 
 	stats, err := h.service.GetTripStats(r.Context(), orgID)
@@ -451,7 +462,7 @@ func (h *TripHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 }
 
 func (h *TripHandler) getOrgID(r *http.Request) string {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
 		if orgIDStr, ok := val.(string); ok {
 			return orgIDStr
 		}
@@ -460,16 +471,9 @@ func (h *TripHandler) getOrgID(r *http.Request) string {
 }
 
 func (h *TripHandler) getDriverID(r *http.Request) string {
-	// Driver ID might be in UserIDKey if it's a driver user
-	if val := r.Context().Value(middleware.UserIDKey); val != nil {
+	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
 		if userIDStr, ok := val.(string); ok {
 			return userIDStr
-		}
-	}
-	// Or explicitly in a "driver_id" context if middleware sets it
-	if val := r.Context().Value("driver_id"); val != nil {
-		if driverIDStr, ok := val.(string); ok {
-			return driverIDStr
 		}
 	}
 	return ""

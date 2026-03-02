@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package compliance.v1;
+
+option go_package = "github.com/flyfleet/proto/compliance/v1;compliancev1";
+
+import "google/protobuf/timestamp.proto";
+
+// ComplianceService handles the highly regulated North American FMCSA ELD State Machine,
+// Hours of Service (HOS) rules, and DVIR reporting.
+service ComplianceService {
+  // Duty Status & Hours of Service (HOS)
+  rpc RecordDutyStatus (RecordDutyStatusRequest) returns (RecordDutyStatusResponse);
+  rpc GetCurrentDutyStatus (GetCurrentDutyStatusRequest) returns (GetCurrentDutyStatusResponse);
+  rpc ListDutyLogs (ListDutyLogsRequest) returns (ListDutyLogsResponse);
+  
+  // ELD & Engine Synchronization
+  rpc ProcessEngineSync (ProcessEngineSyncRequest) returns (ProcessEngineSyncResponse);
+  
+  // Driver Vehicle Inspection Reports (DVIR)
+  rpc SubmitDVIR (SubmitDVIRRequest) returns (SubmitDVIRResponse);
+  rpc ListDVIRs (ListDVIRsRequest) returns (ListDVIRsResponse);
+  
+  // FMCSA Telematics Transfer
+  rpc GenerateFMCSATransfer (GenerateFMCSATransferRequest) returns (GenerateFMCSATransferResponse);
+}
+
+// Enums
+enum DutyStatus {
+  DUTY_STATUS_UNSPECIFIED = 0;
+  OFF_DUTY = 1;
+  SLEEPER_BERTH = 2;
+  DRIVING = 3;
+  ON_DUTY_NOT_DRIVING = 4;
+  PERSONAL_CONVEYANCE = 5;
+  YARD_MOVES = 6;
+}
+
+enum DVIRCondition {
+  DVIR_CONDITION_UNSPECIFIED = 0;
+  SAFE_TO_OPERATE = 1;
+  UNSAFE_TO_OPERATE = 2;
+  DEFECTS_CORRECTED = 3;
+}
+
+// Records
+message DutyStatusLog {
+  string id = 1;
+  string driver_id = 2;
+  string vehicle_id = 3;
+  DutyStatus status = 4;
+  google.protobuf.Timestamp start_time = 5;
+  optional google.protobuf.Timestamp end_time = 6;
+  string location_description = 7;
+  double latitude = 8;
+  double longitude = 9;
+  string odometer_start = 10;
+  string engine_hours_start = 11;
+  string annotations = 12;
+}
+
+message DVIR {
+  string id = 1;
+  string driver_id = 2;
+  string vehicle_id = 3;
+  DVIRCondition condition = 4;
+  google.protobuf.Timestamp created_at = 5;
+  repeated string defect_ids = 6;
+  string driver_signature = 7;
+  string mechanic_signature = 8;
+  bool requires_mechanic_signoff = 9;
+}
+
+message EngineSyncEvent {
+  string vehicle_id = 1;
+  double speed_mph = 2;
+  int32 engine_rpm = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Requests & Responses
+message RecordDutyStatusRequest {
+  string driver_id = 1;
+  string vehicle_id = 2;
+  DutyStatus status = 3;
+  string location = 4;
+  double latitude = 5;
+  double longitude = 6;
+  string odometer = 7;
+  string engine_hours = 8;
+}
+
+message RecordDutyStatusResponse {
+  DutyStatusLog log = 1;
+}
+
+message GetCurrentDutyStatusRequest {
+  string driver_id = 1;
+}
+
+message GetCurrentDutyStatusResponse {
+  DutyStatusLog log = 1;
+  int32 remaining_driving_minutes = 2;
+  int32 remaining_shift_minutes = 3;
+  int32 remaining_cycle_minutes = 4;
+  int32 time_until_break_minutes = 5;
+}
+
+message ListDutyLogsRequest {
+  string driver_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message ListDutyLogsResponse {
+  repeated DutyStatusLog logs = 1;
+}
+
+message ProcessEngineSyncRequest {
+  EngineSyncEvent event = 1;
+}
+
+message ProcessEngineSyncResponse {
+  bool driving_state_updated = 1;
+}
+
+message SubmitDVIRRequest {
+  string driver_id = 1;
+  string vehicle_id = 2;
+  DVIRCondition condition = 3;
+  repeated string listed_defects = 4;
+  string driver_signature = 5;
+}
+
+message SubmitDVIRResponse {
+  DVIR dvir = 1;
+}
+
+message ListDVIRsRequest {
+  string vehicle_id = 1;
+  int32 limit = 2;
+}
+
+message ListDVIRsResponse {
+  repeated DVIR dvirs = 1;
+}
+
+message GenerateFMCSATransferRequest {
+  string driver_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+  string target_email = 4;  // Uses S/MIME AES-256 for transmission
+}
+
+message GenerateFMCSATransferResponse {
+  bool success = 1;
+  string tracking_id = 2;
+}

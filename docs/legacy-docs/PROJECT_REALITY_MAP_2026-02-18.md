@@ -66,7 +66,7 @@ Recommended: keep frontend contract stable, fix BFF/proxy layer.
 
 ### Phase 2: Make BFF the real gateway
 
-In `services/web-bff/cmd/main.go`:
+In `services/microservices/web-bff/cmd/main.go`:
 
 1. Mount all existing handler modules (security, support, settings, integrations, tracking, devices, timeline, search, websocket).
 2. Add proxy routes for missing domains with path translation:
@@ -101,18 +101,18 @@ Until this is decided, endpoint ownership will keep drifting.
 
 ## 4) Key Files Used
 
-1. `services/web-bff/cmd/main.go`
+1. `services/microservices/web-bff/cmd/main.go`
 2. `apps/dashboard-web/src/services/apiClient.ts`
 3. `apps/dashboard-web/src/services/api.ts`
 4. `apps/dashboard-web/src/App.tsx`
-5. `services/auth-service/cmd/main.go`
+5. `services/microservices/auth-service/cmd/main.go`
 6. `services/fleet-core-service/cmd/main.go`
-7. `services/admin-support-service/cmd/main.go`
-8. `services/alert-service/cmd/main.go`
-9. `services/reports-service/cmd/main.go`
-10. `services/settings-service/cmd/main.go`
-11. `services/integrations-service/cmd/main.go`
-12. `services/trip-service/cmd/main.go`
-13. `services/vehicle-service/cmd/main.go`
-14. `services/driver-service/cmd/main.go`
-15. `services/maintenance-service/cmd/main.go`
+7. `services/microservices/admin-support-service/cmd/main.go`
+8. `services/microservices/alert-service/cmd/main.go`
+9. `services/microservices/reports-service/cmd/main.go`
+10. `services/microservices/settings-service/cmd/main.go`
+11. `services/microservices/integrations-service/cmd/main.go`
+12. `services/microservices/trip-service/cmd/main.go`
+13. `services/microservices/vehicle-service/cmd/main.go`
+14. `services/microservices/driver-service/cmd/main.go`
+15. `services/microservices/maintenance-service/cmd/main.go`

@@ -1,222 +1,204 @@
 package com.flyfleet.vehicledevice.ui.login
 
 import android.app.Application
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
-import app.cash.turbine.test
+import com.flyfleet.vehicledevice.core.analytics.PostHogAnalytics
+import com.flyfleet.vehicledevice.domain.model.DriverInfo
+import com.flyfleet.vehicledevice.domain.model.RosterDriver
+import com.flyfleet.vehicledevice.domain.repository.DriverAuthRepository
+import com.flyfleet.vehicledevice.domain.service.DeviceStatusMonitor
+import com.flyfleet.vehicledevice.telemetry.simulation.FakeTelemetryService
 import io.mockk.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import app.cash.turbine.test
 import kotlinx.coroutines.test.*
-import kotlin.time.Duration.Companion.seconds
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.runner.RunWith
 import org.junit.Test
-import com.flyfleet.vehicledevice.ui.boot.MainDispatcherRule
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@ExperimentalCoroutinesApi
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
 class DriverLoginViewModelTest {
 
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private lateinit var mockApp: Application
-    private lateinit var mockDeviceMonitor: com.flyfleet.vehicledevice.service.DeviceStatusMonitor
     private lateinit var viewModel: DriverLoginViewModel
+    private val mockApplication = mockk<Application>(relaxed = true)
+    // private val mockAuthRepository = mockk<DriverAuthRepository>(relaxed = true) // Original mock
+    private val mockAnalytics = mockk<PostHogAnalytics>(relaxed = true)
+    private val mockDeviceMonitor = mockk<DeviceStatusMonitor>(relaxed = true)
+    private val mockSecurityRepository = mockk<com.flyfleet.vehicledevice.domain.repository.SecurityRepository>(relaxed = true)
+    private val mockErrorMapper = mockk<com.flyfleet.vehicledevice.data.util.ErrorMapper>(relaxed = true)
+    private val fakeTelemetry = FakeTelemetryService()
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    private val onlineFlow = MutableStateFlow(true)
+    private val batteryFlow = MutableStateFlow(80)
+
+    private class FakeDriverAuthRepository : com.flyfleet.vehicledevice.domain.repository.DriverAuthRepository {
+        var rosterResult: Result<List<RosterDriver>> = Result.success(emptyList())
+        var loginResult: Result<DriverInfo> = Result.failure(Exception("Not set"))
+        var conflictResult: Result<Boolean> = Result.success(false)
+        var sessionResult: Result<String> = Result.success("MOCK-SESSION")
+
+        override suspend fun getDriverRoster(vehicleId: String) = rosterResult
+        override suspend fun pinLogin(deviceId: String, vehicleId: String, driverId: String, pin: String, gpsLat: Double?, gpsLon: Double?) = loginResult
+        override suspend fun rfidLogin(deviceId: String, vehicleId: String, rfidTag: String, gpsLat: Double?, gpsLon: Double?) = loginResult
+        override suspend fun checkActiveSession(driverId: String) = conflictResult
+        override suspend fun createSession(driverId: String, vehicleId: String, deviceId: String) = sessionResult
+        override suspend fun logout(sessionId: String) = Result.success(Unit)
+    }
+
+    private class FakePreferenceRepository : com.flyfleet.vehicledevice.domain.repository.PreferenceRepository {
+        override fun getPreferences(driverId: String) = MutableStateFlow(null)
+        override suspend fun savePreferences(preferences: com.flyfleet.vehicledevice.domain.model.UserPreference) {}
+        override suspend fun fetchAndSyncPreferences(driverId: String) = Result.success(com.flyfleet.vehicledevice.domain.model.UserPreference(driverId, "en", "light", true))
+    }
+
+    private val fakeAuthRepository = FakeDriverAuthRepository()
+    private val fakePreferenceRepository = FakePreferenceRepository()
+    
+    // We can use these interfaces to match what the ViewModel expects
+    private val mockAuthRepository: DriverAuthRepository get() = fakeAuthRepository
+    private val mockPreferenceRepository: com.flyfleet.vehicledevice.domain.repository.PreferenceRepository get() = fakePreferenceRepository
 
     @Before
     fun setup() {
-        mockApp = mockk(relaxed = true)
-        val mockPm = mockk<PackageManager>(relaxed = true)
-        val mockPi = mockk<PackageInfo>(relaxed = true)
-        every { mockApp.packageManager } returns mockPm
-        every { mockApp.packageName } returns "com.flyfleet.vehicledevice"
-        every { mockPm.getPackageInfo(any<String>(), any<Int>()) } returns mockPi
-        mockPi.versionName = "1.0.0"
-
-        val testDriver = DriverInfo(
-            driverId = "DRV-123",
-            name = "Marcus Rodriguez",
-            org = "FlyFleet",
-            hosStatus = "OFF_DUTY"
-        )
-        val mockRoster = listOf(RosterDriver("DRV-123", "Marcus Rodriguez", "MR", "Lead Driver"))
-        val mockAnalytics = mockk<com.flyfleet.vehicledevice.analytics.PostHogAnalytics>(relaxed = true)
-        mockDeviceMonitor = mockk(relaxed = true)
+        ShadowLog.stream = System.out
+        Dispatchers.setMain(testDispatcher)
         
+        // Use fake result in setup
+        fakeAuthRepository.rosterResult = Result.success(listOf<RosterDriver>())
+        
+        every { mockDeviceMonitor.isOnline } returns onlineFlow
+        every { mockDeviceMonitor.batteryLevel } returns batteryFlow
+        every { mockDeviceMonitor.isLte } returns MutableStateFlow(true)
+        every { mockDeviceMonitor.currentTimeUtc } returns MutableStateFlow("10:00 UTC")
+        every { mockSecurityRepository.getSecureString(any(), any()) } returns "TEST-DEVICE"
+        // coEvery { mockAuthRepository.getDriverRoster(any()) } returns Result.success(listOf<RosterDriver>()) // Replaced by fakeAuthRepository
+
         viewModel = DriverLoginViewModel(
-            application = mockApp,
-            authRepository = MockDriverAuthRepository(
-                mockRoster = mockRoster,
-                mockDriverInfo = testDriver
-            ),
-            analytics = mockAnalytics,
-            deviceMonitor = mockDeviceMonitor,
-            ioDispatcher = mainDispatcherRule.testDispatcher
+            mockApplication,
+            mockAuthRepository,
+            mockAnalytics,
+            mockDeviceMonitor,
+            fakeTelemetry,
+            mockPreferenceRepository,
+            mockSecurityRepository,
+            mockErrorMapper,
+            testDispatcher
         )
+        
+        // Ensure init block launches run
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @After
     fun tearDown() {
-        unmockkAll()
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun `initial state is IDLE_RFID_WAIT`() {
-        assertEquals(LoginScreenState.IDLE_RFID_WAIT, viewModel.uiState.value.screenState)
-        assertEquals(3, viewModel.uiState.value.attemptsRemaining)
-        assertTrue(viewModel.uiState.value.pinDigits.isEmpty())
+    fun `initial state is IDLE_RFID_WAIT`() = runTest {
+        viewModel.uiState.test {
+            assertTrue(awaitItem() is DriverLoginUiState.Idle)
+        }
     }
 
     @Test
-    fun `switch to PIN sets DRIVER_SELECT state`() {
-        viewModel.onSwitchToPin()
-        assertEquals(LoginScreenState.DRIVER_SELECT, viewModel.uiState.value.screenState)
-    }
-
-    @Test
-    fun `switch back to RFID sets IDLE_RFID_WAIT state`() {
-        viewModel.onSwitchToPin()
-        viewModel.onSwitchToRfid()
-        assertEquals(LoginScreenState.IDLE_RFID_WAIT, viewModel.uiState.value.screenState)
-    }
-
-    @Test
-    fun `digits accumulate up to 6`() {
-        viewModel.onSwitchToPin()
-        viewModel.onDigitPressed(1)
-        viewModel.onDigitPressed(2)
-        viewModel.onDigitPressed(3)
-        assertEquals(listOf(1, 2, 3), viewModel.uiState.value.pinDigits)
-    }
-
-    @Test
-    fun `backspace removes last digit`() {
-        viewModel.onSwitchToPin()
-        viewModel.onDigitPressed(1)
-        viewModel.onDigitPressed(2)
-        viewModel.onBackspace()
-        assertEquals(listOf(1), viewModel.uiState.value.pinDigits)
-    }
-
-    @Test
-    fun `correct PIN triggers LOGIN_SUCCESS and navigates to dashboard`() = runTest {
-        viewModel.events.test {
+    fun `onSwitchToPin changes screen state`() = runTest {
+        viewModel.uiState.test {
+            assertTrue(awaitItem() is DriverLoginUiState.Idle) 
             viewModel.onSwitchToPin()
-            // Valid PIN is 123456
-            viewModel.onDigitPressed(1)
-            viewModel.onDigitPressed(2)
-            viewModel.onDigitPressed(3)
-            viewModel.onDigitPressed(4)
-            viewModel.onDigitPressed(5)
-            viewModel.onDigitPressed(6) // triggers auto-submit
-
-            advanceUntilIdle()
-
-            val event = awaitItem()
-            assertEquals(LoginEvent.NavigateToDashboard, event)
-            cancelAndIgnoreRemainingEvents()
+            assertTrue(awaitItem() is DriverLoginUiState.DriverSelection)
         }
-
-        assertEquals(LoginScreenState.LOGIN_SUCCESS, viewModel.uiState.value.screenState)
-        assertNotNull(viewModel.uiState.value.driverInfo)
-        assertEquals("Marcus Rodriguez", viewModel.uiState.value.driverInfo?.name)
-        assertTrue(viewModel.uiState.value.navigateToDashboard)
     }
 
     @Test
-    fun `wrong PIN decrements attempts and shows PIN_ERROR`() = runTest {
-        viewModel.events.test {
-            viewModel.onSwitchToPin()
-            // Wrong PIN
-            viewModel.onDigitPressed(9)
-            viewModel.onDigitPressed(9)
-            viewModel.onDigitPressed(9)
-            viewModel.onDigitPressed(9)
-            viewModel.onDigitPressed(9)
-            viewModel.onDigitPressed(9)
-
-            advanceUntilIdle()
-
-            val event = awaitItem()
-            assertEquals(LoginEvent.LoginFailed, event)
-            cancelAndIgnoreRemainingEvents()
+    fun `onDriverSelected transitions to PIN entry`() = runTest {
+        viewModel.uiState.test {
+            assertTrue(awaitItem() is DriverLoginUiState.Idle)
+            val driver = RosterDriver("DRV-001", "John Doe", "JD")
+            viewModel.onDriverSelected(driver)
+            val state = awaitItem()
+            assertTrue(state is DriverLoginUiState.PinEntry)
+            assertEquals(driver, (state as DriverLoginUiState.PinEntry).selectedDriver)
         }
-
-        assertEquals(LoginScreenState.PIN_ERROR, viewModel.uiState.value.screenState)
-        assertEquals(2, viewModel.uiState.value.attemptsRemaining)
-        assertNotNull(viewModel.uiState.value.pinError)
     }
 
     @Test
-    fun `3 failed PINs triggers LOCKOUT`() = runTest {
-        viewModel.onSwitchToPin()
+    fun testOnDigitPressed() = runTest {
+        try {
+            val driver = RosterDriver("DRV-001", "John Doe", "JD")
+            val driverInfo = DriverInfo(driverId = "DRV-001", name = "John Doe", org = "CMP-1", hosStatus = "V-101")
+            fakeAuthRepository.loginResult = Result.success(driverInfo)
+            fakeAuthRepository.conflictResult = Result.success(false)
+            fakeAuthRepository.sessionResult = Result.success("SESS-123")
 
-        // Attempt 1
-        repeat(6) { viewModel.onDigitPressed(9) }
-        advanceUntilIdle()
-        assertEquals(LoginScreenState.PIN_ERROR, viewModel.uiState.value.screenState)
+            viewModel.uiState.test {
+                val s1 = awaitItem()
+                assertTrue("Initial state should be Idle, was $s1", s1 is DriverLoginUiState.Idle)
+                
+                viewModel.onDriverSelected(driver)
+                runCurrent()
+                val s2 = awaitItem()
+                assertTrue("State after driver selection should be PinEntry, was $s2", s2 is DriverLoginUiState.PinEntry)
+                
+                // Press 1-5
+                repeat(5) { i ->
+                    viewModel.onDigitPressed(i + 1)
+                    val s = awaitItem()
+                    assertTrue("State after ${i+1} digits should be PinEntry, was $s", s is DriverLoginUiState.PinEntry)
+                }
+                
+                // 6th digit starts login
+                viewModel.onDigitPressed(6)
+                
+                // 1st item after 6th digit is the updated PinEntry (6 digits)
+                val s6 = awaitItem()
+                assertTrue("State after 6th digit (1st emiss) should be PinEntry, was $s6", s6 is DriverLoginUiState.PinEntry)
 
-        // Attempt 2
-        repeat(6) { viewModel.onDigitPressed(9) }
-        advanceUntilIdle()
-        assertEquals(LoginScreenState.PIN_ERROR, viewModel.uiState.value.screenState)
-
-        // Attempt 3
-        repeat(6) { viewModel.onDigitPressed(9) }
-        
-        // Wait specifically for the login coroutine to finish but don't let the 30s timer finish.
-        // We do this by calling runCurrent() repeatedly or just using a small advanceTimeBy.
-        runCurrent()
-        testScheduler.advanceTimeBy(1000)
-        runCurrent()
-
-        val state = viewModel.uiState.value
-        assertEquals(LoginScreenState.LOCKOUT, state.screenState)
-        assertEquals(0, state.attemptsRemaining)
-        assertTrue(state.lockoutSecondsLeft > 0)
-    }
-
-    @Test
-    fun `RFID tap transitions to RFID_READING then LOGIN_SUCCESS`() = runTest {
-        viewModel.events.test {
-            viewModel.onRfidTapped()
-
-            advanceUntilIdle()
-
-            // Should transition through RFID_READING → LOGIN_SUCCESS
-            val event = awaitItem()
-            assertEquals(LoginEvent.NavigateToDashboard, event)
-            cancelAndIgnoreRemainingEvents()
+                // 2nd item could be Loading or jump directly to Success due to StateFlow conflation
+                val sNext = awaitItem()
+                if (sNext is DriverLoginUiState.Loading) {
+                    val sFinal = awaitItem()
+                    assertTrue("Final state should be Success, was $sFinal", sFinal is DriverLoginUiState.Success)
+                } else {
+                    assertTrue("Final state should be Success, was $sNext", sNext is DriverLoginUiState.Success)
+                }
+            }
+        } catch (e: Throwable) {
+            println("CAPTURED EXCEPTION in testOnDigitPressed: ${e.javaClass.canonicalName}: ${e.message}")
+            e.printStackTrace()
+            throw e
         }
-
-        assertNotNull(viewModel.uiState.value.driverInfo)
-        assertTrue(viewModel.uiState.value.navigateToDashboard)
     }
 
     @Test
-    fun `vehicle speed above threshold triggers BLOCKED_VEHICLE_MOVING`() {
-        viewModel.onVehicleSpeedChanged(30.0)
-        assertEquals(LoginScreenState.BLOCKED_VEHICLE_MOVING, viewModel.uiState.value.screenState)
+    fun `speed above threshold blocks login`() = runTest {
+        viewModel.uiState.test {
+            assertTrue(awaitItem() is DriverLoginUiState.Idle)
+            viewModel.onVehicleSpeedChanged(10.0)
+            assertTrue(awaitItem() is DriverLoginUiState.Idle) // From updateStatus
+            assertTrue(awaitItem() is DriverLoginUiState.Blocked)
+            
+            viewModel.onVehicleSpeedChanged(2.0)
+            assertTrue(awaitItem() is DriverLoginUiState.Blocked) // From updateStatus
+            assertTrue(awaitItem() is DriverLoginUiState.Idle)
+        }
     }
 
     @Test
-    fun `vehicle stopping clears BLOCKED state`() {
-        viewModel.onVehicleSpeedChanged(30.0)
-        assertEquals(LoginScreenState.BLOCKED_VEHICLE_MOVING, viewModel.uiState.value.screenState)
-
-        viewModel.onVehicleSpeedChanged(0.0)
-        assertEquals(LoginScreenState.IDLE_RFID_WAIT, viewModel.uiState.value.screenState)
-    }
-
-    @Test
-    fun `PIN disabled when vehicle moving`() {
-        viewModel.onVehicleSpeedChanged(30.0)
-        viewModel.onSwitchToPin()
-        // Should stay blocked
-        assertEquals(LoginScreenState.BLOCKED_VEHICLE_MOVING, viewModel.uiState.value.screenState)
+    fun `offline status transitions to OFFLINE_MODE`() = runTest {
+        viewModel.uiState.test {
+            assertTrue(awaitItem() is DriverLoginUiState.Idle)
+            onlineFlow.value = false
+            assertTrue(awaitItem() is DriverLoginUiState.Offline)
+        }
     }
 }

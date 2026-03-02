@@ -5,45 +5,82 @@ import {
     MagnifyingGlassIcon,
     PlusIcon,
     PuzzlePieceIcon,
-    ShieldCheckIcon
-} from '@heroicons/react/24/outline';
-import { AnimatePresence, motion } from 'framer-motion';
-import React, { useState } from 'react';
-import ApiClientHub from './components/ApiClientHub';
-import ConfigForm from './components/ConfigForm';
-import IntegrationLogs from './components/IntegrationLogs';
-import Marketplace from './components/Marketplace';
-import WebhookManager from './components/WebhookManager';
-
-const tabs = [
-  { id: 'marketplace', name: 'Marketplace', icon: PuzzlePieceIcon },
-  { id: 'apiclients', name: 'API Clients', icon: KeyIcon },
-  { id: 'webhooks', name: 'Webhooks', icon: GlobeAltIcon },
-  { id: 'logs', name: 'System Logs', icon: CommandLineIcon },
-];
+    ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
+import { AnimatePresence, motion } from "framer-motion";
+import React, { useState } from "react";
+import { useUIStrings } from "../../hooks/useUIStrings";
+import ApiClientHub from "./components/ApiClientHub";
+import ConfigForm from "./components/ConfigForm";
+import IntegrationLogs from "./components/IntegrationLogs";
+import Marketplace from "./components/Marketplace";
+import WebhookManager from "./components/WebhookManager";
 
 const IntegrationsCenter: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('marketplace');
-  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("marketplace");
+  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(
+    null,
+  );
+  const { uiStrings } = useUIStrings("integrations");
+
+  const IconMap: Record<string, React.ElementType> = {
+    PuzzlePieceIcon,
+    KeyIcon,
+    GlobeAltIcon,
+    CommandLineIcon,
+  };
+
+  const [tabs, setTabs] = React.useState<any[]>([]);
+  const [loading_tabs, setLoading_tabs] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchTabs = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.REACT_APP_API_URL || "/api/v1"}/integrations/tabs`,
+        );
+        if (res.ok) {
+          const payload = await res.json();
+          if (payload.data && payload.data.length > 0) {
+            setTabs(
+              payload.data.map((tab: any) => ({
+                ...tab,
+                icon: IconMap[tab.icon] || PuzzlePieceIcon,
+              })),
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch tabs", error);
+      } finally {
+        setLoading_tabs(false);
+      }
+    };
+    fetchTabs();
+  }, []);
 
   const renderContent = () => {
     if (selectedIntegration) {
       return (
-        <ConfigForm 
-          id={selectedIntegration} 
-          onBack={() => setSelectedIntegration(null)} 
+        <ConfigForm
+          id={selectedIntegration}
+          onBack={() => setSelectedIntegration(null)}
         />
       );
     }
 
     switch (activeTab) {
-      case 'marketplace':
-        return <Marketplace onConfigure={(id) => setSelectedIntegration(id)} />;
-      case 'apiclients':
+      case "marketplace":
+        return (
+          <Marketplace
+            onConfigure={(id: string) => setSelectedIntegration(id)}
+          />
+        );
+      case "apiclients":
         return <ApiClientHub />;
-      case 'webhooks':
+      case "webhooks":
         return <WebhookManager />;
-      case 'logs':
+      case "logs":
         return <IntegrationLogs />;
       default:
         return null;
@@ -57,25 +94,27 @@ const IntegrationsCenter: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 text-primary font-semibold text-xs uppercase tracking-widest mb-1">
             <ShieldCheckIcon className="w-4 h-4" />
-            Advanced Fleet Security
+            {uiStrings?.adv_security_label || "Advanced Fleet Security"}
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            Integrations & Access Control
+            {uiStrings?.center_title || "Integrations & Access Control"}
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="relative">
             <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input 
-              type="text" 
-              placeholder="Search integrations..."
+            <input
+              type="text"
+              placeholder={
+                uiStrings?.search_placeholder || "Search integrations..."
+              }
               className="bg-slate-900/50 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all w-64"
             />
           </div>
           <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-primary/20">
             <PlusIcon className="w-5 h-5" />
-            Add Connector
+            {uiStrings?.add_connector_btn || "Add Connector"}
           </button>
         </div>
       </div>
@@ -88,9 +127,9 @@ const IntegrationsCenter: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                activeTab === tab.id
+                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
               }`}
             >
               <tab.icon className="w-4 h-4" />

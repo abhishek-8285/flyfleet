@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package telemetry.v1;
+
+option go_package = "github.com/flyfleet/proto/telemetry/v1;telemetryv1";
+
+// TelemetryPayload represents the highly compressed binary payload 
+// sent by the edge gateway over MQTT. This entirely replaces JSON payloads
+// to save cellular bandwidth and parsing latency.
+message TelemetryPayload {
+  string device_id = 1;         // Provisioned UUID of the gateway
+  int64 timestamp_ms = 2;       // Unix epoch in milliseconds
+  
+  // GPS & Spatial
+  double latitude = 3;
+  double longitude = 4;
+  float speed_mph = 5;
+  int32 heading_degrees = 6;
+  float hdop = 7;               // Horizontal Dilution of Precision
+  
+  // J1939 CAN Bus (Engine Data)
+  uint32 engine_rpm = 8;        // PGN 61444
+  float engine_load_percent = 9;
+  float fuel_level_percent = 10;
+  double total_odometer_meters = 11; // PGN 65248
+  int32 coolant_temp_celsius = 12;
+  
+  // Hardware State
+  bool ignition_status = 13;
+  float battery_voltage = 14;
+  int32 cellular_signal_dbm = 15;
+  
+  // Faults (Only present if deltas occur)
+  repeated ActiveDTC active_dtcs = 16;
+}
+
+message ActiveDTC {
+  string spn = 1;   // Suspect Parameter Number
+  string fmi = 2;   // Failure Mode Indicator
+  int32 count = 3;  // Occurrence Count
+}
+
+message DashcamSafetyEvent {
+  string device_id = 1;
+  int64 timestamp_ms = 2;
+  
+  SafetyEventType event_type = 3;
+  double severity_score = 4;    // The AI INT8 output confidence score
+  
+  // Edge-computed trigger context
+  float triggering_speed_mph = 5;
+  float following_distance_seconds = 6;
+}
+
+enum SafetyEventType {
+  SAFETY_EVENT_UNSPECIFIED = 0;
+  HARSH_BRAKING = 1;
+  HARSH_ACCELERATION = 2;
+  HARSH_CORNERING = 3;
+  TAILGATING = 4;
+  ROLLING_STOP = 5;
+  DISTRACTED_DRIVING_DETECTED = 6;
+}
+
+message RecordTelemetryResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message RecordDashcamEventResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+service TelemetryService {
+  rpc RecordTelemetry(TelemetryPayload) returns (RecordTelemetryResponse);
+  rpc RecordDashcamEvent(DashcamSafetyEvent) returns (RecordDashcamEventResponse);
+}
+

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useUIStrings } from "../../hooks/useUIStrings";
 
 interface TelemetryPacket {
   id: string;
@@ -18,9 +19,14 @@ interface Device {
 const DeviceTelemetry: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { uiStrings: rawUiStrings } = useUIStrings("devices");
+  const uiStrings = rawUiStrings || {};
+
   const [telemetry, setTelemetry] = useState<TelemetryPacket[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [selectedDevice, setSelectedDevice] = useState<string>(searchParams.get('device') || '');
+  const [selectedDevice, setSelectedDevice] = useState<string>(
+    searchParams.get("device") || "",
+  );
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
@@ -44,16 +50,16 @@ const DeviceTelemetry: React.FC = () => {
 
   const fetchDevices = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const res = await fetch('/api/v1/devices/status?limit=100', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const token = localStorage.getItem("access_token");
+      const res = await fetch("/api/v1/devices/status?limit=100", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setDevices(data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch devices:', error);
+      console.error("Failed to fetch devices:", error);
     }
   };
 
@@ -61,16 +67,19 @@ const DeviceTelemetry: React.FC = () => {
     if (!selectedDevice) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
-      const res = await fetch(`/api/v1/devices/${selectedDevice}/telemetry?limit=100`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(
+        `/api/v1/devices/${selectedDevice}/telemetry?limit=100`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (res.ok) {
         const data = await res.json();
         setTelemetry(data || []);
       }
     } catch (error) {
-      console.error('Failed to fetch telemetry:', error);
+      console.error("Failed to fetch telemetry:", error);
     } finally {
       setLoading(false);
     }
@@ -78,11 +87,16 @@ const DeviceTelemetry: React.FC = () => {
 
   const getPacketTypeColor = (type: string) => {
     switch (type) {
-      case 'gps': return 'bg-emerald-500/20 text-emerald-400';
-      case 'obd': return 'bg-blue-500/20 text-blue-400';
-      case 'heartbeat': return 'bg-violet-500/20 text-violet-400';
-      case 'sensor': return 'bg-yellow-500/20 text-yellow-400';
-      default: return 'bg-slate-500/20 text-slate-400';
+      case "gps":
+        return "bg-emerald-500/20 text-emerald-400";
+      case "obd":
+        return "bg-blue-500/20 text-blue-400";
+      case "heartbeat":
+        return "bg-violet-500/20 text-violet-400";
+      case "sensor":
+        return "bg-yellow-500/20 text-yellow-400";
+      default:
+        return "bg-slate-500/20 text-slate-400";
     }
   };
 
@@ -91,14 +105,19 @@ const DeviceTelemetry: React.FC = () => {
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/admin/devices')}
+            onClick={() => navigate("/admin/devices")}
             className="p-2 rounded-lg bg-slate-800/50 text-slate-400 hover:text-white transition-colors"
           >
-            ← Back
+            {uiStrings.btn_back || "← Back"}
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-white">Live Telemetry</h1>
-            <p className="text-slate-400">Real-time device data streams</p>
+            <h1 className="text-2xl font-bold text-white">
+              {uiStrings.title_live_telemetry || "Live Telemetry"}
+            </h1>
+            <p className="text-slate-400">
+              {uiStrings.subtitle_realtime_data ||
+                "Real-time device data streams"}
+            </p>
           </div>
         </div>
 
@@ -108,9 +127,13 @@ const DeviceTelemetry: React.FC = () => {
             onChange={(e) => setSelectedDevice(e.target.value)}
             className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
-            <option value="">Select Device</option>
+            <option value="">
+              {uiStrings.label_select_device || "Select Device"}
+            </option>
             {devices.map((d) => (
-              <option key={d.id} value={d.id}>{d.serial_number}</option>
+              <option key={d.id} value={d.id}>
+                {d.serial_number}
+              </option>
             ))}
           </select>
 
@@ -121,39 +144,50 @@ const DeviceTelemetry: React.FC = () => {
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="w-4 h-4 rounded accent-violet-500"
             />
-            Auto-refresh
+            {uiStrings.label_auto_refresh || "Auto-refresh"}
           </label>
 
           <button
             onClick={fetchTelemetry}
             className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-500 transition-colors"
           >
-            Refresh
+            {uiStrings.btn_refresh || "Refresh"}
           </button>
         </div>
       </div>
 
       {!selectedDevice ? (
         <div className="flex items-center justify-center h-64 bg-slate-800/50 rounded-xl border border-slate-700/50">
-          <p className="text-slate-400">Select a device to view telemetry</p>
+          <p className="text-slate-400">
+            {uiStrings.msg_select_device_prompt ||
+              "Select a device to view telemetry"}
+          </p>
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center h-64 bg-slate-800/50 rounded-xl border border-slate-700/50">
-          <p className="text-slate-400 animate-pulse">Loading telemetry...</p>
+          <p className="text-slate-400 animate-pulse">
+            {uiStrings.msg_loading_telemetry || "Loading telemetry..."}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
           {telemetry.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
-              No telemetry data available for this device
+              {uiStrings.msg_no_telemetry_data ||
+                "No telemetry data available for this device"}
             </div>
           ) : (
             telemetry.map((packet) => (
-              <div key={packet.id} className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-4">
+              <div
+                key={packet.id}
+                className="bg-slate-800/50 backdrop-blur-xl rounded-xl border border-slate-700/50 p-4"
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPacketTypeColor(packet.packet_type)}`}>
-                      {packet.packet_type?.toUpperCase() || 'UNKNOWN'}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${getPacketTypeColor(packet.packet_type)}`}
+                    >
+                      {packet.packet_type?.toUpperCase() || "UNKNOWN"}
                     </span>
                     <span className="text-slate-400 text-sm">
                       {new Date(packet.timestamp).toLocaleString()}
@@ -169,7 +203,9 @@ const DeviceTelemetry: React.FC = () => {
 
                 {packet.raw_hex && (
                   <div className="mt-3">
-                    <span className="text-xs text-slate-500 uppercase tracking-wider">Raw Hex</span>
+                    <span className="text-xs text-slate-500 uppercase tracking-wider">
+                      {uiStrings.label_raw_hex || "Raw Hex"}
+                    </span>
                     <div className="mt-1 bg-slate-900/50 rounded-lg p-3 font-mono text-xs text-slate-400 break-all">
                       {packet.raw_hex}
                     </div>

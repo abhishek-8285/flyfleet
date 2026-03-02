@@ -1,18 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { notificationService } from '../../../services/notificationService';
-import { GlobalNotificationDefault } from '../../../types/notification';
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useUIStrings } from "../../../hooks/useUIStrings";
+import { notificationService } from "../../../services/notificationService";
+import { GlobalNotificationDefault } from "../../../types/notification";
 
 const GlobalNotificationSettings: React.FC = () => {
   const navigate = useNavigate();
-  const [defaults, setDefaults] = useState<GlobalNotificationDefault | null>(null);
+  const [defaults, setDefaults] = useState<GlobalNotificationDefault | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { uiStrings } = useUIStrings("admin_notifications_global");
   const [form, setForm] = useState({
     email_enabled: true,
     sms_enabled: false,
     push_enabled: true,
-    in_app_enabled: true
+    in_app_enabled: true,
   });
 
   const fetchData = async () => {
@@ -25,11 +29,11 @@ const GlobalNotificationSettings: React.FC = () => {
           email_enabled: data.email_enabled,
           sms_enabled: data.sms_enabled,
           push_enabled: data.push_enabled,
-          in_app_enabled: data.in_app_enabled
+          in_app_enabled: data.in_app_enabled,
         });
       }
     } catch (err) {
-      console.error('Failed to fetch global defaults', err);
+      console.error("Failed to fetch global defaults", err);
     } finally {
       setLoading(false);
     }
@@ -45,90 +49,143 @@ const GlobalNotificationSettings: React.FC = () => {
       await notificationService.updateGlobalDefaults(form);
       fetchData();
     } catch (err) {
-      console.error('Failed to update global defaults', err);
+      console.error("Failed to update global defaults", err);
     } finally {
       setSaving(false);
     }
   };
 
-  const Toggle = ({ enabled, label, sublabel, onChange }: { enabled: boolean, label: string, sublabel: string, onChange: (val: boolean) => void }) => (
-    <div className={`p-6 rounded-3xl border transition-all ${
-      enabled ? 'bg-indigo-500/5 border-indigo-500/20 shadow-lg shadow-indigo-900/5' : 'bg-slate-900/30 border-slate-800 opacity-60'
-    }`}>
+  const Toggle = ({
+    enabled,
+    label,
+    sublabel,
+    onChange,
+  }: {
+    enabled: boolean;
+    label: string;
+    sublabel: string;
+    onChange: (val: boolean) => void;
+  }) => (
+    <div
+      className={`p-6 rounded-3xl border transition-all ${
+        enabled
+          ? "bg-indigo-500/5 border-indigo-500/20 shadow-lg shadow-indigo-900/5"
+          : "bg-slate-900/30 border-slate-800 opacity-60"
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div className="flex gap-4">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-            enabled ? 'bg-indigo-500/20 text-indigo-400 shadow-inner shadow-white/5' : 'bg-slate-800 text-slate-500'
-          }`}>
-            <span className="material-symbols-outlined">notifications_active</span>
+          <div
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              enabled
+                ? "bg-indigo-500/20 text-indigo-400 shadow-inner shadow-white/5"
+                : "bg-slate-800 text-slate-500"
+            }`}
+          >
+            <span className="material-symbols-outlined">
+              notifications_active
+            </span>
           </div>
           <div>
-            <span className="block font-bold text-slate-100 text-lg uppercase tracking-tight">{label}</span>
-            <span className="block text-sm text-slate-500 mt-1 max-w-xs">{sublabel}</span>
+            <span className="block font-bold text-slate-100 text-lg uppercase tracking-tight">
+              {label}
+            </span>
+            <span className="block text-sm text-slate-500 mt-1 max-w-xs">
+              {sublabel}
+            </span>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => onChange(!enabled)}
           className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all outline-none ${
-            enabled ? 'bg-indigo-500 shadow-xl shadow-indigo-500/20' : 'bg-slate-700'
+            enabled
+              ? "bg-indigo-500 shadow-xl shadow-indigo-500/20"
+              : "bg-slate-700"
           }`}
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          <span
+            className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`}
+          />
         </button>
       </div>
     </div>
   );
 
-  if (loading) return <div className="p-8 text-slate-500">Decrypting system defaults...</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-slate-500">
+        {uiStrings?.loading || "Decrypting system defaults..."}
+      </div>
+    );
 
   return (
     <div className="p-6 space-y-8 max-w-4xl mx-auto animate-in fade-in slide-in-from-top-4 duration-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700 border border-slate-700 transition-all text-slate-300 flex items-center justify-center">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2.5 rounded-xl bg-slate-800/50 hover:bg-slate-700 border border-slate-700 transition-all text-slate-300 flex items-center justify-center"
+          >
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
           <div>
             <h1 className="text-3xl font-black bg-gradient-to-br from-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-3">
-              <span className="material-symbols-outlined text-[32px]">display_settings</span>
-              Global Archetypes
+              <span className="material-symbols-outlined text-[32px]">
+                display_settings
+              </span>
+              {uiStrings?.title || "Global Archetypes"}
             </h1>
-            <p className="text-slate-500 font-medium">Define default notification behavior for all new platform users</p>
+            <p className="text-slate-500 font-medium">
+              {uiStrings?.subtitle ||
+                "Define default notification behavior for all new platform users"}
+            </p>
           </div>
         </div>
-        <button 
+        <button
           disabled={saving}
           onClick={handleSave}
           className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white font-bold transition-all flex items-center gap-2 shadow-2xl shadow-indigo-900/40 border border-indigo-400/20 uppercase"
         >
-          <span className="material-symbols-outlined text-[20px]">save</span> {saving ? 'SYNCING...' : 'ENFORCE DEFAULTS'}
+          <span className="material-symbols-outlined text-[20px]">save</span>{" "}
+          {saving
+            ? uiStrings?.btn_syncing || "SYNCING..."
+            : uiStrings?.btn_enforce || "ENFORCE DEFAULTS"}
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Toggle 
-          enabled={form.email_enabled} 
-          label="Default Email" 
-          sublabel="Primary delivery channel for system reports and security updates."
-          onChange={(val) => setForm({...form, email_enabled: val})} 
+        <Toggle
+          enabled={form.email_enabled}
+          label={uiStrings?.label_email || "Default Email"}
+          sublabel={
+            uiStrings?.sub_email ||
+            "Primary delivery channel for system reports and security updates."
+          }
+          onChange={(val) => setForm({ ...form, email_enabled: val })}
         />
-        <Toggle 
-          enabled={form.sms_enabled} 
-          label="Default SMS" 
-          sublabel="Used for high-priority alerts. Disabled by default due to high latency/cost."
-          onChange={(val) => setForm({...form, sms_enabled: val})} 
+        <Toggle
+          enabled={form.sms_enabled}
+          label={uiStrings?.label_sms || "Default SMS"}
+          sublabel={
+            uiStrings?.sub_sms ||
+            "Used for high-priority alerts. Disabled by default due to high latency/cost."
+          }
+          onChange={(val) => setForm({ ...form, sms_enabled: val })}
         />
-        <Toggle 
-          enabled={form.push_enabled} 
-          label="Default Push" 
+        <Toggle
+          enabled={form.push_enabled}
+          label="Default Push"
           sublabel="Real-time mobile engagement for fleet operations and tracking."
-          onChange={(val) => setForm({...form, push_enabled: val})} 
+          onChange={(val) => setForm({ ...form, push_enabled: val })}
         />
-        <Toggle 
-          enabled={form.in_app_enabled} 
-          label="Default Feed" 
-          sublabel="The in-app notification center (System UI Feed)."
-          onChange={(val) => setForm({...form, in_app_enabled: val})} 
+        <Toggle
+          enabled={form.in_app_enabled}
+          label={uiStrings?.label_feed || "Default Feed"}
+          sublabel={
+            uiStrings?.sub_feed ||
+            "The in-app notification center (System UI Feed)."
+          }
+          onChange={(val) => setForm({ ...form, in_app_enabled: val })}
         />
       </div>
 
@@ -137,17 +194,27 @@ const GlobalNotificationSettings: React.FC = () => {
           <span className="material-symbols-outlined">info</span>
         </div>
         <div className="space-y-1">
-          <h4 className="font-bold text-indigo-200 uppercase tracking-widest text-xs">Propagate to All Users</h4>
+          <h4 className="font-bold text-indigo-200 uppercase tracking-widest text-xs">
+            {uiStrings?.card_info_title || "Propagate to All Users"}
+          </h4>
           <p className="text-sm text-indigo-400/80 leading-relaxed">
-            Changing these defaults only affects **future** users. Existing users retain their custom preferences. To perform a mass reset of existing users, contact the infrastructure guardian.
+            {uiStrings?.card_info_desc ||
+              "Changing these defaults only affects **future** users. Existing users retain their custom preferences. To perform a mass reset of existing users, contact the infrastructure guardian."}
           </p>
         </div>
       </div>
 
       <div className="pt-8 border-t border-slate-800">
         <div className="flex items-center justify-between text-[10px] text-slate-600 font-mono uppercase tracking-[0.2em]">
-          <span>System Archetype Revision: 1.0.4</span>
-          <span>Last Enforced: {defaults?.updated_at ? new Date(defaults.updated_at).toLocaleString() : 'NEVER'}</span>
+          <span>
+            {uiStrings?.revision_prefix || "System Archetype Revision:"} 1.0.4
+          </span>
+          <span>
+            {uiStrings?.last_enforced || "Last Enforced:"}{" "}
+            {defaults?.updated_at
+              ? new Date(defaults.updated_at).toLocaleString()
+              : uiStrings?.never || "NEVER"}
+          </span>
         </div>
       </div>
     </div>

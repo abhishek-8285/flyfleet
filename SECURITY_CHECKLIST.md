@@ -68,13 +68,13 @@
 - [x] Import corrections for security functions
 
 ## Files Updated:
-- [x] services/auth-service/internal/service/auth_service.go
-- [x] services/auth-service/internal/repository/postgres.go
-- [x] services/auth-service/internal/handlers/auth_handlers.go
-- [x] services/auth-service/internal/middleware/auth.go
-- [x] services/auth-service/internal/middleware/ratelimit.go
-- [x] services/auth-service/cmd/main.go
-- [x] services/auth-service/internal/config/config.go
+- [x] services/microservices/auth-service/internal/service/auth_service.go
+- [x] services/microservices/auth-service/internal/repository/postgres.go
+- [x] services/microservices/auth-service/internal/handlers/auth_handlers.go
+- [x] services/microservices/auth-service/internal/middleware/auth.go
+- [x] services/microservices/auth-service/internal/middleware/ratelimit.go
+- [x] services/microservices/auth-service/cmd/main.go
+- [x] services/microservices/auth-service/internal/config/config.go
 - [x] docker-compose.yml
 - [x] docker-compose.prod.yml
 - [x] config.toml

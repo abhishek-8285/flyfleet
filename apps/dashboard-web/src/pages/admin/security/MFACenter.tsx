@@ -1,18 +1,19 @@
 import {
-  AdjustmentsVerticalIcon,
-  ArrowPathIcon,
-  DevicePhoneMobileIcon,
-  ExclamationTriangleIcon,
-  KeyIcon,
-  MagnifyingGlassIcon,
-  NoSymbolIcon,
-  ShieldCheckIcon,
-  UserGroupIcon
-} from '@heroicons/react/24/outline';
-import React, { useEffect, useMemo, useState } from 'react';
-import SecurityFooter from '../../../components/SecurityFooter';
-import SecuritySidebar from '../../../components/SecuritySidebar';
-import api from '../../../services/api';
+    AdjustmentsVerticalIcon,
+    ArrowPathIcon,
+    DevicePhoneMobileIcon,
+    ExclamationTriangleIcon,
+    KeyIcon,
+    MagnifyingGlassIcon,
+    NoSymbolIcon,
+    ShieldCheckIcon,
+    UserGroupIcon,
+} from "@heroicons/react/24/outline";
+import React, { useEffect, useMemo, useState } from "react";
+import SecurityFooter from "../../../components/SecurityFooter";
+import SecuritySidebar from "../../../components/SecuritySidebar";
+import { useUIStrings } from "../../../hooks/useUIStrings";
+import api from "../../../services/api";
 
 const toArray = (value: any) => {
   if (Array.isArray(value)) return value;
@@ -28,26 +29,30 @@ const toNumber = (value: any) => {
 };
 
 const toRelativeTime = (value: string) => {
-  if (!value) return 'Never';
+  if (!value) return "Never";
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return value;
 
   const diffMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
-  if (diffMinutes < 1) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? '' : 's'} ago`;
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60)
+    return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  if (diffHours < 24)
+    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 };
 
 const MFACenter: React.FC = () => {
+  const { uiStrings: rawUiStrings } = useUIStrings("admin_security");
+  const uiStrings = rawUiStrings || {};
   const [users, setUsers] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const orgId = localStorage.getItem('org_id') || 'default';
+  const orgId = localStorage.getItem("org_id") || "default";
 
   useEffect(() => {
     fetchMFAUsers();
@@ -64,12 +69,12 @@ const MFACenter: React.FC = () => {
 
       const userDirectory = toArray(usersRes).map((u: any, idx: number) => ({
         id: u.id || u.user_id || `user-${idx}`,
-        email: u.email || '',
-        name: u.name || u.username || u.email || 'Unknown User',
-        status: 'DISABLED',
-        method: 'NONE',
+        email: u.email || "",
+        name: u.name || u.username || u.email || "Unknown User",
+        status: "DISABLED",
+        method: "NONE",
         devices: 0,
-        lastUsed: 'Never',
+        lastUsed: "Never",
       }));
 
       const userById = new Map<string, any>();
@@ -84,12 +89,12 @@ const MFACenter: React.FC = () => {
         if (!merged.has(idKey)) {
           merged.set(idKey, {
             id: fallback.id || idKey,
-            email: fallback.email || '',
-            name: fallback.name || fallback.email || 'Unknown User',
-            status: fallback.status || 'DISABLED',
-            method: fallback.method || 'NONE',
+            email: fallback.email || "",
+            name: fallback.name || fallback.email || "Unknown User",
+            status: fallback.status || "DISABLED",
+            method: fallback.method || "NONE",
             devices: toNumber(fallback.devices),
-            lastUsed: fallback.lastUsed || 'Never',
+            lastUsed: fallback.lastUsed || "Never",
             lastTimestamp: 0,
           });
         }
@@ -103,28 +108,48 @@ const MFACenter: React.FC = () => {
 
       const eventRows = toArray(eventsRes);
       eventRows.forEach((event: any) => {
-        const eventUserId = String(event.user_id || event.userId || '');
-        const eventEmail = String(event.email || event.user_email || event.details?.email || '').toLowerCase();
-        const directoryUser = userById.get(eventUserId) || userByEmail.get(eventEmail);
-        const key = String(directoryUser?.id || eventUserId || eventEmail || event.id);
+        const eventUserId = String(event.user_id || event.userId || "");
+        const eventEmail = String(
+          event.email || event.user_email || event.details?.email || "",
+        ).toLowerCase();
+        const directoryUser =
+          userById.get(eventUserId) || userByEmail.get(eventEmail);
+        const key = String(
+          directoryUser?.id || eventUserId || eventEmail || event.id,
+        );
 
         const row = ensureUser(key, {
           id: directoryUser?.id || eventUserId || event.id,
-          email: directoryUser?.email || eventEmail || '',
-          name: directoryUser?.name || event.details?.name || event.user_name || eventEmail || 'Unknown User',
-          status: 'DISABLED',
-          method: 'NONE',
+          email: directoryUser?.email || eventEmail || "",
+          name:
+            directoryUser?.name ||
+            event.details?.name ||
+            event.user_name ||
+            eventEmail ||
+            "Unknown User",
+          status: "DISABLED",
+          method: "NONE",
           devices: directoryUser?.devices || 0,
-          lastUsed: 'Never',
+          lastUsed: "Never",
         });
 
-        const status = String(event.status || '').toUpperCase();
+        const status = String(event.status || "").toUpperCase();
         if (status) {
-          row.status = status === 'SUCCESS' ? 'ENABLED' : status === 'FAILED' ? 'ENFORCED' : status;
+          row.status =
+            status === "SUCCESS"
+              ? "ENABLED"
+              : status === "FAILED"
+                ? "ENFORCED"
+                : status;
         }
 
         if (event.method) row.method = String(event.method).toUpperCase();
-        row.devices = Math.max(row.devices, toNumber(event.details?.device_count || event.details?.trusted_devices));
+        row.devices = Math.max(
+          row.devices,
+          toNumber(
+            event.details?.device_count || event.details?.trusted_devices,
+          ),
+        );
 
         const createdAt = event.created_at || event.createdAt;
         if (createdAt) {
@@ -137,9 +162,11 @@ const MFACenter: React.FC = () => {
       });
 
       setSummary(dashboardRes || null);
-      setUsers(Array.from(merged.values()).map(({ lastTimestamp, ...rest }) => rest));
+      setUsers(
+        Array.from(merged.values()).map(({ lastTimestamp, ...rest }) => rest),
+      );
     } catch (error) {
-      console.error('Failed to fetch MFA users', error);
+      console.error("Failed to fetch MFA users", error);
       setSummary(null);
       setUsers([]);
     } finally {
@@ -152,23 +179,54 @@ const MFACenter: React.FC = () => {
     if (!term) return users;
     return users.filter((u) =>
       [u.name, u.email, u.status, u.method].some((value) =>
-        String(value || '').toLowerCase().includes(term)
-      )
+        String(value || "")
+          .toLowerCase()
+          .includes(term),
+      ),
     );
   }, [searchTerm, users]);
 
   const totalUsers = toNumber(summary?.total_users) || users.length;
-  const enabledUsers = toNumber(summary?.mfa_enabled) || users.filter((u) => u.status === 'ENABLED' || u.status === 'ENFORCED').length;
-  const enabledPct = totalUsers > 0 ? Math.round((enabledUsers / totalUsers) * 100) : 0;
+  const enabledUsers =
+    toNumber(summary?.mfa_enabled) ||
+    users.filter((u) => u.status === "ENABLED" || u.status === "ENFORCED")
+      .length;
+  const enabledPct =
+    totalUsers > 0 ? Math.round((enabledUsers / totalUsers) * 100) : 0;
   const trustedDevices = users.reduce((sum, u) => sum + toNumber(u.devices), 0);
-  const policyViolations = toNumber(summary?.locked_accounts || summary?.failed_attempts_24h);
+  const policyViolations = toNumber(
+    summary?.locked_accounts || summary?.failed_attempts_24h,
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'ENABLED': return <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-vibrant-green border border-emerald-500/20"><ShieldCheckIcon className="w-3 h-3"/> ACTIVE</span>;
-      case 'ENFORCED': return <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-vibrant-blue border border-blue-500/20"><KeyIcon className="w-3 h-3"/> ENFORCED</span>;
-      case 'DISABLED': return <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-vibrant-red border border-red-500/20"><NoSymbolIcon className="w-3 h-3"/> INACTIVE</span>;
-      default: return <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">BYPASSED</span>;
+      case "ENABLED":
+        return (
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-vibrant-green border border-emerald-500/20">
+            <ShieldCheckIcon className="w-3 h-3" />{" "}
+            {uiStrings.admin_security?.badge_mfa_active || "ACTIVE"}
+          </span>
+        );
+      case "ENFORCED":
+        return (
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-vibrant-blue border border-blue-500/20">
+            <KeyIcon className="w-3 h-3" />{" "}
+            {uiStrings.admin_security?.badge_mfa_enforced || "ENFORCED"}
+          </span>
+        );
+      case "DISABLED":
+        return (
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-vibrant-red border border-red-500/20">
+            <NoSymbolIcon className="w-3 h-3" />{" "}
+            {uiStrings.admin_security?.badge_mfa_inactive || "INACTIVE"}
+          </span>
+        );
+      default:
+        return (
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+            {uiStrings.admin_security?.badge_mfa_bypassed || "BYPASSED"}
+          </span>
+        );
     }
   };
 
@@ -182,33 +240,69 @@ const MFACenter: React.FC = () => {
         <header className="px-8 py-6 border-b border-white/5 bg-slate-900/40 backdrop-blur-md z-10 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary text-3xl">fingerprint</span>
-              MFA Command Center
+              <span className="material-symbols-outlined text-primary text-3xl">
+                fingerprint
+              </span>
+              {uiStrings.admin_security?.title_mfa || "MFA Command Center"}
             </h2>
-            <p className="text-slate-400 text-sm mt-1">Multi-factor identity directory and global enforcement policies.</p>
+            <p className="text-slate-400 text-sm mt-1">
+              {uiStrings.admin_security?.subtitle_mfa ||
+                "Multi-factor identity directory and global enforcement policies."}
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-all shadow-lg shadow-primary/20">
               <AdjustmentsVerticalIcon className="w-5 h-5" />
-              Global Policy
+              {uiStrings.admin_security?.btn_global_policy || "Global Policy"}
             </button>
           </div>
         </header>
 
         <div className="px-8 py-6 grid grid-cols-4 gap-6 z-10">
           {[
-            { label: 'Total Users', value: totalUsers.toLocaleString(), icon: UserGroupIcon, color: 'text-blue-400' },
-            { label: 'MFA Enabled', value: `${enabledPct}%`, icon: ShieldCheckIcon, color: 'text-emerald-400' },
-            { label: 'Trusted Devices', value: trustedDevices.toLocaleString(), icon: DevicePhoneMobileIcon, color: 'text-purple-400' },
-            { label: 'Policy Violations', value: policyViolations.toLocaleString(), icon: ExclamationTriangleIcon, color: 'text-amber-400' },
+            {
+              label:
+                uiStrings.admin_security?.stat_total_users || "Total Users",
+              value: totalUsers.toLocaleString(),
+              icon: UserGroupIcon,
+              color: "text-blue-400",
+            },
+            {
+              label:
+                uiStrings.admin_security?.stat_mfa_enabled || "MFA Enabled",
+              value: `${enabledPct}%`,
+              icon: ShieldCheckIcon,
+              color: "text-emerald-400",
+            },
+            {
+              label:
+                uiStrings.admin_security?.stat_trusted_devices ||
+                "Trusted Devices",
+              value: trustedDevices.toLocaleString(),
+              icon: DevicePhoneMobileIcon,
+              color: "text-purple-400",
+            },
+            {
+              label:
+                uiStrings.admin_security?.stat_policy_violations ||
+                "Policy Violations",
+              value: policyViolations.toLocaleString(),
+              icon: ExclamationTriangleIcon,
+              color: "text-amber-400",
+            },
           ].map((stat, i) => (
-            <div key={i} className="glass-card p-4 rounded-xl flex items-center gap-4">
+            <div
+              key={i}
+              className="glass-card p-4 rounded-xl flex items-center gap-4"
+            >
               <div className={`p-3 rounded-lg bg-slate-800/50 ${stat.color}`}>
                 <stat.icon className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{stat.label}</p>
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                  {stat.label}
+                </p>
                 <p className="text-2xl font-bold text-white">{stat.value}</p>
               </div>
             </div>
@@ -222,7 +316,10 @@ const MFACenter: React.FC = () => {
                 <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search by identity or email..."
+                  placeholder={
+                    uiStrings.admin_security?.placeholder_mfa_search ||
+                    "Search by identity or email..."
+                  }
                   className="w-full bg-slate-900/50 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -242,31 +339,55 @@ const MFACenter: React.FC = () => {
             <div className="flex-1 overflow-auto custom-scrollbar">
               {loading ? (
                 <div className="h-full min-h-[280px] flex items-center justify-center text-slate-400 text-sm">
-                  Loading MFA users...
+                  {uiStrings.admin_security?.loading_mfa_users ||
+                    "Loading MFA users..."}
                 </div>
               ) : (
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-white/5 bg-white/[0.02]">
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">Identity</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">MFA Status</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">Primary Method</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">Trusted Assets</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">Last Activity</th>
-                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 text-right">Actions</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                        {uiStrings.admin_security?.th_identity || "Identity"}
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                        {uiStrings.admin_security?.th_mfa_status ||
+                          "MFA Status"}
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                        {uiStrings.admin_security?.th_primary_method ||
+                          "Primary Method"}
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                        {uiStrings.admin_security?.th_trusted_assets ||
+                          "Trusted Assets"}
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500">
+                        {uiStrings.admin_security?.th_last_activity ||
+                          "Last Activity"}
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 text-right">
+                        {uiStrings.admin_security?.th_actions || "Actions"}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <tr
+                        key={u.id}
+                        className="hover:bg-white/[0.02] transition-colors group"
+                      >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center border border-white/5 shadow-inner">
                               <UserGroupIcon className="w-5 h-5 text-slate-400" />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-white">{u.name}</span>
-                              <span className="text-xs text-slate-500 font-mono tracking-tighter">{u.email || '-'}</span>
+                              <span className="text-sm font-semibold text-white">
+                                {u.name}
+                              </span>
+                              <span className="text-xs text-slate-500 font-mono tracking-tighter">
+                                {u.email || "-"}
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -275,19 +396,31 @@ const MFACenter: React.FC = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-slate-300">
-                            {u.method === 'TOTP' ? <ShieldCheckIcon className="w-4 h-4 text-primary" /> : <DevicePhoneMobileIcon className="w-4 h-4 text-slate-500" />}
-                            <span className="text-sm font-medium">{u.method}</span>
+                            {u.method === "TOTP" ? (
+                              <ShieldCheckIcon className="w-4 h-4 text-primary" />
+                            ) : (
+                              <DevicePhoneMobileIcon className="w-4 h-4 text-slate-500" />
+                            )}
+                            <span className="text-sm font-medium">
+                              {u.method}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-slate-300 font-bold">{toNumber(u.devices)} Devices</span>
+                          <span className="text-sm text-slate-300 font-bold">
+                            {toNumber(u.devices)}{" "}
+                            {uiStrings.admin_security?.label_devices ||
+                              "Devices"}
+                          </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-xs text-slate-400 italic">{u.lastUsed}</span>
+                          <span className="text-xs text-slate-400 italic">
+                            {u.lastUsed}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button className="text-primary hover:text-white text-xs font-bold uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100 px-4 py-2 bg-primary/10 rounded-lg">
-                            Manage
+                            {uiStrings.admin_security?.btn_manage || "Manage"}
                           </button>
                         </td>
                       </tr>

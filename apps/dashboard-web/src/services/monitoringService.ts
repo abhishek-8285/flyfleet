@@ -1,22 +1,23 @@
-import axios from 'axios';
+import axios from "axios";
 
 // Create a specific instance for monitoring to use port 8081 (web-bff) directly if needed
 // or rely on the main apiClient if proxy is set up.
 // For now, we will use a direct instance to ensure we hit the new BFF on 8081
 // since the main apiClient defaults to 8080 (which might be another gateway).
 
-const MONITORING_API_URL = process.env.REACT_APP_MONITORING_API_URL || '/api/v1/admin/monitoring';
+const MONITORING_API_URL =
+  process.env.REACT_APP_MONITORING_API_URL || "/api/v1/monitoring";
 
 const monitoringClient = axios.create({
   baseURL: MONITORING_API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Attach token from localStorage
 monitoringClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -29,7 +30,9 @@ export interface SystemHealthData {
   avg_latency_ms: number;
   error_rate_percent: number;
   database_status: string;
+  replica_lag_ms?: number;
   queue_backlog: number;
+  active_node_count: number;
   active_integrations: {
     total: number;
     active: number;
@@ -39,6 +42,14 @@ export interface SystemHealthData {
     code: number;
     type: string;
     count: number;
+  }>;
+  alerts?: Array<{
+    timestamp: string;
+    service: string;
+    message: string;
+    type: string;
+    instance_id: string;
+    severity: string;
   }>;
 }
 
@@ -50,6 +61,7 @@ export interface MetricsData {
     service: string;
     cpu: number;
     memory_gb: number;
+    memory_percent: number;
     status: string;
   }>;
 }
@@ -78,7 +90,7 @@ export interface SLAData {
 export interface LogEntry {
   timestamp: string;
   service: string;
-  severity: 'CRITICAL' | 'ERROR' | 'WARNING' | 'INFO';
+  severity: "CRITICAL" | "ERROR" | "WARNING" | "INFO";
   type: string;
   message: string;
   count?: number;
@@ -91,27 +103,27 @@ export interface LogsResponse {
 
 export const monitoringService = {
   getSystemHealth: async (): Promise<SystemHealthData> => {
-    const response = await monitoringClient.get('/health');
-    return response.data;
+    const response = await monitoringClient.get("/health");
+    return response.data.data || response.data;
   },
 
   getMetrics: async (): Promise<MetricsData> => {
-    const response = await monitoringClient.get('/metrics');
-    return response.data;
+    const response = await monitoringClient.get("/metrics");
+    return response.data.data || response.data;
   },
 
   getQueues: async (): Promise<QueueData> => {
-    const response = await monitoringClient.get('/queues');
-    return response.data;
+    const response = await monitoringClient.get("/queue");
+    return response.data.data || response.data;
   },
 
   getSLA: async (): Promise<SLAData> => {
-    const response = await monitoringClient.get('/sla');
-    return response.data;
+    const response = await monitoringClient.get("/sla");
+    return response.data.data || response.data;
   },
 
   getLogs: async (filters?: any): Promise<LogsResponse> => {
-    const response = await monitoringClient.get('/logs', { params: filters });
-    return response.data;
-  }
+    const response = await monitoringClient.get("/logs", { params: filters });
+    return response.data.data || response.data;
+  },
 };

@@ -16,7 +16,7 @@ Ensure platform reliability across backend, frontend, mobile, device gateway, an
 | Layer | Scope | Trigger | Gate Type | Owner |
 |---|---|---|---|---|
 | API contract | `docs/api/openapi.yaml` + service contracts | PR + push | Required | API platform |
-| BFF rewrite integration | `services/web-bff` route mappings | PR + push | Required | Backend |
+| BFF rewrite integration | `services/microservices/web-bff` route mappings | PR + push | Required | Backend |
 | Auth security integration | auth + BFF + RBAC checks | PR + nightly | Required | Security/backend |
 | Runtime lifecycle gate | cross-service boot + authenticated smoke + firmware rollout transitions | PR + nightly | Required | Platform/backend |
 | Service integration matrix | per-service health + authenticated admin/report/governance API coverage on full stack | PR + nightly | Required | Platform/backend |

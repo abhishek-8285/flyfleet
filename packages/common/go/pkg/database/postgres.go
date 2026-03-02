@@ -32,6 +32,7 @@ type Database interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner
 	Execute(ctx context.Context, sql string, args ...interface{}) error
 	WithTenant(ctx context.Context, orgID string, fn func(ctx context.Context, tx Transaction) error) error
+	Ping(ctx context.Context) error
 	Close() error
 }
 
@@ -230,6 +231,10 @@ func (ptx *PostgresTransaction) Commit(ctx context.Context) error {
 
 func (ptx *PostgresTransaction) Rollback(ctx context.Context) error {
 	return ptx.tx.Rollback(ctx)
+}
+
+func (pg *Postgres) Ping(ctx context.Context) error {
+	return pg.pool.Ping(ctx)
 }
 
 func (pg *Postgres) Close() error {

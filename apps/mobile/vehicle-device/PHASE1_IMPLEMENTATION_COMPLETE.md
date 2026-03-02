@@ -40,10 +40,10 @@ I have successfully implemented **5 critical backend APIs** for the FlyFleet Veh
 ```
 
 **Files:**
-- Handler: `services/tracking-service/internal/handlers/device_handler.go`
-- Service: `services/tracking-service/internal/service/device_service.go`
-- Repository: `services/tracking-service/internal/repository/device_repository.go`
-- Models: `services/tracking-service/internal/models/device.go`
+- Handler: `services/microservices/tracking-service/internal/handlers/device_handler.go`
+- Service: `services/microservices/tracking-service/internal/service/device_service.go`
+- Repository: `services/microservices/tracking-service/internal/repository/device_repository.go`
+- Models: `services/microservices/tracking-service/internal/models/device.go`
 
 ---
 
@@ -235,7 +235,7 @@ GET /device/config?device_id=DEVICE-001
 
 ## Database Migration
 
-**File:** `services/tracking-service/migrations/002_device_management.sql`
+**File:** `services/microservices/tracking-service/migrations/002_device_management.sql`
 
 **Tables Created:**
 1. `devices` - Device registration and tokens
@@ -254,22 +254,22 @@ GET /device/config?device_id=DEVICE-001
 ## Files Created
 
 ### Models
-- `services/tracking-service/internal/models/device.go` - 250+ lines
+- `services/microservices/tracking-service/internal/models/device.go` - 250+ lines
 
 ### Repository
-- `services/tracking-service/internal/repository/device_repository.go` - 300+ lines
+- `services/microservices/tracking-service/internal/repository/device_repository.go` - 300+ lines
 
 ### Service
-- `services/tracking-service/internal/service/device_service.go` - 400+ lines
+- `services/microservices/tracking-service/internal/service/device_service.go` - 400+ lines
 
 ### Handlers
-- `services/tracking-service/internal/handlers/device_handler.go` - 400+ lines
+- `services/microservices/tracking-service/internal/handlers/device_handler.go` - 400+ lines
 
 ### Migration
-- `services/tracking-service/migrations/002_device_management.sql` - 200+ lines
+- `services/microservices/tracking-service/migrations/002_device_management.sql` - 200+ lines
 
 ### Configuration
-- `services/tracking-service/cmd/main.go` - Updated to wire up device handler
+- `services/microservices/tracking-service/cmd/main.go` - Updated to wire up device handler
 
 **Total Lines of Code:** ~1,550 lines
 
@@ -280,10 +280,10 @@ GET /device/config?device_id=DEVICE-001
 ### Manual Testing Required:
 ```bash
 # 1. Run migration
-psql -h localhost -p 5433 -U fleet_user -d fleet_db -f services/tracking-service/migrations/002_device_management.sql
+psql -h localhost -p 5433 -U fleet_user -d fleet_db -f services/microservices/tracking-service/migrations/002_device_management.sql
 
 # 2. Start tracking service
-cd services/tracking-service
+cd services/microservices/tracking-service
 go run cmd/main.go
 
 # 3. Test device registration

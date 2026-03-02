@@ -3,7 +3,7 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Billing compatibility (services/billing-service/internal/repository/postgres/invoice_repo.go)
+-- Billing compatibility (services/microservices/billing-service/internal/repository/postgres/invoice_repo.go)
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS invoice_number TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_email TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS billing_address TEXT;
@@ -39,7 +39,7 @@ WHERE ii.org_id IS NULL AND ii.invoice_id = i.id;
 
 CREATE INDEX IF NOT EXISTS idx_invoice_items_org_deleted ON invoice_items (org_id, is_deleted);
 
--- Notifications compatibility (services/alert-service/internal/domains/notifications/repository/repository.go)
+-- Notifications compatibility (services/microservices/alert-service/internal/domains/notifications/repository/repository.go)
 CREATE TABLE IF NOT EXISTS notification_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     correlation_id TEXT,

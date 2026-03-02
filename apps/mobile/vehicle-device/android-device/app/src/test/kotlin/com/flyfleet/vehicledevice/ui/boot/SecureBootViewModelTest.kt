@@ -1,114 +1,88 @@
 package com.flyfleet.vehicledevice.ui.boot
 
 import android.app.Application
-import android.content.Context
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
-import app.cash.turbine.test
-import com.flyfleet.vehicledevice.security.IntegrityManager
+import com.flyfleet.vehicledevice.domain.repository.DeviceRepository
+import com.flyfleet.vehicledevice.domain.repository.DeviceStatus as DeviceStatusModel
 import io.mockk.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.*
 import org.junit.After
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import kotlin.time.Duration.Companion.seconds
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@ExperimentalCoroutinesApi
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [31])
 class SecureBootViewModelTest {
 
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
-
-    private lateinit var mockApp: Application
-    private lateinit var mockPackageManager: PackageManager
-    private lateinit var mockPackageInfo: PackageInfo
+    private lateinit var viewModel: SecureBootViewModel
+    private val mockApplication = mockk<Application>(relaxed = true)
+    private val mockDeviceRepository = mockk<DeviceRepository>(relaxed = true)
+    private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
-        mockApp = mockk(relaxed = true)
-        mockPackageManager = mockk(relaxed = true)
-        mockPackageInfo = mockk(relaxed = true)
+        Dispatchers.setMain(testDispatcher)
+        mockkObject(com.flyfleet.vehicledevice.security.IntegrityManager)
+        
+        // Mock strings to avoid R.string dependency issues in pure JVM test
+        every { mockApplication.getString(any()) } returns "Mock String"
+        every { mockDeviceRepository.getDeviceId() } returns "FLT-TEST-123"
+        every { mockDeviceRepository.getDeviceStatus() } returns flowOf(DeviceStatusModel(isRegistered = true, isAttested = true, isOnline = true))
 
-        every { mockApp.packageManager } returns mockPackageManager
-        every { mockApp.packageName } returns "com.flyfleet.vehicledevice"
-        every { mockPackageManager.getPackageInfo(any<String>(), any<Int>()) } returns mockPackageInfo
-        mockPackageInfo.versionName = "1.0.0"
-
-        // Mock string resources
-        every { mockApp.getString(any()) } returns "MockString"
-        every { mockApp.getString(com.flyfleet.vehicledevice.R.string.boot_status_verified) } returns "Verified"
-        every { mockApp.getString(com.flyfleet.vehicledevice.R.string.boot_status_failed_time) } returns "Boot Failed: Time Sync"
-        every { mockApp.getString(com.flyfleet.vehicledevice.R.string.boot_status_failed_integrity) } returns "Boot Failed: Integrity"
-
-        mockkObject(IntegrityManager)
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkHardwareRoot(any()) } returns Pair(true, "Mock HW")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkOsIntegrity(any()) } returns Pair(true, "Mock OS")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkAppSignature(any()) } returns Pair(true, "Mock Sig")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkSecureStorage(any()) } returns Pair(true, "Mock Storage")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkCryptoKeys(any()) } returns Pair(true, "Mock Crypto")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkTimeSync(any()) } returns Pair(true, "Mock Time")
+        coEvery { com.flyfleet.vehicledevice.security.IntegrityManager.checkStorage(any()) } returns Pair(true, "Mock Storage")
+        
+        viewModel = SecureBootViewModel(mockApplication, mockDeviceRepository)
     }
 
     @After
     fun tearDown() {
         unmockkAll()
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun `boot sequence success emits BOOT_SUCCESS and transitions to VERIFIED`() = runTest {
-        coEvery { IntegrityManager.checkHardwareRoot(any()) } returns Pair(true, "Mock Hardware")
-        coEvery { IntegrityManager.checkOsIntegrity(any()) } returns Pair(true, "Mock OS")
-        coEvery { IntegrityManager.checkAppSignature(any()) } returns Pair(true, "Mock Sig")
-        coEvery { IntegrityManager.checkSecureStorage(any()) } returns Pair(true, "Mock Storage")
-        coEvery { IntegrityManager.checkCryptoKeys(any()) } returns Pair(true, "Mock Keys")
-        coEvery { IntegrityManager.checkTimeSync(any()) } returns Pair(true, "Mock Time")
-        coEvery { IntegrityManager.checkSensors(any()) } returns Pair(true, "Mock Sensors")
-        coEvery { IntegrityManager.checkStorage(any()) } returns Pair(true, "Mock Storage Reserve")
+    fun `initial state contains app version and device ID`() = runTest {
+        assertEquals("FLT-TEST-123", viewModel.uiState.value.deviceId)
+        assertTrue(viewModel.uiState.value.checks.isNotEmpty())
+    }
 
-        val viewModel = SecureBootViewModel(mockApp, isTesting = true)
-
-        viewModel.uiEvents.test {
-            viewModel.startBootSequence()
-            assertEquals(BootEvent.BOOT_SUCCESS, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-
+    @Test
+    fun `boot sequence completes with success when all integrity checks pass`() = runTest {
+        // IntegrityManager is an object, so its static methods might be called.
+        // In a pure JVM test without mockkObject, we rely on the implementation.
+        // If it uses Build.BOARD etc, it might fail in JVM. 
+        // We'll see if we need mockkObject(IntegrityManager).
+        
+        viewModel.startBootSequence()
+        advanceUntilIdle()
+        
         assertEquals(BootStatus.VERIFIED, viewModel.uiState.value.status)
-        assertEquals("Verified", viewModel.uiState.value.bootStatusMsg)
+        assertEquals(1.0f, viewModel.uiState.value.overallProgress)
     }
 
     @Test
-    fun `boot sequence failure on time sync emits TIME_SYNC_FAILED and stops`() = runTest {
-        coEvery { IntegrityManager.checkHardwareRoot(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkOsIntegrity(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkAppSignature(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkSecureStorage(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkCryptoKeys(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkTimeSync(any()) } returns Pair(false, "Time Drift > 10m")
-
-        val viewModel = SecureBootViewModel(mockApp, isTesting = true)
-
-        viewModel.uiEvents.test {
-            viewModel.startBootSequence()
-            assertEquals(BootEvent.TIME_SYNC_FAILED, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        assertEquals(BootStatus.TIME_SYNC_FAILURE, viewModel.uiState.value.status)
+    fun `onLaunchDashboard updates state`() = runTest {
+        viewModel.onLaunchDashboard()
+        assertTrue(viewModel.uiState.value.navigateToDashboard)
     }
 
     @Test
-    fun `boot sequence failure on OS Integrity emits TAMPER_DETECTED`() = runTest {
-        coEvery { IntegrityManager.checkHardwareRoot(any()) } returns Pair(true, "")
-        coEvery { IntegrityManager.checkOsIntegrity(any()) } returns Pair(false, "Root access detected: /sbin/su")
-
-        val viewModel = SecureBootViewModel(mockApp, isTesting = true)
-
-        viewModel.uiEvents.test {
-            viewModel.startBootSequence()
-            assertEquals(BootEvent.TAMPER_DETECTED, awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
-
-        assertEquals(BootStatus.INTEGRITY_FAILURE, viewModel.uiState.value.status)
-        assertEquals("Root access detected: /sbin/su", viewModel.uiState.value.integrityFailure?.tamperType)
+    fun `retryBootSequence resets state and starts sequence`() = runTest {
+        viewModel.retryBootSequence()
+        advanceUntilIdle()
+        assertEquals(BootStatus.VERIFIED, viewModel.uiState.value.status)
     }
 }

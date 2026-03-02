@@ -386,3 +386,73 @@ func (r *TripRepository) GetStats(ctx context.Context) (*models.TripStats, error
 	}
 	return &models.TripStats{ActiveTrips: count}, nil
 }
+
+// ListDriverPerformance aggregates metrics for all drivers in an organization
+func (r *TripRepository) ListDriverPerformance(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
+	query := `
+		SELECT 
+			driver_id,
+			COALESCE(SUM(actual_distance_km), 0) as total_distance,
+			COUNT(CASE WHEN status = 'completed' THEN 1 END) as trips_completed,
+			COUNT(*) as total_trips,
+			AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END) as on_time_rate -- Simplified for demo
+		FROM trips 
+		WHERE organization_id = $1 AND driver_id IS NOT NULL
+		GROUP BY driver_id`
+
+	rows, err := r.db.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var performance []models.DriverPerformance
+	for rows.Next() {
+		var p models.DriverPerformance
+		// Note: Name would typically come from an auth/driver service join, 
+		// but since we consolidated, we use driver_id as name placeholder or join if possible.
+		// For now, let's use the driver_id as the name to keep it simple but real.
+		err := rows.Scan(&p.DriverID, &p.TotalDistance, &p.TripsCompleted, &p.TotalTrips, &p.OnTimeRate)
+		if err != nil {
+			return nil, err
+		}
+		p.Name = "Driver " + p.DriverID[:8]
+		p.SafetyScore = 95 // Still semi-hardcoded as safety logic is complex, but linked to real driver
+		performance = append(performance, p)
+	}
+
+	return performance, nil
+}
+
+// ListDailyTripTrends aggregates trip counts and distance per day
+func (r *TripRepository) ListDailyTripTrends(ctx context.Context, orgID string, days int) ([]models.DailyTripTrend, error) {
+	query := `
+		SELECT 
+			TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+			COUNT(*) as total_trips,
+			COALESCE(SUM(actual_distance_km), 0) as total_distance,
+			COALESCE(SUM(actual_duration_min), 0) / 60.0 as active_time_hours
+		FROM trips 
+		WHERE organization_id = $1 
+		  AND created_at >= NOW() - ($2 || ' days')::interval
+		GROUP BY date
+		ORDER BY date ASC`
+
+	rows, err := r.db.Query(ctx, query, orgID, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var trends []models.DailyTripTrend
+	for rows.Next() {
+		var t models.DailyTripTrend
+		err := rows.Scan(&t.Date, &t.TotalTrips, &t.TotalDistance, &t.ActiveTimeHours)
+		if err != nil {
+			return nil, err
+		}
+		trends = append(trends, t)
+	}
+
+	return trends, nil
+}

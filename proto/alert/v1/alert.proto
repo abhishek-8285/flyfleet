@@ -65,4 +65,5 @@ message GetAlertStatsResponse {
   int32 total_alerts = 1;
   int32 critical_alerts = 2;
   int32 open_alerts = 3;
+  int32 new_alerts = 4;
 }

@@ -1,6 +1,7 @@
 package com.fleet.driver.data.remote.api
 
 import com.fleet.driver.data.remote.model.*
+import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -97,82 +98,3 @@ interface VehicleService {
         @Body request: UploadDocumentRequest
     ): Response<VehicleDocument>
 }
-
-// Vehicle Issue Models
-data class VehicleIssueRequest(
-    @SerializedName("title")
-    val title: String,
-    
-    @SerializedName("description")
-    val description: String,
-    
-    @SerializedName("priority")
-    val priority: String, // low, medium, high, critical
-    
-    @SerializedName("category")
-    val category: String, // mechanical, electrical, body, tires, other
-    
-    @SerializedName("images")
-    val images: List<String>? = null // image URLs
-)
-
-data class VehicleIssueResponse(
-    @SerializedName("issue_id")
-    val issueId: String,
-    
-    @SerializedName("status")
-    val status: String, // reported, in_progress, resolved, rejected
-    
-    @SerializedName("reported_at")
-    val reportedAt: String,
-    
-    @SerializedName("assigned_to")
-    val assignedTo: String? = null
-)
-
-// Vehicle Document Models
-data class VehicleDocument(
-    @SerializedName("id")
-    val id: String,
-    
-    @SerializedName("vehicle_id")
-    val vehicleId: String,
-    
-    @SerializedName("document_type")
-    val documentType: String, // rc, insurance, fitness, permit, pollution
-    
-    @SerializedName("document_number")
-    val documentNumber: String,
-    
-    @SerializedName("issue_date")
-    val issueDate: String,
-    
-    @SerializedName("expiry_date")
-    val expiryDate: String,
-    
-    @SerializedName("file_url")
-    val fileUrl: String,
-    
-    @SerializedName("verified")
-    val verified: Boolean,
-    
-    @SerializedName("created_at")
-    val createdAt: String
-)
-
-data class UploadDocumentRequest(
-    @SerializedName("document_type")
-    val documentType: String,
-    
-    @SerializedName("document_number")
-    val documentNumber: String,
-    
-    @SerializedName("issue_date")
-    val issueDate: String,
-    
-    @SerializedName("expiry_date")
-    val expiryDate: String,
-    
-    @SerializedName("file_url")
-    val fileUrl: String
-)

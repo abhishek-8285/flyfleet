@@ -27,7 +27,7 @@ services:
   # Auth Service
   auth-service:
     build:
-      context: ../../services/auth-service
+      context: ../../services/microservices/auth-service
       dockerfile: Dockerfile
     ports:
       - "8081:8080"
@@ -44,7 +44,7 @@ services:
   # Vehicle Service
   vehicle-service:
     build:
-      context: ../../services/vehicle-service
+      context: ../../services/microservices/vehicle-service
       dockerfile: Dockerfile
     ports:
       - "8082:8080"
@@ -62,7 +62,7 @@ services:
   # Driver Service
   driver-service:
     build:
-      context: ../../services/driver-service
+      context: ../../services/microservices/driver-service
       dockerfile: Dockerfile
     ports:
       - "8083:8080"
@@ -78,7 +78,7 @@ services:
   # Trip Service
   trip-service:
     build:
-      context: ../../services/trip-service
+      context: ../../services/microservices/trip-service
       dockerfile: Dockerfile
     ports:
       - "8084:8080"
@@ -96,7 +96,7 @@ services:
   # Maintenance Service
   maintenance-service:
     build:
-      context: ../../services/maintenance-service
+      context: ../../services/microservices/maintenance-service
       dockerfile: Dockerfile
     ports:
       - "8085:8080"
@@ -112,7 +112,7 @@ services:
   # Tracking Service
   tracking-service:
     build:
-      context: ../../services/tracking-service
+      context: ../../services/microservices/tracking-service
       dockerfile: Dockerfile
     ports:
       - "8086:8080"
@@ -132,7 +132,7 @@ services:
   # Alert Service
   alert-service:
     build:
-      context: ../../services/alert-service
+      context: ../../services/microservices/alert-service
       dockerfile: Dockerfile
     ports:
       - "8087:8080"

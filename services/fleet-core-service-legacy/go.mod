@@ -53,4 +53,5 @@ require (
 )
 
 replace github.com/fleet-platform/shared => ../../packages/common/go
+
 replace github.com/flyfleet/proto => ../../proto

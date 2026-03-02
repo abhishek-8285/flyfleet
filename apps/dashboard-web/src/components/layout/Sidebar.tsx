@@ -17,6 +17,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthProvider";
 import { useRBAC } from "../../context/RBACProvider";
+import { useUIStrings } from "../../hooks/useUIStrings";
 
 interface MenuItem {
   name: string;
@@ -26,160 +27,27 @@ interface MenuItem {
   action: string;
 }
 
-const MENU_ITEMS: MenuItem[] = [
-  {
-    name: "Dashboard",
-    path: "/admin",
-    icon: Squares2X2Icon,
-    resource: "dashboard",
-    action: "read",
-  },
-  {
-    name: "Command Center",
-    path: "/dashboard/command-center",
-    icon: MapIcon,
-    resource: "trip",
-    action: "read",
-  },
-  {
-    name: "Organizations",
-    path: "/admin/organizations",
-    icon: BuildingOffice2Icon,
-    resource: "org",
-    action: "read",
-  },
-  {
-    name: "Users",
-    path: "/admin/users",
-    icon: UsersIcon,
-    resource: "user",
-    action: "read",
-  },
-  {
-    name: "Roles & Permissions",
-    path: "/admin/rbac/roles",
-    icon: ShieldCheckIcon,
-    resource: "roles",
-    action: "read",
-  },
-  {
-    name: "Role Assignments",
-    path: "/admin/rbac/assignments",
-    icon: UsersIcon,
-    resource: "users",
-    action: "update",
-  },
-  {
-    name: "Security Logs",
-    path: "/admin/rbac/logs",
-    icon: ShieldCheckIcon,
-    resource: "audit_logs",
-    action: "read",
-  },
-  {
-    name: "Vehicles",
-    path: "/admin/vehicles",
-    icon: TruckIcon,
-    resource: "vehicle",
-    action: "read",
-  },
-  {
-    name: "Bulk Uploads",
-    path: "/admin/bulk-uploads",
-    icon: ArrowUpTrayIcon,
-    resource: "vehicle",
-    action: "create",
-  },
-  {
-    name: "Trips",
-    path: "/admin/trips",
-    icon: MapIcon,
-    resource: "trip",
-    action: "read",
-  },
-  {
-    name: "Route Optimization",
-    path: "/admin/route-optimization",
-    icon: ArrowPathIcon,
-    resource: "trip",
-    action: "create",
-  },
-  {
-    name: "Video Telematics",
-    path: "/admin/video",
-    icon: VideoCameraIcon,
-    resource: "video",
-    action: "read",
-  },
-  {
-    name: "Drivers",
-    path: "/admin/drivers",
-    icon: UsersIcon,
-    resource: "driver",
-    action: "read",
-  },
-  {
-    name: "Devices",
-    path: "/admin/devices",
-    icon: Squares2X2Icon,
-    resource: "device",
-    action: "read",
-  },
-  {
-    name: "Live Map",
-    path: "/admin/map",
-    icon: MapIcon,
-    resource: "trip",
-    action: "read",
-  },
-  {
-    name: "Fuel Management",
-    path: "/admin/fuel",
-    icon: TruckIcon,
-    resource: "fuel",
-    action: "read",
-  },
-  {
-    name: "Diagnostics & AI",
-    path: "/dashboard/insights",
-    icon: CpuChipIcon,
-    resource: "dashboard",
-    action: "read",
-  },
-  {
-    name: "Governance",
-    path: "/admin/governance",
-    icon: ShieldCheckIcon,
-    resource: "governance",
-    action: "read",
-  },
-  {
-    name: "Disaster Recovery",
-    path: "/admin/dr",
-    icon: ArchiveBoxIcon,
-    resource: "disaster_recovery",
-    action: "read",
-  },
-  {
-    name: "Restore Operations",
-    path: "/admin/dr/restores",
-    icon: ArrowPathIcon,
-    resource: "disaster_recovery",
-    action: "read",
-  },
-  {
-    name: "Global Settings",
-    path: "/admin/settings/platform",
-    icon: Cog6ToothIcon,
-    resource: "org",
-    action: "update",
-  },
-];
+const IconMap: Record<string, React.ElementType> = {
+  ArchiveBoxIcon,
+  ArrowLeftOnRectangleIcon,
+  ArrowPathIcon,
+  ArrowUpTrayIcon,
+  BuildingOffice2Icon,
+  Cog6ToothIcon,
+  CpuChipIcon,
+  MapIcon,
+  ShieldCheckIcon,
+  Squares2X2Icon,
+  TruckIcon,
+  UsersIcon,
+  VideoCameraIcon,
+};
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { can } = useRBAC();
   const { user, logout, toggleSidebar } = useAuth();
+  const { uiStrings } = useUIStrings("layout_sidebar");
   // Derive collapsed state from global context (DB-backed), fall back to false
   const collapsed = user?.sidebar_collapsed ?? false;
 
@@ -200,11 +68,28 @@ export const Sidebar: React.FC = () => {
 
   const isCollapsed = forceCollapsed || collapsed;
 
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v1/ui/menus/main_sidebar")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const mapped = data.map((item: any) => ({
+            ...item,
+            icon: IconMap[item.icon] || Squares2X2Icon,
+          }));
+          setMenuItems(mapped);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
   // Temporary bypass for development - show all items if no permissions available
   const filteredItems =
     user && user.permissions && user.permissions.length > 0
-      ? MENU_ITEMS.filter((item) => can(item.action, item.resource))
-      : MENU_ITEMS;
+      ? menuItems.filter((item) => can(item.action, item.resource))
+      : menuItems;
 
   return (
     <aside
@@ -220,7 +105,7 @@ export const Sidebar: React.FC = () => {
         </div>
         {!collapsed && (
           <h1 className="text-lg font-bold tracking-tight text-white truncate animate-in fade-in duration-300">
-            FlyFleet
+            {uiStrings?.brand_name || "FlyFleet"}
           </h1>
         )}
       </div>
@@ -229,7 +114,11 @@ export const Sidebar: React.FC = () => {
       <button
         onClick={handleToggle}
         className="absolute -right-3 top-20 bg-primary text-white rounded-full size-6 flex items-center justify-center shadow-lg hover:bg-primary/90 transition-transform z-40 border border-white/10"
-        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        title={
+          isCollapsed
+            ? uiStrings?.toggle_expand || "Expand Sidebar"
+            : uiStrings?.toggle_collapse || "Collapse Sidebar"
+        }
       >
         <span
           className={`material-symbols-outlined text-sm transition-transform duration-300 ${isCollapsed ? "rotate-180" : "rotate-0"}`}
@@ -244,7 +133,7 @@ export const Sidebar: React.FC = () => {
         <div
           className={`mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted ${isCollapsed ? "text-center text-[10px] scale-90 px-2" : "px-3"}`}
         >
-          {isCollapsed ? "•••" : "Core Modules"}
+          {isCollapsed ? "•••" : uiStrings?.section_core || "Core Modules"}
         </div>
 
         {filteredItems.map((item) => {
@@ -283,7 +172,7 @@ export const Sidebar: React.FC = () => {
           }`}
         >
           <ArrowLeftOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
-          {!isCollapsed && <span>Logout</span>}
+          {!isCollapsed && <span>{uiStrings?.label_logout || "Logout"}</span>}
         </button>
       </div>
     </aside>

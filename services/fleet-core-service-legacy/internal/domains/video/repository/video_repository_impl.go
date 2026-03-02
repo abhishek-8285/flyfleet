@@ -120,6 +120,9 @@ func (r *VideoRepositoryImpl) UpdateVideoStream(ctx context.Context, id string, 
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -138,10 +141,13 @@ func (r *VideoRepositoryImpl) UpdateVideoStream(ctx context.Context, id string, 
 		argIndex++
 	}
 
-	setClause += ", updated_at = $%d"
+	if setClause != "" {
+		setClause += ", "
+	}
+	setClause += fmt.Sprintf("updated_at = $%d", argIndex)
 	args = append(args, time.Now())
 
-	query := fmt.Sprintf("UPDATE video_streams SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE video_streams SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -371,6 +377,9 @@ func (r *VideoRepositoryImpl) UpdateVideoRecording(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -404,10 +413,13 @@ func (r *VideoRepositoryImpl) UpdateVideoRecording(ctx context.Context, id strin
 		argIndex++
 	}
 
-	setClause += ", updated_at = $%d"
+	if setClause != "" {
+		setClause += ", "
+	}
+	setClause += fmt.Sprintf("updated_at = $%d", argIndex)
 	args = append(args, time.Now())
 
-	query := fmt.Sprintf("UPDATE video_recordings SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE video_recordings SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -703,6 +715,9 @@ func (r *VideoRepositoryImpl) UpdateVideoAnalytics(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -742,7 +757,7 @@ func (r *VideoRepositoryImpl) UpdateVideoAnalytics(ctx context.Context, id strin
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE video_analytics SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE video_analytics SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -899,6 +914,9 @@ func (r *VideoRepositoryImpl) UpdateRetentionPolicy(ctx context.Context, id stri
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -907,10 +925,13 @@ func (r *VideoRepositoryImpl) UpdateRetentionPolicy(ctx context.Context, id stri
 		argIndex++
 	}
 
-	setClause += ", updated_at = $%d"
+	if setClause != "" {
+		setClause += ", "
+	}
+	setClause += fmt.Sprintf("updated_at = $%d", argIndex)
 	args = append(args, time.Now())
 
-	query := fmt.Sprintf("UPDATE video_retention_policies SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE video_retention_policies SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -1070,6 +1091,9 @@ func (r *VideoRepositoryImpl) UpdateVideoThumbnail(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		if argIndex > 1 {
 			setClause += ", "
 		}
@@ -1078,7 +1102,7 @@ func (r *VideoRepositoryImpl) UpdateVideoThumbnail(ctx context.Context, id strin
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE video_thumbnails SET %s WHERE id = $%d", setClause, argIndex)
+	query := fmt.Sprintf("UPDATE video_thumbnails SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
 
 	_, err := r.db.Exec(ctx, query, args...)

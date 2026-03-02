@@ -1,5 +1,9 @@
 package com.flyfleet.vehicledevice.ui.boot
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import org.junit.Rule
@@ -7,19 +11,25 @@ import org.junit.Test
 
 class SecureBootUiTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+    @get:Rule val composeTestRule = createComposeRule()
 
     @Test
     fun secureBootScreen_showsAllChecksAndEnablesButtonWhenVerified() {
-        val state = BootState(
-            status = BootStatus.VERIFIED,
-            bootStatusMsg = "Verified",
-            overallProgress = 1.0f,
-            checks = listOf(
-                ChecklistItem("hardware_root", "Hardware Root", "TPM 2.0 Validated", CheckStatus.VERIFIED)
-            )
-        )
+        val state =
+                BootState(
+                        status = BootStatus.VERIFIED,
+                        bootStatusMsg = "Verified",
+                        overallProgress = 1.0f,
+                        checks =
+                                listOf(
+                                        ChecklistItem(
+                                                "hardware_root",
+                                                "Hardware Root",
+                                                "TPM 2.0 Validated",
+                                                CheckStatus.VERIFIED
+                                        )
+                                )
+                )
 
         composeTestRule.setContent {
             // Simplified rendering for UI test
@@ -39,19 +49,20 @@ class SecureBootUiTest {
 
     @Test
     fun integrityCompromisedScreen_showsErrorMessageAndLockdownButton() {
-        val state = BootState(
-            status = BootStatus.INTEGRITY_FAILURE,
-            bootStatusMsg = "Boot Failed: Integrity",
-            integrityFailure = IntegrityFailureData(
-                tamperType = "Signature Mismatch",
-                reasonCode = "0x804F",
-                lockState = "DEGRADED_LOCK"
-            )
-        )
+        val state =
+                BootState(
+                        status = BootStatus.INTEGRITY_FAILURE,
+                        bootStatusMsg = "Boot Failed: Integrity",
+                        integrityFailure =
+                                IntegrityFailureData(
+                                        tamperType = "Signature Mismatch",
+                                        reasonCode = "0x804F",
+                                        lockState = "DEGRADED_LOCK",
+                                        timestampUtc = "2026-02-23T10:00:00Z"
+                                )
+                )
 
-        composeTestRule.setContent {
-            IntegrityCompromisedScreen(state = state)
-        }
+        composeTestRule.setContent { IntegrityCompromisedScreen(state = state) }
 
         composeTestRule.onNodeWithText("Device Integrity").assertIsDisplayed()
         composeTestRule.onNodeWithText("Compromised").assertIsDisplayed()
@@ -62,19 +73,20 @@ class SecureBootUiTest {
 
     @Test
     fun timeSyncFailureScreen_showsDriftAndRetryButton() {
-        val state = BootState(
-            status = BootStatus.TIME_SYNC_FAILURE,
-            timeSyncFailure = TimeSyncData(
-                deviceTime = "10:28:33",
-                networkTime = "10:41:58",
-                driftStr = "+13m 25s",
-                malfunctionCode = "TIME_DRIFT"
-            )
-        )
+        val state =
+                BootState(
+                        status = BootStatus.TIME_SYNC_FAILURE,
+                        timeSyncFailure =
+                                TimeSyncData(
+                                        deviceTime = "10:28:33",
+                                        networkTime = "10:41:58",
+                                        driftStr = "+13m 25s",
+                                        malfunctionCode = "TIME_DRIFT",
+                                        lastSyncStr = "2026-02-23T09:45:00Z"
+                                )
+                )
 
-        composeTestRule.setContent {
-            TimeSyncFailureScreen(state = state)
-        }
+        composeTestRule.setContent { TimeSyncFailureScreen(state = state) }
 
         composeTestRule.onNodeWithText("Time Sync Failed").assertIsDisplayed()
         composeTestRule.onNodeWithTag("drift_value").assertTextEquals("+13m 25s")
@@ -83,36 +95,30 @@ class SecureBootUiTest {
     }
 }
 
-/**
- * A wrapper to test SecureBootScreen without hitting the ViewModel directly
- */
+/** A wrapper to test SecureBootScreen without hitting the ViewModel directly */
 @androidx.compose.runtime.Composable
 fun SecureBootScreenContent(state: BootState) {
     // This is basically a copy of the SecureBootScreen layout but using provided state
     androidx.compose.material3.Scaffold(
-        bottomBar = {
-            // Minimal BottomBar for testing
-            androidx.compose.material3.Surface {
-                androidx.compose.material3.Button(
-                    onClick = {},
-                    enabled = state.status == BootStatus.VERIFIED,
-                    modifier = androidx.compose.ui.Modifier.testTag("launch_dashboard_button")
-                ) {
-                    androidx.compose.material3.Text("Launch Dashboard")
+            bottomBar = {
+                // Minimal BottomBar for testing
+                androidx.compose.material3.Surface {
+                    androidx.compose.material3.Button(
+                            onClick = {},
+                            enabled = state.status == BootStatus.VERIFIED,
+                            modifier = Modifier.testTag("launch_dashboard_button")
+                    ) { androidx.compose.material3.Text("Launch Dashboard") }
                 }
             }
-        }
     ) { padding ->
-        androidx.compose.foundation.layout.Column(modifier = androidx.compose.ui.Modifier.padding(padding)) {
+        androidx.compose.foundation.layout.Column(modifier = Modifier.padding(padding)) {
             StatusCard(
-                status = state.bootStatusMsg,
-                progress = state.overallProgress,
-                isVerified = state.status == BootStatus.VERIFIED
+                    status = state.bootStatusMsg,
+                    progress = state.overallProgress,
+                    isVerified = state.status == BootStatus.VERIFIED
             )
             androidx.compose.foundation.lazy.LazyColumn {
-                androidx.compose.foundation.lazy.items(state.checks) { check ->
-                    ChecklistItemView(check = check)
-                }
+                items(state.checks) { check -> ChecklistItemView(check = check) }
             }
         }
     }

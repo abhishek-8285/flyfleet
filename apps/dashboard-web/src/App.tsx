@@ -58,6 +58,7 @@ import PortalDashboard from "./pages/portal/PortalDashboard";
 import ShipmentTracking from "./pages/portal/ShipmentTracking";
 // RouteOptimization import moved to consolidated block
 import LiveMap from "./components/LiveMap";
+import ScenarioSwitcher from "./components/ScenarioSwitcher";
 import EmergencyDashboard from "./pages/admin/emergency/EmergencyDashboard";
 import ExpenseApprovals from "./pages/admin/finance/ExpenseApprovals";
 import FuelDashboard from "./pages/admin/finance/FuelDashboard";
@@ -608,6 +609,7 @@ function App() {
               {/* 404 Catch-all */}
               <Route path="*" element={<Navigate to="/error" replace />} />
             </Routes>
+            <ScenarioSwitcher />
           </BrowserRouter>
         </RBACProvider>
       </AuthProvider>
