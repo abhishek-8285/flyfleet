@@ -50,8 +50,13 @@ const Login: React.FC = () => {
 
       const data = await response.json();
 
-      if (data.mfa_wait) {
-        navigate("/mfa-verify", { state: { userId: data.user.id } });
+      if (data.mfa_required) {
+        navigate("/mfa-verify", {
+          state: {
+            tempToken: data.temp_token,
+            user: data.user,
+          },
+        });
         return;
       }
 

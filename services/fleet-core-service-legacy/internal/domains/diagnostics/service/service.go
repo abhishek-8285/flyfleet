@@ -215,6 +215,30 @@ func (s *service) GetLatestDeviceTelemetry(ctx context.Context, deviceID uuid.UU
 }
 
 func (s *service) SendCommand(ctx context.Context, deviceID, orgID, userID uuid.UUID, command, category string, params map[string]interface{}) (*models.DeviceCommand, error) {
+	// Validate command
+	command = strings.TrimSpace(command)
+	category = strings.TrimSpace(category)
+	if command == "" {
+		return nil, NewValidationError("command", "command is required")
+	}
+	if category == "" {
+		return nil, NewValidationError("category", "category is required")
+	}
+
+	// Validate device exists
+	device, err := s.repo.GetDevice(ctx, deviceID, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device: %w", err)
+	}
+	if device == nil {
+		return nil, ErrDeviceNotFound
+	}
+
+	// Validate device is online
+	if device.Status != string(models.StatusActive) {
+		return nil, fmt.Errorf("cannot send command to device with status: %s", device.Status)
+	}
+
 	cmd := &models.DeviceCommand{
 		ID:        uuid.New(),
 		DeviceID:  deviceID,
@@ -222,7 +246,7 @@ func (s *service) SendCommand(ctx context.Context, deviceID, orgID, userID uuid.
 		Command:   command,
 		Category:  category,
 		Params:    params,
-		Status:    "queued",
+		Status:    string(models.CommandQueued),
 		CreatedBy: &userID,
 	}
 
@@ -283,6 +307,11 @@ func (s *service) GetCommandHistory(ctx context.Context, deviceID uuid.UUID, lim
 }
 
 func (s *service) TransitionCommand(ctx context.Context, deviceID, orgID, commandID uuid.UUID, nextStatus string, result map[string]interface{}, errorMessage *string) (*models.DeviceCommand, error) {
+	nextStatus = strings.TrimSpace(nextStatus)
+	if nextStatus == "" {
+		return nil, NewValidationError("status", "status is required")
+	}
+
 	next := normalizeCommandStatus(nextStatus)
 	if _, ok := allowedCommandTransitions[next]; !ok {
 		return nil, fmt.Errorf("invalid command status: %s", nextStatus)
@@ -290,7 +319,10 @@ func (s *service) TransitionCommand(ctx context.Context, deviceID, orgID, comman
 
 	cmd, err := s.repo.GetCommand(ctx, commandID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get command: %w", err)
+	}
+	if cmd == nil {
+		return nil, ErrCommandNotFound
 	}
 	if cmd.DeviceID != deviceID {
 		return nil, fmt.Errorf("command does not belong to device")
@@ -300,9 +332,6 @@ func (s *service) TransitionCommand(ctx context.Context, deviceID, orgID, comman
 	}
 
 	current := normalizeCommandStatus(cmd.Status)
-	if current == "" {
-		current = "created"
-	}
 	if !allowedCommandTransitions[current][next] {
 		return nil, fmt.Errorf("invalid transition from %s to %s", current, next)
 	}
@@ -426,12 +455,27 @@ func (s *service) ListFirmware(ctx context.Context, limit, offset int) ([]*model
 }
 
 func (s *service) CreateFirmware(ctx context.Context, version, hwTarget, fileURL string, fileSize int, checksum, notes *string, isCritical bool) (*models.FirmwarePackage, error) {
+	// Validate inputs
 	version = strings.TrimSpace(version)
 	hwTarget = strings.TrimSpace(hwTarget)
 	fileURL = strings.TrimSpace(fileURL)
-	if version == "" || hwTarget == "" || fileURL == "" || fileSize <= 0 {
-		return nil, fmt.Errorf("version, hardware target, file URL and file size are required")
+
+	if version == "" {
+		return nil, NewValidationError("version", "version is required")
 	}
+	if hwTarget == "" {
+		return nil, NewValidationError("hardware_target", "hardware_target is required")
+	}
+	if fileURL == "" {
+		return nil, NewValidationError("file_url", "file_url is required")
+	}
+	if fileSize <= 0 {
+		return nil, NewValidationError("file_size", "file_size must be positive")
+	}
+
+	// Check if version already exists for this hardware target
+	// _, _ = s.repo.GetFirmware(ctx, uuid.Nil) // Would need a GetFirmwareByVersion method
+	// For now, validation is done in repository via unique constraint
 
 	fw := &models.FirmwarePackage{
 		ID:             uuid.New(),
@@ -441,7 +485,7 @@ func (s *service) CreateFirmware(ctx context.Context, version, hwTarget, fileURL
 		FileSize:       &fileSize,
 		Checksum:       checksum,
 		ReleaseNotes:   notes,
-		Status:         "draft",
+		Status:         string(models.FirmwareDraft),
 		IsCritical:     isCritical,
 	}
 
@@ -519,14 +563,30 @@ func (s *service) AddRolloutNote(ctx context.Context, rolloutID, orgID uuid.UUID
 }
 
 func (s *service) CreateRollout(ctx context.Context, firmwareID, orgID, userID uuid.UUID, name, deviceGroup string, totalDevices int) (*models.FirmwareRollout, error) {
+	// Validate inputs
 	name = strings.TrimSpace(name)
 	deviceGroup = strings.TrimSpace(deviceGroup)
-	if name == "" || deviceGroup == "" || totalDevices <= 0 {
-		return nil, fmt.Errorf("name, device group and total devices are required")
+
+	if name == "" {
+		return nil, NewValidationError("name", "name is required")
+	}
+	if deviceGroup == "" {
+		return nil, NewValidationError("device_group", "device_group is required")
+	}
+	if totalDevices <= 0 {
+		return nil, NewValidationError("total_devices", "total_devices must be positive")
 	}
 
-	if _, err := s.repo.GetFirmware(ctx, firmwareID); err != nil {
-		return nil, fmt.Errorf("firmware package not found")
+	// Validate firmware exists and is published
+	firmware, err := s.repo.GetFirmware(ctx, firmwareID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get firmware: %w", err)
+	}
+	if firmware == nil {
+		return nil, ErrFirmwareNotFound
+	}
+	if firmware.Status != string(models.FirmwarePublished) {
+		return nil, ErrFirmwareNotPublished
 	}
 
 	rollout := &models.FirmwareRollout{
@@ -536,7 +596,7 @@ func (s *service) CreateRollout(ctx context.Context, firmwareID, orgID, userID u
 		Name:            &name,
 		DeviceGroup:     &deviceGroup,
 		TotalDevices:    totalDevices,
-		Status:          "scheduled",
+		Status:          string(models.RolloutScheduled),
 		RolloutStrategy: "gradual",
 		MaxConcurrent:   10,
 		CreatedBy:       &userID,
@@ -632,8 +692,4 @@ func (s *service) TransitionRollout(ctx context.Context, rolloutID, orgID uuid.U
 		return nil, err
 	}
 	return updated, nil
-}
-
-func strPtr(v string) *string {
-	return &v
 }

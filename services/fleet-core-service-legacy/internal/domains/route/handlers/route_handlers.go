@@ -9,21 +9,24 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 // RouteOptimizationHandler handles HTTP requests for route optimization
 type RouteOptimizationHandler struct {
-	service service.RouteOptimizationService
-	logger  *zap.Logger
+	service  service.RouteOptimizationService
+	logger   *zap.Logger
+	validate *validator.Validate
 }
 
 // NewRouteOptimizationHandler creates a new instance of RouteOptimizationHandler
 func NewRouteOptimizationHandler(svc service.RouteOptimizationService, logger *zap.Logger) *RouteOptimizationHandler {
 	return &RouteOptimizationHandler{
-		service: svc,
-		logger:  logger,
+		service:  svc,
+		logger:   logger,
+		validate: validator.New(),
 	}
 }
 
@@ -60,7 +63,13 @@ func (h *RouteOptimizationHandler) CreateOptimizationRequest(w http.ResponseWrit
 		return
 	}
 
+	if err := h.validate.Struct(&request); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
+		return
+	}
+
 	if err := h.service.CreateOptimizationRequest(r.Context(), &request); err != nil {
+		h.logger.Error("Failed to create optimization request", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create optimization request", err)
 		return
 	}

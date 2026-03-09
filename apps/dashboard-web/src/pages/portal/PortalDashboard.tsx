@@ -33,7 +33,7 @@ const PortalDashboard: React.FC = () => {
 
         // Fetch shipments
         const shipmentsRes = await axios.get(
-          "/api/v1/customer/shipments",
+          "/api/v1/portal/shipments",
           config,
         );
         setRecentShipments(shipmentsRes.data.slice(0, 5)); // Top 5
@@ -45,10 +45,7 @@ const PortalDashboard: React.FC = () => {
         }));
 
         // Fetch invoices
-        const invoicesRes = await axios.get(
-          "/api/v1/customer/invoices",
-          config,
-        );
+        const invoicesRes = await axios.get("/api/v1/portal/invoices", config);
         setStats((prev) => ({
           ...prev,
           pendingInvoices: invoicesRes.data.filter(

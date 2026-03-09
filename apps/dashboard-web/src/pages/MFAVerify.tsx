@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
+import { useAuth } from "../context/AuthProvider";
 import { useUIStrings } from "../hooks/useUIStrings";
 
 const MFAVerify: React.FC = () => {
@@ -13,16 +14,18 @@ const MFAVerify: React.FC = () => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const { uiStrings } = useUIStrings("auth_extended");
-  const userId = location.state?.userId;
+  const tempToken = location.state?.tempToken;
+  const partialUser = location.state?.user;
 
   useEffect(() => {
-    if (!userId) {
+    if (!tempToken) {
       navigate("/login");
       return;
     }
     inputRefs.current[0]?.focus();
-  }, [userId, navigate]);
+  }, [tempToken, navigate]);
 
   useEffect(() => {
     let timer: any;
@@ -67,7 +70,7 @@ const MFAVerify: React.FC = () => {
       const response = await fetch("/api/v1/auth/mfa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, otpCode: fullCode }),
+        body: JSON.stringify({ temp_token: tempToken, code: fullCode }),
       });
 
       if (!response.ok) {
@@ -77,8 +80,17 @@ const MFAVerify: React.FC = () => {
       }
 
       const data = await response.json();
-      localStorage.setItem("token", data.access_token);
-      navigate("/dashboard");
+
+      const userData = {
+        ...data.user,
+        permissions:
+          data.permissions?.map((p: any) =>
+            typeof p === "string" ? p : `${p.module}:${p.action}`,
+          ) || [],
+      };
+
+      login(data.access_token, data.refresh_token, userData);
+      navigate("/admin");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -193,7 +205,7 @@ const MFAVerify: React.FC = () => {
 
       <div className="mt-8 text-center text-[10px] text-slate-500 font-medium uppercase tracking-widest">
         {uiStrings?.mfa_session_ref || "Session Ref: "}
-        {userId?.slice(0, 8)}
+        {tempToken?.slice(0, 8)}
       </div>
     </EnterpriseAuthLayout>
   );

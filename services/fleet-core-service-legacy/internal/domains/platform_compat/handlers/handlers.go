@@ -5,14 +5,24 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/models"
+	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
-type Handlers struct{}
+type Handlers struct {
+	service service.PlatformCompatService
+	logger  *zap.Logger
+}
 
-func NewHandlers() *Handlers { return &Handlers{} }
+func NewHandlers(service service.PlatformCompatService, logger *zap.Logger) *Handlers {
+	return &Handlers{
+		service: service,
+		logger:  logger,
+	}
+}
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Get("/ws", h.WebsocketCompat)
@@ -37,166 +47,202 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 func (h *Handlers) writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		h.logger.Error("Failed to encode JSON response", zap.Error(err))
+	}
 }
 
-func (h *Handlers) WebsocketCompat(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusOK, map[string]any{
-		"status":  "ok",
-		"mode":    "monolith-compat",
-		"message": "websocket compatibility endpoint is available, upgrade handling is disabled",
-		"service": "web-bff-compat",
-	})
+func (h *Handlers) writeErrorResponse(w http.ResponseWriter, status int, err error) {
+	resp := models.ErrorResponse{
+		Error: err.Error(),
+	}
+
+	if platformErr, ok := err.(*service.PlatformError); ok {
+		resp.Code = platformErr.Code
+		resp.Field = platformErr.Field
+	}
+
+	h.writeJSON(w, status, resp)
 }
 
-func (h *Handlers) DashboardStats(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusOK, map[string]any{
-		"status": "ok",
-		"mode":   "monolith-compat",
-		"data": map[string]any{
-			"fleet":        map[string]any{},
-			"alerts":       map[string]any{},
-			"maintenance":  map[string]any{},
-			"utilization":  map[string]any{},
-			"last_updated": time.Now().UTC().Format(time.RFC3339),
-		},
-	})
+func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
+	resp := h.service.CheckCompatibility(r.Context(), "/ws")
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handlers) AdminDashboardData(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusOK, map[string]any{
-		"status": "ok",
-		"mode":   "monolith-compat",
-		"data": map[string]any{
-			"kpis":         map[string]any{},
-			"recentAlerts": []any{},
-			"widgets":      []any{},
-			"last_updated": time.Now().UTC().Format(time.RFC3339),
-		},
-	})
+func (h *Handlers) DashboardStats(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.service.GetDashboardStats(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to get dashboard stats", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handlers) ComplianceHOSCompat(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusAccepted, map[string]any{
-		"status":  "accepted",
-		"message": "use /api/v1/compliance/duty-status/record for canonical endpoint",
-		"target":  "/api/v1/compliance/duty-status/record",
-	})
+func (h *Handlers) AdminDashboardData(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.service.GetAdminDashboardData(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to get admin dashboard data", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handlers) TelemetryCompat(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusAccepted, map[string]any{
-		"status":  "accepted",
-		"message": "telemetry ingress compatibility endpoint",
-	})
+func (h *Handlers) ComplianceHOSCompat(w http.ResponseWriter, r *http.Request) {
+	var req models.ComplianceHOSRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	resp, err := h.service.RecordHOS(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to record HOS", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	h.writeJSON(w, http.StatusAccepted, resp)
 }
 
-func (h *Handlers) TelemetryDashcamCompat(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusAccepted, map[string]any{
-		"status":  "accepted",
-		"message": "dashcam telemetry compatibility endpoint",
-	})
+func (h *Handlers) TelemetryCompat(w http.ResponseWriter, r *http.Request) {
+	var req models.TelemetryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	resp, err := h.service.IngestTelemetry(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to ingest telemetry", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	h.writeJSON(w, http.StatusAccepted, resp)
 }
 
-func (h *Handlers) MLHealth(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "service": "fleet-ml-service", "mode": "monolith-compat"})
+func (h *Handlers) TelemetryDashcamCompat(w http.ResponseWriter, r *http.Request) {
+	var req models.DashcamTelemetryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	resp, err := h.service.IngestDashcamTelemetry(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to ingest dashcam telemetry", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, err)
+		return
+	}
+	h.writeJSON(w, http.StatusAccepted, resp)
+}
+
+func (h *Handlers) MLHealth(w http.ResponseWriter, r *http.Request) {
+	resp := h.service.GetMLHealth(r.Context())
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handlers) PredictDemand(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		RouteID string `json:"route_id"`
-		Date    string `json:"date"`
-	}
+	var req models.MLPredictionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
-	if req.RouteID == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "route_id required"})
+
+	resp, err := h.service.PredictDemand(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to predict demand", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
-	day := time.Now().Day()
-	if t, err := time.Parse("2006-01-02", req.Date); err == nil {
-		day = t.Day()
-	}
-	predicted := len(req.RouteID)*7 + day
-	if predicted < 1 {
-		predicted = 1
-	}
-	h.writeJSON(w, http.StatusOK, map[string]any{
-		"route_id":         req.RouteID,
-		"date":             req.Date,
-		"predicted_demand": predicted,
-		"confidence_score": 0.82,
-	})
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handlers) SuggestPricing(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		RouteID      string `json:"route_id"`
-		Date         string `json:"date"`
-		BaseCapacity int    `json:"base_capacity"`
-	}
+	var req models.MLPricingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
-	if req.RouteID == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "route_id required"})
+
+	resp, err := h.service.SuggestPricing(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to suggest pricing", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, err)
 		return
 	}
-	if req.BaseCapacity <= 0 {
-		req.BaseCapacity = 50
-	}
-	multiplier := 1.0 + float64((len(req.RouteID)%7))/20.0
-	h.writeJSON(w, http.StatusOK, map[string]any{
-		"route_id":             req.RouteID,
-		"date":                 req.Date,
-		"suggested_multiplier": fmt.Sprintf("%.2f", multiplier),
-	})
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
-func (h *Handlers) TrainJob(w http.ResponseWriter, _ *http.Request) {
-	h.writeJSON(w, http.StatusAccepted, map[string]any{"status": "accepted", "job": "training_pipeline"})
+func (h *Handlers) TrainJob(w http.ResponseWriter, r *http.Request) {
+	var req models.MLTrainingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
+		return
+	}
+
+	resp, err := h.service.TrainModel(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to train model", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+	h.writeJSON(w, http.StatusAccepted, resp)
 }
 
 func (h *Handlers) GetOptimizedRoute(w http.ResponseWriter, r *http.Request) {
 	routeID := chi.URLParam(r, "route_id")
-	switch routeID {
-	case "not-found":
-		h.writeJSON(w, http.StatusNotFound, map[string]string{"error": "route not found"})
-		return
-	case "rate-limit":
-		w.Header().Set("Retry-After", "60")
-		h.writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "rate limit exceeded"})
-		return
-	case "error":
-		h.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "unexpected failure"})
+
+	resp, err := h.service.GetOptimizedRoute(r.Context(), routeID)
+	if err != nil {
+		h.logger.Error("Failed to get optimized route", zap.Error(err))
+
+		if err == service.ErrRouteNotFound {
+			h.writeJSON(w, http.StatusNotFound, models.ErrorResponse{Error: "route not found"})
+			return
+		}
+		if err == service.ErrRateLimitExceeded {
+			w.Header().Set("Retry-After", "60")
+			h.writeJSON(w, http.StatusTooManyRequests, models.ErrorResponse{Error: "rate limit exceeded"})
+			return
+		}
+
+		h.writeErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"id": routeID, "status": "optimized"})
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handlers) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Locations []string `json:"locations"`
-	}
+	var req models.RouteOptimizationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		h.writeErrorResponse(w, http.StatusBadRequest, fmt.Errorf("invalid request body: %w", err))
 		return
 	}
-	if len(req.Locations) < 2 {
-		h.writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "at least two locations are required"})
+
+	resp, err := h.service.OptimizeRoute(r.Context(), &req)
+	if err != nil {
+		h.logger.Error("Failed to optimize route", zap.Error(err))
+
+		if err == service.ErrInsufficientLocations {
+			h.writeJSON(w, http.StatusUnprocessableEntity, models.ErrorResponse{Error: "at least two locations are required"})
+			return
+		}
+
+		h.writeErrorResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"optimized": true, "stops": len(req.Locations)})
+	h.writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handlers) ServiceHealth(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(chi.URLParam(r, "name"))
 	if name == "" {
-		h.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "service name required"})
+		h.writeJSON(w, http.StatusBadRequest, models.ErrorResponse{Error: "service name required"})
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "service": name, "mode": "monolith-compat"})
+
+	resp := h.service.CheckServiceHealth(r.Context(), name)
+	h.writeJSON(w, http.StatusOK, resp)
 }

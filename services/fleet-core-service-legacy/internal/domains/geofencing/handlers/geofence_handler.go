@@ -7,6 +7,7 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -15,14 +16,16 @@ import (
 )
 
 type GeofenceHandler struct {
-	service *service.GeofenceService
-	logger  *zap.Logger
+	service  *service.GeofenceService
+	logger   *zap.Logger
+	validate *validator.Validate
 }
 
 func NewGeofenceHandler(svc *service.GeofenceService, logger *zap.Logger) *GeofenceHandler {
 	return &GeofenceHandler{
-		service: svc,
-		logger:  logger,
+		service:  svc,
+		logger:   logger,
+		validate: validator.New(),
 	}
 }
 
@@ -48,9 +51,11 @@ func (h *GeofenceHandler) CreateGeofence(w http.ResponseWriter, r *http.Request)
 
 	orgID := h.getOrgID(r)
 	userID := h.getUserID(r)
-
-	if orgID == uuid.Nil || userID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Authentication context missing", nil)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -74,7 +79,13 @@ func (h *GeofenceHandler) GetGeofence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	geofence, err := h.service.GetByID(r.Context(), id)
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+
+	geofence, err := h.service.GetByID(r.Context(), id, orgID)
 	if err != nil {
 		h.logger.Error("Failed to get geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Geofence not found", nil)
@@ -88,33 +99,37 @@ func (h *GeofenceHandler) GetGeofence(w http.ResponseWriter, r *http.Request) {
 func (h *GeofenceHandler) ListGeofences(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	var req models.ListGeofencesRequest
-	
+
 	page, err := strconv.Atoi(query.Get("page"))
 	if err != nil || page < 1 {
 		page = 1
 	}
 	req.Page = page
-	
+
 	limit, err := strconv.Atoi(query.Get("limit"))
 	if err != nil || limit < 1 || limit > 100 {
 		limit = 20
 	}
 	req.Limit = limit
-	
+
 	req.Search = query.Get("search")
 	req.Type = query.Get("type")
-	
+
 	activeStr := query.Get("active")
 	if activeStr != "" {
 		activeBool := activeStr == "true"
 		req.Active = &activeBool
 	}
-	
+
 	req.Sort = query.Get("sort")
 
 	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+	userID := h.getUserID(r)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
@@ -161,7 +176,17 @@ func (h *GeofenceHandler) UpdateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedGeofence, err := h.service.Update(r.Context(), id, &req)
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	updatedGeofence, err := h.service.Update(r.Context(), id, orgID, &req)
 	if err != nil {
 		h.logger.Error("Failed to update geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -181,7 +206,13 @@ func (h *GeofenceHandler) DeleteGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id); err != nil {
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+
+	if err := h.service.Delete(r.Context(), id, orgID); err != nil {
 		h.logger.Error("Failed to delete geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -194,7 +225,12 @@ func (h *GeofenceHandler) DeleteGeofence(w http.ResponseWriter, r *http.Request)
 func (h *GeofenceHandler) GetGeofenceEvents(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	var filter models.GeofenceEventFilter
-	
+	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.requireAuthContext(w, orgID, userID) {
+		return
+	}
+
 	geofenceIDStr := query.Get("geofence_id")
 	if geofenceIDStr != "" {
 		geofenceID, err := uuid.Parse(geofenceIDStr)
@@ -204,7 +240,7 @@ func (h *GeofenceHandler) GetGeofenceEvents(w http.ResponseWriter, r *http.Reque
 		}
 		filter.GeofenceID = geofenceID
 	}
-	
+
 	vehicleIDStr := query.Get("vehicle_id")
 	if vehicleIDStr != "" {
 		vehicleID, err := uuid.Parse(vehicleIDStr)
@@ -214,20 +250,25 @@ func (h *GeofenceHandler) GetGeofenceEvents(w http.ResponseWriter, r *http.Reque
 		}
 		filter.VehicleID = vehicleID
 	}
-	
+
 	filter.EventType = query.Get("event_type")
-	
+
 	page, err := strconv.Atoi(query.Get("page"))
 	if err != nil || page < 1 {
 		page = 1
 	}
 	filter.Page = page
-	
+
 	limit, err := strconv.Atoi(query.Get("limit"))
 	if err != nil || limit < 1 || limit > 100 {
 		limit = 20
 	}
 	filter.Limit = limit
+	filter.OrgID = orgID
+	if err := h.validate.Struct(filter); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
 
 	events, total, err := h.service.GetEvents(r.Context(), &filter)
 	if err != nil {
@@ -267,28 +308,46 @@ func (h *GeofenceHandler) writeErrorResponse(w http.ResponseWriter, statusCode i
 
 func (h *GeofenceHandler) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}
-		if id, ok := val.(uuid.UUID); ok {
-			return id
-		}
+	}
+	if id, err := uuid.Parse(r.Header.Get("X-Organization-ID")); err == nil {
+		return id
 	}
 	return uuid.Nil
 }
 
 func (h *GeofenceHandler) getUserID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}
-		if id, ok := val.(uuid.UUID); ok {
-			return id
-		}
+	}
+	if id, err := uuid.Parse(r.Header.Get("X-User-ID")); err == nil {
+		return id
 	}
 	return uuid.Nil
+}
+
+func (h *GeofenceHandler) requireAuthContext(w http.ResponseWriter, orgID uuid.UUID, userID uuid.UUID) bool {
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "missing organization id", nil)
+		return false
+	}
+	if userID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "missing user id", nil)
+		return false
+	}
+	return true
 }

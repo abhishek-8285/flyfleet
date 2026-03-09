@@ -11,22 +11,39 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/models"
 )
 
-// DeviceRepository handles device data persistence
-type DeviceRepository struct {
+// DeviceRepository defines the interface for device data persistence
+type DeviceRepository interface {
+	Register(ctx context.Context, device *models.Device) error
+	GetByDeviceID(ctx context.Context, deviceID string) (*models.Device, error)
+	UpdateHeartbeat(ctx context.Context, deviceID string, status string) error
+	GetConfigVersion(ctx context.Context, deviceID string) (string, error)
+	StoreTelemetryBatch(ctx context.Context, deviceID string, batchID string, telemetry []models.TelemetryPoint) error
+	StoreMediaUpload(ctx context.Context, deviceID, clipID, objectKey, checksum string, durationSeconds int, uploadedBytes int64, storageMode, syncStatus string) error
+	StoreAttestation(ctx context.Context, deviceID, attestationID, evidenceHash, chainHash, signature string, timestamp int64) error
+	GetPendingCommands(ctx context.Context, deviceID string, lastCommandID string) ([]models.Command, error)
+	MarkCommandExecuted(ctx context.Context, commandID string) error
+	StoreDriverSession(ctx context.Context, deviceID, driverID, rfidToken string, dutyStatus string, shiftStart int64) error
+	EndDriverSession(ctx context.Context, deviceID, driverID string, shiftDuration float64, endDutyStatus string) error
+	UpdateDriverHOS(ctx context.Context, deviceID, driverID, dutyStatus string, timestamp int64, latitude, longitude float64) error
+	GetDriverHOSStatus(ctx context.Context, driverID string) (*models.HOSStatus, error)
+}
+
+// PostgresDeviceRepository implements DeviceRepository with PostgreSQL
+type PostgresDeviceRepository struct {
 	db     *pgxpool.Pool
 	logger *zap.Logger
 }
 
 // NewDeviceRepository creates a new device repository
-func NewDeviceRepository(db *pgxpool.Pool, logger *zap.Logger) *DeviceRepository {
-	return &DeviceRepository{
+func NewDeviceRepository(db *pgxpool.Pool, logger *zap.Logger) *PostgresDeviceRepository {
+	return &PostgresDeviceRepository{
 		db:     db,
 		logger: logger,
 	}
 }
 
 // Register creates a new device registration
-func (r *DeviceRepository) Register(ctx context.Context, device *models.Device) error {
+func (r *PostgresDeviceRepository) Register(ctx context.Context, device *models.Device) error {
 	query := `
 		INSERT INTO devices (
 			id, device_id, organization_id, vehicle_id, hardware_attestation,
@@ -69,7 +86,7 @@ func (r *DeviceRepository) Register(ctx context.Context, device *models.Device) 
 }
 
 // GetByDeviceID retrieves a device by device ID
-func (r *DeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (*models.Device, error) {
+func (r *PostgresDeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (*models.Device, error) {
 	query := `
 		SELECT id, device_id, organization_id, vehicle_id, hardware_attestation,
 		       android_version, device_model, app_version, status, jwt_token,
@@ -107,7 +124,7 @@ func (r *DeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (
 }
 
 // UpdateHeartbeat updates the device heartbeat timestamp and health status
-func (r *DeviceRepository) UpdateHeartbeat(ctx context.Context, deviceID string, status string) error {
+func (r *PostgresDeviceRepository) UpdateHeartbeat(ctx context.Context, deviceID string, status string) error {
 	query := `
 		UPDATE devices
 		SET last_heartbeat = NOW(),
@@ -121,7 +138,7 @@ func (r *DeviceRepository) UpdateHeartbeat(ctx context.Context, deviceID string,
 }
 
 // GetConfigVersion retrieves the current config version for a device
-func (r *DeviceRepository) GetConfigVersion(ctx context.Context, deviceID string) (string, error) {
+func (r *PostgresDeviceRepository) GetConfigVersion(ctx context.Context, deviceID string) (string, error) {
 	query := `
 		SELECT COALESCE(config_version, 'v1')
 		FROM device_configs
@@ -139,7 +156,7 @@ func (r *DeviceRepository) GetConfigVersion(ctx context.Context, deviceID string
 }
 
 // StoreTelemetryBatch stores a batch of telemetry data
-func (r *DeviceRepository) StoreTelemetryBatch(ctx context.Context, deviceID string, batchID string, telemetry []models.TelemetryPoint) error {
+func (r *PostgresDeviceRepository) StoreTelemetryBatch(ctx context.Context, deviceID string, batchID string, telemetry []models.TelemetryPoint) error {
 	if len(telemetry) == 0 {
 		return nil
 	}
@@ -182,7 +199,7 @@ func (r *DeviceRepository) StoreTelemetryBatch(ctx context.Context, deviceID str
 }
 
 // StoreMediaUpload stores media upload metadata
-func (r *DeviceRepository) StoreMediaUpload(ctx context.Context, deviceID, clipID, objectKey, checksum string, durationSeconds int, uploadedBytes int64, storageMode, syncStatus string) error {
+func (r *PostgresDeviceRepository) StoreMediaUpload(ctx context.Context, deviceID, clipID, objectKey, checksum string, durationSeconds int, uploadedBytes int64, storageMode, syncStatus string) error {
 	query := `
 		INSERT INTO media_uploads (
 			id, device_id, clip_id, object_key, checksum_sha256,
@@ -216,7 +233,7 @@ func (r *DeviceRepository) StoreMediaUpload(ctx context.Context, deviceID, clipI
 }
 
 // StoreAttestation stores evidence attestation
-func (r *DeviceRepository) StoreAttestation(ctx context.Context, deviceID, attestationID, evidenceHash, chainHash, signature string, timestamp int64) error {
+func (r *PostgresDeviceRepository) StoreAttestation(ctx context.Context, deviceID, attestationID, evidenceHash, chainHash, signature string, timestamp int64) error {
 	query := `
 		INSERT INTO evidence_attestations (
 			id, attestation_id, device_id, evidence_hash, chain_hash,
@@ -238,7 +255,7 @@ func (r *DeviceRepository) StoreAttestation(ctx context.Context, deviceID, attes
 }
 
 // GetPendingCommands retrieves pending commands for a device
-func (r *DeviceRepository) GetPendingCommands(ctx context.Context, deviceID string, lastCommandID string) ([]models.Command, error) {
+func (r *PostgresDeviceRepository) GetPendingCommands(ctx context.Context, deviceID string, lastCommandID string) ([]models.Command, error) {
 	query := `
 		SELECT id, type, params, expires_at, priority, created_at
 		FROM device_commands
@@ -283,7 +300,7 @@ func (r *DeviceRepository) GetPendingCommands(ctx context.Context, deviceID stri
 }
 
 // MarkCommandExecuted marks a command as executed
-func (r *DeviceRepository) MarkCommandExecuted(ctx context.Context, commandID string) error {
+func (r *PostgresDeviceRepository) MarkCommandExecuted(ctx context.Context, commandID string) error {
 	query := `
 		UPDATE device_commands
 		SET status = 'executed',
@@ -297,7 +314,7 @@ func (r *DeviceRepository) MarkCommandExecuted(ctx context.Context, commandID st
 }
 
 // StoreDriverSession stores driver login session
-func (r *DeviceRepository) StoreDriverSession(ctx context.Context, deviceID, driverID, rfidToken string, dutyStatus string, shiftStart int64) error {
+func (r *PostgresDeviceRepository) StoreDriverSession(ctx context.Context, deviceID, driverID, rfidToken string, dutyStatus string, shiftStart int64) error {
 	query := `
 		INSERT INTO driver_sessions (
 			id, device_id, driver_id, rfid_token, duty_status,
@@ -323,7 +340,7 @@ func (r *DeviceRepository) StoreDriverSession(ctx context.Context, deviceID, dri
 }
 
 // EndDriverSession ends the current driver session
-func (r *DeviceRepository) EndDriverSession(ctx context.Context, deviceID, driverID string, shiftDuration float64, endDutyStatus string) error {
+func (r *PostgresDeviceRepository) EndDriverSession(ctx context.Context, deviceID, driverID string, shiftDuration float64, endDutyStatus string) error {
 	query := `
 		UPDATE driver_sessions
 		SET shift_end = NOW(),
@@ -338,7 +355,7 @@ func (r *DeviceRepository) EndDriverSession(ctx context.Context, deviceID, drive
 }
 
 // UpdateDriverHOS updates driver HOS duty status
-func (r *DeviceRepository) UpdateDriverHOS(ctx context.Context, deviceID, driverID, dutyStatus string, timestamp int64, latitude, longitude float64) error {
+func (r *PostgresDeviceRepository) UpdateDriverHOS(ctx context.Context, deviceID, driverID, dutyStatus string, timestamp int64, latitude, longitude float64) error {
 	query := `
 		INSERT INTO driver_hos_logs (
 			id, device_id, driver_id, duty_status, timestamp,
@@ -360,7 +377,7 @@ func (r *DeviceRepository) UpdateDriverHOS(ctx context.Context, deviceID, driver
 }
 
 // GetDriverHOSStatus retrieves current HOS status for a driver
-func (r *DeviceRepository) GetDriverHOSStatus(ctx context.Context, driverID string) (*models.HOSStatus, error) {
+func (r *PostgresDeviceRepository) GetDriverHOSStatus(ctx context.Context, driverID string) (*models.HOSStatus, error) {
 	query := `
 		SELECT
 			COALESCE(MAX(duty_status), 'off_duty') as current_duty_status,

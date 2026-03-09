@@ -4,6 +4,18 @@ import (
 	"time"
 )
 
+// Trip State Machine Constants
+const (
+	TripStatusCreated   = "CREATED"
+	TripStatusScheduled = "SCHEDULED"
+	TripStatusStarted   = "STARTED"
+	TripStatusPaused    = "PAUSED"
+	TripStatusResumed   = "RESUMED"
+	TripStatusCompleted = "COMPLETED"
+	TripStatusCancelled = "CANCELLED"
+	TripStatusFailed    = "FAILED"
+)
+
 // Validation constants
 const (
 	MaxTitleLength          = 100
@@ -23,34 +35,53 @@ const (
 
 // Trip represents a vehicle journey
 type Trip struct {
-	ID                   string             `json:"id" db:"id"`
-	OrgID                string             `json:"org_id" db:"org_id"`
-	VehicleID            string             `json:"vehicle_id" db:"vehicle_id"`
-	DriverID             *string            `json:"driver_id" db:"driver_id"`
-	Status               string             `json:"status" db:"status"` // planned, in_progress, paused, completed, cancelled
-	Title                string             `json:"title" db:"title"`
-	Description          string             `json:"description" db:"description"`
-	PlannedRoute         []Waypoint         `json:"planned_route" db:"planned_route"`
-	ActualRoute          []Waypoint         `json:"actual_route" db:"actual_route"`
-	Waypoints            []Waypoint         `json:"waypoints" db:"waypoints"`
-	EstimatedDistanceKm  float64            `json:"estimated_distance_km" db:"estimated_distance_km"`
-	ActualDistanceKm     *float64           `json:"actual_distance_km" db:"actual_distance_km"`
-	EstimatedDurationMin int                `json:"estimated_duration_min" db:"estimated_duration_min"`
-	ActualDurationMin    *int               `json:"actual_duration_min" db:"actual_duration_min"`
-	CargoDetails         CargoDetails       `json:"cargo_details" db:"cargo_details"`
-	ScheduledStart       time.Time          `json:"scheduled_start" db:"scheduled_start"`
-	StartedAt            *time.Time         `json:"started_at" db:"started_at"`
-	EndedAt              *time.Time         `json:"ended_at" db:"ended_at"`
-	StartLocation        *Location          `json:"start_location" db:"start_location"`
-	EndLocation          *Location          `json:"end_location" db:"end_location"`
-	FuelConsumedLiters   *float64           `json:"fuel_consumed_liters" db:"fuel_consumed_liters"`
-	IdlingTimeMinutes    *int               `json:"idling_time_minutes" db:"idling_time_minutes"`
-	Events               []TripEvent        `json:"events" db:"events"`
+	ID              string     `json:"id" db:"id"`
+	TenantID        string     `json:"tenant_id" db:"tenant_id"`
+	VehicleID       string     `json:"vehicle_id" db:"vehicle_id"`
+	DriverID        *string    `json:"driver_id" db:"driver_id"`
+	Status          string     `json:"status" db:"status"` // planned, in_progress, paused, completed, cancelled
+	Title           string     `json:"title" db:"title"`
+	Description     string     `json:"description" db:"description"`
+	PickupGeo       *Location  `json:"pickup_geo" db:"pickup_geo"`
+	DropGeo         *Location  `json:"drop_geo" db:"drop_geo"`
+	PlannedRoute    []Waypoint `json:"planned_route" db:"planned_route"`
+	ActualRoute     []Waypoint `json:"actual_route" db:"actual_route"`
+	Waypoints       []Waypoint `json:"waypoints" db:"waypoints"`
+	PlannedDistance float64    `json:"planned_distance" db:"planned_distance"`
+	TotalDistance   *float64   `json:"total_distance" db:"total_distance"`
+	EstimatedDurationMin int   `json:"estimated_duration_min" db:"estimated_duration_min"`
+	ActualDurationMin *int     `json:"actual_duration_min" db:"actual_duration_min"`
+	CargoDetails    CargoDetails `json:"cargo_details" db:"cargo_details"`
+	ScheduledStart  time.Time  `json:"scheduled_start" db:"scheduled_start"`
+	PlannedETA      *time.Time `json:"planned_eta" db:"planned_eta"`
+	StartTime       *time.Time `json:"start_time" db:"start_time"`
+	EndTime         *time.Time `json:"end_time" db:"end_time"`
+	StartLocation   *Location  `json:"start_location" db:"start_location"`
+	EndLocation     *Location  `json:"end_location" db:"end_location"`
+	StartOdometer   *float64   `json:"start_odometer" db:"start_odometer"`
+	EndOdometer     *float64   `json:"end_odometer" db:"end_odometer"`
+	FuelLevelSnapshot *float64 `json:"fuel_level_snapshot" db:"fuel_level_snapshot"`
+	FuelUsed        *float64   `json:"fuel_used" db:"fuel_used"`
+	IdlingTimeMinutes *int     `json:"idling_time_minutes" db:"idling_time_minutes"`
+	
+	// India-Specific Compliance
+	EWayBillNo          string             `json:"eway_bill_no" db:"eway_bill_no"`
+	GSTClassification   string             `json:"gst_classification" db:"gst_classification"`
+	PermitVerified      bool               `json:"permit_verified" db:"permit_verified"`
+	AIS140Compliant     bool               `json:"ais140_compliant" db:"ais140_compliant"`
+
+	// Compliance & Audit (Section 9)
+	LegalHold           bool               `json:"legal_hold" db:"legal_hold"`          // AIS-140/CERT-In 7-year archival
+	CorrelationID       string             `json:"correlation_id" db:"correlation_id"` // Per-trip distributed tracing ID
+	
+	// India-ready Documents & Metadata
 	PODDocuments         []PODDocument      `json:"pod_documents" db:"pod_documents"`
 	CustomerName         string             `json:"customer_name" db:"customer_name"`
 	CustomerPhone        string             `json:"customer_phone" db:"customer_phone"`
 	CustomerEmail        string             `json:"customer_email" db:"customer_email"`
 	CancellationReason   string             `json:"cancellation_reason" db:"cancellation_reason"`
+	IsDeleted            bool               `json:"is_deleted" db:"is_deleted"`
+	Version              int                `json:"version" db:"version"`
 	CreatedAt            time.Time          `json:"created_at" db:"created_at"`
 	UpdatedAt            time.Time          `json:"updated_at" db:"updated_at"`
 }
@@ -90,11 +121,26 @@ type CargoDetails struct {
 type TripEvent struct {
 	ID          string    `json:"id" db:"id"`
 	Type        string    `json:"type" db:"type"` // arrival, departure, delivery_attempt, delivery_success, delivery_failed, delay, breakdown, accident
-	Timestamp   time.Time `json:"timestamp" db:"timestamp"`
-	Location    Location  `json:"location" db:"location"`
-	Description string    `json:"description" db:"description"`
-	Photos      []string  `json:"photos" db:"photos"`
+	Timestamp   time.Time              `json:"timestamp" db:"timestamp"`
+	Location    Location               `json:"location" db:"location"`
+	Description string                 `json:"description" db:"description"`
+	Payload     map[string]interface{} `json:"payload" db:"payload"`
+	Photos      []string               `json:"photos" db:"photos"`
 	CreatedBy   string    `json:"created_by" db:"created_by"` // driver_id or system
+	Hash        string                 `json:"hash" db:"hash"`
+	PrevHash    string                 `json:"prev_hash" db:"prev_hash"`
+}
+
+// TelemetryPoint represents a single GPS/IoT data point
+type TelemetryPoint struct {
+	TripID         string    `json:"trip_id" db:"trip_id"`
+	Latitude       float64   `json:"lat" db:"lat"`
+	Longitude      float64   `json:"lng" db:"lng"`
+	Speed          float64   `json:"speed" db:"speed"`
+	Heading        float64   `json:"heading" db:"heading"`
+	FuelLevel      float64   `json:"fuel_level" db:"fuel_level"`
+	IgnitionStatus bool      `json:"ignition_status" db:"ignition_status"`
+	RecordedAt     time.Time `json:"recorded_at" db:"recorded_at"`
 }
 
 // PODDocument represents Proof of Delivery documents
@@ -124,13 +170,22 @@ type CreateTripRequest struct {
 	Description         string       `json:"description" validate:"max=500"`
 	PlannedRoute        []Waypoint   `json:"planned_route" validate:"required,min=2"`
 	Waypoints           []Waypoint   `json:"waypoints" validate:"required,min=2"`
-	EstimatedDistanceKm float64      `json:"estimated_distance_km" validate:"required,gt=0"`
-	EstimatedDurationMin int        `json:"estimated_duration_min" validate:"required,gt=0"`
-	CargoDetails        CargoDetails `json:"cargo_details" validate:"required"`
-	ScheduledStart      time.Time    `json:"scheduled_start" validate:"required"`
+	PlannedDistance      float64      `json:"planned_distance" validate:"required,gt=0"`
+	EstimatedDurationMin int          `json:"estimated_duration_min" validate:"required,gt=0"`
+	CargoDetails         CargoDetails `json:"cargo_details" validate:"required"`
+	ScheduledStart       time.Time    `json:"scheduled_start" validate:"required"`
+	PlannedETA           *time.Time   `json:"planned_eta" validate:"omitempty"`
+	StartOdometer       *float64     `json:"start_odometer" validate:"omitempty,gte=0"`
+	FuelLevelSnapshot   *float64     `json:"fuel_level_snapshot" validate:"omitempty,gte=0,lte=100"`
 	CustomerName        string       `json:"customer_name" validate:"required"`
 	CustomerPhone       string       `json:"customer_phone" validate:"required,e164"`
 	CustomerEmail       string       `json:"customer_email" validate:"omitempty,email"`
+	
+	// Advanced Fields
+	PickupGeo           *Location    `json:"pickup_geo" validate:"omitempty"`
+	DropGeo             *Location    `json:"drop_geo" validate:"omitempty"`
+	EWayBillNo          string       `json:"eway_bill_no" validate:"omitempty"`
+	GSTClassification   string       `json:"gst_classification" validate:"omitempty"`
 }
 
 // UpdateTripRequest represents the request body for updating a trip
@@ -139,7 +194,7 @@ type UpdateTripRequest struct {
 	Description         *string       `json:"description,omitempty" validate:"omitempty,max=500"`
 	PlannedRoute        *[]Waypoint   `json:"planned_route,omitempty" validate:"omitempty,min=2"`
 	Waypoints           *[]Waypoint   `json:"waypoints,omitempty" validate:"omitempty,min=2"`
-	EstimatedDistanceKm *float64      `json:"estimated_distance_km,omitempty" validate:"omitempty,gt=0"`
+	PlannedDistance     *float64      `json:"planned_distance,omitempty" validate:"omitempty,gt=0"`
 	EstimatedDurationMin *int         `json:"estimated_duration_min,omitempty" validate:"omitempty,gt=0"`
 	CargoDetails        *CargoDetails `json:"cargo_details,omitempty"`
 	ScheduledStart      *time.Time    `json:"scheduled_start,omitempty"`
@@ -159,8 +214,8 @@ type StartTripRequest struct {
 type CompleteTripRequest struct {
 	OdometerReading    float64       `json:"odometer_reading" validate:"required,gt=0"`
 	FuelLevel          float64       `json:"fuel_level" validate:"required,gte=0,lte=100"`
-	ActualDistanceKm   float64       `json:"actual_distance_km" validate:"required,gt=0"`
-	FuelConsumedLiters float64       `json:"fuel_consumed_liters" validate:"required,gte=0"`
+	TotalDistance      float64       `json:"total_distance" validate:"required,gt=0"`
+	FuelUsed           float64       `json:"fuel_used" validate:"required,gte=0"`
 	IdlingTimeMinutes  int           `json:"idling_time_minutes" validate:"gte=0"`
 	PODDocuments       []PODDocument `json:"pod_documents" validate:"required,min=1"`
 	Notes              string        `json:"notes" validate:"max=500"`
@@ -191,17 +246,28 @@ type OptimizeRouteRequest struct {
 	MinimizeTime  bool `json:"minimize_time"`
 }
 
+// RouteOptimization represents the result of a route optimization request
+type RouteOptimization struct {
+	TripID      string     `json:"trip_id"`
+	Polyline    string     `json:"polyline"`
+	Waypoints   []Waypoint `json:"waypoints"`
+	Distance    float64    `json:"distance"`
+	Duration    int        `json:"duration"`
+	Optimized   bool       `json:"optimized"`
+}
+
 // TripListFilter represents filters for listing trips
 type TripListFilter struct {
-	Status      string `json:"status" form:"status"`
-	VehicleID   string `json:"vehicle_id" form:"vehicle_id"`
-	DriverID    string `json:"driver_id" form:"driver_id"`
-	DateFrom    string `json:"date_from" form:"date_from"`
-	DateTo      string `json:"date_to" form:"date_to"`
-	Page        int    `json:"page" form:"page"`
-	PageSize    int    `json:"page_size" form:"page_size"`
-	OrderBy     string `json:"order_by" form:"order_by"`
-	OrderDir    string `json:"order_dir" form:"order_dir"`
+	TenantID  string `json:"tenant_id"`
+	VehicleID string `json:"vehicle_id"`
+	DriverID  string `json:"driver_id"`
+	Status    string `json:"status"`
+	From      string `json:"from"` // Date range start
+	To        string `json:"to"`   // Date range end
+	Page      int    `json:"page"`
+	PageSize  int    `json:"page_size"`
+	OrderBy   string `json:"order_by"`
+	OrderDir  string `json:"order_dir"`
 }
 
 // TripSummary represents trip analytics and summary information
@@ -209,10 +275,10 @@ type TripSummary struct {
 	TotalTrips          int     `json:"total_trips"`
 	CompletedTrips      int     `json:"completed_trips"`
 	CancelledTrips      int     `json:"cancelled_trips"`
-	TotalDistanceKm     float64 `json:"total_distance_km"`
+	TotalDistance       float64 `json:"total_distance"`
 	TotalDurationHours  float64 `json:"total_duration_hours"`
 	AverageFuelEfficiency float64 `json:"average_fuel_efficiency"`
-	TotalFuelConsumed   float64 `json:"total_fuel_consumed"`
+	FuelUsed            float64 `json:"fuel_used"`
 	TotalIdleTimeMinutes  int     `json:"total_idle_time_minutes"`
 	OnTimeRate          float64 `json:"on_time_rate"`
 	AverageTripDuration float64 `json:"average_trip_duration"`

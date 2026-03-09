@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -97,19 +99,62 @@ func (m *MockDriverRepository) ListExpenses(ctx context.Context, driverID string
 	return args.Get(0).([]*models.DriverExpense), args.Error(1)
 }
 
+func (m *MockDriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
+	args := m.Called(ctx, driverID, orgID, oldScore, newScore, reason, eventType, userID, userEmail)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) CreateBehaviorScoreUpdate(ctx context.Context, update *models.BehaviorScoreUpdate) error {
+	args := m.Called(ctx, update)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) GetBehaviorRecords(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DriverBehavior, error) {
+	args := m.Called(ctx, driverID, startDate, endDate)
+	return args.Get(0).([]*models.DriverBehavior), args.Error(1)
+}
+
+func (m *MockDriverRepository) GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error) {
+	args := m.Called(ctx, driverID)
+	return args.Get(0).(*models.DriverBehavior), args.Error(1)
+}
+
+func (m *MockDriverRepository) GetIncidents(ctx context.Context, driverID string, filter models.BehaviorReportRequest) ([]*models.DriverIncident, error) {
+	args := m.Called(ctx, driverID, filter)
+	return args.Get(0).([]*models.DriverIncident), args.Error(1)
+}
+
+func (m *MockDriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
+	args := m.Called(ctx, logID, durationMinutes)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
+	args := m.Called(ctx, driverID, startDate, endDate)
+	return args.Get(0).([]*models.DutyStatusLog), args.Error(1)
+}
+
 func TestUpdateDutyStatus(t *testing.T) {
 	mockRepo := new(MockDriverRepository)
 	logger := zap.NewNop()
 	service := NewDriverService(mockRepo, logger)
 
 	ctx := context.Background()
-	driverID := "driver-123"
-	req := &models.DutyStatusLog{Status: "ON_DUTY"}
+	driverID := uuid.New().String()
+	orgID := uuid.New()
+	req := &models.DutyStatusLog{
+		Status: "ON_DUTY",
+		Location: &models.Location{Latitude: 28.6, Longitude: 77.2},
+	}
 
-	mockRepo.On("GetLatestDutyStatus", ctx, driverID).Return(nil, nil)
-	mockRepo.On("CreateDutyStatusLog", ctx, mock.AnythingOfType("*models.DutyStatusLog")).Return(nil)
+	// Mock for DutyStatusService inside DriverService
+	mockRepo.On("GetLatestDutyStatus", ctx, driverID).Return(&models.DutyStatusLog{Status: "OFF_DUTY"}, nil)
+	mockRepo.On("EndDutyStatusLog", ctx, mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("CreateDutyStatusLog", ctx, mock.MatchedBy(func(log *models.DutyStatusLog) bool {
+		return log.DriverID == driverID && log.Status == "ON_DUTY"
+	})).Return(nil)
 
-	err := service.UpdateDutyStatus(ctx, driverID, req)
+	err := service.UpdateDutyStatus(ctx, driverID, orgID, req)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
@@ -121,10 +166,12 @@ func TestSendMessage(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := "driver-123"
+	orgID := "org-123"
 	
+	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, OrgID: orgID}, nil)
 	mockRepo.On("CreateMessage", ctx, mock.AnythingOfType("*models.DriverMessage")).Return(nil)
 
-	msg, err := service.SendMessage(ctx, driverID, "Hello Dispatch", "CHAT", "")
+	msg, err := service.SendMessage(ctx, driverID, orgID, "Hello Dispatch", "CHAT", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, msg)
 	assert.Equal(t, "Hello Dispatch", msg.Content)
@@ -139,11 +186,13 @@ func TestSubmitExpense(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := "driver-123"
+	orgID := "org-123"
 	req := &models.DriverExpense{Amount: 50.0, Currency: "USD"}
 
-	mockRepo.On("CreateExpense", ctx, req).Return(nil)
+	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, OrgID: orgID}, nil)
+	mockRepo.On("CreateExpense", ctx, mock.AnythingOfType("*models.DriverExpense")).Return(nil)
 
-	res, err := service.SubmitExpense(ctx, driverID, req)
+	res, err := service.SubmitExpense(ctx, driverID, orgID, req)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, "PENDING", res.Status)

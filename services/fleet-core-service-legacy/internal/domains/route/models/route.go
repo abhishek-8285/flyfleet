@@ -108,6 +108,7 @@ type RouteOptimizationResult struct {
 	TotalStops         int                `json:"total_stops"`
 	Routes             []Route            `json:"routes"`
 	PerformanceMetrics PerformanceMetrics `json:"performance_metrics"`
+	CreatedAt          time.Time          `json:"created_at"`
 }
 
 // Route represents an optimized route for a single vehicle

@@ -1,0 +1,47 @@
+# Invoice Configuration
+# Copy to invoice_config.yaml and customize
+
+company:
+  name: "FlyFleet Technologies Pvt Ltd"
+  address: |
+    123 Fleet Street, Koramangala
+    Bangalore, Karnataka 560034
+    India
+  gstin: "29ABCDE1234F1Z5"
+  pan: "ABCDE1234F"
+  email: "billing@flyfleet.com"
+  phone: "+91-80-1234-5678"
+  website: "www.flyfleet.com"
+  logo_url: ""  # Base64 or URL
+
+branding:
+  primary_color: "#3b82f6"  # Blue
+  secondary_color: "#1e40af"  # Dark Blue
+  theme: "modern"  # modern, classic, minimal
+
+payment:
+  bank_name: "HDFC Bank"
+  account_name: "FlyFleet Technologies Pvt Ltd"
+  account_number: "123456789012"
+  ifsc: "HDFC0001234"
+  branch: "Koramangala, Bangalore"
+  upi: "flyfleet@hdfcbank"
+
+invoice:
+  prefix: "INV"
+  terms:
+    - "Payment due within 30 days from invoice date"
+    - "Please make cheque/transfer payable to the company"
+    - "All disputes subject to Bangalore jurisdiction"
+    - "Interest @18% p.a. on delayed payments"
+  notes: "Thank you for your business!"
+  
+  # Enable/disable features
+  show_hsn: true
+  show_qr_code: true
+  show_payment_info: true
+  
+defaults:
+  currency: "INR"
+  tax_calculation: "inclusive"  # inclusive or exclusive
+  rounding: "round"  # round, ceil, floor

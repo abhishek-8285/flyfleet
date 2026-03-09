@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -26,7 +27,7 @@ func NewSettingsRepository(db *pgxpool.Pool) SettingsRepository {
 
 func (r *settingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
 	query := `
-		SELECT 
+		SELECT
 			organization_id, default_currency, allowed_fuel_types,
 			validation_rules, auto_sync_enabled, created_at, updated_at
 		FROM fuel_settings
@@ -41,7 +42,7 @@ func (r *settingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get fuel settings: %w", err)
 	}
 	return &s, nil
 }
@@ -63,7 +64,10 @@ func (r *settingsRepository) Upsert(ctx context.Context, s *models.FuelSettings)
 		s.OrganizationID, s.DefaultCurrency, s.AllowedFuelTypes,
 		s.ValidationRules, s.AutoSyncEnabled,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to upsert fuel settings: %w", err)
+	}
+	return nil
 }
 
 func (r *settingsRepository) GetOrDefault(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {

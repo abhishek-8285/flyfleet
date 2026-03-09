@@ -10,8 +10,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// Note: Trip offer methods are now part of the TripRepository interface
+// These implementations remain on PostgresTripRepository
+
 // CreateOffer creates a new trip offer for a driver
-func (r *TripRepository) CreateOffer(ctx context.Context, offer *models.TripOffer) error {
+func (r *PostgresTripRepository) CreateOffer(ctx context.Context, offer *models.TripOffer) error {
 	query := `
 		INSERT INTO trip_offers (
 			id, trip_id, driver_id, status, expires_at, created_at, updated_at
@@ -29,7 +32,7 @@ func (r *TripRepository) CreateOffer(ctx context.Context, offer *models.TripOffe
 }
 
 // GetOffer retrieves an offer by ID
-func (r *TripRepository) GetOffer(ctx context.Context, offerID string) (*models.TripOffer, error) {
+func (r *PostgresTripRepository) GetOffer(ctx context.Context, offerID string) (*models.TripOffer, error) {
 	query := `
 		SELECT id, trip_id, driver_id, status, rejection_reason, expires_at, responded_at, created_at, updated_at
 		FROM trip_offers
@@ -49,7 +52,7 @@ func (r *TripRepository) GetOffer(ctx context.Context, offerID string) (*models.
 }
 
 // RespondToOffer updates the status of an offer (ACCEPT/REJECT)
-func (r *TripRepository) RespondToOffer(ctx context.Context, offerID string, status, reason string) error {
+func (r *PostgresTripRepository) RespondToOffer(ctx context.Context, offerID string, status, reason string) error {
 	query := `
 		UPDATE trip_offers 
 		SET status = $1, rejection_reason = $2, responded_at = NOW(), updated_at = NOW()
@@ -68,7 +71,7 @@ func (r *TripRepository) RespondToOffer(ctx context.Context, offerID string, sta
 }
 
 // GetOffersForDriver retrieves active offers for a driver
-func (r *TripRepository) GetOffersForDriver(ctx context.Context, driverID string) ([]*models.TripOffer, error) {
+func (r *PostgresTripRepository) GetOffersForDriver(ctx context.Context, driverID string) ([]*models.TripOffer, error) {
 	query := `
 		SELECT id, trip_id, driver_id, status, expires_at, created_at
 		FROM trip_offers
@@ -97,7 +100,7 @@ func (r *TripRepository) GetOffersForDriver(ctx context.Context, driverID string
 }
 
 // SaveProofOfDelivery saves a POD record
-func (r *TripRepository) SaveProofOfDelivery(ctx context.Context, pod *models.ProofOfDelivery) error {
+func (r *PostgresTripRepository) SaveProofOfDelivery(ctx context.Context, pod *models.ProofOfDelivery) error {
 	query := `
 		INSERT INTO proof_of_delivery (
 			id, trip_id, type, url, metadata, uploaded_by, verified, created_at
@@ -116,7 +119,7 @@ func (r *TripRepository) SaveProofOfDelivery(ctx context.Context, pod *models.Pr
 }
 
 // GetPODsForTrip retrieves PODs for a trip
-func (r *TripRepository) GetPODsForTrip(ctx context.Context, tripID string) ([]*models.ProofOfDelivery, error) {
+func (r *PostgresTripRepository) GetPODsForTrip(ctx context.Context, tripID string) ([]*models.ProofOfDelivery, error) {
 	query := `
 		SELECT id, trip_id, type, url, metadata, uploaded_by, verified, created_at
 		FROM proof_of_delivery

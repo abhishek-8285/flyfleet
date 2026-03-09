@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -26,32 +27,46 @@ func NewDriverRepository(db *pgxpool.Pool) *DriverRepository {
 func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) error {
 	query := `
 		INSERT INTO drivers (
-			id, org_id, first_name, last_name, full_name, email, phone,
-			license_number, license_type, license_expiry, license_authority,
-			date_of_birth, address, emergency_contact, status, joining_date,
+			id, org_id, first_name, last_name, email, phone,
+			employee_code, aadhaar_number, pan_number,
+			license_number, license_type, license_issue_date, license_expiry, license_authority,
+			date_of_birth, address, emergency_contact, status, employment_type, joining_date,
 			experience_years, rating, total_trips, total_distance_km,
 			total_hours_driven, behavior_score, metadata, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
 	now := time.Now()
-	fullName := fmt.Sprintf("%s %s", driver.FirstName, driver.LastName)
 
 	// Convert structs to JSON for storage
-	addressJSON, _ := json.Marshal(driver.Address)
-	emergencyContactJSON, _ := json.Marshal(driver.EmergencyContact)
-	metadataJSON, _ := json.Marshal(driver.Metadata)
+	addressJSON, err := json.Marshal(driver.Address)
+	if err != nil {
+		return fmt.Errorf("failed to marshal address: %w", err)
+	}
+	emergencyContactJSON, err := json.Marshal(driver.EmergencyContact)
+	if err != nil {
+		return fmt.Errorf("failed to marshal emergency contact: %w", err)
+	}
+	metadataJSON, err := json.Marshal(driver.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
 
-	err := r.db.QueryRow(ctx, query,
-		id, driver.OrgID, driver.FirstName, driver.LastName, fullName, driver.Email, driver.Phone,
-		driver.LicenseNumber, driver.LicenseType, driver.LicenseExpiry, driver.LicenseAuthority,
-		driver.DateOfBirth, addressJSON, emergencyContactJSON, driver.Status, driver.JoiningDate,
+	err = r.db.QueryRow(ctx, query,
+		id, driver.OrgID, driver.FirstName, driver.LastName, driver.Email, driver.Phone,
+		driver.EmployeeCode, driver.AadhaarNumber, driver.PanNumber,
+		driver.LicenseNumber, driver.LicenseType, driver.LicenseIssueDate, driver.LicenseExpiry, driver.LicenseAuthority,
+		driver.DateOfBirth, addressJSON, emergencyContactJSON, driver.Status, driver.EmploymentType, driver.JoiningDate,
 		driver.ExperienceYears, driver.Rating, driver.TotalTrips, driver.TotalDistanceKm,
 		driver.TotalHoursDriven, driver.BehaviorScore, metadataJSON, now, now,
 	).Scan(&driver.ID, &driver.CreatedAt, &driver.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create driver: %w", err)
+	}
+
+	return nil
 }
 
 // GetByEmail retrieves a driver by email address
@@ -64,7 +79,10 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get driver by email: %w", err)
 	}
 	return &driver, nil
 }
@@ -79,7 +97,10 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get driver by license number: %w", err)
 	}
 	return &driver, nil
 }
@@ -88,8 +109,9 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	query := `
 		SELECT id, org_id, first_name, last_name, full_name, email, phone,
-		       license_number, license_type, license_expiry, license_authority,
-		       date_of_birth, address, emergency_contact, status, current_vehicle_id,
+		       employee_code, aadhaar_number, pan_number,
+		       license_number, license_type, license_issue_date, license_expiry, license_authority,
+		       date_of_birth, address, emergency_contact, status, employment_type, current_vehicle_id,
 		       current_trip_id, joining_date, resignation_date, experience_years,
 		       rating, total_trips, total_distance_km, total_hours_driven,
 		       behavior_score, documents, attendance_records, schedules,
@@ -101,10 +123,11 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
-		&driver.Email, &driver.Phone, &driver.LicenseNumber, &driver.LicenseType,
-		&driver.LicenseExpiry, &driver.LicenseAuthority, &driver.DateOfBirth,
-		&addressJSON, &emergencyContactJSON, &driver.Status, &driver.CurrentVehicleID,
-		&driver.CurrentTripID, &driver.JoiningDate, &driver.ResignationDate,
+		&driver.Email, &driver.Phone, &driver.EmployeeCode, &driver.AadhaarNumber,
+		&driver.PanNumber, &driver.LicenseNumber, &driver.LicenseType,
+		&driver.LicenseIssueDate, &driver.LicenseExpiry, &driver.LicenseAuthority,
+		&driver.DateOfBirth, &addressJSON, &emergencyContactJSON, &driver.Status, &driver.EmploymentType,
+		&driver.CurrentVehicleID, &driver.CurrentTripID, &driver.JoiningDate, &driver.ResignationDate,
 		&driver.ExperienceYears, &driver.Rating, &driver.TotalTrips, &driver.TotalDistanceKm,
 		&driver.TotalHoursDriven, &driver.BehaviorScore, &documentsJSON,
 		&attendanceJSON, &schedulesJSON, &metadataJSON, &driver.CreatedAt,
@@ -112,16 +135,43 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get driver by ID: %w", err)
 	}
 
 	// Parse JSON fields
-	json.Unmarshal(addressJSON, &driver.Address)
-	json.Unmarshal(emergencyContactJSON, &driver.EmergencyContact)
-	json.Unmarshal(documentsJSON, &driver.Documents)
-	json.Unmarshal(attendanceJSON, &driver.AttendanceRecords)
-	json.Unmarshal(schedulesJSON, &driver.Schedules)
-	json.Unmarshal(metadataJSON, &driver.Metadata)
+	if len(addressJSON) > 0 {
+		if err := json.Unmarshal(addressJSON, &driver.Address); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal address: %w", err)
+		}
+	}
+	if len(emergencyContactJSON) > 0 {
+		if err := json.Unmarshal(emergencyContactJSON, &driver.EmergencyContact); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal emergency contact: %w", err)
+		}
+	}
+	if len(documentsJSON) > 0 {
+		if err := json.Unmarshal(documentsJSON, &driver.Documents); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal documents: %w", err)
+		}
+	}
+	if len(attendanceJSON) > 0 {
+		if err := json.Unmarshal(attendanceJSON, &driver.AttendanceRecords); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal attendance records: %w", err)
+		}
+	}
+	if len(schedulesJSON) > 0 {
+		if err := json.Unmarshal(schedulesJSON, &driver.Schedules); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal schedules: %w", err)
+		}
+	}
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &driver.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
 
 	return &driver, nil
 }
@@ -169,7 +219,7 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	countSQL := countQuery + whereClause
 	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to count drivers: %w", err)
 	}
 
 	// List query with pagination
@@ -208,7 +258,7 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 
 	rows, err := r.db.Query(ctx, listSQL, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to list drivers: %w", err)
 	}
 	defer rows.Close()
 
@@ -222,9 +272,13 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 			&driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
 		)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("failed to scan driver: %w", err)
 		}
 		drivers = append(drivers, &driver)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("driver iteration error: %w", err)
 	}
 
 	return drivers, totalCount, nil
@@ -242,11 +296,14 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 
 	for key, value := range updates {
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
-		
+
 		// Handle special JSON fields
 		switch key {
 		case "address", "emergency_contact", "documents", "attendance_records", "schedules", "metadata":
-			jsonData, _ := json.Marshal(value)
+			jsonData, err := json.Marshal(value)
+			if err != nil {
+				return fmt.Errorf("failed to marshal %s: %w", key, err)
+			}
 			args = append(args, jsonData)
 		default:
 			args = append(args, value)
@@ -260,7 +317,7 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 
 	result, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update driver: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -275,7 +332,7 @@ func (r *DriverRepository) Delete(ctx context.Context, id string) error {
 	query := "UPDATE drivers SET deleted_at = NOW(), status = 'inactive' WHERE id = $1 AND deleted_at IS NULL"
 	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete driver: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -288,13 +345,13 @@ func (r *DriverRepository) Delete(ctx context.Context, id string) error {
 // AssignVehicle assigns a vehicle to a driver
 func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleID string) error {
 	query := `
-		UPDATE drivers 
+		UPDATE drivers
 		SET current_vehicle_id = $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL`
-	
+
 	result, err := r.db.Exec(ctx, query, vehicleID, driverID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to assign vehicle: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -307,13 +364,13 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 // UnassignVehicle removes vehicle assignment from a driver
 func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string) error {
 	query := `
-		UPDATE drivers 
+		UPDATE drivers
 		SET current_vehicle_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deleted_at IS NULL`
-	
+
 	result, err := r.db.Exec(ctx, query, driverID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to unassign vehicle: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -326,13 +383,13 @@ func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string)
 // UpdateBehaviorScore updates driver's behavior score
 func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int) error {
 	query := `
-		UPDATE drivers 
+		UPDATE drivers
 		SET behavior_score = behavior_score + $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL`
-	
+
 	result, err := r.db.Exec(ctx, query, scoreChange, driverID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update behavior score: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -345,16 +402,16 @@ func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID str
 // IncrementStats increments driver statistics
 func (r *DriverRepository) IncrementStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error {
 	query := `
-		UPDATE drivers 
+		UPDATE drivers
 		SET total_trips = total_trips + 1,
 		    total_distance_km = total_distance_km + $1,
 		    total_hours_driven = total_hours_driven + $2,
 		    updated_at = NOW()
 		WHERE id = $3 AND deleted_at IS NULL`
-	
+
 	result, err := r.db.Exec(ctx, query, distanceKm, hoursDriven, driverID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to increment driver stats: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -367,7 +424,7 @@ func (r *DriverRepository) IncrementStats(ctx context.Context, driverID string, 
 // GetDriverAnalytics retrieves driver analytics
 func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error) {
 	query := `
-		SELECT 
+		SELECT
 			d.total_trips,
 			d.total_distance_km,
 			d.total_hours_driven,
@@ -375,12 +432,15 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 			d.behavior_score as current_behavior_score,
 			COALESCE(COUNT(t.id) FILTER (WHERE t.status = 'completed'), 0) as completed_trips,
 			COALESCE(COUNT(t.id) FILTER (WHERE t.status = 'cancelled'), 0) as cancelled_trips,
-			COALESCE(AVG(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) * 100, 0) as attendance_rate
+			COALESCE((
+				SELECT AVG(CASE WHEN (v->>'status') = 'present' THEN 1 ELSE 0 END) * 100
+				FROM jsonb_array_elements(d.attendance_records) v
+				WHERE (v->>'date')::date >= CURRENT_DATE - INTERVAL '30 days'
+			), 0) as attendance_rate
 		FROM drivers d
 		LEFT JOIN trips t ON d.id = t.driver_id AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
-		LEFT JOIN attendance_records a ON d.id = a.driver_id AND a.date >= CURRENT_DATE - INTERVAL '30 days'
 		WHERE d.id = $1 AND d.deleted_at IS NULL
-		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score`
+		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score, d.attendance_records`
 
 	var analytics models.DriverAnalytics
 	err := r.db.QueryRow(ctx, query, driverID).Scan(
@@ -390,7 +450,10 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get driver analytics: %w", err)
 	}
 
 	// Calculate derived metrics
@@ -398,7 +461,7 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 		analytics.CompletionRate = float64(analytics.CompletedTrips) / float64(analytics.TotalTrips) * 100
 		analytics.OnTimeRate = analytics.AttendanceRate // Simplified for now
 	}
-	
+
 	if analytics.TotalHoursDriven > 0 {
 		analytics.FuelEfficiency = analytics.TotalDistanceKm / analytics.TotalHoursDriven // Simplified
 	}
@@ -412,15 +475,15 @@ func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehic
 		SELECT id, org_id, first_name, last_name, full_name, email, phone,
 		       license_number, license_type, status, rating, behavior_score,
 		       created_at, updated_at
-		FROM drivers 
-		WHERE current_vehicle_id = $1 
-		  AND status = 'active' 
+		FROM drivers
+		WHERE current_vehicle_id = $1
+		  AND status = 'active'
 		  AND deleted_at IS NULL
 		ORDER BY created_at ASC`
 
 	rows, err := r.db.Query(ctx, query, vehicleID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query active drivers: %w", err)
 	}
 	defer rows.Close()
 
@@ -433,9 +496,13 @@ func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehic
 			&driver.Status, &driver.Rating, &driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan driver: %w", err)
 		}
 		drivers = append(drivers, &driver)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("driver iteration error: %w", err)
 	}
 
 	return drivers, nil
@@ -452,7 +519,7 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 			hours_of_service, rest_periods, document_compliance, maintenance_adherence,
 			night_driving_hours, highway_percentage, city_driving_percentage,
 			risk_level, risk_factors, improvement_areas, metadata, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
 			$16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
 		RETURNING id, created_at, updated_at`
 
@@ -460,11 +527,20 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 	now := time.Now()
 
 	// Convert slices and maps to JSON
-	riskFactorsJSON, _ := json.Marshal(behavior.RiskFactors)
-	improvementAreasJSON, _ := json.Marshal(behavior.ImprovementAreas)
-	metadataJSON, _ := json.Marshal(behavior.Metadata)
+	riskFactorsJSON, err := json.Marshal(behavior.RiskFactors)
+	if err != nil {
+		return fmt.Errorf("failed to marshal risk factors: %w", err)
+	}
+	improvementAreasJSON, err := json.Marshal(behavior.ImprovementAreas)
+	if err != nil {
+		return fmt.Errorf("failed to marshal improvement areas: %w", err)
+	}
+	metadataJSON, err := json.Marshal(behavior.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
 
-	err := r.db.QueryRow(ctx, query,
+	err = r.db.QueryRow(ctx, query,
 		id, behavior.DriverID, behavior.OrgID, behavior.PeriodStart, behavior.PeriodEnd,
 		behavior.Score, behavior.SafetyScore, behavior.EfficiencyScore, behavior.ComplianceScore,
 		behavior.HarshAccelerations, behavior.HarshBrakings, behavior.HarshCornerings,
@@ -475,7 +551,11 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 		behavior.RiskLevel, riskFactorsJSON, improvementAreasJSON, metadataJSON, now, now,
 	).Scan(&behavior.ID, &behavior.CreatedAt, &behavior.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create behavior record: %w", err)
+	}
+
+	return nil
 }
 
 // GetBehaviorRecords retrieves behavior records for a driver
@@ -488,15 +568,15 @@ func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID stri
 			hours_of_service, rest_periods, document_compliance, maintenance_adherence,
 			night_driving_hours, highway_percentage, city_driving_percentage,
 			risk_level, risk_factors, improvement_areas, metadata, created_at, updated_at
-		FROM driver_behavior 
-		WHERE driver_id = $1 
-			AND period_start >= $2 
+		FROM driver_behavior
+		WHERE driver_id = $1
+			AND period_start >= $2
 			AND period_end <= $3
 		ORDER BY period_start DESC`
 
 	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query behavior records: %w", err)
 	}
 	defer rows.Close()
 
@@ -517,15 +597,25 @@ func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID stri
 			&behavior.CreatedAt, &behavior.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan behavior record: %w", err)
 		}
 
 		// Parse JSON fields
-		json.Unmarshal(riskFactorsJSON, &behavior.RiskFactors)
-		json.Unmarshal(improvementAreasJSON, &behavior.ImprovementAreas)
-		json.Unmarshal(metadataJSON, &behavior.Metadata)
+		if err := json.Unmarshal(riskFactorsJSON, &behavior.RiskFactors); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal risk factors: %w", err)
+		}
+		if err := json.Unmarshal(improvementAreasJSON, &behavior.ImprovementAreas); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal improvement areas: %w", err)
+		}
+		if err := json.Unmarshal(metadataJSON, &behavior.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
 
 		behaviors = append(behaviors, &behavior)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("behavior record iteration error: %w", err)
 	}
 
 	return behaviors, nil
@@ -544,16 +634,26 @@ func (r *DriverRepository) CreateIncident(ctx context.Context, incident *models.
 	now := time.Now()
 
 	// Convert structs to JSON
-	locationJSON, _ := json.Marshal(incident.Location)
-	detailsJSON, _ := json.Marshal(incident.Details)
+	locationJSON, err := json.Marshal(incident.Location)
+	if err != nil {
+		return fmt.Errorf("failed to marshal location: %w", err)
+	}
+	detailsJSON, err := json.Marshal(incident.Details)
+	if err != nil {
+		return fmt.Errorf("failed to marshal details: %w", err)
+	}
 
-	err := r.db.QueryRow(ctx, query,
+	err = r.db.QueryRow(ctx, query,
 		id, incident.DriverID, incident.OrgID, incident.Type, incident.Severity,
 		incident.Timestamp, locationJSON, incident.Speed, detailsJSON,
 		incident.Resolved, incident.ResolutionNotes, now,
 	).Scan(&incident.ID, &incident.CreatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create incident: %w", err)
+	}
+
+	return nil
 }
 
 // GetIncidents retrieves incidents for a driver
@@ -590,7 +690,7 @@ func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, fi
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query incidents: %w", err)
 	}
 	defer rows.Close()
 
@@ -605,14 +705,22 @@ func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, fi
 			&detailsJSON, &incident.Resolved, &incident.ResolutionNotes, &incident.CreatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan incident: %w", err)
 		}
 
 		// Parse JSON fields
-		json.Unmarshal(locationJSON, &incident.Location)
-		json.Unmarshal(detailsJSON, &incident.Details)
+		if err := json.Unmarshal(locationJSON, &incident.Location); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal location: %w", err)
+		}
+		if err := json.Unmarshal(detailsJSON, &incident.Details); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal details: %w", err)
+		}
 
 		incidents = append(incidents, &incident)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("incident iteration error: %w", err)
 	}
 
 	return incidents, nil
@@ -623,7 +731,7 @@ func (r *DriverRepository) UpdateIncidentResolution(ctx context.Context, inciden
 	query := `UPDATE driver_incidents SET resolved = $1, resolution_notes = $2, updated_at = NOW() WHERE id = $3`
 	result, err := r.db.Exec(ctx, query, resolved, notes, incidentID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update incident resolution: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -643,20 +751,27 @@ func (r *DriverRepository) CreateBehaviorScoreUpdate(ctx context.Context, update
 
 	id := uuid.New().String()
 	now := time.Now()
-	detailsJSON, _ := json.Marshal(update.Details)
+	detailsJSON, err := json.Marshal(update.Details)
+	if err != nil {
+		return fmt.Errorf("failed to marshal details: %w", err)
+	}
 
-	err := r.db.QueryRow(ctx, query,
+	err = r.db.QueryRow(ctx, query,
 		id, update.DriverID, update.ScoreChange, update.Reason,
 		update.EventType, detailsJSON, update.CreatedBy, now,
 	).Scan(&update.ID, &update.CreatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create behavior score update: %w", err)
+	}
+
+	return nil
 }
 
 // GetBehaviorSummary retrieves behavior summary for a driver
 func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error) {
 	query := `
-		SELECT 
+		SELECT
 			MAX(score) as current_score,
 			MAX(safety_score) as current_safety_score,
 			MAX(efficiency_score) as current_efficiency_score,
@@ -667,8 +782,8 @@ func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID stri
 			AVG(fuel_consumption) as avg_fuel_consumption,
 			SUM(distance_driven) as total_distance_driven,
 			MAX(risk_level) as current_risk_level
-		FROM driver_behavior 
-		WHERE driver_id = $1 
+		FROM driver_behavior
+		WHERE driver_id = $1
 			AND period_end >= CURRENT_DATE - INTERVAL '30 days'`
 
 	var summary models.DriverBehavior
@@ -679,9 +794,342 @@ func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID stri
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get behavior summary: %w", err)
 	}
 
 	summary.DriverID = driverID
 	return &summary, nil
+}
+
+// Audit log methods
+
+// CreateAuditLog creates a new audit log entry
+func (r *DriverRepository) CreateAuditLog(ctx context.Context, audit *models.DriverAuditLog) error {
+	query := `
+		INSERT INTO driver_audit_logs (
+			id, driver_id, org_id, action, old_value, new_value,
+			user_id, user_type, user_email, reason, metadata,
+			ip_address, user_agent, created_at
+		) VALUES ($1, $2, $3, $4, ($5)::jsonb, ($6)::jsonb, $7, $8, $9, $10, ($11)::jsonb, $12, $13, $14)
+	`
+
+	id := uuid.New().String()
+
+	// Convert maps to JSON
+	oldValueJSON, err := json.Marshal(audit.OldValue)
+	if err != nil {
+		return fmt.Errorf("failed to marshal old value: %w", err)
+	}
+	newValueJSON, err := json.Marshal(audit.NewValue)
+	if err != nil {
+		return fmt.Errorf("failed to marshal new value: %w", err)
+	}
+	metadataJSON, err := json.Marshal(audit.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	_, err = r.db.Exec(ctx, query,
+		id, audit.DriverID, audit.OrgID, audit.Action,
+		oldValueJSON, newValueJSON, audit.UserID, audit.UserType, audit.UserEmail,
+		audit.Reason, metadataJSON, audit.IPAddress, audit.UserAgent, audit.CreatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create audit log: %w", err)
+	}
+
+	return nil
+}
+
+// GetAuditLogs retrieves audit logs for a driver
+func (r *DriverRepository) GetAuditLogs(ctx context.Context, filter models.AuditLogFilter) ([]*models.DriverAuditLog, int, error) {
+	baseQuery := `
+		SELECT id, driver_id, org_id, action, old_value, new_value,
+		       user_id, user_type, user_email, reason, metadata,
+		       ip_address, user_agent, created_at
+		FROM driver_audit_logs
+		WHERE 1=1`
+
+	countQuery := `SELECT COUNT(*) FROM driver_audit_logs WHERE 1=1`
+
+	var conditions []string
+	var args []interface{}
+	argIndex := 1
+
+	if filter.DriverID != nil {
+		conditions = append(conditions, fmt.Sprintf("driver_id = $%d", argIndex))
+		args = append(args, filter.DriverID)
+		argIndex++
+	}
+
+	if filter.OrgID != uuid.Nil {
+		conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIndex))
+		args = append(args, filter.OrgID)
+		argIndex++
+	}
+
+	if filter.Action != "" {
+		conditions = append(conditions, fmt.Sprintf("action = $%d", argIndex))
+		args = append(args, filter.Action)
+		argIndex++
+	}
+
+	if filter.UserID != nil {
+		conditions = append(conditions, fmt.Sprintf("user_id = $%d", argIndex))
+		args = append(args, filter.UserID)
+		argIndex++
+	}
+
+	if filter.UserType != "" {
+		conditions = append(conditions, fmt.Sprintf("user_type = $%d", argIndex))
+		args = append(args, filter.UserType)
+		argIndex++
+	}
+
+	if filter.FromDate != nil {
+		conditions = append(conditions, fmt.Sprintf("created_at >= $%d", argIndex))
+		args = append(args, filter.FromDate)
+		argIndex++
+	}
+
+	if filter.ToDate != nil {
+		conditions = append(conditions, fmt.Sprintf("created_at <= $%d", argIndex))
+		args = append(args, filter.ToDate)
+		argIndex++
+	}
+
+	// Build WHERE clause
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = " AND " + strings.Join(conditions, " AND ")
+	}
+
+	// Count
+	var totalCount int
+	countSQL := countQuery + whereClause
+	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count audit logs: %w", err)
+	}
+
+	// List
+	page := filter.Page
+	if page < 1 {
+		page = 1
+	}
+	pageSize := filter.PageSize
+	if pageSize < 1 {
+		pageSize = 50
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	offset := (page - 1) * pageSize
+	limitClause := fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, pageSize, offset)
+
+	listSQL := baseQuery + whereClause + limitClause
+
+	rows, err := r.db.Query(ctx, listSQL, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query audit logs: %w", err)
+	}
+	defer rows.Close()
+
+	var audits []*models.DriverAuditLog
+	for rows.Next() {
+		audit := &models.DriverAuditLog{}
+		var oldValueJSON, newValueJSON, metadataJSON []byte
+
+		err := rows.Scan(
+			&audit.ID, &audit.DriverID, &audit.OrgID, &audit.Action,
+			&oldValueJSON, &newValueJSON, &audit.UserID, &audit.UserType,
+			&audit.UserEmail, &audit.Reason, &metadataJSON,
+			&audit.IPAddress, &audit.UserAgent, &audit.CreatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan audit log: %w", err)
+		}
+
+		// Parse JSON fields
+		if len(oldValueJSON) > 0 {
+			if err := json.Unmarshal(oldValueJSON, &audit.OldValue); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal old value: %w", err)
+			}
+		}
+		if len(newValueJSON) > 0 {
+			if err := json.Unmarshal(newValueJSON, &audit.NewValue); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal new value: %w", err)
+			}
+		}
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &audit.Metadata); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal metadata: %w", err)
+			}
+		}
+
+		audits = append(audits, audit)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("audit log iteration error: %w", err)
+	}
+
+	return audits, totalCount, nil
+}
+
+// LogDriverCreation logs driver creation
+func (r *DriverRepository) LogDriverCreation(ctx context.Context, driver *models.Driver, userID uuid.UUID, userEmail string) error {
+	audit := &models.DriverAuditLog{
+		DriverID:  uuid.MustParse(driver.ID),
+		OrgID:     uuid.MustParse(driver.OrgID),
+		Action:    string(models.ActionDriverCreated),
+		NewValue:  map[string]interface{}{"driver": driver},
+		UserID:    userID,
+		UserType:  "admin",
+		UserEmail: userEmail,
+		CreatedAt: time.Now(),
+	}
+	return r.CreateAuditLog(ctx, audit)
+}
+
+// LogDriverStatusChange logs driver status change
+func (r *DriverRepository) LogDriverStatusChange(ctx context.Context, driverID, orgID uuid.UUID, oldStatus, newStatus string, userID uuid.UUID, userEmail, reason string) error {
+	audit := &models.DriverAuditLog{
+		DriverID:  driverID,
+		OrgID:     orgID,
+		Action:    string(models.ActionDriverStatusChanged),
+		OldValue:  map[string]interface{}{"status": oldStatus},
+		NewValue:  map[string]interface{}{"status": newStatus},
+		UserID:    userID,
+		UserType:  "admin",
+		UserEmail: userEmail,
+		Reason:    reason,
+		CreatedAt: time.Now(),
+	}
+	return r.CreateAuditLog(ctx, audit)
+}
+
+// LogBehaviorScoreChange logs behavior score update
+func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
+	audit := &models.DriverAuditLog{
+		DriverID:  driverID,
+		OrgID:     orgID,
+		Action:    string(models.ActionDriverBehaviorScoreUpdated),
+		OldValue:  map[string]interface{}{"score": oldScore},
+		NewValue:  map[string]interface{}{"score": newScore},
+		UserID:    userID,
+		UserType:  "admin",
+		UserEmail: userEmail,
+		Reason:    reason,
+		Metadata:  map[string]interface{}{"event_type": eventType},
+		CreatedAt: time.Now(),
+	}
+	return r.CreateAuditLog(ctx, audit)
+}
+// EndDutyStatusLog ends a duty status log
+func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
+	query := `
+		UPDATE duty_status_logs
+		SET ended_at = NOW(),
+		    duration_minutes = $2,
+		    updated_at = NOW()
+		WHERE id = $1
+	`
+
+	result, err := r.db.Exec(ctx, query, logID, durationMinutes)
+	if err != nil {
+		return fmt.Errorf("failed to end duty status log: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	return nil
+}
+// GetDutyStatusLogs retrieves duty status logs for a driver within a time range
+func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
+	query := `
+		SELECT id, driver_id, status, location, started_at, ended_at, 
+			   duration_minutes, remarks, created_at, updated_at
+		FROM duty_status_logs
+		WHERE driver_id = $1 AND started_at >= $2 AND started_at <= $3
+		ORDER BY started_at ASC`
+
+	fmt.Printf("[DEBUG GetDutyStatusLogs] Fetching logs for driver %s between %v and %v\n", driverID, startDate, endDate)
+	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
+	if err != nil {
+		fmt.Printf("[DEBUG GetDutyStatusLogs] Error querying: %v\n", err)
+		return nil, fmt.Errorf("failed to query duty status logs: %w", err)
+	}
+	defer rows.Close()
+
+	var logs []*models.DutyStatusLog
+	for rows.Next() {
+		var log models.DutyStatusLog
+		var locationJSON []byte
+		var endedAt *time.Time
+		var durationMinutes *int
+		var remarks *string
+
+		err := rows.Scan(
+			&log.ID, &log.DriverID, &log.Status, &locationJSON, &log.StartedAt,
+			&endedAt, &durationMinutes, &remarks, &log.CreatedAt, &log.UpdatedAt,
+		)
+		if err != nil {
+			fmt.Printf("[DEBUG GetDutyStatusLogs] Error scanning row: %v\n", err)
+			return nil, fmt.Errorf("failed to scan duty status log: %w", err)
+		}
+		log.EndedAt = endedAt
+		log.DurationMinutes = durationMinutes
+		if remarks != nil {
+			log.Remarks = *remarks
+		}
+
+		if len(locationJSON) > 0 {
+			json.Unmarshal(locationJSON, &log.Location)
+		}
+		logs = append(logs, &log)
+		fmt.Printf("[DEBUG GetDutyStatusLogs] Found log: Status=%s StartedAt=%v Duration=%v\n", log.Status, log.StartedAt, driveDurationStr(log.DurationMinutes))
+	}
+
+	fmt.Printf("[DEBUG GetDutyStatusLogs] Total logs found: %d\n", len(logs))
+	return logs, nil
+}
+
+func driveDurationStr(d *int) string {
+	if d == nil {
+		return "nil"
+	}
+	return fmt.Sprintf("%d", *d)
+}
+func (r *DriverRepository) GetDriversWithExpiringDocuments(ctx context.Context, days int) ([]*models.Driver, error) {
+	query := `
+		SELECT id, org_id, full_name, email, license_number, license_expiry
+		FROM drivers
+		WHERE license_expiry <= $1 AND status = 'active' AND deleted_at IS NULL`
+
+	expiryDate := time.Now().AddDate(0, 0, days)
+	rows, err := r.db.Query(ctx, query, expiryDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var drivers []*models.Driver
+	for rows.Next() {
+		var d models.Driver
+		err := rows.Scan(&d.ID, &d.OrgID, &d.FullName, &d.Email, &d.LicenseNumber, &d.LicenseExpiry)
+		if err != nil {
+			return nil, err
+		}
+		drivers = append(drivers, &d)
+	}
+	return drivers, nil
 }

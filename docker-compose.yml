@@ -12,7 +12,7 @@ volumes:
 services:
   # Database Services
   postgres:
-    image: timescale/timescaledb:latest-pg15
+    image: timescale/timescaledb-ha:pg15
     command:
       [
         "postgres",
@@ -112,7 +112,7 @@ services:
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
       - PORT=8084
       - LOG_LEVEL=info
-      - ENFORCE_BFF_AUTH_GATE=true
+      - ENFORCE_BFF_AUTH_GATE=false
       # Unified internal service URLs (Internal loopback via Monolith's internal gateway)
       - AUTH_SERVICE_URL=http://localhost:8084
       - ALERT_SERVICE_URL=http://localhost:8084

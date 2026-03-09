@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/models"
 	"github.com/google/uuid"
@@ -67,19 +68,29 @@ func (m *MockRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*mode
 	return args.Get(0).(*models.BillingMetrics), args.Error(1)
 }
 
+func (m *MockRepository) CreateTaxLines(ctx context.Context, lines []models.InvoiceTaxLine) error {
+	args := m.Called(ctx, lines)
+	return args.Error(0)
+}
+
 func TestCalculateInvoiceTotals(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	mockRepo := new(MockRepository)
-	svc := NewBillingService(mockRepo, logger)
+	// NewBillingService(repo, auditRepo, subServ, meterServ, hwServ, ledgerServ, taxServ, seqServ, notifServ, dunningS, qClient, logger)
+	svc := NewBillingService(mockRepo, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 
 	inv := &models.Invoice{
+		OrgID:       uuid.New(),
+		InvoiceDate: time.Now(),
+		DueDate:     time.Now().Add(24 * time.Hour),
 		Items: []models.InvoiceItem{
 			{Quantity: 2, UnitPrice: 100, TaxPercent: 10}, // Total: 220
 			{Quantity: 1, UnitPrice: 500, TaxPercent: 18}, // Total: 590
 		},
 	}
 
-	mockRepo.On("CreateInvoice", mock.Anything, inv).Return(nil)
+	mockRepo.On("GetSettings", mock.Anything, mock.Anything).Return(&models.BillingSettings{TaxCountry: ""}, nil)
+	mockRepo.On("CreateInvoice", mock.Anything, mock.Anything).Return(nil)
 
 	err := svc.CreateInvoice(context.Background(), inv)
 
@@ -93,7 +104,7 @@ func TestCalculateInvoiceTotals(t *testing.T) {
 func TestGetSettings_Fallback(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	mockRepo := new(MockRepository)
-	svc := NewBillingService(mockRepo, logger)
+	svc := NewBillingService(mockRepo, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, logger)
 
 	orgID := uuid.New()
 	mockRepo.On("GetSettings", mock.Anything, orgID).Return(nil, nil)

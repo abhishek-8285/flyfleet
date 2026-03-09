@@ -40,6 +40,7 @@ func (h *CustomerHandlers) RegisterRoutes(r chi.Router) {
 		r.Use(h.CustomerAuthMiddleware)
 		r.Post("/bookings", h.CreateBooking)
 		r.Get("/invoices", h.GetInvoices)
+		r.Get("/shipments", h.GetShipments)
 	})
 }
 
@@ -88,9 +89,7 @@ func (h *CustomerHandlers) TrackShipment(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": shipment,
-	})
+	json.NewEncoder(w).Encode(shipment)
 }
 
 // CreateBooking: POST /bookings
@@ -134,9 +133,22 @@ func (h *CustomerHandlers) GetInvoices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": invoices,
-	})
+	json.NewEncoder(w).Encode(invoices) // Remove "data" wrapper if frontend expects array directly
+}
+
+// GetShipments: GET /shipments
+func (h *CustomerHandlers) GetShipments(w http.ResponseWriter, r *http.Request) {
+	customerID := r.Context().Value("customer_id").(string)
+
+	shipments, err := h.service.GetCustomerShipments(r.Context(), customerID)
+	if err != nil {
+		h.logger.Error("failed to get shipments", zap.Error(err))
+		http.Error(w, "Failed to retrieve shipments", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(shipments)
 }
 
 // CustomerAuthMiddleware validates the JWT

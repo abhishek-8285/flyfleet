@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
-	// "github.com/flyfleet/fleet-core-service/internal/domains/driver/repository" // Remove concrete dependency if possible, or keep for NewDriverRepository
 )
 
 // Repository defines the interface for driver persistence
@@ -39,16 +38,32 @@ type Repository interface {
 	GetMessages(ctx context.Context, driverID string, limit, offset int) ([]*models.DriverMessage, error)
 	CreateExpense(ctx context.Context, expense *models.DriverExpense) error
 	ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error)
+
+	// Behavior Scoring & Incident Methods
+	LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error
+	CreateBehaviorScoreUpdate(ctx context.Context, update *models.BehaviorScoreUpdate) error
+	GetBehaviorRecords(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DriverBehavior, error)
+	GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error)
+	GetIncidents(ctx context.Context, driverID string, filter models.BehaviorReportRequest) ([]*models.DriverIncident, error)
+
+	// Duty Status Methods
+	EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error
+	GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error)
 }
 
 type DriverService struct {
-	repo   Repository // Use interface
-	logger *zap.Logger
-	nc     *nats.Conn
+	repo        Repository
+	logger      *zap.Logger
+	nc          *nats.Conn
+	dutyStatus  *DutyStatusService
 }
 
 func NewDriverService(repo Repository, logger *zap.Logger, opts ...func(*DriverService)) *DriverService {
-	s := &DriverService{repo: repo, logger: logger}
+	s := &DriverService{
+		repo:   repo, 
+		logger: logger,
+		dutyStatus: NewDutyStatusService(repo, logger),
+	}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -65,6 +80,7 @@ func WithNATS(nc *nats.Conn) func(*DriverService) {
 // publishEvent publishes a NATS event (best-effort, non-blocking)
 func (s *DriverService) publishEvent(subject string, data interface{}) {
 	if s.nc == nil {
+		s.logger.Warn("NATS connection is NIL in DriverService, skipping event publish", zap.String("subject", subject))
 		return
 	}
 	payload, err := json.Marshal(data)
@@ -74,6 +90,8 @@ func (s *DriverService) publishEvent(subject string, data interface{}) {
 	}
 	if err := s.nc.Publish(subject, payload); err != nil {
 		s.logger.Warn("failed to publish NATS event", zap.String("subject", subject), zap.Error(err))
+	} else {
+		s.logger.Info("NATS event published successfully", zap.String("subject", subject))
 	}
 }
 
@@ -101,17 +119,21 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 		OrgID:             orgID,
 		FirstName:         req.FirstName,
 		LastName:          req.LastName,
-		FullName:          fmt.Sprintf("%s %s", req.FirstName, req.LastName),
 		Email:             req.Email,
 		Phone:             req.Phone,
 		LicenseNumber:     req.LicenseNumber,
 		LicenseType:       &req.LicenseType,
+		LicenseIssueDate:  req.LicenseIssueDate,
 		LicenseExpiry:     req.LicenseExpiry,
 		LicenseAuthority:  req.LicenseAuthority,
+		EmployeeCode:      req.EmployeeCode,
+		AadhaarNumber:     req.AadhaarNumber,
+		PanNumber:         req.PanNumber,
 		DateOfBirth:       req.DateOfBirth,
 		Address:           req.Address,
 		EmergencyContact:  req.EmergencyContact,
 		Status:            "active",
+		EmploymentType:    req.EmploymentType,
 		JoiningDate:       time.Now(),
 		ExperienceYears:   req.ExperienceYears,
 		Rating:            0.0,
@@ -130,7 +152,7 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 	}
 
 	s.logger.Info("driver created", zap.String("driver_id", driver.ID))
-	s.publishEvent("drivers.created", driver)
+	s.publishEvent("driver.created", driver)
 	return driver, nil
 }
 
@@ -170,17 +192,6 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 	if req.LastName != nil {
 		updates["last_name"] = *req.LastName
 	}
-	if req.FirstName != nil || req.LastName != nil {
-		firstName := driver.FirstName
-		lastName := driver.LastName
-		if req.FirstName != nil {
-			firstName = *req.FirstName
-		}
-		if req.LastName != nil {
-			lastName = *req.LastName
-		}
-		updates["full_name"] = fmt.Sprintf("%s %s", firstName, lastName)
-	}
 	if req.Email != nil && *req.Email != driver.Email {
 		// Check for unique email when changing
 		existing, err := s.repo.GetByEmail(ctx, *req.Email)
@@ -218,6 +229,21 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 	}
 	if req.ExperienceYears != nil {
 		updates["experience_years"] = *req.ExperienceYears
+	}
+	if req.EmployeeCode != nil {
+		updates["employee_code"] = *req.EmployeeCode
+	}
+	if req.AadhaarNumber != nil {
+		updates["aadhaar_number"] = *req.AadhaarNumber
+	}
+	if req.PanNumber != nil {
+		updates["pan_number"] = *req.PanNumber
+	}
+	if req.LicenseIssueDate != nil {
+		updates["license_issue_date"] = *req.LicenseIssueDate
+	}
+	if req.EmploymentType != nil {
+		updates["employment_type"] = *req.EmploymentType
 	}
 	if req.Metadata != nil {
 		updates["metadata"] = *req.Metadata
@@ -411,6 +437,15 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 		zap.Int("score_change", scoreChangeActual),
 		zap.String("reason", reason))
 	
+	s.publishEvent("driver.behavior_updated", map[string]interface{}{
+		"driver_id":    driverID,
+		"old_score":    driver.BehaviorScore,
+		"new_score":    newScore,
+		"score_change": scoreChangeActual,
+		"reason":       reason,
+		"timestamp":    time.Now(),
+	})
+	
 	return nil
 }
 
@@ -463,4 +498,74 @@ func (s *DriverService) GetByLicenseNumber(ctx context.Context, licenseNumber st
 // GetActiveDriversForVehicle retrieves active drivers for a vehicle
 func (s *DriverService) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
 	return s.repo.GetActiveDriversForVehicle(ctx, vehicleID)
+}
+// Publish satisfies the EventPublisher interface for workers
+func (s *DriverService) Publish(ctx context.Context, topic string, payload interface{}) error {
+	s.publishEvent(topic, payload)
+	return nil
+}
+
+// GetActiveDriversDutyHours satisfies the DutyStatusProvider interface for workers
+func (s *DriverService) GetActiveDriversDutyHours(ctx context.Context) ([]models.DriverDutyHours, error) {
+	// This is a simplified implementation. In a real system, we would query the database
+	// for active duty status logs and calculate hours.
+	return nil, nil // Placeholder
+}
+
+// GetDriverPerformanceSummary retrieves a comprehensive performance summary for a driver
+func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverID, orgID string) (map[string]interface{}, error) {
+	driver, err := s.repo.GetByID(ctx, driverID)
+	if err != nil {
+		return nil, err
+	}
+	if driver == nil {
+		return nil, fmt.Errorf("driver not found")
+	}
+
+	// Enforce organization isolation
+	if driver.OrgID != orgID {
+		s.logger.Warn("unauthorized access attempt to driver performance summary",
+			zap.String("requested_driver", driverID),
+			zap.String("authorized_org", driver.OrgID),
+			zap.String("requested_org", orgID))
+		return nil, fmt.Errorf("unauthorized access to driver data")
+	}
+
+	// Get behavior summary
+	behavior, err := s.repo.GetBehaviorSummary(ctx, driverID)
+	if err != nil {
+		s.logger.Warn("failed to get behavior summary", zap.Error(err))
+	}
+
+	// Get latest rating
+	rating, err := s.repo.GetDriverAnalytics(ctx, driverID)
+	if err != nil {
+		s.logger.Warn("failed to get driver analytics", zap.Error(err))
+	}
+
+	summary := map[string]interface{}{
+		"driver_id":      driverID,
+		"behavior_score": driver.BehaviorScore,
+		"total_distance": driver.TotalDistanceKm,
+		"total_hours":    driver.TotalHoursDriven,
+		"status":         driver.Status,
+	}
+
+	if behavior != nil {
+		summary["safety_score"] = behavior.SafetyScore
+		summary["efficiency_score"] = behavior.EfficiencyScore
+		summary["risk_level"] = behavior.RiskLevel
+		summary["incidents"] = map[string]int{
+			"speeding":           behavior.SpeedingIncidents,
+			"harsh_braking":      behavior.HarshBrakings,
+			"harsh_acceleration": behavior.HarshAccelerations,
+		}
+	}
+
+	if rating != nil {
+		summary["average_rating"] = rating.AverageRating
+		summary["total_trips"] = rating.TotalTrips
+	}
+
+	return summary, nil
 }

@@ -13,7 +13,7 @@ import (
 // OfferTrip creates a trip offer for a driver
 func (s *TripService) OfferTrip(ctx context.Context, tripID, driverID string) (*models.TripOffer, error) {
 	// Check if trip exists and is assignable
-	trip, err := s.Get(ctx, tripID)
+	trip, err := s.GetTripByID(ctx, tripID)
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: diagnostics-workers
+  namespace: flyfleet
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: diagnostics-workers
+  template:
+    metadata:
+      labels:
+        app: diagnostics-workers
+    spec:
+      containers:
+        - name: worker
+          image: flyfleet/fleet-core-service:latest
+          command: ["./worker"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flyfleet-secrets
+                  key: database-url
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

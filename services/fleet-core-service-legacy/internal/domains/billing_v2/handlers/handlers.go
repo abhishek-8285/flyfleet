@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/cache"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/service"
+	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -15,16 +18,34 @@ import (
 )
 
 type BillingHandler struct {
-	service   *service.BillingService
-	logger    *zap.Logger
-	validator *validator.Validate
+	service           *service.BillingService
+	invoiceServ       *service.InvoiceService
+	subService        *service.SubscriptionService
+	meterService      *service.MeteringService
+	creditNoteService *service.CreditNoteService
+	hwService         *service.HardwareService
+	ledgerService     *service.LedgerService
+	advSubService     *service.AdvancedSubService
+	analyticsHandler  *AnalyticsHandler
+	accountingHandler *AccountingHandler
+	logger            *zap.Logger
+	validator         *validator.Validate
 }
 
-func NewBillingHandler(s *service.BillingService, logger *zap.Logger) *BillingHandler {
+func NewBillingHandler(s *service.BillingService, invServ *service.InvoiceService, subServ *service.SubscriptionService, meterServ *service.MeteringService, cnServ *service.CreditNoteService, hwServ *service.HardwareService, ledgerServ *service.LedgerService, advSubServ *service.AdvancedSubService, analyticsH *AnalyticsHandler, accountingH *AccountingHandler, logger *zap.Logger) *BillingHandler {
 	return &BillingHandler{
-		service:   s,
-		logger:    logger,
-		validator: validator.New(),
+		service:           s,
+		invoiceServ:       invServ,
+		subService:        subServ,
+		meterService:      meterServ,
+		creditNoteService: cnServ,
+		hwService:         hwServ,
+		ledgerService:     ledgerServ,
+		advSubService:     advSubServ,
+		analyticsHandler:  analyticsH,
+		accountingHandler: accountingH,
+		logger:            logger,
+		validator:         validator.New(),
 	}
 }
 
@@ -36,11 +57,55 @@ func (h *BillingHandler) RegisterRoutes(r chi.Router) {
 		r.Put("/invoices/{id}", h.UpdateInvoice)
 		r.Delete("/invoices/{id}", h.DeleteInvoice)
 		r.Post("/invoices/{id}/payments", h.RecordPayment)
+		r.Get("/invoices/{id}/pdf", h.DownloadInvoicePDF)
+		r.Post("/invoices/{id}/email", h.EmailInvoice)
 
 		r.Get("/settings", h.GetSettings)
 		r.Put("/settings", h.UpdateSettings)
-
 		r.Get("/metrics", h.GetMetrics)
+		r.Get("/health", h.HealthCheck)
+		r.Get("/stats", h.GetStats)
+
+		// Subscription Routes
+		r.Get("/plans", h.ListPlans)
+		r.Get("/subscription", h.GetSubscription)
+		r.Post("/subscription/subscribe", h.Subscribe)
+		r.Post("/subscription/change-plan", h.ChangePlan)
+		r.Post("/subscription/prorate-upgrade", h.ProrateUpgrade)
+		r.Post("/subscription/redeem-coupon", h.RedeemCoupon)
+		r.Post("/subscription/cancel", h.CancelSubscription)
+
+		// Metering & Draft Invoicing
+		r.Post("/usage/record", h.RecordUsage)
+		r.Post("/invoices/generate-draft", h.GenerateDraftInvoice)
+
+		// External Payment Webhooks
+		r.Post("/webhooks/stripe", h.StripeWebhook)
+		r.Post("/webhooks/razorpay", h.RazorpayWebhook)
+
+		// Credit Notes
+		r.Post("/credit-notes", h.IssueCreditNote)
+		r.Get("/credit-notes", h.ListCreditNotes)
+
+		// Hardware Billing
+		r.Get("/hardware/products", h.ListHardwareProducts)
+		r.Post("/hardware/assign", h.AssignHardware)
+
+		// Ledger & Wallet
+		r.Get("/wallet/balance", h.GetBalance)
+		r.Post("/wallet/credit", h.ApplyCredit)
+
+		// Financial Analytics
+		r.Route("/analytics", func(r chi.Router) {
+			r.Get("/system", h.analyticsHandler.GetSystemMetrics)
+		})
+
+		// Accounting Integration
+		r.Route("/accounting", func(r chi.Router) {
+			r.Post("/export/ledger", h.accountingHandler.ExportLedger)
+			r.Post("/export/invoices", h.accountingHandler.ExportInvoices)
+			r.Get("/history", h.accountingHandler.GetExportHistory)
+		})
 	})
 }
 
@@ -77,6 +142,18 @@ func (h *BillingHandler) getUserID(r *http.Request) uuid.UUID {
 		}
 	}
 	return uuid.Nil
+}
+
+func (h *BillingHandler) readInt(r *http.Request, name string, defaultValue int) int {
+	val := r.URL.Query().Get(name)
+	if val == "" {
+		return defaultValue
+	}
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		return defaultValue
+	}
+	return i
 }
 
 func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +200,13 @@ func (h *BillingHandler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
+
+	// Validate invoice
+	if err := h.validator.Struct(&inv); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	inv.OrgID = orgID
 
 	if err := h.service.CreateInvoice(r.Context(), &inv); err != nil {
@@ -168,6 +252,13 @@ func (h *BillingHandler) UpdateInvoice(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, "Invalid Request Body", http.StatusBadRequest)
 		return
 	}
+
+	// Validate invoice
+	if err := h.validator.Struct(&inv); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	inv.ID = id
 
 	if err := h.service.UpdateInvoice(r.Context(), &inv); err != nil {
@@ -279,4 +370,142 @@ func (h *BillingHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.json(w, metrics, http.StatusOK)
+}
+
+// DownloadInvoicePDF generates and downloads invoice PDF
+func (h *BillingHandler) DownloadInvoicePDF(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.errorJSON(w, "Invalid Invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get invoice with items
+	invoice, err := h.service.GetInvoice(r.Context(), id)
+	if err != nil {
+		h.logger.Error("Failed to get invoice for PDF", zap.Error(err))
+		h.errorJSON(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if invoice == nil {
+		h.errorJSON(w, "Invoice Not Found", http.StatusNotFound)
+		return
+	}
+
+	// TODO: Initialize PDF generator and generate PDF
+	// For now, return not implemented
+	h.errorJSON(w, "PDF generation requires Chrome/Chromium - see documentation", http.StatusNotImplemented)
+
+	// Example usage:
+	// generator := pdf.NewPDFGenerator("", 30*time.Second)
+	// invoiceService := pdf.NewInvoiceService(generator)
+	// pdfData, err := invoiceService.GeneratePDF(r.Context(), invoice, invoice.Items)
+	// if err != nil {
+	//     h.errorJSON(w, "Failed to generate PDF", http.StatusInternalServerError)
+	//     return
+	// }
+	// w.Header().Set("Content-Type", "application/pdf")
+	// w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s.pdf", invoice.InvoiceNumber))
+	// w.Write(pdfData)
+}
+
+// EmailInvoice sends invoice via email
+func (h *BillingHandler) EmailInvoice(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.errorJSON(w, "Invalid Invoice ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		Email        string `json:"email" validate:"required,email"`
+		CustomerName string `json:"customer_name" validate:"required"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.validator.Struct(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get invoice to verify it exists
+	invoice, err := h.service.GetInvoice(r.Context(), id)
+	if err != nil {
+		h.logger.Error("Failed to get invoice for email", zap.Error(err))
+		h.errorJSON(w, "Invoice not found", http.StatusNotFound)
+		return
+	}
+
+	if invoice == nil {
+		h.errorJSON(w, "Invoice not found", http.StatusNotFound)
+		return
+	}
+
+	// TODO: Use invoice service to send email
+	// For now, return not implemented
+	h.errorJSON(w, "Email sending requires SendGrid API key - see documentation", http.StatusNotImplemented)
+
+	// Example usage:
+	// if err := h.service.SendInvoiceEmail(r.Context(), id, req.Email, req.CustomerName); err != nil {
+	//     h.logger.Error("Failed to send invoice email", zap.Error(err))
+	//     h.errorJSON(w, "Failed to send email", http.StatusInternalServerError)
+	//     return
+	// }
+	// h.json(w, map[string]string{"status": "sent"}, http.StatusOK)
+}
+
+// HealthCheck returns health status of billing components
+func (h *BillingHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	type HealthStatus struct {
+		Status string            `json:"status"`
+		Components map[string]string `json:"components"`
+	}
+
+	status := HealthStatus{
+		Status: "healthy",
+		Components: make(map[string]string),
+	}
+
+	// Check storage
+	if stats, err := h.invoiceServ.GetStorageStats(r.Context()); err != nil {
+		status.Components["storage"] = "unhealthy"
+		status.Status = "unhealthy"
+	} else {
+		status.Components["storage"] = fmt.Sprintf("healthy (%.2f MB, %d files)", stats.TotalSizeMB, stats.FileCount)
+	}
+
+	// Check cache
+	cacheStats := h.invoiceServ.GetCacheStats()
+	status.Components["cache"] = fmt.Sprintf("healthy (%d entries, %.2f MB)", cacheStats.EntryCount, cacheStats.TotalSizeMB)
+
+	// Check email
+	emailConfig := h.invoiceServ.GetEmailConfig()
+	if emailConfig["api_key_configured"] != "" {
+		status.Components["email"] = "configured"
+	} else {
+		status.Components["email"] = "not configured (optional)"
+	}
+
+	h.json(w, status, http.StatusOK)
+}
+
+// GetStats returns billing statistics
+func (h *BillingHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	type Stats struct {
+		Storage *storage.StorageStats `json:"storage"`
+		Cache   *cache.CacheStats     `json:"cache"`
+	}
+
+	storageStats, _ := h.invoiceServ.GetStorageStats(r.Context())
+	cacheStats := h.invoiceServ.GetCacheStats()
+
+	h.json(w, Stats{
+		Storage: storageStats,
+		Cache:   cacheStats,
+	}, http.StatusOK)
 }

@@ -1,0 +1,8 @@
+HTTP/1.1 500 Internal Server Error
+Content-Type: application/json
+X-Request-Id: unknown/vzwI7SLTGB-000001
+X-Trace-Id: unknown/vzwI7SLTGB-000001
+Date: Sat, 07 Mar 2026 13:58:22 GMT
+Content-Length: 71
+
+{"error":"safety violation: mandatory rest required after 8h driving"}

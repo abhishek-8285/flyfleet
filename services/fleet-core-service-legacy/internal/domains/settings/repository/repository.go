@@ -50,6 +50,7 @@ type Repository interface {
 	// Audit
 	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
 	ListAuditLogs(ctx context.Context, query models.AuditLogQuery) ([]models.AuditLog, error)
+	CleanupOldAuditLogs(ctx context.Context, retentionPeriod string) (int64, error)
 
 	// Transactions
 	WithTx(ctx context.Context, fn func(Repository) error) error
@@ -470,4 +471,20 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, query models.Aud
 	}
 
 	return logs, nil
+}
+
+// CleanupOldAuditLogs removes audit logs older than the specified retention period
+// retentionPeriod should be in PostgreSQL interval format (e.g., "1 year", "180 days", "30 days")
+func (r *PostgresRepository) CleanupOldAuditLogs(ctx context.Context, retentionPeriod string) (int64, error) {
+	query := `DELETE FROM settings_audit_logs WHERE created_at < NOW() - INTERVAL '` + retentionPeriod + `'`
+	result, err := r.exec(ctx, query)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && (pgErr.Code == "42P01" || pgErr.Code == "42703") {
+			r.logger.Warn("Audit schema unavailable; skipping cleanup", zap.String("code", pgErr.Code))
+			return 0, nil
+		}
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

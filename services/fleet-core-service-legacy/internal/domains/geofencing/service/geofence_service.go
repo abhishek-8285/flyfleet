@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/models"
@@ -15,45 +17,53 @@ import (
 )
 
 type GeofenceService struct {
-	repo   *repository.GeofenceRepository
-	nats   *nats.Conn
-	logger *zap.Logger
+	repo      *repository.GeofenceRepository
+	validator *GeofenceValidator
+	nats      *nats.Conn
+	logger    *zap.Logger
 }
 
 func NewGeofenceService(repo *repository.GeofenceRepository, nats *nats.Conn, logger *zap.Logger) *GeofenceService {
 	return &GeofenceService{
-		repo:   repo,
-		nats:   nats,
-		logger: logger,
+		repo:      repo,
+		validator: NewGeofenceValidator(repo.DB()),
+		nats:      nats,
+		logger:    logger,
 	}
 }
 
 // Create creates a new geofence
 func (s *GeofenceService) Create(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req *models.CreateGeofenceRequest) (*models.Geofence, error) {
+	ctx, span := otel.Tracer("geofencing.service").Start(ctx, "create_geofence")
+	span.SetAttributes(attribute.String("org_id", orgID.String()))
+	defer span.End()
 	// Validate the request
 	if err := s.validateCreateRequest(req); err != nil {
+		return nil, err
+	}
+	if err := s.validator.ValidateGeofenceGeometry(ctx, req); err != nil {
 		return nil, err
 	}
 
 	// Prepare the geofence model
 	geofence := &models.Geofence{
-		ID:           uuid.New(),
-		OrgID:        orgID,
-		Name:         req.Name,
-		Type:         req.Type,
-		Center:       req.Center,
-		RadiusMeters: req.RadiusMeters,
-		Coordinates:  req.Coordinates,
+		ID:            uuid.New(),
+		OrgID:         orgID,
+		Name:          req.Name,
+		Type:          req.Type,
+		Center:        req.Center,
+		RadiusMeters:  req.RadiusMeters,
+		Coordinates:   req.Coordinates,
 		RoutePolyline: req.RoutePolyline,
-		BufferMeters: req.BufferMeters,
-		EntryAlert:   req.EntryAlert,
-		ExitAlert:    req.ExitAlert,
-		SpeedLimit:   req.SpeedLimit,
-		Vehicles:     req.Vehicles,
-		Active:       true,
-		CreatedBy:    userID,
-		Metadata:     req.Metadata,
-		ActiveHours:  req.ActiveHours,
+		BufferMeters:  req.BufferMeters,
+		EntryAlert:    req.EntryAlert,
+		ExitAlert:     req.ExitAlert,
+		SpeedLimit:    req.SpeedLimit,
+		Vehicles:      req.Vehicles,
+		Active:        true,
+		CreatedBy:     userID,
+		Metadata:      req.Metadata,
+		ActiveHours:   req.ActiveHours,
 	}
 
 	// Save to database
@@ -66,25 +76,27 @@ func (s *GeofenceService) Create(ctx context.Context, orgID uuid.UUID, userID uu
 
 	// Publish event to NATS
 	event := map[string]interface{}{
-		"event_type":   "geofence.created",
-		"geofence_id":  geofence.ID.String(),
-		"org_id":       orgID.String(),
-		"name":         req.Name,
-		"type":         req.Type,
-		"created_by":   userID.String(),
-		"timestamp":    geofence.CreatedAt.Unix(),
+		"event_type":  "geofence.created",
+		"geofence_id": geofence.ID.String(),
+		"org_id":      orgID.String(),
+		"name":        req.Name,
+		"type":        req.Type,
+		"created_by":  userID.String(),
+		"timestamp":   geofence.CreatedAt.Unix(),
 	}
 
-	if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
-		s.logger.Error("Failed to publish geofence created event", zap.Error(err))
+	if s.nats != nil {
+		if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
+			s.logger.Error("Failed to publish geofence created event", zap.Error(err))
+		}
 	}
 
 	return geofence, nil
 }
 
 // GetByID retrieves a geofence by ID
-func (s *GeofenceService) GetByID(ctx context.Context, id uuid.UUID) (*models.Geofence, error) {
-	geofence, err := s.repo.GetByID(ctx, id)
+func (s *GeofenceService) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Geofence, error) {
+	geofence, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		s.logger.Error("Failed to get geofence", zap.String("id", id.String()), zap.Error(err))
 		return nil, fmt.Errorf("failed to get geofence: %w", err)
@@ -113,26 +125,46 @@ func (s *GeofenceService) List(ctx context.Context, orgID uuid.UUID, req *models
 }
 
 // Update updates an existing geofence
-func (s *GeofenceService) Update(ctx context.Context, id uuid.UUID, req *models.UpdateGeofenceRequest) (*models.Geofence, error) {
+func (s *GeofenceService) Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req *models.UpdateGeofenceRequest) (*models.Geofence, error) {
+	ctx, span := otel.Tracer("geofencing.service").Start(ctx, "update_geofence")
+	span.SetAttributes(attribute.String("org_id", orgID.String()), attribute.String("geofence_id", id.String()))
+	defer span.End()
 	// Validate the update request
 	if err := s.validateUpdateRequest(req); err != nil {
 		return nil, err
 	}
+	if req.Type != nil || len(req.Coordinates) > 0 || req.Center != nil {
+		probeType := "polygon"
+		if req.Center != nil {
+			probeType = "circle"
+		}
+		if req.Type != nil {
+			probeType = *req.Type
+		}
+		geomReq := &models.CreateGeofenceRequest{
+			Type:        probeType,
+			Center:      req.Center,
+			Coordinates: req.Coordinates,
+		}
+		if err := s.validator.ValidateGeofenceGeometry(ctx, geomReq); err != nil {
+			return nil, err
+		}
+	}
 
 	// Check if geofence exists
-	_, err := s.repo.GetByID(ctx, id)
+	_, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("geofence not found: %w", err)
 	}
 
 	// Update the geofence
-	if err := s.repo.Update(ctx, id, req); err != nil {
+	if err := s.repo.Update(ctx, id, orgID, req); err != nil {
 		s.logger.Error("Failed to update geofence", zap.String("id", id.String()), zap.Error(err))
 		return nil, fmt.Errorf("failed to update geofence: %w", err)
 	}
 
 	// Fetch updated geofence
-	updated, err := s.repo.GetByID(ctx, id)
+	updated, err := s.repo.GetByID(ctx, id, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated geofence: %w", err)
 	}
@@ -147,16 +179,18 @@ func (s *GeofenceService) Update(ctx context.Context, id uuid.UUID, req *models.
 		"timestamp":   updated.UpdatedAt.Unix(),
 	}
 
-	if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
-		s.logger.Error("Failed to publish geofence updated event", zap.Error(err))
+	if s.nats != nil {
+		if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
+			s.logger.Error("Failed to publish geofence updated event", zap.Error(err))
+		}
 	}
 
 	return updated, nil
 }
 
 // Delete marks a geofence as inactive
-func (s *GeofenceService) Delete(ctx context.Context, id uuid.UUID) error {
-	if err := s.repo.Delete(ctx, id); err != nil {
+func (s *GeofenceService) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+	if err := s.repo.Delete(ctx, id, orgID); err != nil {
 		s.logger.Error("Failed to delete geofence", zap.String("id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to delete geofence: %w", err)
 	}
@@ -170,8 +204,10 @@ func (s *GeofenceService) Delete(ctx context.Context, id uuid.UUID) error {
 		"timestamp":   time.Now().Unix(),
 	}
 
-	if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
-		s.logger.Error("Failed to publish geofence deleted event", zap.Error(err))
+	if s.nats != nil {
+		if err := s.nats.Publish("fleet.geofence.events", []byte(fmt.Sprintf("%v", event))); err != nil {
+			s.logger.Error("Failed to publish geofence deleted event", zap.Error(err))
+		}
 	}
 
 	return nil

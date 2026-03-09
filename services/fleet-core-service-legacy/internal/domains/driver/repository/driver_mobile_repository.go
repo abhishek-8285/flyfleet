@@ -7,6 +7,7 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 // CreateMessage creates a new driver message
@@ -152,6 +153,9 @@ func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID str
 	)
 
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,12 +18,12 @@ import (
 )
 
 type VehicleHandlers struct {
-	service  *service.VehicleService
+	service  service.VehicleServiceInterface
 	logger   *zap.Logger
 	validate *validator.Validate
 }
 
-func NewVehicleHandlers(service *service.VehicleService, logger *zap.Logger) *VehicleHandlers {
+func NewVehicleHandlers(service service.VehicleServiceInterface, logger *zap.Logger) *VehicleHandlers {
 	return &VehicleHandlers{
 		service:  service,
 		logger:   logger,
@@ -34,6 +35,7 @@ func (h *VehicleHandlers) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.ListVehicles)
 	r.Post("/", h.CreateVehicle)
 	r.Get("/stats", h.GetStats)
+	r.Get("/search", h.SearchVehicles)
 	r.Route("/{id}", func(r chi.Router) {
 		r.Get("/", h.GetVehicle)
 		r.Put("/", h.UpdateVehicle)
@@ -215,8 +217,80 @@ func (h *VehicleHandlers) GetStats(w http.ResponseWriter, r *http.Request) {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get vehicle stats", err)
 		return
 	}
-
 	h.writeJSONResponse(w, http.StatusOK, stats)
+}
+
+// SearchVehicles godoc — GET /vehicles/search?q=&status=&vehicle_type=&fuel_type=&page=&limit=
+func (h *VehicleHandlers) SearchVehicles(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	params := models.VehicleSearchParams{
+		Query:       q.Get("q"),
+		Status:      q.Get("status"),
+		VehicleType: q.Get("vehicle_type"),
+		FuelType:    q.Get("fuel_type"),
+	}
+
+	if tenantIDStr := q.Get("tenant_id"); tenantIDStr != "" {
+		if id, err := uuid.Parse(tenantIDStr); err == nil {
+			params.TenantID = &id
+		}
+	} else {
+		orgID := h.getOrgID(r)
+		if orgID != uuid.Nil {
+			params.TenantID = &orgID
+		}
+	}
+
+	if branchIDStr := q.Get("branch_id"); branchIDStr != "" {
+		if id, err := uuid.Parse(branchIDStr); err == nil {
+			params.BranchID = &id
+		}
+	}
+
+	page, _ := strconv.Atoi(q.Get("page"))
+	limit, _ := strconv.Atoi(q.Get("limit"))
+	if page <= 0 {
+		page = 1
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	params.Page = page
+	params.Limit = limit
+
+	// Use SearchVehicles if the service impl supports it; fall back to list
+	type searchable interface {
+		SearchVehicles(ctx context.Context, params models.VehicleSearchParams) ([]models.Vehicle, int64, error)
+	}
+	if svc, ok := h.service.(searchable); ok {
+		vehicles, total, err := svc.SearchVehicles(r.Context(), params)
+		if err != nil {
+			h.logger.Error("failed to search vehicles", zap.Error(err))
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to search vehicles", err)
+			return
+		}
+		h.writeJSONResponse(w, http.StatusOK, models.VehicleListResponse{
+			Vehicles: vehicles,
+			Total:    total,
+			Page:     page,
+			Limit:    limit,
+		})
+		return
+	}
+	// Fallback: regular list
+	orgID := h.getOrgID(r)
+	vehicles, total, err := h.service.ListVehicles(r.Context(), orgID, page, limit)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to search vehicles", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, models.VehicleListResponse{
+		Vehicles: vehicles,
+		Total:    total,
+		Page:     page,
+		Limit:    limit,
+	})
 }
 
 func (h *VehicleHandlers) decodeAndValidate(body io.ReadCloser, dest interface{}) error {

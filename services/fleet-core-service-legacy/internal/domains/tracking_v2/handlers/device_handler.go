@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -8,17 +9,31 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/service"
 )
+
+// DeviceServiceInterface defines the interface for device service
+type DeviceServiceInterface interface {
+	RegisterDevice(ctx context.Context, req *models.DeviceRegisterRequest) (*models.DeviceRegisterResponse, error)
+	UpdateHeartbeat(ctx context.Context, req *models.HeartbeatRequest) (*models.HeartbeatResponse, error)
+	GetConfig(ctx context.Context, deviceID string) (*models.ConfigResponse, error)
+	StoreTelemetryBatch(ctx context.Context, req *models.TelemetryBatchRequest) (*models.TelemetryResponse, error)
+	GetMediaUploadURL(ctx context.Context, req *models.UploadUrlRequest) (*models.UploadUrlResponse, error)
+	ConfirmMediaUpload(ctx context.Context, req *models.ConfirmUploadRequest) (*models.ConfirmUploadResponse, error)
+	AttestEvidence(ctx context.Context, req *models.AttestationRequest) (*models.AttestationResponse, error)
+	GetPendingCommands(ctx context.Context, deviceID, lastCommandID string) ([]models.Command, error)
+	DriverLogin(ctx context.Context, req *models.DriverLoginRequest) (*models.DriverLoginResponse, error)
+	DriverLogout(ctx context.Context, req *models.DriverLogoutRequest) (*models.DriverLogoutResponse, error)
+	UpdateDriverHOS(ctx context.Context, req *models.HOSUpdateRequest) (*models.HOSUpdateResponse, error)
+}
 
 // DeviceHandler handles device-related HTTP requests
 type DeviceHandler struct {
-	deviceService *service.DeviceService
+	deviceService DeviceServiceInterface
 	logger        *zap.Logger
 }
 
 // NewDeviceHandler creates a new device handler
-func NewDeviceHandler(deviceService *service.DeviceService, logger *zap.Logger) *DeviceHandler {
+func NewDeviceHandler(deviceService DeviceServiceInterface, logger *zap.Logger) *DeviceHandler {
 	return &DeviceHandler{
 		deviceService: deviceService,
 		logger:        logger,

@@ -18,14 +18,23 @@ import (
 
 // Mock Repo duplication for handlers test
 type MockRepo struct {
-	LastAuditLog *models.AuditLog
-	AuditLogs    []models.AuditLog
+	LastAuditLog     *models.AuditLog
+	AuditLogs        []models.AuditLog
+	PlatformSettings *models.PlatformSettings
 }
 
 func (m *MockRepo) GetPlatformSettings(ctx context.Context) (*models.PlatformSettings, error) {
-	return &models.PlatformSettings{SystemName: "Test"}, nil
+	return &models.PlatformSettings{
+		ID:              models.PlatformSettingsSingletonID,
+		SystemName:      "Test",
+		SupportEmail:    "test@fleet-system.com",
+		DefaultTimezone: "UTC",
+		DefaultCurrency: "USD",
+		DefaultLanguage: "en-US",
+	}, nil
 }
 func (m *MockRepo) UpdatePlatformSettings(ctx context.Context, s *models.PlatformSettings) error {
+	m.PlatformSettings = s
 	return nil
 }
 func (m *MockRepo) ListFeatureFlags(ctx context.Context) ([]models.FeatureFlag, error) {
@@ -55,7 +64,14 @@ func (m *MockRepo) ListNotificationChannels(ctx context.Context) ([]models.Notif
 func (m *MockRepo) UpdateNotificationChannel(ctx context.Context, c *models.NotificationChannel) error {
 	return nil
 }
-func (m *MockRepo) GetSystemLimits(ctx context.Context) (*models.SystemLimit, error) { return nil, nil }
+func (m *MockRepo) GetSystemLimits(ctx context.Context) (*models.SystemLimit, error) {
+	return &models.SystemLimit{
+		ID:             uuid.New(),
+		APIRateLimit:   10000,
+		BurstLimit:     500,
+		AuditRetention: "1y",
+	}, nil
+}
 func (m *MockRepo) UpdateSystemLimits(ctx context.Context, l *models.SystemLimit) error {
 	return nil
 }
@@ -100,6 +116,10 @@ func (m *MockRepo) WithTx(ctx context.Context, fn func(repository.Repository) er
 	return fn(m)
 }
 
+func (m *MockRepo) CleanupOldAuditLogs(ctx context.Context, retentionPeriod string) (int64, error) {
+	return 0, nil
+}
+
 func TestUpdatePlatformSettings_Integration(t *testing.T) {
 	// Setup
 	repo := &MockRepo{}
@@ -116,11 +136,13 @@ func TestUpdatePlatformSettings_Integration(t *testing.T) {
 	userID := uuid.New()
 	userIP := "192.168.1.100"
 
-	// Request
-	payload := map[string]string{
+	// Request - use proper JSON field names matching the struct
+	payload := map[string]interface{}{
 		"system_name":      "New System Name",
 		"support_email":    "support@test.com",
 		"default_timezone": "UTC",
+		"default_currency": "USD",
+		"default_language": "en-US",
 	}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest("PUT", "/settings/platform", bytes.NewBuffer(body))
@@ -132,6 +154,11 @@ func TestUpdatePlatformSettings_Integration(t *testing.T) {
 
 	// Execute
 	handler.ServeHTTP(rr, req)
+
+	// Debug: print response body if error
+	if rr.Code != http.StatusOK {
+		t.Logf("Response body: %s", rr.Body.String())
+	}
 
 	// Assert Response
 	if rr.Code != http.StatusOK {

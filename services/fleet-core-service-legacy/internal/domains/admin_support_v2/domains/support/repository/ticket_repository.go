@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -26,6 +27,7 @@ type TicketRepository interface {
 	GetTicketComments(ctx context.Context, ticketID uuid.UUID) ([]*models.IncidentComment, error)
 	GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error)
 	UpdateOrgMetrics(ctx context.Context, metrics *models.OrgSupportMetrics) error
+	GetNextTicketNumber(ctx context.Context) (int, error)
 }
 
 type ticketRepository struct {
@@ -88,9 +90,9 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*models.SupportTicket, error) {
 	query := `
 		SELECT id, ticket_id, org_id, title, description, status, priority, category,
-		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
+		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at,
 		       sla_deadline, tags, metadata
-		FROM support_tickets 
+		FROM support_tickets
 		WHERE id = $1`
 
 	var ticket models.SupportTicket
@@ -102,7 +104,10 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("ticket not found: %w", err)
+		}
+		return nil, fmt.Errorf("failed to get ticket: %w", err)
 	}
 
 	return &ticket, nil
@@ -111,9 +116,9 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID string) (*models.SupportTicket, error) {
 	query := `
 		SELECT id, ticket_id, org_id, title, description, status, priority, category,
-		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
+		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at,
 		       sla_deadline, tags, metadata
-		FROM support_tickets 
+		FROM support_tickets
 		WHERE ticket_id = $1`
 
 	var ticket models.SupportTicket
@@ -125,7 +130,10 @@ func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID str
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("ticket not found: %w", err)
+		}
+		return nil, fmt.Errorf("failed to get ticket: %w", err)
 	}
 
 	return &ticket, nil
@@ -142,7 +150,17 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 	if filter.Status != "" {
 		countQuery += fmt.Sprintf(" AND status = $%d", countArgIndex)
 		countArgs = append(countArgs, filter.Status)
-		// countArgIndex++ // Not needed since we only have one filter condition
+		countArgIndex++
+	}
+
+	if filter.Query != "" {
+		countQuery += fmt.Sprintf(` AND (
+			setweight(to_tsvector('english', COALESCE(title, '')), 'A') ||
+			setweight(to_tsvector('english', COALESCE(description, '')), 'B') ||
+			setweight(to_tsvector('english', array_to_string(tags, ' ')), 'C')
+		) @@ websearch_to_tsquery('english', $%d)`, countArgIndex)
+		countArgs = append(countArgs, filter.Query)
+		countArgIndex++
 	}
 
 	var totalCount int
@@ -165,6 +183,16 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 	if filter.Status != "" {
 		query += fmt.Sprintf(" AND status = $%d", argIndex)
 		args = append(args, filter.Status)
+		argIndex++
+	}
+
+	if filter.Query != "" {
+		query += fmt.Sprintf(` AND (
+			setweight(to_tsvector('english', COALESCE(title, '')), 'A') ||
+			setweight(to_tsvector('english', COALESCE(description, '')), 'B') ||
+			setweight(to_tsvector('english', array_to_string(tags, ' ')), 'C')
+		) @@ websearch_to_tsquery('english', $%d)`, argIndex)
+		args = append(args, filter.Query)
 		argIndex++
 	}
 
@@ -231,7 +259,10 @@ func (r *ticketRepository) UpdateTicket(ctx context.Context, ticket *models.Supp
 func (r *ticketRepository) DeleteTicket(ctx context.Context, id uuid.UUID) error {
 	query := "DELETE FROM support_tickets WHERE id = $1"
 	_, err := r.db.Exec(ctx, query, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to delete ticket: %w", err)
+	}
+	return nil
 }
 
 func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string) error {
@@ -278,7 +309,10 @@ func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID,
 func (r *ticketRepository) AssignTicket(ctx context.Context, id uuid.UUID, assignedTo uuid.UUID) error {
 	query := "UPDATE support_tickets SET assigned_to = $1, updated_at = NOW() WHERE id = $2"
 	_, err := r.db.Exec(ctx, query, assignedTo, id)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to assign ticket: %w", err)
+	}
+	return nil
 }
 
 func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
@@ -357,7 +391,7 @@ func (r *ticketRepository) AddComment(ctx context.Context, comment *models.Incid
 
 	query := `
 		INSERT INTO incident_comments (
-			id, ticket_id, author_id, author_name, comment_type, content, 
+			id, ticket_id, author_id, author_name, comment_type, content,
 			is_private, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
@@ -370,21 +404,24 @@ func (r *ticketRepository) AddComment(ctx context.Context, comment *models.Incid
 		comment.CommentType, comment.Content, comment.IsPrivate,
 		comment.CreatedAt, comment.UpdatedAt,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to add comment: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.UUID) ([]*models.IncidentComment, error) {
 	query := `
-		SELECT id, ticket_id, author_id, author_name, comment_type, content, 
+		SELECT id, ticket_id, author_id, author_name, comment_type, content,
 		       is_private, created_at, updated_at
-		FROM incident_comments 
-		WHERE ticket_id = $1 
+		FROM incident_comments
+		WHERE ticket_id = $1
 		ORDER BY created_at ASC`
 
 	rows, err := r.db.Query(ctx, query, ticketID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get comments: %w", err)
 	}
 	defer rows.Close()
 
@@ -397,13 +434,13 @@ func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.
 			&comment.CreatedAt, &comment.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan comment: %w", err)
 		}
 		comments = append(comments, &comment)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("comment iteration error: %w", err)
 	}
 
 	return comments, nil
@@ -411,9 +448,9 @@ func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.
 
 func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error) {
 	query := `
-		SELECT org_id, open_tickets, resolved_tickets, avg_resolution_time, 
+		SELECT org_id, open_tickets, resolved_tickets, avg_resolution_time,
 		       sla_breaches, critical_issues, last_calculated, updated_at
-		FROM org_support_metrics 
+		FROM org_support_metrics
 		WHERE org_id = $1`
 
 	var metrics models.OrgSupportMetrics
@@ -424,7 +461,10 @@ func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (
 	)
 
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("metrics not found for org: %w", err)
+		}
+		return nil, fmt.Errorf("failed to get org metrics: %w", err)
 	}
 
 	return &metrics, nil
@@ -436,8 +476,8 @@ func (r *ticketRepository) UpdateOrgMetrics(ctx context.Context, metrics *models
 			org_id, open_tickets, resolved_tickets, avg_resolution_time,
 			sla_breaches, critical_issues, last_calculated, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (org_id) 
-		DO UPDATE SET 
+		ON CONFLICT (org_id)
+		DO UPDATE SET
 			open_tickets = $2, resolved_tickets = $3, avg_resolution_time = $4,
 			sla_breaches = $5, critical_issues = $6, last_calculated = $7, updated_at = $8`
 
@@ -450,8 +490,11 @@ func (r *ticketRepository) UpdateOrgMetrics(ctx context.Context, metrics *models
 		metrics.AvgResolutionTime, metrics.SLABreaches, metrics.CriticalIssues,
 		metrics.LastCalculated, metrics.UpdatedAt,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to update org metrics: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (r *ticketRepository) logAudit(ctx context.Context, oldTicket *models.SupportTicket, ticketID uuid.UUID, userID uuid.UUID, action string, _, newValue map[string]interface{}, details string) error {
@@ -475,10 +518,20 @@ func (r *ticketRepository) logAudit(ctx context.Context, oldTicket *models.Suppo
 
 	_, err := r.db.Exec(ctx, query, ticketID, userID, action, oldTicketJSON, newValue, details)
 	if err != nil {
-		r.logger.Error("Failed to log audit", zap.Error(err), 
-			zap.String("ticket_id", ticketID.String()), 
+		r.logger.Error("Failed to log audit", zap.Error(err),
+			zap.String("ticket_id", ticketID.String()),
 			zap.String("action", action))
 		return fmt.Errorf("failed to log audit: %w", err)
 	}
 	return nil
+}
+
+func (r *ticketRepository) GetNextTicketNumber(ctx context.Context) (int, error) {
+	var nextVal int
+	err := r.db.QueryRow(ctx, "SELECT nextval('support_tickets_ticket_id_seq')").Scan(&nextVal)
+	if err != nil {
+		r.logger.Error("Failed to get next ticket number", zap.Error(err))
+		return 0, fmt.Errorf("failed to get next ticket number: %w", err)
+	}
+	return nextVal, nil
 }

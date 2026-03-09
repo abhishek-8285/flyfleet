@@ -84,7 +84,7 @@ func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, li
 
 func (r *OrganizationRepository) GetOrganizationStats(ctx context.Context) (models.OrganizationStats, error) {
 	var stats models.OrganizationStats
-	
+
 	// Use a transaction or multiple queries
 	queries := map[string]*int{
 		"SELECT COUNT(*) FROM organizations WHERE is_deleted = false": &stats.TotalOrgs,
@@ -94,22 +94,27 @@ func (r *OrganizationRepository) GetOrganizationStats(ctx context.Context) (mode
 		"SELECT COUNT(*) FROM users": &stats.TotalUsers,
 		"SELECT COUNT(*) FROM vehicles": &stats.TotalVehicles,
 	}
-	
+
 	for q, ptr := range queries {
 		err := r.db.QueryRow(ctx, q).Scan(ptr)
 		if err != nil {
 			r.logger.Warn("Failed to fetch stat", zap.String("query", q), zap.Error(err))
 		}
 	}
-	
-	stats.TotalDevices = stats.TotalVehicles // Assuming 1:1 for now
-	
+
+	// Get actual device count from devices table (not assuming 1:1 with vehicles)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM devices").Scan(&stats.TotalDevices)
+	if err != nil {
+		r.logger.Warn("Failed to fetch device count", zap.Error(err))
+		stats.TotalDevices = 0
+	}
+
 	// Active Alerts
-	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM threat_alerts WHERE status = 'open'").Scan(&stats.ActiveAlerts)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM threat_alerts WHERE status = 'open'").Scan(&stats.ActiveAlerts)
 	if err != nil {
 		r.logger.Warn("Failed to fetch alert stats", zap.Error(err))
 	}
-	
+
 	return stats, nil
 }
 
@@ -175,8 +180,31 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 }
 
 func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid.UUID, updatedBy uuid.UUID) error {
+	// Check for dependent records before deleting
+	var userCount, vehicleCount int
+
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE org_id = $1 AND is_deleted = false", id).Scan(&userCount)
+	if err != nil {
+		r.logger.Error("Failed to count users", zap.String("org_id", id.String()), zap.Error(err))
+		return fmt.Errorf("failed to check dependencies: %w", err)
+	}
+
+	if userCount > 0 {
+		return fmt.Errorf("cannot delete organization with %d active users", userCount)
+	}
+
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE org_id = $1 AND deleted_at IS NULL", id).Scan(&vehicleCount)
+	if err != nil {
+		r.logger.Error("Failed to count vehicles", zap.String("org_id", id.String()), zap.Error(err))
+		return fmt.Errorf("failed to check dependencies: %w", err)
+	}
+
+	if vehicleCount > 0 {
+		return fmt.Errorf("cannot delete organization with %d active vehicles", vehicleCount)
+	}
+
 	query := `UPDATE organizations SET is_deleted = true, updated_at = $2, updated_by = $3 WHERE id = $1`
-	_, err := r.db.Exec(ctx, query, id, time.Now().UTC(), updatedBy)
+	_, err = r.db.Exec(ctx, query, id, time.Now().UTC(), updatedBy)
 	if err != nil {
 		r.logger.Error("Failed to delete organization", zap.String("id", id.String()), zap.Error(err))
 		return err

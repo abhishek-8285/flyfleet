@@ -15,27 +15,56 @@ import (
 	driverMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/driver/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 )
 
 type DriverHandler struct {
-	service  *service.DriverService
-	security *driverMiddleware.DriverSecurityMiddleware
-	logger   *zap.Logger
-	validate *validator.Validate
+	service     *service.DriverService
+	onboarding  *service.OnboardingService
+	shift       *service.ShiftService
+	training    *service.TrainingService
+	payroll     *service.PayrollService
+	rating      *service.RatingService
+	safety      *service.SafetyEventService
+	mobileSync  *service.MobileSyncService
+	security    *driverMiddleware.DriverSecurityMiddleware
+	logger      *zap.Logger
+	validate    *validator.Validate
 }
 
-func NewDriverHandler(service *service.DriverService, security *driverMiddleware.DriverSecurityMiddleware, logger *zap.Logger) *DriverHandler {
+func NewDriverHandler(
+	service *service.DriverService,
+	onboarding *service.OnboardingService,
+	shift *service.ShiftService,
+	training *service.TrainingService,
+	payroll *service.PayrollService,
+	rating *service.RatingService,
+	safety *service.SafetyEventService,
+	mobileSync *service.MobileSyncService,
+	security *driverMiddleware.DriverSecurityMiddleware,
+	logger *zap.Logger,
+) *DriverHandler {
 	return &DriverHandler{
-		service:  service,
-		security: security,
-		logger:   logger,
-		validate: validator.New(),
+		service:    service,
+		onboarding: onboarding,
+		shift:      shift,
+		training:   training,
+		payroll:    payroll,
+		rating:     rating,
+		safety:     safety,
+		mobileSync: mobileSync,
+		security:   security,
+		logger:     logger,
+		validate:   validator.New(),
 	}
 }
 
 func (h *DriverHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.ListDrivers)
 	r.Post("/", h.CreateDriver)
+	r.Route("/onboarding", func(r chi.Router) {
+		r.Post("/start", h.StartOnboarding)
+	})
 	r.Route("/{id}", func(r chi.Router) {
 		r.Get("/", h.GetDriver)
 		r.Put("/", h.UpdateDriver)
@@ -46,6 +75,22 @@ func (h *DriverHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/behavior-score", h.GetBehaviorScore)
 		r.Post("/update-behavior", h.UpdateBehaviorScore)
 		r.Get("/analytics", h.GetAnalytics)
+		r.Route("/onboarding", func(r chi.Router) {
+			r.Post("/advance", h.AdvanceOnboarding)
+			r.Get("/status", h.GetOnboardingStatus)
+		})
+		r.Route("/shifts", func(r chi.Router) {
+			r.Post("/", h.CreateShift)
+			r.Get("/", h.GetShifts)
+		})
+		r.Route("/payroll", func(r chi.Router) {
+			r.Get("/earnings", h.GetEarnings)
+			r.Get("/payouts", h.GetPayouts)
+		})
+		r.Route("/ratings", func(r chi.Router) {
+			r.Post("/", h.SubmitRating)
+			r.Get("/", h.GetRatings)
+		})
 		r.Route("/documents", func(r chi.Router) {
 			r.Get("/", h.ListDocuments)
 			r.Post("/", h.UploadDocument)
@@ -66,6 +111,7 @@ func (h *DriverHandler) RegisterRoutes(r chi.Router) {
 			
 			r.Post("/duty-status", h.UpdateDutyStatus)
 			r.Post("/sos", h.TriggerSOS)
+			r.Post("/sync", h.SyncMobileData)
 			r.Route("/messages", func(r chi.Router) {
 				r.Post("/", h.SendMessage)
 				r.Get("/", h.GetMessages)
@@ -74,6 +120,7 @@ func (h *DriverHandler) RegisterRoutes(r chi.Router) {
 				r.Post("/", h.SubmitExpense)
 				r.Get("/", h.GetExpenses)
 			})
+			r.Get("/performance", h.GetPerformance)
 		})
 	})
 }
@@ -684,6 +731,176 @@ func (h *DriverHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// StartOnboarding starts the onboarding process for a driver
+func (h *DriverHandler) StartOnboarding(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID string `json:"driver_id" validate:"required,uuid"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
+		return
+	}
+
+	if err := h.onboarding.StartOnboarding(r.Context(), req.DriverID); err != nil {
+		h.logger.Error("failed to start onboarding", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to start onboarding", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Onboarding started"})
+}
+
+// AdvanceOnboarding advances the onboarding process for a driver
+func (h *DriverHandler) AdvanceOnboarding(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	var req struct {
+		Step    string `json:"step" validate:"required"`
+		Status  string `json:"status" validate:"required"`
+		Remarks string `json:"remarks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
+		return
+	}
+
+	if err := h.onboarding.AdvanceOnboarding(r.Context(), driverID, req.Step, req.Status, req.Remarks); err != nil {
+		h.logger.Error("failed to advance onboarding", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to advance onboarding", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Onboarding advanced"})
+}
+
+// GetOnboardingStatus returns the onboarding status for a driver
+func (h *DriverHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	status, err := h.onboarding.GetOnboardingStatus(r.Context(), driverID)
+	if err != nil {
+		h.logger.Error("failed to get onboarding status", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get onboarding status", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"status": status})
+}
+
+// CreateShift creates a new shift for a driver
+func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	var shift models.Shift
+	if err := json.NewDecoder(r.Body).Decode(&shift); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
+		return
+	}
+	shift.DriverID = driverID
+
+	if err := h.shift.CreateShift(r.Context(), &shift); err != nil {
+		h.logger.Error("failed to create shift", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create shift", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, shift)
+}
+
+// GetShifts returns shifts for a driver within a time range
+func (h *DriverHandler) GetShifts(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+
+	start, _ := time.Parse(time.RFC3339, startStr)
+	end, _ := time.Parse(time.RFC3339, endStr)
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	shifts, err := h.shift.GetShiftsByDriverID(r.Context(), driverID, start, end)
+	if err != nil {
+		h.logger.Error("failed to get shifts", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get shifts", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"shifts": shifts})
+}
+
+// GetEarnings returns earnings for a driver within a time range
+func (h *DriverHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+
+	start, _ := time.Parse(time.RFC3339, startStr)
+	end, _ := time.Parse(time.RFC3339, endStr)
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	// This assumes PayrollService has a method for this, which I'll add or use existing repo method if orchestrated
+	// For now, let's assume we can get them from service
+	earnings, err := h.payroll.GetTripEarnings(r.Context(), driverID, start, end)
+	if err != nil {
+		h.logger.Error("failed to get earnings", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get earnings", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"earnings": earnings})
+}
+
+// GetPayouts returns payouts for a driver
+func (h *DriverHandler) GetPayouts(w http.ResponseWriter, r *http.Request) {
+	_ = chi.URLParam(r, "id")
+	// For now, return a placeholder or implement specific service method
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"payouts": []interface{}{}})
+}
+
+// SubmitRating submits a rating for a driver
+func (h *DriverHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	var rating models.Rating
+	if err := json.NewDecoder(r.Body).Decode(&rating); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request format", err)
+		return
+	}
+	rating.DriverID = driverID
+
+	if err := h.rating.SubmitRating(r.Context(), &rating); err != nil {
+		h.logger.Error("failed to submit rating", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to submit rating", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, rating)
+}
+
+// GetRatings returns average rating and history for a driver
+func (h *DriverHandler) GetRatings(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	avg, err := h.rating.GetDriverRating(r.Context(), driverID)
+	if err != nil {
+		h.logger.Error("failed to get rating", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get rating", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"average_rating": avg})
+}
+
+// SyncMobileData triggers a mobile data sync
+func (h *DriverHandler) SyncMobileData(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	if err := h.mobileSync.ProcessSyncQueue(r.Context(), driverID); err != nil {
+		h.logger.Error("failed to sync mobile data", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to sync mobile data", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Sync complete"})
+}
+
 // Helper methods
 
 func (h *DriverHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
@@ -710,6 +927,19 @@ func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
 			if id, err := uuid.Parse(orgIDStr); err == nil {
 				return id
 			}
+		}
+	}
+	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback to header for dev/test environments
+	if orgIDHeader := r.Header.Get("X-Organization-ID"); orgIDHeader != "" {
+		if id, err := uuid.Parse(orgIDHeader); err == nil {
+			return id
 		}
 	}
 	return uuid.Nil

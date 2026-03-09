@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Request-Id: unknown/gxgSX6ALCD-000008
+X-Trace-Id: unknown/gxgSX6ALCD-000008
+Date: Sat, 07 Mar 2026 15:52:15 GMT
+Content-Length: 173
+
+{"driver_id":"41b5650b-c777-4ac0-ba21-136cb5a45fd7","message":"Behavior score updated successfully","new_score":95,"reason":"Harsh acceleration detected","score_change":-5}

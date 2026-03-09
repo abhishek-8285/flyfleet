@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -32,17 +33,30 @@ func (r *CustomerRepository) Create(ctx context.Context, c *models.Customer) err
 
 	id := uuid.New().String()
 	now := time.Now()
-	
-	addressJSON, _ := json.Marshal(c.Address)
-	billingJSON, _ := json.Marshal(c.BillingInfo)
-	metadataJSON, _ := json.Marshal(c.Metadata)
 
-	err := r.db.QueryRow(ctx, query,
+	addressJSON, err := json.Marshal(c.Address)
+	if err != nil {
+		return fmt.Errorf("failed to marshal address: %w", err)
+	}
+	billingJSON, err := json.Marshal(c.BillingInfo)
+	if err != nil {
+		return fmt.Errorf("failed to marshal billing info: %w", err)
+	}
+	metadataJSON, err := json.Marshal(c.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, query,
 		id, c.OrgID, c.Name, c.Email, c.Phone, c.APIKey, c.APISecretHash,
 		addressJSON, billingJSON, c.Status, metadataJSON, now, now,
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create customer: %w", err)
+	}
+
+	return nil
 }
 
 func (r *CustomerRepository) GetByAPIKey(ctx context.Context, apiKey string) (*models.Customer, error) {
@@ -59,13 +73,22 @@ func (r *CustomerRepository) GetByAPIKey(ctx context.Context, apiKey string) (*m
 		&addressJSON, &billingJSON, &c.Status, &metadataJSON, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get customer by API key: %w", err)
 	}
 
-	json.Unmarshal(addressJSON, &c.Address)
-	json.Unmarshal(billingJSON, &c.BillingInfo)
-	json.Unmarshal(metadataJSON, &c.Metadata)
-	
+	if err := json.Unmarshal(addressJSON, &c.Address); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal address: %w", err)
+	}
+	if err := json.Unmarshal(billingJSON, &c.BillingInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal billing info: %w", err)
+	}
+	if err := json.Unmarshal(metadataJSON, &c.Metadata); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+	}
+
 	return &c, nil
 }
 
@@ -83,13 +106,22 @@ func (r *CustomerRepository) GetByID(ctx context.Context, id string) (*models.Cu
 		&addressJSON, &billingJSON, &c.Status, &metadataJSON, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get customer by ID: %w", err)
 	}
 
-	json.Unmarshal(addressJSON, &c.Address)
-	json.Unmarshal(billingJSON, &c.BillingInfo)
-	json.Unmarshal(metadataJSON, &c.Metadata)
-	
+	if err := json.Unmarshal(addressJSON, &c.Address); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal address: %w", err)
+	}
+	if err := json.Unmarshal(billingJSON, &c.BillingInfo); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal billing info: %w", err)
+	}
+	if err := json.Unmarshal(metadataJSON, &c.Metadata); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+	}
+
 	return &c, nil
 }
 
@@ -107,21 +139,40 @@ func (r *CustomerRepository) CreateShipment(ctx context.Context, s *models.Shipm
 
 	id := uuid.New().String()
 	now := time.Now()
-	
-	originJSON, _ := json.Marshal(s.Origin)
-	destJSON, _ := json.Marshal(s.Destination)
-	currLocJSON, _ := json.Marshal(s.CurrentLocation)
-	cargoJSON, _ := json.Marshal(s.CargoDetails)
-	metadataJSON, _ := json.Marshal(s.Metadata)
 
-	err := r.db.QueryRow(ctx, query,
+	originJSON, err := json.Marshal(s.Origin)
+	if err != nil {
+		return fmt.Errorf("failed to marshal origin: %w", err)
+	}
+	destJSON, err := json.Marshal(s.Destination)
+	if err != nil {
+		return fmt.Errorf("failed to marshal destination: %w", err)
+	}
+	currLocJSON, err := json.Marshal(s.CurrentLocation)
+	if err != nil {
+		return fmt.Errorf("failed to marshal current location: %w", err)
+	}
+	cargoJSON, err := json.Marshal(s.CargoDetails)
+	if err != nil {
+		return fmt.Errorf("failed to marshal cargo details: %w", err)
+	}
+	metadataJSON, err := json.Marshal(s.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, query,
 		id, s.CustomerID, s.TripID, s.TrackingNumber, s.Status,
 		originJSON, destJSON, currLocJSON, s.EstimatedDelivery,
 		s.ActualDelivery, cargoJSON, s.PODURL, s.PODUploadedAt,
 		metadataJSON, now, now,
 	).Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create shipment: %w", err)
+	}
+
+	return nil
 }
 
 func (r *CustomerRepository) GetShipment(ctx context.Context, id string) (*models.Shipment, error) {
@@ -142,15 +193,28 @@ func (r *CustomerRepository) GetShipment(ctx context.Context, id string) (*model
 		&metadataJSON, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get shipment: %w", err)
 	}
 
-	json.Unmarshal(originJSON, &s.Origin)
-	json.Unmarshal(destJSON, &s.Destination)
-	json.Unmarshal(currLocJSON, &s.CurrentLocation)
-	json.Unmarshal(cargoJSON, &s.CargoDetails)
-	json.Unmarshal(metadataJSON, &s.Metadata)
-	
+	if err := json.Unmarshal(originJSON, &s.Origin); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal origin: %w", err)
+	}
+	if err := json.Unmarshal(destJSON, &s.Destination); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal destination: %w", err)
+	}
+	if err := json.Unmarshal(currLocJSON, &s.CurrentLocation); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal current location: %w", err)
+	}
+	if err := json.Unmarshal(cargoJSON, &s.CargoDetails); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cargo details: %w", err)
+	}
+	if err := json.Unmarshal(metadataJSON, &s.Metadata); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+	}
+
 	return &s, nil
 }
 
@@ -172,15 +236,28 @@ func (r *CustomerRepository) GetShipmentByTrackingNumber(ctx context.Context, tr
 		&metadataJSON, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get shipment by tracking number: %w", err)
 	}
 
-	json.Unmarshal(originJSON, &s.Origin)
-	json.Unmarshal(destJSON, &s.Destination)
-	json.Unmarshal(currLocJSON, &s.CurrentLocation)
-	json.Unmarshal(cargoJSON, &s.CargoDetails)
-	json.Unmarshal(metadataJSON, &s.Metadata)
-	
+	if err := json.Unmarshal(originJSON, &s.Origin); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal origin: %w", err)
+	}
+	if err := json.Unmarshal(destJSON, &s.Destination); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal destination: %w", err)
+	}
+	if err := json.Unmarshal(currLocJSON, &s.CurrentLocation); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal current location: %w", err)
+	}
+	if err := json.Unmarshal(cargoJSON, &s.CargoDetails); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cargo details: %w", err)
+	}
+	if err := json.Unmarshal(metadataJSON, &s.Metadata); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+	}
+
 	return &s, nil
 }
 
@@ -191,7 +268,7 @@ func (r *CustomerRepository) ListShipments(ctx context.Context, filter models.Sh
 			   actual_delivery, cargo_details, pod_url, pod_uploaded_at,
 			   metadata, created_at, updated_at
 		FROM shipments WHERE deleted_at IS NULL`
-	
+
 	countQuery := `SELECT COUNT(*) FROM shipments WHERE deleted_at IS NULL`
 
 	var conditions []string
@@ -203,7 +280,7 @@ func (r *CustomerRepository) ListShipments(ctx context.Context, filter models.Sh
 		args = append(args, filter.CustomerID)
 		argIndex++
 	}
-	
+
 	if filter.Status != "" {
 		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
 		args = append(args, filter.Status)
@@ -219,20 +296,20 @@ func (r *CustomerRepository) ListShipments(ctx context.Context, filter models.Sh
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery + whereClause, args...).Scan(&totalCount)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to count shipments: %w", err)
 	}
 
 	// List
 	orderBy := "created_at DESC"
 	limit := filter.PageSize
 	offset := (filter.Page - 1) * filter.PageSize
-	
+
 	limitClause := fmt.Sprintf(" ORDER BY %s LIMIT $%d OFFSET $%d", orderBy, argIndex, argIndex+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, baseQuery + whereClause + limitClause, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to list shipments: %w", err)
 	}
 	defer rows.Close()
 
@@ -240,7 +317,7 @@ func (r *CustomerRepository) ListShipments(ctx context.Context, filter models.Sh
 	for rows.Next() {
 		var s models.Shipment
 		var originJSON, destJSON, currLocJSON, cargoJSON, metadataJSON []byte
-		
+
 		err := rows.Scan(
 			&s.ID, &s.CustomerID, &s.TripID, &s.TrackingNumber, &s.Status,
 			&originJSON, &destJSON, &currLocJSON, &s.EstimatedDelivery,
@@ -248,16 +325,30 @@ func (r *CustomerRepository) ListShipments(ctx context.Context, filter models.Sh
 			&metadataJSON, &s.CreatedAt, &s.UpdatedAt,
 		)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("failed to scan shipment: %w", err)
 		}
-		
-		json.Unmarshal(originJSON, &s.Origin)
-		json.Unmarshal(destJSON, &s.Destination)
-		json.Unmarshal(currLocJSON, &s.CurrentLocation)
-		json.Unmarshal(cargoJSON, &s.CargoDetails)
-		json.Unmarshal(metadataJSON, &s.Metadata)
-		
+
+		if err := json.Unmarshal(originJSON, &s.Origin); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal origin: %w", err)
+		}
+		if err := json.Unmarshal(destJSON, &s.Destination); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal destination: %w", err)
+		}
+		if err := json.Unmarshal(currLocJSON, &s.CurrentLocation); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal current location: %w", err)
+		}
+		if err := json.Unmarshal(cargoJSON, &s.CargoDetails); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal cargo details: %w", err)
+		}
+		if err := json.Unmarshal(metadataJSON, &s.Metadata); err != nil {
+			return nil, 0, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+
 		shipments = append(shipments, &s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("shipment iteration error: %w", err)
 	}
 
 	return shipments, totalCount, nil
@@ -274,7 +365,7 @@ func (r *CustomerRepository) GetInvoices(ctx context.Context, customerID string)
 
 	rows, err := r.db.Query(ctx, query, customerID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query invoices: %w", err)
 	}
 	defer rows.Close()
 
@@ -288,11 +379,18 @@ func (r *CustomerRepository) GetInvoices(ctx context.Context, customerID string)
 			&i.PDFURL, &metadataJSON, &i.CreatedAt, &i.UpdatedAt,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan invoice: %w", err)
 		}
-		json.Unmarshal(metadataJSON, &i.Metadata)
+		if err := json.Unmarshal(metadataJSON, &i.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
 		invoices = append(invoices, &i)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("invoice iteration error: %w", err)
+	}
+
 	return invoices, nil
 }
 
@@ -309,17 +407,33 @@ func (r *CustomerRepository) CreateBookingRequest(ctx context.Context, b *models
 
 	id := uuid.New().String()
 	now := time.Now()
-	
-	originJSON, _ := json.Marshal(b.Origin)
-	destJSON, _ := json.Marshal(b.Destination)
-	cargoJSON, _ := json.Marshal(b.CargoDetails)
-	metadataJSON, _ := json.Marshal(b.Metadata)
 
-	err := r.db.QueryRow(ctx, query,
+	originJSON, err := json.Marshal(b.Origin)
+	if err != nil {
+		return fmt.Errorf("failed to marshal origin: %w", err)
+	}
+	destJSON, err := json.Marshal(b.Destination)
+	if err != nil {
+		return fmt.Errorf("failed to marshal destination: %w", err)
+	}
+	cargoJSON, err := json.Marshal(b.CargoDetails)
+	if err != nil {
+		return fmt.Errorf("failed to marshal cargo details: %w", err)
+	}
+	metadataJSON, err := json.Marshal(b.Metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	err = r.db.QueryRow(ctx, query,
 		id, b.CustomerID, b.RequestType, originJSON, destJSON,
 		b.RequestedPickupTime, cargoJSON, b.Status, b.Notes,
 		metadataJSON, now, now,
 	).Scan(&b.ID, &b.CreatedAt, &b.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create booking request: %w", err)
+	}
+
+	return nil
 }

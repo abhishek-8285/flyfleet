@@ -50,19 +50,19 @@ func (h *DrHandlers) RegisterRoutes(r chi.Router) {
 
 // Request Models
 type InitiateBackupRequest struct {
-	Type models.BackupType `json:"type" binding:"required"`
+	Type models.BackupType `json:"type" validate:"required,oneof=FULL INCREMENTAL SNAPSHOT"`
 }
 
 type InitiateRestoreRequest struct {
-	BackupID          uuid.UUID `json:"backup_id" binding:"required"`
-	TargetEnvironment string    `json:"target_environment" binding:"required"`
+	BackupID          uuid.UUID `json:"backup_id" validate:"required"`
+	TargetEnvironment string    `json:"target_environment" validate:"required"`
 }
 
 type CreateDRTestRequest struct {
-	Name            string     `json:"name"`
+	Name            string     `json:"name" validate:"required"`
 	Description     string     `json:"description"`
-	TestType        string     `json:"test_type"`
-	TargetEnv       string     `json:"target_env"`
+	TestType        string     `json:"test_type" validate:"required,oneof=FAILOVER RESTORE BACKUP_VERIFY"`
+	TargetEnv       string     `json:"target_env" validate:"required"`
 	SuccessCriteria string     `json:"success_criteria"`
 	ScheduledAt     *time.Time `json:"scheduled_at"`
 }
@@ -71,6 +71,11 @@ func (h *DrHandlers) InitiateBackup(w http.ResponseWriter, r *http.Request) {
 	var req InitiateBackupRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -123,6 +128,11 @@ func (h *DrHandlers) InitiateRestore(w http.ResponseWriter, r *http.Request) {
 	var req InitiateRestoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -241,8 +251,9 @@ func (h *DrHandlers) CreateDRTest(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	if req.Name == "" {
-		h.errorJSON(w, "name is required", http.StatusBadRequest)
+
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

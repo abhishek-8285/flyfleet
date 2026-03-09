@@ -6,6 +6,8 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/cache"
 	"github.com/fleet-platform/shared/pkg/database"
+	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
+	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
@@ -13,6 +15,11 @@ import (
 type PulseService interface {
 	CheckHealth(ctx context.Context) map[string]string
 	GetUptime() float64
+	GetSLAMetrics(ctx context.Context, period string) (*models.SLAMetrics, error)
+	GetSystemMetrics(ctx context.Context) (*models.SystemMetrics, error)
+	GetActiveAlerts(ctx context.Context) ([]*models.HealthAlert, error)
+	AcknowledgeAlert(ctx context.Context, alertID string) error
+	ResolveAlert(ctx context.Context, alertID string) error
 }
 
 type pulseService struct {
@@ -21,15 +28,17 @@ type pulseService struct {
 	nc     *nats.Conn
 	logger *zap.Logger
 	start  time.Time
+	repo   repository.MonitoringRepository
 }
 
-func NewPulseService(db database.Database, redis cache.RedisCacheInterface, nc *nats.Conn, logger *zap.Logger) PulseService {
+func NewPulseService(db database.Database, redis cache.RedisCacheInterface, nc *nats.Conn, logger *zap.Logger, repo repository.MonitoringRepository) PulseService {
 	return &pulseService{
 		db:     db,
 		redis:  redis,
 		nc:     nc,
 		logger: logger,
 		start:  time.Now(),
+		repo:   repo,
 	}
 }
 
@@ -79,5 +88,107 @@ func (s *pulseService) CheckHealth(ctx context.Context) map[string]string {
 func (s *pulseService) GetUptime() float64 {
 	// Simple uptime calculation for MVP
 	// In production, this would track total downtime incidents
-	return 99.98 
+	return 99.98
+}
+
+// GetSLAMetrics retrieves SLA metrics for a period
+func (s *pulseService) GetSLAMetrics(ctx context.Context, period string) (*models.SLAMetrics, error) {
+	// Parse period (e.g., "30d", "7d", "24h")
+	startTime := time.Now()
+	switch period {
+	case "7d":
+		startTime = startTime.AddDate(0, 0, -7)
+	case "24h":
+		startTime = startTime.Add(-24 * time.Hour)
+	case "30d":
+		startTime = startTime.AddDate(0, 0, -30)
+	default:
+		startTime = startTime.AddDate(0, 0, -30)
+	}
+
+	// Get health history for the period
+	history, err := s.repo.GetHealthHistory(ctx, "all", startTime, time.Now(), 1000)
+	if err != nil {
+		return nil, ErrSLACalculationFailed
+	}
+
+	// Calculate metrics
+	totalChecks := len(history)
+	downCount := 0
+	for _, h := range history {
+		if h.Status == models.HealthStatusDown {
+			downCount++
+		}
+	}
+
+	availability := 100.0
+	if totalChecks > 0 {
+		availability = float64(totalChecks-downCount) / float64(totalChecks) * 100
+	}
+
+	return &models.SLAMetrics{
+		Period:         period,
+		Availability:   availability,
+		TotalDowntime:  int64(downCount),
+		TotalIncidents: downCount,
+		MTTR:           0, // Would need more sophisticated calculation
+		MTBF:           0, // Would need more sophisticated calculation
+		StartTime:      startTime,
+		EndTime:        time.Now(),
+	}, nil
+}
+
+// GetSystemMetrics retrieves system metrics
+func (s *pulseService) GetSystemMetrics(ctx context.Context) (*models.SystemMetrics, error) {
+	health := s.CheckHealth(ctx)
+
+	componentMetrics := make(map[string]models.ComponentMetrics)
+	for component, status := range health {
+		componentMetrics[component] = models.ComponentMetrics{
+			Component:  component,
+			Availability: getAvailabilityForStatus(status),
+			LastUpdated: time.Now(),
+		}
+	}
+
+	return &models.SystemMetrics{
+		TotalRequests:    0, // Would need actual metrics
+		ActiveRequests:   0,
+		FailedRequests:   0,
+		AverageResponseTime: 0,
+		ErrorRate:        0,
+		Uptime:           s.GetUptime(),
+		ComponentMetrics: componentMetrics,
+		LastUpdated:      time.Now(),
+	}, nil
+}
+
+// GetActiveAlerts retrieves active alerts
+func (s *pulseService) GetActiveAlerts(ctx context.Context) ([]*models.HealthAlert, error) {
+	return s.repo.GetActiveAlerts(ctx)
+}
+
+// AcknowledgeAlert acknowledges an alert
+func (s *pulseService) AcknowledgeAlert(ctx context.Context, alertID string) error {
+	return s.repo.UpdateAlertStatus(ctx, alertID, "acknowledged")
+}
+
+// ResolveAlert resolves an alert
+func (s *pulseService) ResolveAlert(ctx context.Context, alertID string) error {
+	return s.repo.UpdateAlertStatus(ctx, alertID, "resolved")
+}
+
+// Helper functions
+
+func getAvailabilityForStatus(status string) float64 {
+	switch status {
+	case "up":
+		return 100.0
+	case "degraded":
+		return 50.0
+	case "down":
+		return 0.0
+	default:
+		return 100.0
+	}
 }

@@ -29,13 +29,13 @@ type SupportTicket struct {
 type CreateTicketRequest struct {
 	Title       string   `json:"title" validate:"required"`
 	Description string   `json:"description"`
-	Priority    string   `json:"priority"`
+	Priority    string   `json:"priority" validate:"omitempty,oneof=LOW MEDIUM HIGH CRITICAL"`
 	Category    string   `json:"category"`
 	Tags        []string `json:"tags"`
 }
 
 type UpdateTicketStatusRequest struct {
-	Status string `json:"status" validate:"required"`
+	Status string `json:"status" validate:"required,oneof=OPEN IN_PROGRESS RESOLVED CLOSED ESCALATED"`
 }
 
 type AddCommentRequest struct {
@@ -51,6 +51,7 @@ type TicketFilter struct {
 	Status   string `json:"status"`
 	Priority string `json:"priority"`
 	Category string `json:"category"`
+	Query    string `json:"q"`
 	Page     int    `json:"page"`
 	PageSize int    `json:"page_size"`
 }

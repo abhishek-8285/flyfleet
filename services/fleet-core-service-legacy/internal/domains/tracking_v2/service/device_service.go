@@ -12,17 +12,20 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
-
+	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/repository"
+	"github.com/nats-io/nats.go"
 )
 
 // DeviceService handles device business logic
 type DeviceService struct {
-	repo          *repository.DeviceRepository
+	repo          repository.DeviceRepository
 	jwtSecret     string
 	configSigner  ConfigSigner
 	defaultConfig models.DeviceRuntimeConfig
+	analytics     analytics.AnalyticsService // optional
+	nc            *nats.Conn
 	logger        *zap.Logger
 }
 
@@ -33,15 +36,19 @@ type ConfigSigner interface {
 
 // NewDeviceService creates a new device service
 func NewDeviceService(
-	repo *repository.DeviceRepository,
+	repo repository.DeviceRepository,
 	jwtSecret string,
 	configSigner ConfigSigner,
+	analytics analytics.AnalyticsService,
+	nc *nats.Conn,
 	logger *zap.Logger,
 ) *DeviceService {
 	return &DeviceService{
 		repo:         repo,
 		jwtSecret:    jwtSecret,
 		configSigner: configSigner,
+		analytics:    analytics,
+		nc:           nc,
 		defaultConfig: models.DeviceRuntimeConfig{
 			SchemaVersion:     "v1",
 			HeartbeatSeconds:  45,
@@ -117,6 +124,20 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 	if err := s.repo.Register(ctx, device); err != nil {
 		s.logger.Error("Failed to register device", zap.Error(err))
 		return nil, err
+	}
+
+	// Publish domain event
+	if s.nc != nil {
+		eventData := map[string]interface{}{
+			"device_id":       req.DeviceID,
+			"organization_id": req.OrganizationID,
+			"vehicle_id":      req.VehicleID,
+			"timestamp":       time.Now().Unix(),
+		}
+		eventBytes, _ := json.Marshal(eventData)
+		if err := s.nc.Publish("fleet.device.registered", eventBytes); err != nil {
+			s.logger.Warn("Failed to publish device registration event", zap.Error(err))
+		}
 	}
 
 	return &models.DeviceRegisterResponse{
@@ -375,7 +396,6 @@ func (s *DeviceService) DriverLogin(ctx context.Context, req *models.DriverLogin
 
 	shiftStart := time.Now().Unix()
 
-	// Store driver session
 	if err := s.repo.StoreDriverSession(
 		ctx,
 		req.DeviceID,
@@ -386,6 +406,14 @@ func (s *DeviceService) DriverLogin(ctx context.Context, req *models.DriverLogin
 	); err != nil {
 		s.logger.Error("Failed to store driver session", zap.Error(err))
 		return nil, err
+	}
+
+	// ── Analytics Cache Invalidation ──
+	if s.analytics != nil {
+		if did, err := uuid.Parse(req.DriverID); err == nil {
+			orgID := s.getOrgID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+		}
 	}
 
 	// Get HOS status
@@ -422,7 +450,6 @@ func (s *DeviceService) DriverLogin(ctx context.Context, req *models.DriverLogin
 
 // DriverLogout processes driver logout
 func (s *DeviceService) DriverLogout(ctx context.Context, req *models.DriverLogoutRequest) (*models.DriverLogoutResponse, error) {
-	// End driver session
 	if err := s.repo.EndDriverSession(
 		ctx,
 		req.DeviceID,
@@ -432,6 +459,14 @@ func (s *DeviceService) DriverLogout(ctx context.Context, req *models.DriverLogo
 	); err != nil {
 		s.logger.Error("Failed to end driver session", zap.Error(err))
 		return nil, err
+	}
+
+	// ── Analytics Cache Invalidation ──
+	if s.analytics != nil {
+		if did, err := uuid.Parse(req.DriverID); err == nil {
+			orgID := s.getOrgID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+		}
 	}
 
 	// Calculate HOS summary (placeholder)
@@ -471,6 +506,14 @@ func (s *DeviceService) UpdateDriverHOS(ctx context.Context, req *models.HOSUpda
 	); err != nil {
 		s.logger.Error("Failed to update HOS", zap.Error(err))
 		return nil, err
+	}
+
+	// ── Analytics Cache Invalidation ──
+	if s.analytics != nil && (req.DutyStatus == "OFF_DUTY" || req.DutyStatus == "SLEEPER_BERTH") {
+		if did, err := uuid.Parse(req.DriverID); err == nil {
+			orgID := s.getOrgID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+		}
 	}
 
 	// Get updated HOS status
@@ -517,4 +560,21 @@ func (s *DeviceService) generateDeviceTokens(deviceID string) (string, string, i
 	refreshToken := base64.URLEncoding.EncodeToString(refreshBytes)
 
 	return jwtToken, refreshToken, expiresAt.Unix(), nil
+}
+
+func (s *DeviceService) getOrgID(ctx context.Context) uuid.UUID {
+	val := ctx.Value("org_id")
+	if val == nil {
+		return uuid.Nil
+	}
+	oidStr, ok := val.(string)
+	if !ok {
+		// Try uuid.UUID if it's already parsed (standard middleware)
+		if oid, ok := val.(uuid.UUID); ok {
+			return oid
+		}
+		return uuid.Nil
+	}
+	oid, _ := uuid.Parse(oidStr)
+	return oid
 }

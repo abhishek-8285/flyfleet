@@ -3,14 +3,18 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 type SettingsHandlers struct {
 	service *service.SettingsService
@@ -19,6 +23,94 @@ type SettingsHandlers struct {
 
 func NewSettingsHandlers(service *service.SettingsService, logger *zap.Logger) *SettingsHandlers {
 	return &SettingsHandlers{service: service, logger: logger}
+}
+
+// validatePlatformSettings validates platform settings input
+func (h *SettingsHandlers) validatePlatformSettings(settings *models.PlatformSettings) error {
+	if settings.SystemName == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "system name is required", Field: "system_name"}
+	}
+	if len(settings.SystemName) > 255 {
+		return &service.SettingsError{Code: "INVALID_LENGTH", Message: "system name must be less than 255 characters", Field: "system_name"}
+	}
+	if settings.SupportEmail == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "support email is required", Field: "support_email"}
+	}
+	if !emailRegex.MatchString(settings.SupportEmail) {
+		return &service.SettingsError{Code: "INVALID_FORMAT", Message: "invalid email format", Field: "support_email"}
+	}
+	if settings.DefaultTimezone == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "default timezone is required", Field: "default_timezone"}
+	}
+	if _, err := time.LoadLocation(settings.DefaultTimezone); err != nil {
+		return &service.SettingsError{Code: "INVALID_TIMEZONE", Message: "invalid timezone", Field: "default_timezone"}
+	}
+	if settings.DefaultCurrency == "" || len(settings.DefaultCurrency) != 3 {
+		return &service.SettingsError{Code: "INVALID_FORMAT", Message: "currency must be 3 characters", Field: "default_currency"}
+	}
+	if settings.DefaultLanguage == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "default language is required", Field: "default_language"}
+	}
+	return nil
+}
+
+// validateFeatureFlag validates feature flag input
+func (h *SettingsHandlers) validateFeatureFlag(flag *models.FeatureFlag) error {
+	if flag.Key == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "flag key is required", Field: "key"}
+	}
+	if len(flag.Key) > 100 {
+		return &service.SettingsError{Code: "INVALID_LENGTH", Message: "key must be less than 100 characters", Field: "key"}
+	}
+	if flag.Scope != "" && flag.Scope != "GLOBAL" && flag.Scope != "ORG" {
+		return &service.SettingsError{Code: "INVALID_SCOPE", Message: "scope must be GLOBAL or ORG", Field: "scope"}
+	}
+	return nil
+}
+
+// validateTemplate validates template input
+func (h *SettingsHandlers) validateTemplate(template *models.Template) error {
+	if template.Key == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "template key is required", Field: "key"}
+	}
+	if len(template.Key) > 100 {
+		return &service.SettingsError{Code: "INVALID_LENGTH", Message: "key must be less than 100 characters", Field: "key"}
+	}
+	if template.Channel == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "channel is required", Field: "channel"}
+	}
+	if template.Channel != "EMAIL" && template.Channel != "SMS" {
+		return &service.SettingsError{Code: "INVALID_CHANNEL", Message: "channel must be EMAIL or SMS", Field: "channel"}
+	}
+	if template.Body == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "body is required", Field: "body"}
+	}
+	return nil
+}
+
+// validateNotificationChannel validates notification channel input
+func (h *SettingsHandlers) validateNotificationChannel(channel *models.NotificationChannel) error {
+	if channel.ChannelType == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "channel type is required", Field: "channel_type"}
+	}
+	if channel.ChannelType != "EMAIL" && channel.ChannelType != "SMS" && channel.ChannelType != "SLACK" {
+		return &service.SettingsError{Code: "INVALID_CHANNEL_TYPE", Message: "invalid channel type", Field: "channel_type"}
+	}
+	if channel.Provider == "" {
+		return &service.SettingsError{Code: "REQUIRED_FIELD", Message: "provider is required", Field: "provider"}
+	}
+	return nil
+}
+
+// validateSystemLimits validates system limits input
+func (h *SettingsHandlers) validateSystemLimits(limits *models.SystemLimit) error {
+	if limits.APIRateLimit < 0 {
+		return &service.SettingsError{Code: "INVALID_VALUE", Message: "rate limit cannot be negative", Field: "api_rate_limit"}
+	}
+	if limits.BurstLimit < 0 {
+		return &service.SettingsError{Code: "INVALID_VALUE", Message: "burst limit cannot be negative", Field: "burst_limit"}
+	}
+	return nil
 }
 
 // Helper for JSON responses
@@ -151,6 +243,11 @@ func (h *SettingsHandlers) UpdatePlatformSettings(w http.ResponseWriter, r *http
 		return
 	}
 
+	if err := h.validatePlatformSettings(&settings); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := h.service.UpdatePlatformSettings(r.Context(), &settings); err != nil {
 		h.logger.Error("Failed to update platform settings", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
@@ -174,6 +271,11 @@ func (h *SettingsHandlers) CreateFeatureFlag(w http.ResponseWriter, r *http.Requ
 	var flag models.FeatureFlag
 	if err := json.NewDecoder(r.Body).Decode(&flag); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.validateFeatureFlag(&flag); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -254,6 +356,11 @@ func (h *SettingsHandlers) UpdateTemplate(w http.ResponseWriter, r *http.Request
 	}
 	template.ID = id
 
+	if err := h.validateTemplate(&template); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := h.service.UpdateTemplate(r.Context(), &template); err != nil {
 		h.logger.Error("Failed to update template", zap.Error(err))
 		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -277,6 +384,11 @@ func (h *SettingsHandlers) UpdateNotificationChannel(w http.ResponseWriter, r *h
 	var channel models.NotificationChannel
 	if err := json.NewDecoder(r.Body).Decode(&channel); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if err := h.validateNotificationChannel(&channel); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -306,10 +418,35 @@ func (h *SettingsHandlers) UpdateSystemLimits(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if err := h.validateSystemLimits(&limits); err != nil {
+		h.respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := h.service.UpdateSystemLimits(r.Context(), &limits); err != nil {
 		h.logger.Error("Failed to update system limits", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
 	}
 	h.respondJSON(w, http.StatusOK, limits)
+}
+
+// CleanupAuditLogs removes old audit logs based on configured retention policy
+func (h *SettingsHandlers) CleanupAuditLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	deleted, err := h.service.CleanupOldAuditLogs(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to cleanup audit logs", zap.Error(err))
+		h.handleServiceError(w, err, "Internal Server Error")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, map[string]any{
+		"message":       "Audit logs cleaned up successfully",
+		"deleted_count": deleted,
+	})
 }

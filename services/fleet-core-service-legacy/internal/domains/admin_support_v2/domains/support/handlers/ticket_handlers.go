@@ -113,9 +113,8 @@ func (h *TicketHandlers) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validation
-	if req.Title == "" {
-		h.errorJSON(w, "Title is required", http.StatusBadRequest)
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -163,6 +162,9 @@ func (h *TicketHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	if category := query.Get("category"); category != "" {
 		filter.Category = category
 	}
+	if q := query.Get("q"); q != "" {
+		filter.Query = q
+	}
 	
 	if pageStr := query.Get("page"); pageStr != "" {
 		if page, err := strconv.Atoi(pageStr); err == nil {
@@ -205,8 +207,8 @@ func (h *TicketHandlers) UpdateTicketStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.Status == "" {
-		h.errorJSON(w, "Status is required", http.StatusBadRequest)
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -235,6 +237,11 @@ func (h *TicketHandlers) AssignTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	userID := h.getUserID(r)
 	err = h.service.AssignTicket(r.Context(), id, req.AssignedTo, userID)
 	if err != nil {
@@ -260,14 +267,14 @@ func (h *TicketHandlers) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Content == "" {
-		h.errorJSON(w, "Content is required", http.StatusBadRequest)
+	if err := ValidateRequest(&req); err != nil {
+		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	userID := h.getUserID(r)
 	authorName := "Support Agent" // Would come from user context
-	
+
 	err = h.service.AddComment(r.Context(), id, userID, &req, authorName)
 	if err != nil {
 		h.logger.Error("Failed to add comment", zap.Error(err))

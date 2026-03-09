@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/repository"
@@ -24,19 +25,49 @@ type TicketService interface {
 }
 
 type ticketService struct {
-	repo   repository.TicketRepository
-	logger *zap.Logger
+	repo            repository.TicketRepository
+	logger          *zap.Logger
+	notificationCh  chan<- NotificationEvent // Channel for sending notifications
 }
 
-func NewTicketService(repo repository.TicketRepository, logger *zap.Logger) TicketService {
-	return &ticketService{repo: repo, logger: logger}
+// NotificationEvent represents a notification to be sent
+type NotificationEvent struct {
+	Type       string    `json:"type"` // COMMENT_ADDED, STATUS_CHANGED, TICKET_ASSIGNED
+	TicketID   string    `json:"ticket_id"`
+	UserID     string    `json:"user_id"`
+	Message    string    `json:"message"`
+	Priority   string    `json:"priority"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func NewTicketService(repo repository.TicketRepository, logger *zap.Logger, notificationCh chan<- NotificationEvent) TicketService {
+	return &ticketService{
+		repo:            repo,
+		logger:          logger,
+		notificationCh:  notificationCh,
+	}
 }
 
 func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTicketRequest, orgID, reporterID uuid.UUID) (*models.SupportTicket, error) {
-	// Generate ticket ID
-	ticketID := fmt.Sprintf("INC-%d", s.generateTicketNumber())
+	// Generate unique ticket number using database sequence
+	ticketNum, err := s.repo.GetNextTicketNumber(ctx)
+	if err != nil {
+		s.logger.Error("Failed to generate ticket number", zap.Error(err))
+		return nil, fmt.Errorf("failed to generate ticket number: %w", err)
+	}
+	ticketID := fmt.Sprintf("INC-%d", ticketNum)
 
 	userID := s.getUserID(ctx)
+
+	// Set default priority if not provided
+	priority := req.Priority
+	if priority == "" {
+		priority = "MEDIUM"
+	}
+
+	// Calculate SLA deadline based on priority
+	slaDeadline := s.calculateSLADeadline(priority)
+
 	ticket := &models.SupportTicket{
 		ID:          uuid.New(),
 		TicketID:    ticketID,
@@ -44,26 +75,41 @@ func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTick
 		Title:       req.Title,
 		Description: req.Description,
 		Status:      "OPEN",
-		Priority:    req.Priority,
+		Priority:    priority,
 		Category:    req.Category,
 		ReporterID:  reporterID,
 		CreatedBy:   userID,
 		UpdatedBy:   userID,
 		Tags:        req.Tags,
 		Metadata:    make(map[string]interface{}),
+		SLADeadline: &slaDeadline,
 	}
 
-	if ticket.Priority == "" {
-		ticket.Priority = "MEDIUM"
-	}
-
-	err := s.repo.CreateTicket(ctx, ticket)
+	err = s.repo.CreateTicket(ctx, ticket)
 	if err != nil {
 		s.logger.Error("Failed to create ticket", zap.Error(err))
 		return nil, fmt.Errorf("failed to create ticket: %w", err)
 	}
 
 	return ticket, nil
+}
+
+// calculateSLADeadline calculates the SLA deadline based on priority
+// CRITICAL: 4 hours, HIGH: 24 hours, MEDIUM: 72 hours, LOW: 168 hours (7 days)
+func (s *ticketService) calculateSLADeadline(priority string) time.Time {
+	slaHours := map[string]int{
+		"CRITICAL": 4,
+		"HIGH":     24,
+		"MEDIUM":   72,
+		"LOW":      168, // 7 days
+	}
+
+	hours, ok := slaHours[priority]
+	if !ok {
+		hours = 72 // Default to MEDIUM
+	}
+
+	return time.Now().Add(time.Duration(hours) * time.Hour)
 }
 
 func (s *ticketService) GetTicket(ctx context.Context, id uuid.UUID) (*models.SupportTicket, error) {
@@ -135,6 +181,23 @@ func (s *ticketService) AddComment(ctx context.Context, ticketID, userID uuid.UU
 		return fmt.Errorf("failed to add comment: %w", err)
 	}
 
+	// Send notification for non-private comments
+	if !req.IsPrivate && s.notificationCh != nil {
+		ticket, err := s.repo.GetTicketByID(ctx, ticketID)
+		if err != nil {
+			s.logger.Warn("Failed to get ticket for notification", zap.Error(err))
+		} else {
+			s.notificationCh <- NotificationEvent{
+				Type:      "COMMENT_ADDED",
+				TicketID:  ticket.TicketID,
+				UserID:    userID.String(),
+				Message:   fmt.Sprintf("New comment on ticket %s by %s", ticket.TicketID, authorName),
+				Priority:  ticket.Priority,
+				CreatedAt: time.Now(),
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -187,18 +250,12 @@ func (s *ticketService) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*mo
 	if err != nil {
 		// Return default metrics if not found
 		return &models.OrgSupportMetrics{
-			OrgID:          orgID,
-			OpenTickets:    0,
-			ResolvedTickets: 0,
-			SLABreaches:    0,
-			CriticalIssues: 0,
+			OrgID:             orgID,
+			OpenTickets:       0,
+			ResolvedTickets:   0,
+			SLABreaches:       0,
+			CriticalIssues:    0,
 		}, nil
 	}
 	return metrics, nil
-}
-
-func (s *ticketService) generateTicketNumber() int {
-	// In production, this should use a sequence or atomic counter
-	// For now, using a simple incrementing number
-	return 1000 // This should be replaced with proper sequence logic
 }

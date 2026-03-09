@@ -2,10 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
@@ -13,472 +12,369 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// RouteOptimizationRepositoryImpl implements the RouteOptimizationRepository interface
 type RouteOptimizationRepositoryImpl struct {
 	db *pgxpool.Pool
 }
 
-// NewRouteOptimizationRepository creates a new instance of RouteOptimizationRepositoryImpl
-func NewRouteOptimizationRepository(db *pgxpool.Pool) *RouteOptimizationRepositoryImpl {
-	return &RouteOptimizationRepositoryImpl{
-		db: db,
-	}
+// NewRouteOptimizationRepository creates a new route optimization repository
+func NewRouteOptimizationRepository(db *pgxpool.Pool) RouteOptimizationRepository {
+	return &RouteOptimizationRepositoryImpl{db: db}
 }
 
-// CreateOptimizationRequest creates a new route optimization request
+// CreateOptimizationRequest creates a new optimization request
 func (r *RouteOptimizationRepositoryImpl) CreateOptimizationRequest(ctx context.Context, request *models.RouteOptimizationRequest) error {
 	query := `
 		INSERT INTO route_optimization_requests (
-			id, organization_id, name, description, start_time, end_time, 
-			start_time_window, end_time_window, constraints, stops, vehicles, 
-			priorities, optimization_goals, created_at, updated_at, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
+			id, organization_id, name, description, start_time, end_time,
+			start_time_window, end_time_window, constraints, stops, vehicles,
+			priorities, optimization_goals, status, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+	`
 
-	stopsJSON, err := json.Marshal(request.Stops)
-	if err != nil {
-		return fmt.Errorf("failed to marshal stops: %w", err)
-	}
+	constraintsJSON, _ := json.Marshal(request.Constraints)
+	stopsJSON, _ := json.Marshal(request.Stops)
+	vehiclesJSON, _ := json.Marshal(request.Vehicles)
+	prioritiesJSON, _ := json.Marshal(request.Priorities)
+	goalsJSON, _ := json.Marshal(request.OptimizationGoals)
 
-	vehiclesJSON, err := json.Marshal(request.Vehicles)
-	if err != nil {
-		return fmt.Errorf("failed to marshal vehicles: %w", err)
-	}
-
-	constraintsJSON, err := json.Marshal(request.Constraints)
-	if err != nil {
-		return fmt.Errorf("failed to marshal constraints: %w", err)
-	}
-
-	prioritiesJSON, err := json.Marshal(request.Priorities)
-	if err != nil {
-		return fmt.Errorf("failed to marshal priorities: %w", err)
-	}
-
-	goalsJSON, err := json.Marshal(request.OptimizationGoals)
-	if err != nil {
-		return fmt.Errorf("failed to marshal optimization goals: %w", err)
-	}
-
-	_, err = r.db.Exec(ctx, query,
-		request.ID,
-		request.OrganizationID,
-		request.Name,
-		request.Description,
-		request.StartTime,
-		request.EndTime,
-		request.StartTimeWindow,
-		request.EndTimeWindow,
-		constraintsJSON,
-		stopsJSON,
-		vehiclesJSON,
-		prioritiesJSON,
-		goalsJSON,
-		request.CreatedAt,
-		request.UpdatedAt,
-		request.Status,
+	_, err := r.db.Exec(ctx, query,
+		request.ID, request.OrganizationID, request.Name, request.Description,
+		request.StartTime, request.EndTime, request.StartTimeWindow, request.EndTimeWindow,
+		constraintsJSON, stopsJSON, vehiclesJSON, prioritiesJSON, goalsJSON,
+		request.Status, request.CreatedAt, request.UpdatedAt,
 	)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create optimization request: %w", err)
+	}
+	return nil
 }
 
-// GetOptimizationRequest retrieves a route optimization request by ID
+// GetOptimizationRequest retrieves an optimization request by ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationRequest(ctx context.Context, id string) (*models.RouteOptimizationRequest, error) {
 	query := `
 		SELECT id, organization_id, name, description, start_time, end_time,
 		       start_time_window, end_time_window, constraints, stops, vehicles,
-		       priorities, optimization_goals, created_at, updated_at, status, result
+		       priorities, optimization_goals, status, result, created_at, updated_at
 		FROM route_optimization_requests
-		WHERE id = $1`
+		WHERE id = $1
+	`
 
 	var request models.RouteOptimizationRequest
-	var constraintsJSON, stopsJSON, vehiclesJSON, prioritiesJSON, goalsJSON []byte
-	var resultJSON []byte
+	var constraintsJSON, stopsJSON, vehiclesJSON, prioritiesJSON, goalsJSON, resultJSON []byte
 
-	row := r.db.QueryRow(ctx, query, id)
-	err := row.Scan(
-		&request.ID,
-		&request.OrganizationID,
-		&request.Name,
-		&request.Description,
-		&request.StartTime,
-		&request.EndTime,
-		&request.StartTimeWindow,
-		&request.EndTimeWindow,
-		&constraintsJSON,
-		&stopsJSON,
-		&vehiclesJSON,
-		&prioritiesJSON,
-		&goalsJSON,
-		&request.CreatedAt,
-		&request.UpdatedAt,
-		&request.Status,
-		&resultJSON,
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&request.ID, &request.OrganizationID, &request.Name, &request.Description,
+		&request.StartTime, &request.EndTime, &request.StartTimeWindow, &request.EndTimeWindow,
+		&constraintsJSON, &stopsJSON, &vehiclesJSON, &prioritiesJSON, &goalsJSON,
+		&request.Status, &resultJSON, &request.CreatedAt, &request.UpdatedAt,
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("route optimization request not found")
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get route optimization request: %w", err)
+		return nil, fmt.Errorf("failed to get optimization request: %w", err)
 	}
 
-	// Unmarshal JSON fields
 	if err := json.Unmarshal(constraintsJSON, &request.Constraints); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal constraints: %w", err)
 	}
-
 	if err := json.Unmarshal(stopsJSON, &request.Stops); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal stops: %w", err)
 	}
-
 	if err := json.Unmarshal(vehiclesJSON, &request.Vehicles); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal vehicles: %w", err)
 	}
-
 	if err := json.Unmarshal(prioritiesJSON, &request.Priorities); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal priorities: %w", err)
 	}
-
 	if err := json.Unmarshal(goalsJSON, &request.OptimizationGoals); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal optimization goals: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal goals: %w", err)
 	}
-
-	if resultJSON != nil {
-		var result models.RouteOptimizationResult
-		if err := json.Unmarshal(resultJSON, &result); err != nil {
+	if len(resultJSON) > 0 {
+		if err := json.Unmarshal(resultJSON, &request.Result); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal result: %w", err)
 		}
-		request.Result = &result
 	}
 
 	return &request, nil
 }
 
-// UpdateOptimizationRequest updates an existing route optimization request
+// UpdateOptimizationRequest updates an optimization request
 func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationRequest(ctx context.Context, id string, updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return nil
-	}
-
-	setClause := ""
+	setParts := []string{}
 	args := []interface{}{}
 	argIndex := 1
 
 	for key, value := range updates {
-		if key == "updated_at" {
-			continue
+		// Handle JSON fields specially
+		if key == "constraints" || key == "stops" || key == "vehicles" || key == "priorities" || key == "optimization_goals" || key == "result" {
+			if jsonBytes, ok := value.([]byte); ok {
+				setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
+				args = append(args, jsonBytes)
+				argIndex++
+			} else if jsonBytes, err := json.Marshal(value); err == nil {
+				setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
+				args = append(args, jsonBytes)
+				argIndex++
+			}
+		} else {
+			setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
+			args = append(args, value)
+			argIndex++
 		}
-		if argIndex > 1 {
-			setClause += ", "
-		}
-		setClause += fmt.Sprintf("%s = $%d", key, argIndex)
-		args = append(args, value)
-		argIndex++
 	}
 
-	if setClause != "" {
-		setClause += ", "
-	}
-	setClause += fmt.Sprintf("updated_at = $%d", argIndex)
-	args = append(args, time.Now())
-
-	query := fmt.Sprintf("UPDATE route_optimization_requests SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
+	query := fmt.Sprintf("UPDATE route_optimization_requests SET %s WHERE id = $%d",
+		fmt.Sprintf("%s", setParts), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
-	return err
-}
-
-// DeleteOptimizationRequest deletes a route optimization request
-func (r *RouteOptimizationRepositoryImpl) DeleteOptimizationRequest(ctx context.Context, id string) error {
-	query := "DELETE FROM route_optimization_requests WHERE id = $1"
-	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete route optimization request: %w", err)
+		return fmt.Errorf("failed to update optimization request: %w", err)
 	}
-
-	if result.RowsAffected() == 0 {
-		return errors.New("route optimization request not found")
-	}
-
 	return nil
 }
 
-// ListOptimizationRequests retrieves route optimization requests for an organization
+// DeleteOptimizationRequest deletes an optimization request
+func (r *RouteOptimizationRepositoryImpl) DeleteOptimizationRequest(ctx context.Context, id string) error {
+	query := "DELETE FROM route_optimization_requests WHERE id = $1"
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete optimization request: %w", err)
+	}
+	return nil
+}
+
+// ListOptimizationRequests lists optimization requests for an organization
 func (r *RouteOptimizationRepositoryImpl) ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
 	countQuery := "SELECT COUNT(*) FROM route_optimization_requests WHERE organization_id = $1"
-	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&totalCount)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count route optimization requests: %w", err)
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count optimization requests: %w", err)
 	}
 
 	query := `
 		SELECT id, organization_id, name, description, start_time, end_time,
 		       start_time_window, end_time_window, constraints, stops, vehicles,
-		       priorities, optimization_goals, created_at, updated_at, status, result
+		       priorities, optimization_goals, status, result, created_at, updated_at
 		FROM route_optimization_requests
 		WHERE organization_id = $1
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3`
+		LIMIT $2 OFFSET $3
+	`
 
 	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list route optimization requests: %w", err)
+		return nil, 0, fmt.Errorf("failed to list optimization requests: %w", err)
 	}
 	defer rows.Close()
 
 	var requests []*models.RouteOptimizationRequest
 	for rows.Next() {
 		var request models.RouteOptimizationRequest
-		var constraintsJSON, stopsJSON, vehiclesJSON, prioritiesJSON, goalsJSON []byte
-		var resultJSON []byte
+		var constraintsJSON, stopsJSON, vehiclesJSON, prioritiesJSON, goalsJSON, resultJSON []byte
 
 		err := rows.Scan(
-			&request.ID,
-			&request.OrganizationID,
-			&request.Name,
-			&request.Description,
-			&request.StartTime,
-			&request.EndTime,
-			&request.StartTimeWindow,
-			&request.EndTimeWindow,
-			&constraintsJSON,
-			&stopsJSON,
-			&vehiclesJSON,
-			&prioritiesJSON,
-			&goalsJSON,
-			&request.CreatedAt,
-			&request.UpdatedAt,
-			&request.Status,
-			&resultJSON,
+			&request.ID, &request.OrganizationID, &request.Name, &request.Description,
+			&request.StartTime, &request.EndTime, &request.StartTimeWindow, &request.EndTimeWindow,
+			&constraintsJSON, &stopsJSON, &vehiclesJSON, &prioritiesJSON, &goalsJSON,
+			&request.Status, &resultJSON, &request.CreatedAt, &request.UpdatedAt,
 		)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to scan route optimization request: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan optimization request: %w", err)
 		}
 
-		// Unmarshal JSON fields
 		if err := json.Unmarshal(constraintsJSON, &request.Constraints); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal constraints: %w", err)
 		}
-
 		if err := json.Unmarshal(stopsJSON, &request.Stops); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal stops: %w", err)
 		}
-
 		if err := json.Unmarshal(vehiclesJSON, &request.Vehicles); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal vehicles: %w", err)
 		}
-
 		if err := json.Unmarshal(prioritiesJSON, &request.Priorities); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal priorities: %w", err)
 		}
-
 		if err := json.Unmarshal(goalsJSON, &request.OptimizationGoals); err != nil {
-			return nil, 0, fmt.Errorf("failed to unmarshal optimization goals: %w", err)
+			return nil, 0, fmt.Errorf("failed to unmarshal goals: %w", err)
 		}
-
-		if resultJSON != nil {
-			var result models.RouteOptimizationResult
-			if err := json.Unmarshal(resultJSON, &result); err != nil {
-				log.Printf("Warning: failed to unmarshal result: %v", err)
-			} else {
-				request.Result = &result
+		if len(resultJSON) > 0 {
+			if err := json.Unmarshal(resultJSON, &request.Result); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal result: %w", err)
 			}
 		}
 
 		requests = append(requests, &request)
 	}
 
-	return requests, totalCount, nil
+	return requests, total, nil
 }
 
-// CreateOptimizationResult creates a new route optimization result
+// CreateOptimizationResult creates a new optimization result
 func (r *RouteOptimizationRepositoryImpl) CreateOptimizationResult(ctx context.Context, result *models.RouteOptimizationResult) error {
 	query := `
 		INSERT INTO route_optimization_results (
-			id, request_id, optimization_time, total_distance, total_time, 
-			total_cost, total_vehicles_used, total_stops, routes, performance_metrics
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+			id, request_id, optimization_time, total_distance, total_time,
+			total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
+			created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	`
 
-	routesJSON, err := json.Marshal(result.Routes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal routes: %w", err)
-	}
+	routesJSON, _ := json.Marshal(result.Routes)
+	metricsJSON, _ := json.Marshal(result.PerformanceMetrics)
 
-	metricsJSON, err := json.Marshal(result.PerformanceMetrics)
-	if err != nil {
-		return fmt.Errorf("failed to marshal performance metrics: %w", err)
-	}
-
-	_, err = r.db.Exec(ctx, query,
-		result.ID,
-		result.RequestID,
-		result.OptimizationTime,
-		result.TotalDistance,
-		result.TotalTime,
-		result.TotalCost,
-		result.TotalVehiclesUsed,
-		result.TotalStops,
-		routesJSON,
-		metricsJSON,
+	_, err := r.db.Exec(ctx, query,
+		result.ID, result.RequestID, result.OptimizationTime,
+		result.TotalDistance, result.TotalTime, result.TotalCost,
+		result.TotalVehiclesUsed, result.TotalStops, routesJSON, metricsJSON,
+		time.Now(),
 	)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create optimization result: %w", err)
+	}
+	return nil
 }
 
-// GetOptimizationResult retrieves a route optimization result by ID
+// GetOptimizationResult retrieves an optimization result by ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationResult(ctx context.Context, id string) (*models.RouteOptimizationResult, error) {
 	query := `
 		SELECT id, request_id, optimization_time, total_distance, total_time,
-		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics
+		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
+		       created_at
 		FROM route_optimization_results
-		WHERE id = $1`
+		WHERE id = $1
+	`
 
 	var result models.RouteOptimizationResult
 	var routesJSON, metricsJSON []byte
 
-	row := r.db.QueryRow(ctx, query, id)
-	err := row.Scan(
-		&result.ID,
-		&result.RequestID,
-		&result.OptimizationTime,
-		&result.TotalDistance,
-		&result.TotalTime,
-		&result.TotalCost,
-		&result.TotalVehiclesUsed,
-		&result.TotalStops,
-		&routesJSON,
-		&metricsJSON,
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&result.ID, &result.RequestID, &result.OptimizationTime,
+		&result.TotalDistance, &result.TotalTime, &result.TotalCost,
+		&result.TotalVehiclesUsed, &result.TotalStops, &routesJSON, &metricsJSON,
+		&result.CreatedAt,
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("route optimization result not found")
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get route optimization result: %w", err)
+		return nil, fmt.Errorf("failed to get optimization result: %w", err)
 	}
 
-	// Unmarshal JSON fields
 	if err := json.Unmarshal(routesJSON, &result.Routes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal routes: %w", err)
 	}
-
 	if err := json.Unmarshal(metricsJSON, &result.PerformanceMetrics); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal performance metrics: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal metrics: %w", err)
 	}
 
 	return &result, nil
 }
 
-// GetOptimizationResultByRequestID retrieves a route optimization result by request ID
+// GetOptimizationResultByRequestID retrieves an optimization result by request ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationResultByRequestID(ctx context.Context, requestID string) (*models.RouteOptimizationResult, error) {
 	query := `
 		SELECT id, request_id, optimization_time, total_distance, total_time,
-		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics
+		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
+		       created_at
 		FROM route_optimization_results
-		WHERE request_id = $1`
+		WHERE request_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
 
 	var result models.RouteOptimizationResult
 	var routesJSON, metricsJSON []byte
 
-	row := r.db.QueryRow(ctx, query, requestID)
-	err := row.Scan(
-		&result.ID,
-		&result.RequestID,
-		&result.OptimizationTime,
-		&result.TotalDistance,
-		&result.TotalTime,
-		&result.TotalCost,
-		&result.TotalVehiclesUsed,
-		&result.TotalStops,
-		&routesJSON,
-		&metricsJSON,
+	err := r.db.QueryRow(ctx, query, requestID).Scan(
+		&result.ID, &result.RequestID, &result.OptimizationTime,
+		&result.TotalDistance, &result.TotalTime, &result.TotalCost,
+		&result.TotalVehiclesUsed, &result.TotalStops, &routesJSON, &metricsJSON,
+		&result.CreatedAt,
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("route optimization result not found")
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get route optimization result by request ID: %w", err)
+		return nil, fmt.Errorf("failed to get optimization result: %w", err)
 	}
 
-	// Unmarshal JSON fields
 	if err := json.Unmarshal(routesJSON, &result.Routes); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal routes: %w", err)
 	}
-
 	if err := json.Unmarshal(metricsJSON, &result.PerformanceMetrics); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal performance metrics: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal metrics: %w", err)
 	}
 
 	return &result, nil
 }
 
-// UpdateOptimizationResult updates an existing route optimization result
+// UpdateOptimizationResult updates an optimization result
 func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationResult(ctx context.Context, id string, updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return nil
-	}
-
-	setClause := ""
+	setParts := []string{}
 	args := []interface{}{}
 	argIndex := 1
 
 	for key, value := range updates {
-		if key == "updated_at" {
-			continue
+		if jsonBytes, err := json.Marshal(value); err == nil {
+			setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
+			args = append(args, jsonBytes)
+			argIndex++
+		} else {
+			setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
+			args = append(args, value)
+			argIndex++
 		}
-		if argIndex > 1 {
-			setClause += ", "
-		}
-		setClause += fmt.Sprintf("%s = $%d", key, argIndex)
-		args = append(args, value)
-		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE route_optimization_results SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
+	query := fmt.Sprintf("UPDATE route_optimization_results SET %s WHERE id = $%d",
+		fmt.Sprintf("%s", setParts), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
-	return err
-}
-
-// DeleteOptimizationResult deletes a route optimization result
-func (r *RouteOptimizationRepositoryImpl) DeleteOptimizationResult(ctx context.Context, id string) error {
-	query := "DELETE FROM route_optimization_results WHERE id = $1"
-	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
-		return fmt.Errorf("failed to delete route optimization result: %w", err)
+		return fmt.Errorf("failed to update optimization result: %w", err)
 	}
-
-	if result.RowsAffected() == 0 {
-		return errors.New("route optimization result not found")
-	}
-
 	return nil
 }
 
-// ListOptimizationResults retrieves route optimization results for a request
+// DeleteOptimizationResult deletes an optimization result
+func (r *RouteOptimizationRepositoryImpl) DeleteOptimizationResult(ctx context.Context, id string) error {
+	query := "DELETE FROM route_optimization_results WHERE id = $1"
+	_, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete optimization result: %w", err)
+	}
+	return nil
+}
+
+// ListOptimizationResults lists optimization results for a request
 func (r *RouteOptimizationRepositoryImpl) ListOptimizationResults(ctx context.Context, requestID string, limit, offset int) ([]*models.RouteOptimizationResult, int, error) {
 	countQuery := "SELECT COUNT(*) FROM route_optimization_results WHERE request_id = $1"
-	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, requestID).Scan(&totalCount)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count route optimization results: %w", err)
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, requestID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count optimization results: %w", err)
 	}
 
 	query := `
 		SELECT id, request_id, optimization_time, total_distance, total_time,
-		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics
+		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
+		       created_at
 		FROM route_optimization_results
 		WHERE request_id = $1
-		ORDER BY optimization_time DESC
-		LIMIT $2 OFFSET $3`
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
 
 	rows, err := r.db.Query(ctx, query, requestID, limit, offset)
 	if err != nil {
-		return nil, 0, fmt.Errorf("failed to list route optimization results: %w", err)
+		return nil, 0, fmt.Errorf("failed to list optimization results: %w", err)
 	}
 	defer rows.Close()
 
@@ -488,81 +384,64 @@ func (r *RouteOptimizationRepositoryImpl) ListOptimizationResults(ctx context.Co
 		var routesJSON, metricsJSON []byte
 
 		err := rows.Scan(
-			&result.ID,
-			&result.RequestID,
-			&result.OptimizationTime,
-			&result.TotalDistance,
-			&result.TotalTime,
-			&result.TotalCost,
-			&result.TotalVehiclesUsed,
-			&result.TotalStops,
-			&routesJSON,
-			&metricsJSON,
+			&result.ID, &result.RequestID, &result.OptimizationTime,
+			&result.TotalDistance, &result.TotalTime, &result.TotalCost,
+			&result.TotalVehiclesUsed, &result.TotalStops, &routesJSON, &metricsJSON,
+			&result.CreatedAt,
 		)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to scan route optimization result: %w", err)
+			return nil, 0, fmt.Errorf("failed to scan optimization result: %w", err)
 		}
 
-		// Unmarshal JSON fields
 		if err := json.Unmarshal(routesJSON, &result.Routes); err != nil {
 			return nil, 0, fmt.Errorf("failed to unmarshal routes: %w", err)
 		}
-
 		if err := json.Unmarshal(metricsJSON, &result.PerformanceMetrics); err != nil {
-			return nil, 0, fmt.Errorf("failed to unmarshal performance metrics: %w", err)
+			return nil, 0, fmt.Errorf("failed to unmarshal metrics: %w", err)
 		}
 
 		results = append(results, &result)
 	}
 
-	return results, totalCount, nil
+	return results, total, nil
 }
 
 // CreateOptimizationJob creates a new optimization job
 func (r *RouteOptimizationRepositoryImpl) CreateOptimizationJob(ctx context.Context, job *models.OptimizationJob) error {
 	query := `
-		INSERT INTO optimization_jobs (
+		INSERT INTO route_optimization_jobs (
 			id, request_id, status, created_at, started_at, completed_at, error, result_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
 
 	_, err := r.db.Exec(ctx, query,
-		job.ID,
-		job.RequestID,
-		job.Status,
-		job.CreatedAt,
-		job.StartedAt,
-		job.CompletedAt,
-		job.Error,
-		job.ResultID,
+		job.ID, job.RequestID, job.Status, job.CreatedAt,
+		job.StartedAt, job.CompletedAt, job.Error, job.ResultID,
 	)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create optimization job: %w", err)
+	}
+	return nil
 }
 
 // GetOptimizationJob retrieves an optimization job by ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationJob(ctx context.Context, id string) (*models.OptimizationJob, error) {
 	query := `
 		SELECT id, request_id, status, created_at, started_at, completed_at, error, result_id
-		FROM optimization_jobs
-		WHERE id = $1`
+		FROM route_optimization_jobs
+		WHERE id = $1
+	`
 
 	var job models.OptimizationJob
-
-	row := r.db.QueryRow(ctx, query, id)
-	err := row.Scan(
-		&job.ID,
-		&job.RequestID,
-		&job.Status,
-		&job.CreatedAt,
-		&job.StartedAt,
-		&job.CompletedAt,
-		&job.Error,
-		&job.ResultID,
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&job.ID, &job.RequestID, &job.Status, &job.CreatedAt,
+		&job.StartedAt, &job.CompletedAt, &job.Error, &job.ResultID,
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("optimization job not found")
+		if err == sql.ErrNoRows {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get optimization job: %w", err)
 	}
@@ -570,67 +449,76 @@ func (r *RouteOptimizationRepositoryImpl) GetOptimizationJob(ctx context.Context
 	return &job, nil
 }
 
-// UpdateOptimizationJob updates an existing optimization job
+// UpdateOptimizationJob updates an optimization job
 func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJob(ctx context.Context, id string, updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return nil
-	}
-
-	setClause := ""
+	setParts := []string{}
 	args := []interface{}{}
 	argIndex := 1
 
 	for key, value := range updates {
-		if key == "updated_at" {
-			continue
-		}
-		if argIndex > 1 {
-			setClause += ", "
-		}
-		setClause += fmt.Sprintf("%s = $%d", key, argIndex)
+		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
 	}
 
-	query := fmt.Sprintf("UPDATE optimization_jobs SET %s WHERE id = $%d", setClause, argIndex+1)
 	args = append(args, id)
+	query := fmt.Sprintf("UPDATE route_optimization_jobs SET %s WHERE id = $%d",
+		fmt.Sprintf("%s", setParts), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update optimization job: %w", err)
+	}
+	return nil
 }
 
-// UpdateOptimizationJobStatus updates the status of an optimization job
-func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJobStatus(ctx context.Context, id, status string, completedAt *time.Time, error *string) error {
-	query := "UPDATE optimization_jobs SET status = $1, completed_at = $2, error = $3 WHERE id = $4"
-	_, err := r.db.Exec(ctx, query, status, completedAt, error, id)
-	return err
+// UpdateOptimizationJobStatus updates an optimization job status
+func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJobStatus(ctx context.Context, id, status string, completedAt *time.Time, errMsg *string) error {
+	query := `
+		UPDATE route_optimization_jobs
+		SET status = $1, completed_at = $2, error = $3, updated_at = NOW()
+		WHERE id = $4
+	`
+
+	_, err := r.db.Exec(ctx, query, status, completedAt, errMsg, id)
+	if err != nil {
+		return fmt.Errorf("failed to update optimization job status: %w", err)
+	}
+	return nil
 }
 
-// ListOptimizationJobs retrieves optimization jobs for a request
+// ListOptimizationJobs lists optimization jobs for a request
 func (r *RouteOptimizationRepositoryImpl) ListOptimizationJobs(ctx context.Context, requestID string, status string, limit, offset int) ([]*models.OptimizationJob, int, error) {
-	args := []interface{}{requestID}
+	countQuery := "SELECT COUNT(*) FROM route_optimization_jobs WHERE request_id = $1"
+	countArgs := []interface{}{requestID}
 	argIndex := 2
 
-	whereClause := "WHERE request_id = $1"
 	if status != "" {
-		whereClause += fmt.Sprintf(" AND status = $%d", argIndex)
+		countQuery += fmt.Sprintf(" AND status = $%d", argIndex)
+		countArgs = append(countArgs, status)
+		argIndex++
+	}
+
+	var total int
+	if err := r.db.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count optimization jobs: %w", err)
+	}
+
+	query := `
+		SELECT id, request_id, status, created_at, started_at, completed_at, error, result_id
+		FROM route_optimization_jobs
+		WHERE request_id = $1
+	`
+	args := []interface{}{requestID}
+	argIndex = 2
+
+	if status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argIndex)
 		args = append(args, status)
 		argIndex++
 	}
 
-	var totalCount int
-	err := r.db.QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM optimization_jobs %s", whereClause), args...).Scan(&totalCount)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count optimization jobs: %w", err)
-	}
-
-	query := fmt.Sprintf(`
-		SELECT id, request_id, status, created_at, started_at, completed_at, error, result_id
-		FROM optimization_jobs
-		%s
-		ORDER BY created_at DESC
-		LIMIT $%d OFFSET $%d`, whereClause, argIndex, argIndex+1)
-
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.db.Query(ctx, query, args...)
@@ -642,37 +530,25 @@ func (r *RouteOptimizationRepositoryImpl) ListOptimizationJobs(ctx context.Conte
 	var jobs []*models.OptimizationJob
 	for rows.Next() {
 		var job models.OptimizationJob
-
 		err := rows.Scan(
-			&job.ID,
-			&job.RequestID,
-			&job.Status,
-			&job.CreatedAt,
-			&job.StartedAt,
-			&job.CompletedAt,
-			&job.Error,
-			&job.ResultID,
+			&job.ID, &job.RequestID, &job.Status, &job.CreatedAt,
+			&job.StartedAt, &job.CompletedAt, &job.Error, &job.ResultID,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan optimization job: %w", err)
 		}
-
 		jobs = append(jobs, &job)
 	}
 
-	return jobs, totalCount, nil
+	return jobs, total, nil
 }
 
 // HealthCheck performs a health check on the database
 func (r *RouteOptimizationRepositoryImpl) HealthCheck(ctx context.Context) error {
-	err := r.db.Ping(ctx)
-	if err != nil {
-		return fmt.Errorf("database health check failed: %w", err)
-	}
-	return nil
+	return r.db.Ping(ctx)
 }
 
-// Ping checks if the database connection is alive
+// Ping pings the database
 func (r *RouteOptimizationRepositoryImpl) Ping(ctx context.Context) error {
 	return r.db.Ping(ctx)
 }

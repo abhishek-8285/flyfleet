@@ -29,6 +29,7 @@ type Config struct {
 	TripServiceURL          string
 	MaintenanceServiceURL   string
 	MLServiceURL            string
+	JWKSURL                 string
 }
 
 func Load() *Config {
@@ -57,6 +58,7 @@ func Load() *Config {
 	v.SetDefault("services.trip_url", "")
 	v.SetDefault("services.maintenance_url", "")
 	v.SetDefault("services.ml_url", "http://localhost:8000") // Sidecar default
+	v.SetDefault("security.jwks_url", "http://localhost:8084/.well-known/jwks.json")
 
 	// Config file setup
 	v.SetConfigName("config")
@@ -96,6 +98,7 @@ func Load() *Config {
 	v.BindEnv("services.trip_url", "TRIP_SERVICE_URL")
 	v.BindEnv("services.maintenance_url", "MAINTENANCE_SERVICE_URL")
 	v.BindEnv("services.ml_url", "ML_SERVICE_URL")
+	v.BindEnv("security.jwks_url", "AUTH_V2_JWKS_URL")
 
 	return &Config{
 		Port:                   v.GetString("server.port"),
@@ -119,5 +122,6 @@ func Load() *Config {
 		TripServiceURL:         v.GetString("services.trip_url"),
 		MaintenanceServiceURL:  v.GetString("services.maintenance_url"),
 		MLServiceURL:           v.GetString("services.ml_url"),
+		JWKSURL:                v.GetString("security.jwks_url"),
 	}
 }

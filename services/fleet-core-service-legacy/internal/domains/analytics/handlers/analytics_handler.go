@@ -4,33 +4,69 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
+	"errors"
+	analyticsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/analytics/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
+	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
+	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
+// Rate limiters for expensive endpoints
+var (
+	// Fleet analytics: 10 requests per minute (expensive aggregation)
+	fleetAnalyticsLimiter = NewRateLimiter(10, time.Minute)
+	// Driver behavior: 30 requests per minute
+	driverBehaviorLimiter = NewRateLimiter(30, time.Minute)
+	// Predictions: 60 requests per minute
+	predictionLimiter = NewRateLimiter(60, time.Minute)
+
+	initLimitersOnce sync.Once
+)
+
 // AnalyticsHandler handles HTTP requests for analytics operations
 type AnalyticsHandler struct {
-	service service.AnalyticsService
-	logger  *zap.Logger
+	service          analytics.AnalyticsService
+	guard            *analyticsMiddleware.TenantGuard
+	logger           *zap.Logger
+	rateLimiter      *analyticsMiddleware.RateLimiter
+	qualityValidator *analyticsMiddleware.DataQualityValidator
 }
 
 // NewAnalyticsHandler creates a new instance of AnalyticsHandler
-func NewAnalyticsHandler(service service.AnalyticsService, logger *zap.Logger) *AnalyticsHandler {
+func NewAnalyticsHandler(service analytics.AnalyticsService, guard *analyticsMiddleware.TenantGuard, logger *zap.Logger, rateLimiter *analyticsMiddleware.RateLimiter, qualityValidator *analyticsMiddleware.DataQualityValidator) *AnalyticsHandler {
+	// Start cleanup goroutine for rate limiters only once
+	initLimitersOnce.Do(func() {
+		stopCh := make(chan struct{})
+		fleetAnalyticsLimiter.StartCleanup(time.Minute, stopCh)
+		driverBehaviorLimiter.StartCleanup(time.Minute, stopCh)
+		predictionLimiter.StartCleanup(time.Minute, stopCh)
+	})
+
 	return &AnalyticsHandler{
-		service: service,
-		logger:  logger,
+		service:          service,
+		guard:            guard,
+		logger:           logger,
+		rateLimiter:      rateLimiter,
+		qualityValidator: qualityValidator,
 	}
 }
 
 // RegisterRoutes registers the analytics routes
 func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
-	// Predictive Models
+	// h.service.SubscribeToInvalidations(context.Background())
+
+	r.Route("/analytics", func(r chi.Router) {
+		r.Use(h.rateLimiter.OrgRateLimit)
+
+		// Predictive Models
 	r.Route("/predictive-models", func(r chi.Router) {
 		r.Post("/", h.CreatePredictiveModel)
 		r.Get("/", h.ListPredictiveModels)
@@ -60,6 +96,25 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 			r.Put("/", h.UpdateAnalyticsJob)
 			r.Delete("/", h.DeleteAnalyticsJob)
 		})
+	})
+
+	// Phase 8: Operations & ML Lifecycle
+	r.Route("/deployments", func(r chi.Router) {
+		r.Post("/", h.DeployModel)
+	})
+
+	r.Route("/risk-events", func(r chi.Router) {
+		r.Post("/", h.CreateDriverRiskEvent)
+		r.Get("/", h.GetDriverRiskEvents)
+	})
+
+	r.Route("/quotas", func(r chi.Router) {
+		r.Get("/", h.GetAnalyticsQuota)
+	})
+
+	r.Route("/ops", func(r chi.Router) {
+		r.Post("/reconciliation", h.RunReconciliation)
+		r.Post("/backfill", h.RunHistoricalBackfill)
 	})
 
 	// Fleet Analytics
@@ -99,14 +154,24 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		})
 	})
 
-	// Legacy/Placeholder endpoints
-	r.Get("/vehicle-analytics", h.GetVehicleAnalytics)
-	r.Get("/driver-analytics", h.GetDriverAnalytics)
-	r.Get("/trip-analytics", h.GetTripAnalytics)
-	r.Get("/forecast-analytics", h.GetForecastAnalytics)
+	// Fleet Analytics with Ownership Guard
+	r.Route("/analytics/fleet", func(r chi.Router) {
+		r.Use(h.guard.ResourceOwnershipGuard())
+		r.Get("/summary", h.GetFleetSummary)
+		r.Get("/hourly", h.GetFleetHourlyStats)
+	})
+
+	// Stats routes with cursor pagination
+	r.Group(func(r chi.Router) {
+		r.Use(h.rateLimiter.OrgRateLimit)
+		r.Use(h.guard.ResourceOwnershipGuard())
+		r.Get("/stats/vehicle/{vehicleID}", h.GetVehicleDailyStats)
+		r.Get("/stats/driver/{driverID}", h.GetDriverDailyStats)
+	})
 
 	// Health Check
 	r.Get("/health", h.HealthCheck)
+	})
 }
 
 // CreatePredictiveModel handles the creation of a new predictive model
@@ -117,11 +182,14 @@ func (h *AnalyticsHandler) CreatePredictiveModel(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Validate required fields
-	if err := validatePredictiveModel(&model); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&model); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
+
+	// Ensure organization ID matches context if applicable (PredictiveModel is global-ish but might be org-bound)
+	// For now, focusing on the ones we know are org-bound
 
 	// Set ID and timestamps
 	model.ID = uuid.New().String()
@@ -139,8 +207,9 @@ func (h *AnalyticsHandler) CreatePredictiveModel(w http.ResponseWriter, r *http.
 // GetPredictiveModel handles retrieving a predictive model by ID
 func (h *AnalyticsHandler) GetPredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	model, err := h.service.GetPredictiveModel(r.Context(), id)
+	model, err := h.service.GetPredictiveModel(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -153,13 +222,14 @@ func (h *AnalyticsHandler) GetPredictiveModel(w http.ResponseWriter, r *http.Req
 func (h *AnalyticsHandler) GetPredictiveModelByVersion(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	version := r.URL.Query().Get("version")
+	orgID := h.getOrgID(r)
 
 	if name == "" || version == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Name and version are required", nil)
 		return
 	}
 
-	model, err := h.service.GetPredictiveModelByVersion(r.Context(), name, version)
+	model, err := h.service.GetPredictiveModelByVersion(r.Context(), name, version, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -171,20 +241,36 @@ func (h *AnalyticsHandler) GetPredictiveModelByVersion(w http.ResponseWriter, r 
 // UpdatePredictiveModel handles updating an existing predictive model
 func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var req models.UpdatePredictiveModelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate updates
-	if err := validatePredictiveModelUpdates(updates); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	if err := ValidateRequest(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdatePredictiveModel(r.Context(), id, updates); err != nil {
+	// Map to only the fields we allow updating
+	updates := make(map[string]interface{})
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.Version != nil {
+		updates["version"] = *req.Version
+	}
+	updates["updated_at"] = time.Now()
+
+	if err := h.service.UpdatePredictiveModel(r.Context(), id, orgID, updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -195,8 +281,9 @@ func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.
 // DeletePredictiveModel handles deleting a predictive model
 func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	if err := h.service.DeletePredictiveModel(r.Context(), id); err != nil {
+	if err := h.service.DeletePredictiveModel(r.Context(), id, orgID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -207,38 +294,57 @@ func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.
 // ListPredictiveModels handles listing predictive models with filtering
 func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+	orgID := h.getOrgID(r)
 	modelType := parseStringParam(query.Get("type"))
 	status := parseStringParam(query.Get("status"))
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	models, totalCount, err := h.service.ListPredictiveModels(r.Context(), modelType, status, limit, offset)
+	modelsList, totalCount, err := h.service.ListPredictiveModels(r.Context(), orgID, modelType, status, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
+	var nextCursor string
+	if len(modelsList) == limit && len(modelsList) > 0 {
+		last := modelsList[len(modelsList)-1]
+		nextCursor = utils.EncodeCursor(last.CreatedAt, last.ID)
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"data":        models,
+		"data":        modelsList,
 		"total_count": totalCount,
 		"limit":       limit,
 		"offset":      offset,
+		"next_cursor": nextCursor,
 	})
 }
 
 // CreatePredictionResult handles creating a new prediction result
 func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http.Request) {
+	// Rate limiting
+	orgID := h.getOrgID(r)
+	if !predictionLimiter.Allow(orgID.String()) {
+		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 60 requests per minute", nil)
+		return
+	}
+
 	var result models.PredictionResult
 	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate required fields
-	if err := validatePredictionResult(&result); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&result); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
+
+	// Ensure organization ID matches the one from context
+	result.OrganizationID = orgID
 
 	// Set ID and timestamps
 	result.ID = uuid.New().String()
@@ -257,8 +363,9 @@ func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http
 // GetPredictionResult handles retrieving a prediction result by ID
 func (h *AnalyticsHandler) GetPredictionResult(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	result, err := h.service.GetPredictionResult(r.Context(), id)
+	result, err := h.service.GetPredictionResult(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -270,10 +377,11 @@ func (h *AnalyticsHandler) GetPredictionResult(w http.ResponseWriter, r *http.Re
 // GetPredictionResultsByModel handles retrieving prediction results by model ID
 func (h *AnalyticsHandler) GetPredictionResultsByModel(w http.ResponseWriter, r *http.Request) {
 	modelID := chi.URLParam(r, "modelId")
+	orgID := h.getOrgID(r)
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	results, totalCount, err := h.service.GetPredictionResultsByModel(r.Context(), modelID, limit, offset)
+	results, totalCount, err := h.service.GetPredictionResultsByModel(r.Context(), modelID, orgID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -334,11 +442,18 @@ func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.
 	anomalyDetected := parseBoolParam(query.Get("anomalyDetected"))
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	results, totalCount, err := h.service.ListPredictionResults(r.Context(), orgID, modelID, anomalyDetected, limit, offset)
+	results, totalCount, err := h.service.ListPredictionResults(r.Context(), orgID, modelID, anomalyDetected, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
+	}
+
+	var nextCursor string
+	if len(results) == limit && len(results) > 0 {
+		last := results[len(results)-1]
+		nextCursor = utils.EncodeCursor(last.CreatedAt, last.ID)
 	}
 
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
@@ -346,22 +461,33 @@ func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.
 		"total_count": totalCount,
 		"limit":       limit,
 		"offset":      offset,
+		"next_cursor": nextCursor,
 	})
 }
 
 // CreateAnalyticsJob handles creating a new analytics job
 func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
+	// Rate limiting (shared with fleet analytics as they are both heavy)
+	orgID := h.getOrgID(r)
+	if !fleetAnalyticsLimiter.Allow(orgID.String()) {
+		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 10 requests per minute", nil)
+		return
+	}
+
 	var job models.AnalyticsJob
 	if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate required fields
-	if err := validateAnalyticsJob(&job); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&job); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
+
+	// Ensure organization ID matches context
+	job.OrganizationID = orgID
 
 	// Set ID and timestamps
 	job.ID = uuid.New().String()
@@ -379,8 +505,9 @@ func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Req
 // GetAnalyticsJob handles retrieving an analytics job by ID
 func (h *AnalyticsHandler) GetAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	job, err := h.service.GetAnalyticsJob(r.Context(), id)
+	job, err := h.service.GetAnalyticsJob(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -392,20 +519,41 @@ func (h *AnalyticsHandler) GetAnalyticsJob(w http.ResponseWriter, r *http.Reques
 // UpdateAnalyticsJob handles updating an existing analytics job
 func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var req models.UpdateAnalyticsJobRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate updates
-	if err := validateAnalyticsJobUpdates(updates); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	if err := ValidateRequest(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateAnalyticsJob(r.Context(), id, updates); err != nil {
+	updates := make(map[string]interface{})
+	if req.Status != nil {
+		updates["status"] = *req.Status
+	}
+	if req.Progress != nil {
+		updates["progress"] = *req.Progress
+	}
+	if req.ErrorDetails != nil {
+		updates["error_details"] = *req.ErrorDetails
+	}
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+	if req.Description != nil {
+		updates["description"] = *req.Description
+	}
+	if req.Parameters != nil {
+		updates["parameters"] = req.Parameters
+	}
+	updates["updated_at"] = time.Now()
+
+	if err := h.service.UpdateAnalyticsJob(r.Context(), id, orgID, updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -416,8 +564,9 @@ func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Req
 // DeleteAnalyticsJob handles deleting an analytics job
 func (h *AnalyticsHandler) DeleteAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	if err := h.service.DeleteAnalyticsJob(r.Context(), id); err != nil {
+	if err := h.service.DeleteAnalyticsJob(r.Context(), id, orgID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -443,11 +592,18 @@ func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Requ
 	}
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	jobs, totalCount, err := h.service.ListAnalyticsJobs(r.Context(), jobType, status, orgID, limit, offset)
+	jobs, totalCount, err := h.service.ListAnalyticsJobs(r.Context(), jobType, status, orgID, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
+	}
+
+	var nextCursor string
+	if len(jobs) == limit && len(jobs) > 0 {
+		last := jobs[len(jobs)-1]
+		nextCursor = utils.EncodeCursor(last.CreatedAt, last.ID)
 	}
 
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
@@ -455,6 +611,7 @@ func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Requ
 		"total_count": totalCount,
 		"limit":       limit,
 		"offset":      offset,
+		"next_cursor": nextCursor,
 	})
 }
 
@@ -466,9 +623,9 @@ func (h *AnalyticsHandler) CreateFleetAnalytics(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Validate required fields
-	if err := validateFleetAnalytics(&analytics); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
@@ -489,8 +646,9 @@ func (h *AnalyticsHandler) CreateFleetAnalytics(w http.ResponseWriter, r *http.R
 // GetFleetAnalytics handles retrieving fleet analytics by ID
 func (h *AnalyticsHandler) GetFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	analytics, err := h.service.GetFleetAnalytics(r.Context(), id)
+	analytics, err := h.service.GetFleetAnalytics(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -501,8 +659,18 @@ func (h *AnalyticsHandler) GetFleetAnalytics(w http.ResponseWriter, r *http.Requ
 
 // GetFleetAnalyticsByPeriod handles retrieving fleet analytics by organization and date period
 func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(w http.ResponseWriter, r *http.Request) {
+	// Rate limiting: 10 requests per minute per org
+	orgIDStr := r.URL.Query().Get("orgId")
+	if orgIDStr == "" {
+		orgIDStr = h.getOrgID(r).String()
+	}
+	if !fleetAnalyticsLimiter.Allow(orgIDStr) {
+		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 10 requests per minute", nil)
+		return
+	}
+
 	query := r.URL.Query()
-	orgIDStr := query.Get("orgId")
+	orgIDStr = query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
 		orgID = h.getOrgID(r)
@@ -541,19 +709,42 @@ func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(w http.ResponseWriter, r *h
 func (h *AnalyticsHandler) UpdateFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var req models.UpdateFleetAnalyticsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate updates
-	if err := validateFleetAnalyticsUpdates(updates); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	if err := ValidateRequest(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateFleetAnalytics(r.Context(), id, updates); err != nil {
+	updates := make(map[string]interface{})
+	if req.TotalVehicles != nil {
+		updates["total_vehicles"] = *req.TotalVehicles
+	}
+	if req.ActiveVehicles != nil {
+		updates["active_vehicles"] = *req.ActiveVehicles
+	}
+	if req.TotalDistance != nil {
+		updates["total_distance"] = *req.TotalDistance
+	}
+	if req.AverageSpeed != nil {
+		updates["average_speed"] = *req.AverageSpeed
+	}
+	if req.TotalFuelConsumption != nil {
+		updates["total_fuel_consumption"] = *req.TotalFuelConsumption
+	}
+	if req.AverageFuelEfficiency != nil {
+		updates["average_fuel_efficiency"] = *req.AverageFuelEfficiency
+	}
+	if req.SafetyScore != nil {
+		updates["safety_score"] = *req.SafetyScore
+	}
+	updates["updated_at"] = time.Now()
+
+	if err := h.service.UpdateFleetAnalytics(r.Context(), id, h.getOrgID(r), updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -564,8 +755,9 @@ func (h *AnalyticsHandler) UpdateFleetAnalytics(w http.ResponseWriter, r *http.R
 // DeleteFleetAnalytics handles deleting fleet analytics
 func (h *AnalyticsHandler) DeleteFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	if err := h.service.DeleteFleetAnalytics(r.Context(), id); err != nil {
+	if err := h.service.DeleteFleetAnalytics(r.Context(), id, orgID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -608,34 +800,52 @@ func (h *AnalyticsHandler) ListFleetAnalytics(w http.ResponseWriter, r *http.Req
 	}
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	analytics, totalCount, err := h.service.ListFleetAnalytics(r.Context(), orgID, startDate, endDate, limit, offset)
+	analyticsList, totalCount, err := h.service.ListFleetAnalytics(r.Context(), orgID, startDate, endDate, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
+	var nextCursor string
+	if len(analyticsList) == limit && len(analyticsList) > 0 {
+		last := analyticsList[len(analyticsList)-1]
+		nextCursor = utils.EncodeCursor(last.StartDate, last.ID)
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"data":        analytics,
+		"data":        analyticsList,
 		"total_count": totalCount,
 		"limit":       limit,
 		"offset":      offset,
+		"next_cursor": nextCursor,
 	})
 }
 
 // CreateDriverBehaviorAnalytics handles creating new driver behavior analytics
 func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	// Rate limiting
+	orgID := h.getOrgID(r)
+	if !driverBehaviorLimiter.Allow(orgID.String()) {
+		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded", nil)
+		return
+	}
+
 	var analytics models.DriverBehaviorAnalytics
 	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate required fields
-	if err := validateDriverBehaviorAnalytics(&analytics); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
+
+	// Ensure organization ID matches context
+	analytics.OrganizationID = orgID
 
 	// Set ID and timestamps
 	analytics.ID = uuid.New().String()
@@ -654,8 +864,9 @@ func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, 
 // GetDriverBehaviorAnalytics handles retrieving driver behavior analytics by ID
 func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	analytics, err := h.service.GetDriverBehaviorAnalytics(r.Context(), id)
+	analytics, err := h.service.GetDriverBehaviorAnalytics(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -668,6 +879,7 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(w http.ResponseWriter, r *
 func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWriter, r *http.Request) {
 	driverIDStr := r.URL.Query().Get("driverId")
 	driverID, err := uuid.Parse(driverIDStr)
+	orgID := h.getOrgID(r)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
 		return
@@ -675,7 +887,7 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWri
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(r.Context(), driverID, limit, offset)
+	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(r.Context(), driverID, orgID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -722,19 +934,36 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByOrg(w http.ResponseWriter
 func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var req models.UpdateDriverBehaviorAnalyticsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate updates
-	if err := validateDriverBehaviorAnalyticsUpdates(updates); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	if err := ValidateRequest(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdateDriverBehaviorAnalytics(r.Context(), id, updates); err != nil {
+	updates := make(map[string]interface{})
+	if req.SafetyScore != nil {
+		updates["safety_score"] = *req.SafetyScore
+	}
+	if req.EfficiencyScore != nil {
+		updates["efficiency_score"] = *req.EfficiencyScore
+	}
+	if req.ComfortScore != nil {
+		updates["comfort_score"] = *req.ComfortScore
+	}
+	if req.ImprovementSuggestions != nil {
+		updates["improvement_suggestions"] = req.ImprovementSuggestions
+	}
+	if req.BehaviorTrend != nil {
+		updates["behavior_trend"] = *req.BehaviorTrend
+	}
+	updates["updated_at"] = time.Now()
+
+	if err := h.service.UpdateDriverBehaviorAnalytics(r.Context(), id, h.getOrgID(r), updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -745,8 +974,9 @@ func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(w http.ResponseWriter, 
 // DeleteDriverBehaviorAnalytics handles deleting driver behavior analytics
 func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	if err := h.service.DeleteDriverBehaviorAnalytics(r.Context(), id); err != nil {
+	if err := h.service.DeleteDriverBehaviorAnalytics(r.Context(), id, orgID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -789,8 +1019,9 @@ func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r 
 	}
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), orgID, periodStart, periodEnd, limit, offset)
+	analyticsList, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), orgID, periodStart, periodEnd, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -799,8 +1030,14 @@ func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r 
 	page := offset/limit + 1
 	totalPages := (totalCount + limit - 1) / limit
 
+	var nextCursor string
+	if len(analyticsList) == limit && len(analyticsList) > 0 {
+		last := analyticsList[len(analyticsList)-1]
+		nextCursor = utils.EncodeCursor(last.AnalysisPeriodStart, last.ID)
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"data": analytics,
+		"data": analyticsList,
 		"meta": map[string]interface{}{
 			"total":       totalCount,
 			"page":        page,
@@ -808,6 +1045,7 @@ func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r 
 			"total_pages": totalPages,
 			"has_next":    page < totalPages,
 			"has_prev":    page > 1,
+			"next_cursor": nextCursor,
 		},
 	})
 }
@@ -820,9 +1058,9 @@ func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(w http.ResponseW
 		return
 	}
 
-	// Validate required fields
-	if err := validatePredictiveMaintenanceAnalytics(&analytics); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	// Validate using validator
+	if err := ValidateRequest(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
@@ -843,8 +1081,9 @@ func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(w http.ResponseW
 // GetPredictiveMaintenanceAnalytics handles retrieving predictive maintenance analytics by ID
 func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id)
+	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -857,6 +1096,7 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWrit
 func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicleId")
 	vehicleID, err := uuid.Parse(vehicleIDStr)
+	orgID := h.getOrgID(r)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
 		return
@@ -864,7 +1104,7 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.Res
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, limit, offset)
+	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, orgID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -882,19 +1122,36 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.Res
 func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	var updates map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
+	var req models.UpdatePredictiveMaintenanceAnalyticsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	// Validate updates
-	if err := validatePredictiveMaintenanceAnalyticsUpdates(updates); err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+	if err := ValidateRequest(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
 		return
 	}
 
-	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, updates); err != nil {
+	updates := make(map[string]interface{})
+	if req.NextServiceDue != nil {
+		updates["next_service_due"] = *req.NextServiceDue
+	}
+	if req.ServicePriority != nil {
+		updates["service_priority"] = *req.ServicePriority
+	}
+	if req.CostEstimation != nil {
+		updates["cost_estimation"] = *req.CostEstimation
+	}
+	if req.ReliabilityScore != nil {
+		updates["reliability_score"] = *req.ReliabilityScore
+	}
+	if req.Recommendations != nil {
+		updates["recommendations"] = req.Recommendations
+	}
+	updates["updated_at"] = time.Now()
+
+	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, h.getOrgID(r), updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -905,8 +1162,9 @@ func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseW
 // DeletePredictiveMaintenanceAnalytics handles deleting predictive maintenance analytics
 func (h *AnalyticsHandler) DeletePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
 
-	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id); err != nil {
+	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id, orgID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -940,8 +1198,9 @@ func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWri
 	}
 
 	limit, offset := parsePaginationParams(query)
+	cursor := query.Get("cursor")
 
-	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), orgID, vehicleID, limit, offset)
+	analyticsList, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), orgID, vehicleID, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -950,8 +1209,14 @@ func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWri
 	page := offset/limit + 1
 	totalPages := (totalCount + limit - 1) / limit
 
+	var nextCursor string
+	if len(analyticsList) == limit && len(analyticsList) > 0 {
+		last := analyticsList[len(analyticsList)-1]
+		nextCursor = utils.EncodeCursor(last.CreatedAt, last.ID)
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"data": analytics,
+		"data": analyticsList,
 		"meta": map[string]interface{}{
 			"total":       totalCount,
 			"page":        page,
@@ -959,6 +1224,7 @@ func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWri
 			"total_pages": totalPages,
 			"has_next":    page < totalPages,
 			"has_prev":    page > 1,
+			"next_cursor": nextCursor,
 		},
 	})
 }
@@ -973,134 +1239,7 @@ func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "healthy"})
 }
 
-// Validation functions
-func validatePredictiveModel(model *models.PredictiveModel) error {
-	if model.Name == "" {
-		return ValidationError("model name is required")
-	}
-	if model.Version == "" {
-		return ValidationError("model version is required")
-	}
-	if model.ModelType == "" {
-		return ValidationError("model type is required")
-	}
-	if model.Status == "" {
-		return ValidationError("model status is required")
-	}
-	if model.TrainedAt.IsZero() {
-		return ValidationError("trained at timestamp is required")
-	}
-	return nil
-}
-
-func validatePredictiveModelUpdates(updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return ValidationError("updates are required")
-	}
-	return nil
-}
-
-func validatePredictionResult(result *models.PredictionResult) error {
-	if result.ModelID == "" {
-		return ValidationError("model ID is required")
-	}
-	if result.OrganizationID == uuid.Nil {
-		return ValidationError("organization ID is required")
-	}
-	if result.ConfidenceScore < 0 || result.ConfidenceScore > 1 {
-		return ValidationError("confidence score must be between 0 and 1")
-	}
-	return nil
-}
-
-func validateAnalyticsJob(job *models.AnalyticsJob) error {
-	if job.Name == "" {
-		return ValidationError("job name is required")
-	}
-	if job.Type == "" {
-		return ValidationError("job type is required")
-	}
-	if job.Status == "" {
-		return ValidationError("job status is required")
-	}
-	if job.OrganizationID == uuid.Nil {
-		return ValidationError("organization ID is required")
-	}
-	if job.CreatedBy == uuid.Nil {
-		return ValidationError("created by ID is required")
-	}
-	return nil
-}
-
-func validateAnalyticsJobUpdates(updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return ValidationError("updates are required")
-	}
-	return nil
-}
-
-func validateFleetAnalytics(analytics *models.FleetAnalytics) error {
-	if analytics.OrganizationID == uuid.Nil {
-		return ValidationError("organization ID is required")
-	}
-	if analytics.StartDate.IsZero() || analytics.EndDate.IsZero() {
-		return ValidationError("start and end dates are required")
-	}
-	if analytics.StartDate.After(analytics.EndDate) {
-		return ValidationError("start date cannot be after end date")
-	}
-	return nil
-}
-
-func validateFleetAnalyticsUpdates(updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return ValidationError("updates are required")
-	}
-	return nil
-}
-
-func validateDriverBehaviorAnalytics(analytics *models.DriverBehaviorAnalytics) error {
-	if analytics.DriverID == uuid.Nil {
-		return ValidationError("driver ID is required")
-	}
-	if analytics.OrganizationID == uuid.Nil {
-		return ValidationError("organization ID is required")
-	}
-	if analytics.AnalysisPeriodStart.IsZero() || analytics.AnalysisPeriodEnd.IsZero() {
-		return ValidationError("analysis period start and end dates are required")
-	}
-	if analytics.AnalysisPeriodStart.After(analytics.AnalysisPeriodEnd) {
-		return ValidationError("analysis period start cannot be after end date")
-	}
-	return nil
-}
-
-func validateDriverBehaviorAnalyticsUpdates(updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return ValidationError("updates are required")
-	}
-	return nil
-}
-
-func validatePredictiveMaintenanceAnalytics(analytics *models.PredictiveMaintenanceAnalytics) error {
-	if analytics.VehicleID == uuid.Nil {
-		return ValidationError("vehicle ID is required")
-	}
-	if analytics.OrganizationID == uuid.Nil {
-		return ValidationError("organization ID is required")
-	}
-	if analytics.AnalysisDate.IsZero() {
-		return ValidationError("analysis date is required")
-	}
-	return nil
-}
-
-func validatePredictiveMaintenanceAnalyticsUpdates(updates map[string]interface{}) error {
-	if len(updates) == 0 {
-		return ValidationError("updates are required")
-	}
-	return nil
-}
+// No manual validation functions needed anymore as we use validator/v10
 
 // ValidationError represents a validation error
 type ValidationError string
@@ -1151,37 +1290,152 @@ func parsePaginationParams(values map[string][]string) (int, int) {
 	// Limit maximum limit to prevent abuse
 	MaxQueryLimit := 100
 	if limit > MaxQueryLimit {
-		limit = 100
+		limit = MaxQueryLimit
+	}
+
+	// Limit maximum offset to prevent performance issues (max 10,000 records)
+	MaxQueryOffset := 10000
+	if offset > MaxQueryOffset {
+		offset = MaxQueryOffset
 	}
 
 	return limit, offset
 }
 
-func (h *AnalyticsHandler) GetVehicleAnalytics(w http.ResponseWriter, r *http.Request) {
+// GetVehicleDailyStats handles retrieving daily stats for a vehicle
+func (h *AnalyticsHandler) GetVehicleDailyStats(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := chi.URLParam(r, "vehicleID")
+	vehicleID, err := uuid.Parse(vehicleIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
+		return
+	}
+
+	query := r.URL.Query()
+	startDate, _ := time.Parse(time.RFC3339, query.Get("startDate"))
+	endDate, _ := time.Parse(time.RFC3339, query.Get("endDate"))
+	cursor := query.Get("cursor")
+	limit, _ := strconv.Atoi(query.Get("limit"))
+
+	if startDate.IsZero() {
+		startDate = time.Now().AddDate(0, 0, -7)
+	}
+	if endDate.IsZero() {
+		endDate = time.Now()
+	}
+
+	orgID := h.getOrgID(r)
+	stats, nextCursor, err := h.service.GetVehicleDailyStats(r.Context(), vehicleID, orgID, startDate, endDate, cursor, limit)
+	if err != nil {
+		if errors.Is(err, repository.ErrQueryTooExpensive) {
+			h.writeErrorResponse(w, http.StatusBadRequest, "Query too expensive, please narrow date range", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"message": "Vehicle analytics endpoint",
-		"data":    []interface{}{},
+		"data":   stats,
+		"cursor": nextCursor,
 	})
 }
 
-func (h *AnalyticsHandler) GetDriverAnalytics(w http.ResponseWriter, r *http.Request) {
+// GetDriverDailyStats handles retrieving daily stats for a driver
+func (h *AnalyticsHandler) GetDriverDailyStats(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := chi.URLParam(r, "driverID")
+	driverID, err := uuid.Parse(driverIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	query := r.URL.Query()
+	startDate, _ := time.Parse(time.RFC3339, query.Get("startDate"))
+	endDate, _ := time.Parse(time.RFC3339, query.Get("endDate"))
+	cursor := query.Get("cursor")
+	limit, _ := strconv.Atoi(query.Get("limit"))
+
+	if startDate.IsZero() {
+		startDate = time.Now().AddDate(0, 0, -7)
+	}
+	if endDate.IsZero() {
+		endDate = time.Now()
+	}
+
+	orgID := h.getOrgID(r)
+	stats, nextCursor, err := h.service.GetDriverDailyStats(r.Context(), driverID, orgID, startDate, endDate, cursor, limit)
+	if err != nil {
+		if errors.Is(err, repository.ErrQueryTooExpensive) {
+			h.writeErrorResponse(w, http.StatusBadRequest, "Query too expensive, please narrow date range", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"message": "Driver analytics endpoint",
-		"data":    []interface{}{},
+		"data":   stats,
+		"cursor": nextCursor,
 	})
 }
 
-func (h *AnalyticsHandler) GetTripAnalytics(w http.ResponseWriter, r *http.Request) {
-	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"message": "Trip analytics endpoint",
-		"data":    []interface{}{},
-	})
+// GetFleetSummary handles the retrieval of fleet-wide aggregate stats
+func (h *AnalyticsHandler) GetFleetSummary(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	startDate, _ := time.Parse(time.RFC3339, query.Get("startDate"))
+	endDate, _ := time.Parse(time.RFC3339, query.Get("endDate"))
+
+	if startDate.IsZero() {
+		startDate = time.Now().AddDate(0, 0, -7) // Last 7 days
+	}
+	if endDate.IsZero() {
+		endDate = time.Now()
+	}
+
+	orgID := h.getOrgID(r)
+	summary, err := h.service.GetFleetAnalyticsByPeriod(r.Context(), orgID, startDate, endDate)
+	if err != nil {
+		if errors.Is(err, repository.ErrQueryTooExpensive) {
+			h.writeErrorResponse(w, http.StatusBadRequest, "Query too expensive, please narrow date range", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, summary)
 }
 
-func (h *AnalyticsHandler) GetForecastAnalytics(w http.ResponseWriter, r *http.Request) {
+// GetFleetHourlyStats handles retrieving hourly stats for the fleet
+func (h *AnalyticsHandler) GetFleetHourlyStats(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	startDate, _ := time.Parse(time.RFC3339, query.Get("startDate"))
+	endDate, _ := time.Parse(time.RFC3339, query.Get("endDate"))
+	cursor := query.Get("cursor")
+	limit, _ := strconv.Atoi(query.Get("limit"))
+
+	if startDate.IsZero() {
+		startDate = time.Now().AddDate(0, 0, -1) // Last 24 hours
+	}
+	if endDate.IsZero() {
+		endDate = time.Now()
+	}
+
+	orgID := h.getOrgID(r)
+	stats, nextCursor, err := h.service.GetFleetHourlyStats(r.Context(), orgID, startDate, endDate, cursor, limit)
+	if err != nil {
+		if errors.Is(err, repository.ErrQueryTooExpensive) {
+			h.writeErrorResponse(w, http.StatusBadRequest, "Query too expensive, please narrow date range", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"message": "Forecast analytics endpoint",
-		"data":    []interface{}{},
+		"data":   stats,
+		"cursor": nextCursor,
 	})
 }
 
@@ -1209,4 +1463,71 @@ func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
 		return uuid.Nil
 	}
 	return orgID
+}
+
+// Phase 8 Handlers
+
+func (h *AnalyticsHandler) DeployModel(w http.ResponseWriter, r *http.Request) {
+	var deployment models.ModelDeployment
+	if err := json.NewDecoder(r.Body).Decode(&deployment); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid payload", err)
+		return
+	}
+	deployment.OrganizationID = h.getOrgID(r)
+	if err := h.service.DeployModel(r.Context(), &deployment); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Deployment failed", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusCreated, deployment)
+}
+
+func (h *AnalyticsHandler) CreateDriverRiskEvent(w http.ResponseWriter, r *http.Request) {
+	var event models.DriverRiskEvent
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid payload", err)
+		return
+	}
+	event.OrganizationID = h.getOrgID(r)
+	if err := h.service.CreateDriverRiskEvent(r.Context(), &event); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create risk event", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusCreated, event)
+}
+
+func (h *AnalyticsHandler) GetDriverRiskEvents(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := r.URL.Query().Get("driver_id")
+	driverID, _ := uuid.Parse(driverIDStr)
+	start, _ := time.Parse(time.RFC3339, r.URL.Query().Get("start"))
+	end, _ := time.Parse(time.RFC3339, r.URL.Query().Get("end"))
+	
+	events, err := h.service.GetDriverRiskEvents(r.Context(), driverID, h.getOrgID(r), start, end)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch events", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, events)
+}
+
+func (h *AnalyticsHandler) GetAnalyticsQuota(w http.ResponseWriter, r *http.Request) {
+	quota, err := h.service.GetAnalyticsQuota(r.Context(), h.getOrgID(r))
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch quota", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, quota)
+}
+
+func (h *AnalyticsHandler) RunReconciliation(w http.ResponseWriter, r *http.Request) {
+	var req struct { Start time.Time `json:"start"`; End time.Time `json:"end"` }
+	json.NewDecoder(r.Body).Decode(&req)
+	h.service.RunReconciliation(r.Context(), h.getOrgID(r), req.Start, req.End)
+	h.writeJSONResponse(w, http.StatusAccepted, map[string]string{"status": "triggered"})
+}
+
+func (h *AnalyticsHandler) RunHistoricalBackfill(w http.ResponseWriter, r *http.Request) {
+	var req struct { Start time.Time `json:"start"`; End time.Time `json:"end"` }
+	json.NewDecoder(r.Body).Decode(&req)
+	h.service.RunHistoricalBackfill(r.Context(), h.getOrgID(r), req.Start, req.End)
+	h.writeJSONResponse(w, http.StatusAccepted, map[string]string{"status": "triggered"})
 }

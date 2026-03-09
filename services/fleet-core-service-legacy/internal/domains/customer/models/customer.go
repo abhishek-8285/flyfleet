@@ -10,38 +10,40 @@ import (
 type Customer struct {
 	ID            string                 `json:"id" db:"id"`
 	OrgID         string                 `json:"org_id" db:"org_id"`
-	Name          string                 `json:"name" db:"name"`
-	Email         string                 `json:"email" db:"email"`
-	Phone         string                 `json:"phone,omitempty" db:"phone"`
-	APIKey        string                 `json:"-" db:"api_key"`           // Never expose API Key in responses
-	APISecretHash string                 `json:"-" db:"api_secret_hash"` // Never expose Secret
-	Address       *models.Address        `json:"address,omitempty" db:"address"`
+	Name          string                 `json:"name" db:"name" validate:"required,min=2,max=255"`
+	Email         string                 `json:"email" db:"email" validate:"required,email"`
+	Phone         string                 `json:"phone,omitempty" db:"phone" validate:"omitempty,e164"`
+	APIKey        string                 `json:"-" db:"api_key"`
+	APISecretHash string                 `json:"-" db:"api_secret_hash"`
+	Address       *models.Address        `json:"address,omitempty" db:"address" validate:"omitempty"`
 	BillingInfo   map[string]interface{} `json:"billing_info,omitempty" db:"billing_info"`
-	Status        string                 `json:"status" db:"status"`
+	Status        string                 `json:"status" db:"status" validate:"required,oneof=active inactive suspended"`
 	Metadata      map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
 	CreatedAt     time.Time              `json:"created_at" db:"created_at"`
 	UpdatedAt     time.Time              `json:"updated_at" db:"updated_at"`
+	DeletedAt     *time.Time             `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
 // Shipment represents a consignment linked to a trip
 type Shipment struct {
 	ID                string                 `json:"id" db:"id"`
-	CustomerID        string                 `json:"customer_id" db:"customer_id"`
+	CustomerID        string                 `json:"customer_id" db:"customer_id" validate:"required"`
 	TripID            *string                `json:"trip_id,omitempty" db:"trip_id"`
-	TrackingNumber    string                 `json:"tracking_number" db:"tracking_number"`
-	Status            string                 `json:"status" db:"status"`
-	Origin            *models.Location       `json:"origin" db:"origin"`
-	Destination       *models.Location       `json:"destination" db:"destination"`
+	TrackingNumber    string                 `json:"tracking_number" db:"tracking_number" validate:"required"`
+	Status            string                 `json:"status" db:"status" validate:"required,oneof=created picked_up in_transit delivered exception"`
+	Origin            *models.Location       `json:"origin" db:"origin" validate:"required"`
+	Destination       *models.Location       `json:"destination" db:"destination" validate:"required"`
 	CurrentLocation   *models.Location       `json:"current_location,omitempty" db:"current_location"`
 	EstimatedDelivery *time.Time             `json:"estimated_delivery,omitempty" db:"estimated_delivery"`
 	ActualDelivery    *time.Time             `json:"actual_delivery,omitempty" db:"actual_delivery"`
-	CargoDetails      map[string]interface{} `json:"cargo_details" db:"cargo_details"`
+	CargoDetails      map[string]interface{} `json:"cargo_details" db:"cargo_details" validate:"required"`
 	PODURL            string                 `json:"pod_url,omitempty" db:"pod_url"`
 	PODUploadedAt     *time.Time             `json:"pod_uploaded_at,omitempty" db:"pod_uploaded_at"`
 	Metadata          map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
 	CreatedAt         time.Time              `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at" db:"updated_at"`
-	
+	DeletedAt         *time.Time             `json:"deleted_at,omitempty" db:"deleted_at"`
+
 	// Join fields
 	CustomerName      string                 `json:"customer_name,omitempty" db:"-"`
 }
@@ -49,14 +51,14 @@ type Shipment struct {
 // Invoice represents a billing record for a shipment
 type Invoice struct {
 	ID            string                 `json:"id" db:"id"`
-	CustomerID    string                 `json:"customer_id" db:"customer_id"`
+	CustomerID    string                 `json:"customer_id" db:"customer_id" validate:"required"`
 	ShipmentID    *string                `json:"shipment_id,omitempty" db:"shipment_id"`
-	InvoiceNumber string                 `json:"invoice_number" db:"invoice_number"`
-	Status        string                 `json:"status" db:"status"`
-	Amount        float64                `json:"amount" db:"amount"`
-	Currency      string                 `json:"currency" db:"currency"`
-	IssueDate     time.Time              `json:"issue_date" db:"issue_date"`
-	DueDate       time.Time              `json:"due_date" db:"due_date"`
+	InvoiceNumber string                 `json:"invoice_number" db:"invoice_number" validate:"required"`
+	Status        string                 `json:"status" db:"status" validate:"required,oneof=draft issued paid overdue cancelled"`
+	Amount        float64                `json:"amount" db:"amount" validate:"required,gt=0"`
+	Currency      string                 `json:"currency" db:"currency" validate:"required,len=3"`
+	IssueDate     time.Time              `json:"issue_date" db:"issue_date" validate:"required"`
+	DueDate       time.Time              `json:"due_date" db:"due_date" validate:"required"`
 	PaidDate      *time.Time             `json:"paid_date,omitempty" db:"paid_date"`
 	PDFURL        string                 `json:"pdf_url,omitempty" db:"pdf_url"`
 	Metadata      map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
@@ -67,13 +69,13 @@ type Invoice struct {
 // BookingRequest represents a customer transport request
 type BookingRequest struct {
 	ID                  string                 `json:"id" db:"id"`
-	CustomerID          string                 `json:"customer_id" db:"customer_id"`
-	RequestType         string                 `json:"request_type" db:"request_type"`
-	Origin              *models.Location       `json:"origin" db:"origin"`
-	Destination         *models.Location       `json:"destination" db:"destination"`
+	CustomerID          string                 `json:"customer_id" db:"customer_id" validate:"required"`
+	RequestType         string                 `json:"request_type" db:"request_type" validate:"required,oneof=standard express hazardous"`
+	Origin              *models.Location       `json:"origin" db:"origin" validate:"required"`
+	Destination         *models.Location       `json:"destination" db:"destination" validate:"required"`
 	RequestedPickupTime *time.Time             `json:"requested_pickup_time,omitempty" db:"requested_pickup_time"`
-	CargoDetails        map[string]interface{} `json:"cargo_details" db:"cargo_details"`
-	Status              string                 `json:"status" db:"status"`
+	CargoDetails        map[string]interface{} `json:"cargo_details" db:"cargo_details" validate:"required"`
+	Status              string                 `json:"status" db:"status" validate:"required,oneof=pending approved rejected converted"`
 	Notes               string                 `json:"notes,omitempty" db:"notes"`
 	Metadata            map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
 	CreatedAt           time.Time              `json:"created_at" db:"created_at"`
@@ -92,10 +94,63 @@ type ShipmentListFilter struct {
 
 // BookingRequestCreate represents the payload for creating a booking
 type BookingRequestCreate struct {
-	RequestType         string                 `json:"request_type" validate:"required"`
+	RequestType         string                 `json:"request_type" validate:"required,oneof=standard express hazardous"`
 	Origin              *models.Location       `json:"origin" validate:"required"`
 	Destination         *models.Location       `json:"destination" validate:"required"`
 	RequestedPickupTime *time.Time             `json:"requested_pickup_time"`
-	CargoDetails        map[string]interface{} `json:"cargo_details"`
+	CargoDetails        map[string]interface{} `json:"cargo_details" validate:"required"`
 	Notes               string                 `json:"notes"`
+}
+
+// CustomerStatus defines valid customer statuses
+type CustomerStatus string
+
+const (
+	StatusActive     CustomerStatus = "active"
+	StatusInactive   CustomerStatus = "inactive"
+	StatusSuspended  CustomerStatus = "suspended"
+)
+
+// ShipmentStatus defines valid shipment statuses
+type ShipmentStatus string
+
+const (
+	StatusCreated    ShipmentStatus = "created"
+	StatusPickedUp   ShipmentStatus = "picked_up"
+	StatusInTransit  ShipmentStatus = "in_transit"
+	StatusDelivered  ShipmentStatus = "delivered"
+	StatusException  ShipmentStatus = "exception"
+)
+
+// BookingStatus defines valid booking statuses
+type BookingStatus string
+
+const (
+	BookingPending   BookingStatus = "pending"
+	BookingApproved  BookingStatus = "approved"
+	BookingRejected  BookingStatus = "rejected"
+	BookingConverted BookingStatus = "converted"
+)
+
+// IsValidStatusTransition checks if a shipment status transition is valid
+func IsValidStatusTransition(from, to ShipmentStatus) bool {
+	validTransitions := map[ShipmentStatus][]ShipmentStatus{
+		StatusCreated:   {StatusPickedUp, StatusException},
+		StatusPickedUp:  {StatusInTransit, StatusException},
+		StatusInTransit: {StatusDelivered, StatusException},
+		StatusDelivered: {}, // Terminal state
+		StatusException: {StatusInTransit, StatusCreated}, // Can retry
+	}
+
+	allowed, ok := validTransitions[from]
+	if !ok {
+		return false
+	}
+
+	for _, status := range allowed {
+		if status == to {
+			return true
+		}
+	}
+	return false
 }

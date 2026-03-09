@@ -54,11 +54,19 @@ import CreateReport from "./pages/admin/reports/CreateReport";
 import ExecutionHistory from "./pages/admin/reports/ExecutionHistory";
 import ScheduledReportsList from "./pages/admin/reports/ScheduledReportsList";
 import CustomerLogin from "./pages/portal/CustomerLogin";
+import InvoicesList from "./pages/portal/InvoicesList";
+import NewBooking from "./pages/portal/NewBooking";
 import PortalDashboard from "./pages/portal/PortalDashboard";
+import ShipmentsList from "./pages/portal/ShipmentsList";
 import ShipmentTracking from "./pages/portal/ShipmentTracking";
 // RouteOptimization import moved to consolidated block
 import LiveMap from "./components/LiveMap";
 import ScenarioSwitcher from "./components/ScenarioSwitcher";
+import AnalyticsJobsPage from "./pages/admin/analytics/AnalyticsJobsPage";
+import DriverBehaviorPage from "./pages/admin/analytics/DriverBehaviorPage";
+import FleetAnalyticsPage from "./pages/admin/analytics/FleetAnalyticsPage";
+import PredictiveMaintenancePage from "./pages/admin/analytics/PredictiveMaintenancePage";
+import PredictiveModelsPage from "./pages/admin/analytics/PredictiveModelsPage";
 import EmergencyDashboard from "./pages/admin/emergency/EmergencyDashboard";
 import ExpenseApprovals from "./pages/admin/finance/ExpenseApprovals";
 import FuelDashboard from "./pages/admin/finance/FuelDashboard";
@@ -69,6 +77,7 @@ import ForecastingDashboard from "./pages/admin/revenue/ForecastingDashboard";
 import RouteOptimization from "./pages/admin/RouteOptimization";
 import AccessReview from "./pages/admin/security/AccessReview";
 import ActiveSessions from "./pages/admin/security/ActiveSessions";
+import APIKeys from "./pages/admin/security/APIKeys";
 import IPControls from "./pages/admin/security/IPControls";
 import LoginActivityLogs from "./pages/admin/security/LoginActivityLogs";
 import MFACenter from "./pages/admin/security/MFACenter";
@@ -207,6 +216,23 @@ function App() {
                 <Route path="alerts" element={<Alerts />} />
                 <Route path="insights" element={<Insights />} />
                 <Route path="analytics" element={<Analytics />} />
+                <Route
+                  path="analytics/models"
+                  element={<PredictiveModelsPage />}
+                />
+                <Route path="analytics/jobs" element={<AnalyticsJobsPage />} />
+                <Route
+                  path="analytics/fleet"
+                  element={<FleetAnalyticsPage />}
+                />
+                <Route
+                  path="analytics/drivers"
+                  element={<DriverBehaviorPage />}
+                />
+                <Route
+                  path="analytics/maintenance"
+                  element={<PredictiveMaintenancePage />}
+                />
                 <Route path="maintenance" element={<Maintenance />} />
                 <Route path="drivers" element={<Drivers />} />
                 <Route path="reports" element={<Reports />} />
@@ -233,6 +259,7 @@ function App() {
                 <Route path="exceptions" element={<MFAExceptions />} />
                 <Route path="overrides" element={<MFAOverrides />} />
                 <Route path="audit" element={<AuditCenter />} />
+                <Route path="api-keys" element={<APIKeys />} />
               </Route>
 
               {/* Admin Portal */}
@@ -576,28 +603,9 @@ function App() {
                   element={<Navigate to="/portal/dashboard" replace />}
                 />
                 <Route path="dashboard" element={<PortalDashboard />} />
-                <Route
-                  path="shipments"
-                  element={
-                    <div className="p-6 text-white">
-                      Shipments List (Placeholder)
-                    </div>
-                  }
-                />
-                <Route
-                  path="bookings"
-                  element={
-                    <div className="p-6 text-white">
-                      New Booking (Placeholder)
-                    </div>
-                  }
-                />
-                <Route
-                  path="invoices"
-                  element={
-                    <div className="p-6 text-white">Invoices (Placeholder)</div>
-                  }
-                />
+                <Route path="shipments" element={<ShipmentsList />} />
+                <Route path="bookings" element={<NewBooking />} />
+                <Route path="invoices" element={<InvoicesList />} />
                 <Route
                   path="settings"
                   element={

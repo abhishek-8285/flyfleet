@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
@@ -15,12 +16,12 @@ import (
 )
 
 type TripHandler struct {
-	service  *service.TripService
+	service  service.TripServiceInterface
 	logger   *zap.Logger
 	validate *validator.Validate
 }
 
-func NewTripHandler(service *service.TripService, logger *zap.Logger) *TripHandler {
+func NewTripHandler(service service.TripServiceInterface, logger *zap.Logger) *TripHandler {
 	return &TripHandler{
 		service:  service,
 		logger:   logger,
@@ -31,7 +32,7 @@ func NewTripHandler(service *service.TripService, logger *zap.Logger) *TripHandl
 func (h *TripHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.ListTrips)
 	r.Post("/", h.CreateTrip)
-	r.Get("/stats", h.GetTripStats)
+	r.Get("/stats", h.GetStats)
 	r.Get("/stats/drivers", h.GetDriverStats)
 	r.Get("/stats/trips", h.GetTripStats)
 
@@ -43,55 +44,25 @@ func (h *TripHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.GetTrip)
 		r.Put("/", h.UpdateTrip)
 		r.Delete("/", h.DeleteTrip)
+		r.Post("/approve", h.ApproveTrip)
 		r.Post("/start", h.StartTrip)
 		r.Post("/pause", h.PauseTrip)
 		r.Post("/resume", h.ResumeTrip)
 		r.Post("/complete", h.CompleteTrip)
 		r.Post("/cancel", h.CancelTrip)
+		r.Post("/fail", h.FailTrip)
 		r.Post("/events", h.AddEvent)
+		r.Get("/telemetry", h.GetTelemetry)
 		r.Post("/pod", h.SubmitPOD)
 		r.Post("/offer", h.OfferTrip)
 		r.Get("/optimize-route", h.OptimizeRoute)
 	})
 }
-
-// CreateTrip godoc
-func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.logger.Error("invalid request body", zap.Error(err))
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
-		return
-	}
-
-	// Validate request
-	if err := h.validate.Struct(req); err != nil {
-		h.logger.Error("validation failed", zap.Error(err))
-		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
-		return
-	}
-
-	orgID := h.getOrgID(r)
-	if orgID == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
-		return
-	}
-
-	trip, err := h.service.Create(r.Context(), orgID, &req)
-	if err != nil {
-		h.logger.Error("failed to create trip", zap.Error(err))
-		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
-		return
-	}
-
-	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": trip})
-}
-
 // GetTrip godoc
 func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	trip, err := h.service.Get(r.Context(), id)
+
+	trip, err := h.service.GetTripByID(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get trip", zap.String("trip_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "trip not found", nil)
@@ -101,15 +72,47 @@ func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": trip})
 }
 
+
+func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
+		return
+	}
+
+	var reqData models.CreateTripRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+		h.logger.Error("invalid request body", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	trip, err := h.service.Create(r.Context(), tenantID, &reqData)
+	if err != nil {
+		h.logger.Error("failed to create trip", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": trip})
+}
+
 // ListTrips godoc
 func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
+		return
+	}
+
 	query := r.URL.Query()
 	filter := models.TripListFilter{
+		TenantID:  tenantID,
 		Status:    query.Get("status"),
 		VehicleID: query.Get("vehicle_id"),
 		DriverID:  query.Get("driver_id"),
-		DateFrom:  query.Get("date_from"),
-		DateTo:    query.Get("date_to"),
+		From:      query.Get("from"),
+		To:        query.Get("to"),
 		OrderBy:   query.Get("order_by"),
 		OrderDir:  query.Get("order_dir"),
 	}
@@ -182,6 +185,22 @@ func (h *TripHandler) DeleteTrip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ApproveTrip godoc
+func (h *TripHandler) ApproveTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if err := h.service.Approve(r.Context(), id); err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "trip not found" {
+			status = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, status, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "SCHEDULED"})
 }
 
 // StartTrip godoc
@@ -312,6 +331,28 @@ func (h *TripHandler) CancelTrip(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// FailTrip godoc
+func (h *TripHandler) FailTrip(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	reason := r.URL.Query().Get("reason")
+	
+	if reason == "" {
+		h.writeErrorResponse(w, http.StatusBadRequest, "reason is required", nil)
+		return
+	}
+
+	if err := h.service.Fail(r.Context(), id, reason); err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "trip not found" {
+			status = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, status, err.Error(), nil)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // AddEvent godoc
 func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -394,15 +435,43 @@ func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
 	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
-// GetDriverStats godoc
-func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+// GetTripSummary godoc
+func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetDriverStats(r.Context(), orgID)
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+	
+	start, _ := time.Parse(time.RFC3339, startStr)
+	end, _ := time.Parse(time.RFC3339, endStr)
+	
+	if end.IsZero() {
+		end = time.Now()
+	}
+
+	summary, err := h.service.GetTripSummary(r.Context(), tenantID, start, end)
+	if err != nil {
+		h.logger.Error("failed to get trip summary", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, summary)
+}
+
+// GetDriverStats godoc
+func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
+		return
+	}
+
+	stats, err := h.service.GetDriverStats(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get driver stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -414,13 +483,13 @@ func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
 
 // GetTripStats godoc
 func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetTripStats(r.Context(), orgID)
+	stats, err := h.service.GetTripStats(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get trip stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -430,15 +499,29 @@ func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
 	h.writeJSONResponse(w, http.StatusOK, stats)
 }
 
+// GetStats godoc
 func (h *TripHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
-		h.logger.Error("failed to get trip stats", zap.Error(err))
+		h.logger.Error("failed to get general stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
 	h.writeJSONResponse(w, http.StatusOK, stats)
+}
+
+// GetTelemetry godoc
+func (h *TripHandler) GetTelemetry(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	telemetry, err := h.service.GetTelemetry(r.Context(), id)
+	if err != nil {
+		h.logger.Error("failed to get telemetry", zap.String("trip_id", id), zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": telemetry})
 }
 
 // Helper methods
@@ -461,10 +544,10 @@ func (h *TripHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *TripHandler) getOrgID(r *http.Request) string {
-	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			return orgIDStr
+func (h *TripHandler) getTenantID(r *http.Request) string {
+	if val := r.Context().Value(ctxkeys.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			return tenantIDStr
 		}
 	}
 	return ""

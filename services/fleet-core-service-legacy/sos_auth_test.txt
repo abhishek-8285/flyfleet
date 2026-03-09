@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+X-Request-Id: unknown/gxgSX6ALCD-000007
+X-Trace-Id: unknown/gxgSX6ALCD-000007
+Date: Sat, 07 Mar 2026 15:52:15 GMT
+Content-Length: 27
+Content-Type: text/plain; charset=utf-8
+
+{"status":"SOS triggered"}

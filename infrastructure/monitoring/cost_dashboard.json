@@ -1,0 +1,28 @@
+{
+  "dashboard": {
+    "title": "FlyFleet Platform Cost & Resource Cloud",
+    "panels": [
+      {
+        "title": "Telemetry Ingestion Bandwidth Cost",
+        "type": "graph",
+        "targets": [
+          { "expr": "rate(diagnostics_telemetry_rate_count[5m]) * 0.00001" }
+        ]
+      },
+      {
+        "title": "Database Storage Usage",
+        "type": "singlestat",
+        "targets": [{ "expr": "pg_database_size_bytes{datname='testdb'}" }]
+      },
+      {
+        "title": "CPU Consumption by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{namespace='flyfleet'}) by (container)"
+          }
+        ]
+      }
+    ]
+  }
+}

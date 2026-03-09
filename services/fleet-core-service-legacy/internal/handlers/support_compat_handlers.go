@@ -436,17 +436,49 @@ func (h *UIHandlers) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 		"system_metadata": map[string]interface{}{
 			"environment": "production-consolidated",
 			"version":     "2.0.0-monolith",
+			"ui_strings": map[string]interface{}{
+				"portal": map[string]string{
+					"dashboard_title": "B2B Customer Dashboard",
+					"welcome_prefix":  "Authorized for",
+					"new_booking_btn": "Book Shipment",
+				},
+				"portal_shipments": map[string]string{
+					"title": "Your Active Shipments",
+					"th_tracking": "Tracking ID",
+					"th_status": "Status",
+					"action_track": "Real-time Tracking",
+				},
+				"portal_booking": map[string]string{
+					"title": "New Booking Request",
+					"btn_submit": "Notify Logistics Team",
+				},
+				"portal_invoices": map[string]string{
+					"title": "Billing & Financials",
+				},
+			},
 		},
 		"support_metadata": map[string]interface{}{
 			"avg_resolution_time": "1h 15m",
-			"critical_load":      "25%",
-			"high_priority_load": "40%",
+			"critical_load":       "25%",
+			"high_priority_load":  "40%",
 			"in_progress_status": "Active",
-			"sla_attainment":     "99.8%",
-			"system_protocol":    "Operational",
-			"version":            "v1.4.2",
+			"sla_attainment":      "99.8%",
+			"system_protocol":     "Operational",
+			"version":             "v1.4.2",
 		},
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(config)
+}
+
+func (h *UIHandlers) GetMenuItems(w http.ResponseWriter, r *http.Request) {
+	menuItems := []map[string]interface{}{
+		{"label": "Dashboard", "icon": "dashboard", "path": "/portal/dashboard"},
+		{"label": "Shipments", "icon": "local_shipping", "path": "/portal/shipments"},
+		{"label": "Bookings", "icon": "add_box", "path": "/portal/bookings"},
+		{"label": "Invoices", "icon": "payments", "path": "/portal/invoices"},
+		{"label": "Settings", "icon": "settings", "path": "/portal/settings"},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(menuItems)
 }

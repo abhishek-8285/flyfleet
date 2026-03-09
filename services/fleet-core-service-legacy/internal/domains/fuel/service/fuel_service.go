@@ -2,20 +2,22 @@ package service
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	finService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
+	"github.com/flyfleet/fleet-core-service/internal/domains/integrations"
 )
 
-var (
-	ErrLogNotFound      = errors.New("fuel log not found")
-	ErrInvalidOdometer = errors.New("odometer reading cannot be lower than previous entry")
-	ErrInvalidCost     = errors.New("total cost must match quantity multiplied by unit price")
+const (
+	// Duplicate prevention window (minutes)
+	DuplicateFuelLogWindow = 5
 )
 
 type FuelService interface {
@@ -33,28 +35,94 @@ type FuelService interface {
 type fuelService struct {
 	repo         repository.FuelLogRepository
 	settingsRepo repository.SettingsRepository
+	anomalySvc   *AnomalyDetectionService
+	taxService   *finService.TaxCalculationService
+	eventBus     integrations.EventBus
 	logger       *zap.Logger
 }
 
-func NewFuelService(repo repository.FuelLogRepository, settingsRepo repository.SettingsRepository, logger *zap.Logger) FuelService {
+type fuelAuditWriter interface {
+	CreateAuditLog(ctx context.Context, entry *models.FuelAuditLog) error
+}
+
+func NewFuelService(
+	repo repository.FuelLogRepository,
+	settingsRepo repository.SettingsRepository,
+	anomalySvc *AnomalyDetectionService,
+	taxService *finService.TaxCalculationService,
+	eventBus integrations.EventBus,
+	logger *zap.Logger,
+) FuelService {
+	if anomalySvc == nil {
+		anomalySvc = NewAnomalyDetectionService(nil, logger)
+	}
 	return &fuelService{
 		repo:         repo,
 		settingsRepo: settingsRepo,
+		anomalySvc:   anomalySvc,
+		taxService:   taxService,
+		eventBus:     eventBus,
 		logger:       logger,
 	}
 }
 
 func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error) {
+	// Check for duplicate transaction within window
+	isDuplicate, err := s.repo.CheckDuplicate(ctx, req.VehicleID, orgID, req.TransactionDate, DuplicateFuelLogWindow)
+	if err != nil {
+		s.logger.Error("failed to check for duplicate", zap.Error(err))
+	}
+	if isDuplicate {
+		return nil, ErrDuplicateFuelLog
+	}
+
 	// Validate odometer
 	lastOdo, err := s.repo.GetLastOdometer(ctx, req.VehicleID, orgID)
-	if err == nil && req.Odometer < lastOdo {
-		return nil, ErrInvalidOdometer
+	if err == nil && lastOdo > 0 {
+		if req.Odometer < lastOdo {
+			return nil, ErrInvalidOdometer
+		}
+	}
+
+	// Phase 4: Validate against tank capacity
+	specs, err := s.repo.GetVehicleSpecs(ctx, req.VehicleID)
+	if err == nil && specs != nil {
+		if req.Quantity > specs.TankCapacityLiters {
+			s.logger.Warn("Fuel quantity exceeds vehicle tank capacity",
+				zap.String("vehicle_id", req.VehicleID.String()),
+				zap.Float64("quantity", req.Quantity),
+				zap.Float64("capacity", specs.TankCapacityLiters))
+			return nil, ErrFuelQuantityExceedsCapacity
+		}
+	}
+
+	// Phase 7: Driver Fuel Limit Controls
+	if err := s.validateFuelLimits(ctx, orgID, req.DriverID, req.Quantity, req.TotalCost); err != nil {
+		return nil, err
 	}
 
 	// Validate cost (with small epsilon for floating point)
 	expectedCost := req.Quantity * req.UnitPrice
 	if req.TotalCost < expectedCost-0.05 || req.TotalCost > expectedCost+0.05 {
 		return nil, ErrInvalidCost
+	}
+
+	// GST Validation and Calculation
+	if req.VendorGSTIN != nil && *req.VendorGSTIN != "" {
+		if !s.taxService.ValidateGSTIN(*req.VendorGSTIN) {
+			s.logger.Warn("Invalid Vendor GSTIN provided", zap.String("gstin", *req.VendorGSTIN))
+		}
+	}
+	if req.GSTNumber != nil && *req.GSTNumber != "" {
+		if !s.taxService.ValidateGSTIN(*req.GSTNumber) {
+			s.logger.Warn("Invalid Purchaser GSTIN provided", zap.String("gstin", *req.GSTNumber))
+		}
+	}
+
+	var gstAmount *float64
+	if req.GSTRate != nil && *req.GSTRate > 0 {
+		res := s.taxService.CalculateGST(req.TotalCost, *req.GSTRate, false)
+		gstAmount = &res.GSTAmount
 	}
 
 	log := &models.FuelLog{
@@ -70,6 +138,11 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		Odometer:        req.Odometer,
 		TransactionDate: req.TransactionDate,
 		Status:          models.FuelLogStatusPending,
+		GSTNumber:       req.GSTNumber,
+		GSTRate:         req.GSTRate,
+		GSTAmount:       gstAmount,
+		InvoiceNumber:   req.InvoiceNumber,
+		VendorGSTIN:     req.VendorGSTIN,
 		ReceiptURL:      req.ReceiptURL,
 		Notes:           req.Notes,
 		CreatedBy:       userID,
@@ -77,9 +150,36 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		UpdatedAt:       time.Now(),
 	}
 
+	// Run anomaly checks using previous odometer context when available.
+	var previousLog *models.FuelLog
+	if lastOdo > 0 {
+		previousLog = &models.FuelLog{Odometer: lastOdo}
+	}
+	if anomalyResult := s.anomalySvc.DetectFuelAnomalies(log, previousLog); anomalyResult != nil && anomalyResult.IsAnomaly {
+		log.AnomalyFlag = true
+		log.AnomalyReason = &anomalyResult.AnomalyType
+	}
+
 	if err := s.repo.Create(ctx, log); err != nil {
 		s.logger.Error("failed to create fuel log", zap.Error(err))
 		return nil, err
+	}
+	s.writeAuditLog(ctx, &models.FuelAuditLog{
+		FuelLogID: log.ID,
+		Action:    "create",
+		ChangedBy: userID,
+		NewValues: mustJSONMarshal(map[string]interface{}{
+			"status":       log.Status,
+			"quantity":     log.Quantity,
+			"total_cost":   log.TotalCost,
+			"station_name": log.StationName,
+		}),
+	})
+
+	// Phase 15: Event Bus Integration
+	envelope, err := integrations.NewEnvelope("fuel.log.created", orgID, log.ID.String(), "", log)
+	if err == nil {
+		_ = s.eventBus.Publish(ctx, integrations.TopicFuel, envelope)
 	}
 
 	return log, nil
@@ -115,8 +215,8 @@ func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 		return nil, ErrLogNotFound
 	}
 
-	if log.Status == models.FuelLogStatusApproved {
-		return nil, errors.New("approved fuel logs cannot be modified")
+	if log.Status == models.FuelLogStatusApproved || log.Status == models.FuelLogStatusRejected {
+		return nil, ErrLogImmutable
 	}
 
 	if req.StationName != nil {
@@ -147,6 +247,28 @@ func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 		log.Notes = req.Notes
 	}
 
+	// GST Updates
+	if req.GSTNumber != nil {
+		log.GSTNumber = req.GSTNumber
+		if *req.GSTNumber != "" && !s.taxService.ValidateGSTIN(*req.GSTNumber) {
+			s.logger.Warn("Invalid Purchaser GSTIN provided in update", zap.String("gstin", *req.GSTNumber))
+		}
+	}
+	if req.VendorGSTIN != nil {
+		log.VendorGSTIN = req.VendorGSTIN
+		if *req.VendorGSTIN != "" && !s.taxService.ValidateGSTIN(*req.VendorGSTIN) {
+			s.logger.Warn("Invalid Vendor GSTIN provided in update", zap.String("gstin", *req.VendorGSTIN))
+		}
+	}
+	if req.GSTRate != nil {
+		log.GSTRate = req.GSTRate
+		res := s.taxService.CalculateGST(log.TotalCost, *req.GSTRate, false)
+		log.GSTAmount = &res.GSTAmount
+	}
+	if req.InvoiceNumber != nil {
+		log.InvoiceNumber = req.InvoiceNumber
+	}
+
 	// Re-validate cost if changed
 	if req.Quantity != nil || req.UnitPrice != nil || req.TotalCost != nil {
 		expectedCost := log.Quantity * log.UnitPrice
@@ -158,6 +280,17 @@ func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 	if err := s.repo.Update(ctx, log); err != nil {
 		return nil, err
 	}
+	s.writeAuditLog(ctx, &models.FuelAuditLog{
+		FuelLogID: log.ID,
+		Action:    "update",
+		ChangedBy: log.CreatedBy,
+		NewValues: mustJSONMarshal(map[string]interface{}{
+			"status":       log.Status,
+			"quantity":     log.Quantity,
+			"total_cost":   log.TotalCost,
+			"station_name": log.StationName,
+		}),
+	})
 
 	return log, nil
 }
@@ -170,10 +303,24 @@ func (s *fuelService) DeleteLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 	if log == nil {
 		return ErrLogNotFound
 	}
-	if log.Status == models.FuelLogStatusApproved {
-		return errors.New("approved fuel logs cannot be deleted")
+	if log.Status == models.FuelLogStatusApproved || log.Status == models.FuelLogStatusRejected {
+		return ErrLogImmutable
 	}
-	return s.repo.Delete(ctx, id, orgID)
+	if err := s.repo.Delete(ctx, id, orgID); err != nil {
+		return err
+	}
+	s.writeAuditLog(ctx, &models.FuelAuditLog{
+		FuelLogID: id,
+		Action:    "delete",
+		ChangedBy: log.CreatedBy,
+		OldValues: mustJSONMarshal(map[string]interface{}{
+			"status":       log.Status,
+			"quantity":     log.Quantity,
+			"total_cost":   log.TotalCost,
+			"station_name": log.StationName,
+		}),
+	})
+	return nil
 }
 
 func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req models.ChangeFuelLogStatusRequest) error {
@@ -186,14 +333,68 @@ func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid
 	}
 
 	if log.Status != models.FuelLogStatusPending {
-		return errors.New("only pending fuel logs can be approved or rejected")
+		return ErrStatusNotPending
 	}
 
-	return s.repo.UpdateStatus(ctx, id, orgID, req.Status)
+	// Prepare audit log data
+	oldVal, _ := json.Marshal(map[string]interface{}{"status": string(log.Status)})
+	newVal, _ := json.Marshal(map[string]interface{}{"status": string(req.Status)})
+
+	_ = &models.FuelAuditLog{
+		FuelLogID: id,
+		Action:    string(req.Status),
+		ChangedBy: uuid.Nil, // Would be populated from context
+		ChangedAt: time.Now(),
+		OldValues: oldVal,
+		NewValues: newVal,
+	}
+
+	// Update status
+	if err := s.repo.UpdateStatus(ctx, id, orgID, req.Status); err != nil {
+		return err
+	}
+	s.writeAuditLog(ctx, &models.FuelAuditLog{
+		FuelLogID: id,
+		Action:    strings.ToLower(string(req.Status)),
+		ChangedBy: log.CreatedBy,
+		OldValues: oldVal,
+		NewValues: newVal,
+	})
+	s.logger.Info("Fuel log status changed",
+		zap.String("log_id", id.String()),
+		zap.String("old_status", string(log.Status)),
+		zap.String("new_status", string(req.Status)),
+	)
+
+	return nil
 }
 
 func (s *fuelService) GetStats(ctx context.Context, orgID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error) {
 	return s.repo.GetStats(ctx, orgID, filter)
+}
+
+// CalculateFuelEfficiency calculates fuel efficiency (km per liter) for a vehicle
+func (s *fuelService) CalculateFuelEfficiency(ctx context.Context, vehicleID, orgID uuid.UUID) (float64, error) {
+	// Get last two approved fuel logs for the vehicle
+	// This would need a new repository method to get last N logs
+	// For now, return 0 as placeholder
+	return 0.0, nil
+}
+
+// GetFuelEfficiencyHistory gets fuel efficiency history for a vehicle
+func (s *fuelService) GetFuelEfficiencyHistory(ctx context.Context, vehicleID, orgID uuid.UUID, limit int) ([]FuelEfficiencyRecord, error) {
+	// This would need a new repository method
+	// For now, return empty slice
+	return []FuelEfficiencyRecord{}, nil
+}
+
+// FuelEfficiencyRecord represents a fuel efficiency calculation record
+type FuelEfficiencyRecord struct {
+	Date       time.Time `json:"date"`
+	Odometer   float64   `json:"odometer"`
+	FuelQty    float64   `json:"fuel_quantity"`
+	Distance   float64   `json:"distance"`
+	Efficiency float64   `json:"efficiency_km_per_liter"`
 }
 
 func (s *fuelService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
@@ -224,4 +425,81 @@ func (s *fuelService) UpdateSettings(ctx context.Context, orgID uuid.UUID, req m
 	}
 
 	return settings, nil
+}
+
+func (s *fuelService) validateFuelLimits(ctx context.Context, orgID, driverID uuid.UUID, quantity, amount float64) error {
+	// 1. Get Driver Specific Limits
+	limit, err := s.repo.GetDriverFuelLimit(ctx, driverID, orgID)
+	if err != nil {
+		s.logger.Error("failed to get driver fuel limit", zap.Error(err))
+	}
+
+	var dailyLiters, monthlyLiters, dailyAmount, monthlyAmount *float64
+	if limit != nil {
+		dailyLiters = limit.DailyLitersLimit
+		monthlyLiters = limit.MonthlyLitersLimit
+		dailyAmount = limit.DailyAmountLimit
+		monthlyAmount = limit.MonthlyAmountLimit
+	} else {
+		// 2. Fallback to org settings
+		orgSettings, err := s.repo.GetOrgFuelSettings(ctx, orgID)
+		if err != nil {
+			s.logger.Error("failed to get org fuel settings", zap.Error(err))
+		}
+		if orgSettings != nil {
+			dailyLiters = orgSettings.DefaultDailyLitersLimit
+			monthlyLiters = orgSettings.DefaultMonthlyLitersLimit
+			dailyAmount = orgSettings.DefaultDailyAmountLimit
+			monthlyAmount = orgSettings.DefaultMonthlyAmountLimit
+		}
+	}
+
+	if dailyLiters == nil && monthlyLiters == nil && dailyAmount == nil && monthlyAmount == nil {
+		return nil // No limits set
+	}
+
+	// 3. Check Daily Usage
+	startOfDay := time.Now().Truncate(24 * time.Hour)
+	usedDailyLiters, usedDailyAmount, err := s.repo.GetFuelUsage(ctx, driverID, orgID, startOfDay)
+	if err == nil {
+		if dailyLiters != nil && usedDailyLiters+quantity > *dailyLiters {
+			return ErrDailyFuelLimitExceeded
+		}
+		if dailyAmount != nil && usedDailyAmount+amount > *dailyAmount {
+			return ErrDailyFuelLimitExceeded
+		}
+	}
+
+	// 4. Check Monthly Usage
+	now := time.Now()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	usedMonthlyLiters, usedMonthlyAmount, err := s.repo.GetFuelUsage(ctx, driverID, orgID, startOfMonth)
+	if err == nil {
+		if monthlyLiters != nil && usedMonthlyLiters+quantity > *monthlyLiters {
+			return ErrMonthlyFuelLimitExceeded
+		}
+		if monthlyAmount != nil && usedMonthlyAmount+amount > *monthlyAmount {
+			return ErrMonthlyFuelLimitExceeded
+		}
+	}
+
+	return nil
+}
+
+func (s *fuelService) writeAuditLog(ctx context.Context, entry *models.FuelAuditLog) {
+	writer, ok := s.repo.(fuelAuditWriter)
+	if !ok || entry == nil {
+		return
+	}
+	if entry.ChangedAt.IsZero() {
+		entry.ChangedAt = time.Now().UTC()
+	}
+	if err := writer.CreateAuditLog(ctx, entry); err != nil {
+		s.logger.Warn("failed to persist fuel audit log", zap.Error(err))
+	}
+}
+
+func mustJSONMarshal(v map[string]interface{}) []byte {
+	b, _ := json.Marshal(v)
+	return b
 }

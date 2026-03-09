@@ -1,43 +1,79 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	pb "github.com/flyfleet/proto/auth/v1"
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 type Handlers struct {
 	svc    *authservice.AuthService
 	logger *zap.Logger
-	mu     sync.Mutex
-	limits map[string]*rateState
+	redis  *redis.Client
 }
 
-func NewHandlers(svc *authservice.AuthService, logger *zap.Logger) *Handlers {
-	return &Handlers{svc: svc, logger: logger, limits: map[string]*rateState{}}
+func NewHandlers(svc *authservice.AuthService, logger *zap.Logger, redis *redis.Client) *Handlers {
+	return &Handlers{svc: svc, logger: logger, redis: redis}
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", h.Login)
+		r.Post("/refresh", h.RefreshToken)
+		r.Post("/revoke", h.RevokeToken)
 		r.Post("/register", h.Register)
 		r.Post("/validate-token", h.ValidateToken)
+
+		// MFA endpoints
+		r.Post("/mfa/generate-secret", h.GenerateMFASecret)
+		r.Post("/mfa/enable", h.EnableMFA)
+		r.Post("/mfa/disable", h.DisableMFA)
+		r.Post("/mfa/verify", h.VerifyMFA)
+		r.Post("/login/mfa/verify", h.VerifyLoginMFA)
+		r.Post("/login/mfa/setup", h.SetupAdminMFA)
+		r.Post("/login/oidc/{provider}", h.LoginOIDC)
+
+		// Session endpoints
+		r.Get("/users/{id}/sessions", h.GetSessions)
+		r.Post("/users/{id}/sessions/{session_id}/revoke", h.RevokeSession)
+
+		// Password Reset endpoints
+		r.Post("/password/reset/request", h.RequestPasswordReset)
+		r.Post("/password/reset/confirm", h.ConfirmPasswordReset)
+
 		r.Get("/users/{id}", h.GetUser)
 		r.Get("/organizations/{id}", h.GetOrganization)
 		r.Get("/organizations", h.ListOrganizations)
 		r.Get("/stats", h.GetStats)
 		r.Get("/security-telemetry", h.GetSecurityTelemetry)
 		r.Get("/audit-logs", h.GetAuditLogs)
+		
+		// Admin Console endpoints
+		r.Group(func(r chi.Router) {
+			r.Post("/api-keys", h.CreateAPIKey)
+			r.Get("/api-keys", h.ListAPIKeys)
+			r.Post("/api-keys/{id}/revoke", h.RevokeAPIKey)
+			
+			r.Post("/service-accounts", h.CreateServiceAccount)
+			r.Get("/service-accounts", h.ListServiceAccounts)
+			
+			r.Post("/emergency-revoke", h.EmergencyRevoke)
+		})
 	})
+	r.Get("/.well-known/jwks.json", h.GetJWKS)
 }
 
 func (h *Handlers) json(w http.ResponseWriter, status int, v any) {
@@ -65,25 +101,26 @@ func (h *Handlers) clientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-func (h *Handlers) allowRate(key string, limit int, window time.Duration) bool {
-	now := time.Now()
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Handlers) allowRate(ctx context.Context, key string, limit int, window time.Duration) bool {
+	if h.redis == nil {
+		return true // Fallback if redis is not available
+	}
 
-	st, ok := h.limits[key]
-	if !ok || now.After(st.Reset) {
-		h.limits[key] = &rateState{Count: 1, Reset: now.Add(window)}
+	pipe := h.redis.Pipeline()
+	incr := pipe.Incr(ctx, "rate:"+key)
+	pipe.Expire(ctx, "rate:"+key, window)
+	
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		h.logger.Error("redis rate limit error", zap.Error(err))
 		return true
 	}
-	if st.Count >= limit {
-		return false
-	}
-	st.Count++
-	return true
+
+	return incr.Val() <= int64(limit)
 }
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
-	if !h.allowRate("login:"+h.clientIP(r), 5, time.Minute) {
+	if !h.allowRate(r.Context(), "login:"+h.clientIP(r), 5, time.Minute) {
 		h.errorJSON(w, http.StatusTooManyRequests, "too many login attempts")
 		return
 	}
@@ -95,7 +132,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	resp, err := h.svc.Login(r.Context(), req.Email, req.Password)
+	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, h.clientIP(r), r.UserAgent())
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
 		h.errorJSON(w, http.StatusUnauthorized, "invalid credentials")
@@ -104,8 +141,43 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	h.json(w, http.StatusOK, resp)
 }
 
+func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.svc.RefreshToken(r.Context(), req.RefreshToken, h.clientIP(r), r.UserAgent())
+	if err != nil {
+		h.logger.Error("token refresh failed", zap.Error(err))
+		h.errorJSON(w, http.StatusUnauthorized, "invalid or expired refresh token")
+		return
+	}
+	h.json(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) RevokeToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.svc.RevokeToken(r.Context(), req.RefreshToken); err != nil {
+		h.logger.Error("token revoke failed", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to revoke token")
+		return
+	}
+	h.json(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
-	if !h.allowRate("register:"+h.clientIP(r), 3, time.Minute) {
+	if !h.allowRate(r.Context(), "register:"+h.clientIP(r), 3, time.Minute) {
 		h.errorJSON(w, http.StatusTooManyRequests, "too many registration attempts")
 		return
 	}
@@ -117,6 +189,14 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.Register(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("auth register failed", zap.Error(err))
+
+		// Check if it's a validation error
+		var ve authservice.ValidationError
+		if errors.As(err, &ve) {
+			h.errorJSON(w, http.StatusBadRequest, ve.Error())
+			return
+		}
+
 		h.errorJSON(w, http.StatusInternalServerError, "failed to register user")
 		return
 	}
@@ -217,4 +297,456 @@ func (h *Handlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.json(w, http.StatusOK, map[string]any{"logs": logs, "total": total, "page": page, "limit": limit})
+}
+
+// MFA Handlers
+
+func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	secret, uri, err := h.svc.GenerateMFASecret(r.Context(), userID)
+	if err != nil {
+		h.logger.Error("failed to generate MFA secret", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to generate secret")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]any{
+		"secret":     secret,
+		"qr_uri":     uri,
+		"issuer":     "FlyFleet",
+		"algorithm":  "SHA1",
+		"digits":     6,
+		"period":     30,
+	})
+}
+
+func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	var req struct {
+		Secret string `json:"secret"`
+		Code   string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	codes, err := h.svc.EnableMFA(r.Context(), userID, req.Secret, req.Code)
+	if err != nil {
+		h.logger.Error("failed to enable MFA", zap.Error(err))
+		h.errorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]any{
+		"status":         "mfa_enabled",
+		"recovery_codes": codes,
+	})
+}
+
+func (h *Handlers) DisableMFA(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.svc.DisableMFA(r.Context(), userID, req.Code); err != nil {
+		h.logger.Error("failed to disable MFA", zap.Error(err))
+		h.errorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]string{"status": "mfa_disabled"})
+}
+
+func (h *Handlers) VerifyMFA(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Secret string `json:"secret"`
+		Code   string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	valid, err := h.svc.VerifyTOTP(req.Secret, req.Code)
+	if err != nil {
+		h.logger.Error("MFA verification error", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "verification error")
+		return
+	}
+
+	if !valid {
+		h.errorJSON(w, http.StatusBadRequest, "invalid code")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]bool{"valid": true})
+}
+
+func (h *Handlers) VerifyLoginMFA(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TempToken string `json:"temp_token"`
+		Code      string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.svc.VerifyLoginMFA(r.Context(), req.TempToken, req.Code, h.clientIP(r), r.UserAgent())
+	if err != nil {
+		h.logger.Error("MFA login verification failed", zap.Error(err))
+		h.errorJSON(w, http.StatusUnauthorized, "invalid MFA code or token")
+		return
+	}
+
+	h.json(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) SetupAdminMFA(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		TempToken string `json:"temp_token"`
+		Secret    string `json:"secret"`
+		Code      string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.svc.SetupAdminMFA(r.Context(), req.TempToken, req.Secret, req.Code, h.clientIP(r), r.UserAgent())
+	if err != nil {
+		h.logger.Error("MFA setup failed", zap.Error(err))
+		h.errorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.json(w, http.StatusOK, resp)
+}
+
+// Password Reset Handlers
+
+func (h *Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.svc.RequestPasswordReset(r.Context(), req.Email); err != nil {
+		h.logger.Error("password reset request failed", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to process request")
+		return
+	}
+
+	// Always return success to prevent email enumeration
+	h.json(w, http.StatusOK, map[string]string{
+		"message": "If an account exists with this email, a password reset link has been sent",
+	})
+}
+
+func (h *Handlers) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.svc.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		h.logger.Error("password reset failed", zap.Error(err))
+
+		var ve authservice.ValidationError
+		if errors.As(err, &ve) {
+			h.errorJSON(w, http.StatusBadRequest, ve.Error())
+			return
+		}
+
+		h.errorJSON(w, http.StatusBadRequest, "invalid or expired reset token")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]string{"status": "password_reset"})
+}
+
+// Session Handlers
+
+func (h *Handlers) GetSessions(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	sessions, err := h.svc.ListUserSessions(r.Context(), id)
+	if err != nil {
+		h.logger.Error("failed to list sessions", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to get sessions")
+		return
+	}
+
+	h.json(w, http.StatusOK, sessions)
+}
+
+func (h *Handlers) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	sessionID, err := uuid.Parse(chi.URLParam(r, "session_id"))
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid session id")
+		return
+	}
+
+	if err := h.svc.RevokeUserSession(r.Context(), sessionID, userID); err != nil {
+		h.logger.Error("failed to revoke session", zap.Error(err))
+		h.errorJSON(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]string{"status": "session_revoked"})
+}
+
+func (h *Handlers) LoginOIDC(w http.ResponseWriter, r *http.Request) {
+	provider := chi.URLParam(r, "provider")
+	var req struct {
+		Code  string `json:"code"`
+		State string `json:"state"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	resp, err := h.svc.LoginWithOIDC(r.Context(), provider, req.Code, req.State, h.clientIP(r), r.UserAgent())
+	if err != nil {
+		h.logger.Error("OIDC login failed", zap.Error(err), zap.String("provider", provider))
+		h.errorJSON(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	h.json(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) GetJWKS(w http.ResponseWriter, r *http.Request) {
+	jwks, err := h.svc.GetJWKS(r.Context())
+	if err != nil {
+		h.logger.Error("failed to get JWKS", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to fetch JWKS")
+		return
+	}
+	h.json(w, http.StatusOK, jwks)
+}
+
+func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		// Fallback to legacy string if needed, but primary should be UUID
+		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
+		if !okStr {
+			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+			return
+		}
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
+			return
+		}
+	}
+	
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		userIDStr, okStr := r.Context().Value(ctxkeys.UserIDKey).(string)
+		if !okStr {
+			h.errorJSON(w, http.StatusUnauthorized, "user context missing")
+			return
+		}
+		var err error
+		userID, err = uuid.Parse(userIDStr)
+		if err != nil {
+			h.errorJSON(w, http.StatusUnauthorized, "invalid user id")
+			return
+		}
+	}
+
+	var req struct {
+		Name      string     `json:"name"`
+		ExpiresAt *time.Time `json:"expires_at"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	key, err := h.svc.CreateAPIKey(r.Context(), userID, orgID, req.Name, req.ExpiresAt)
+	if err != nil {
+		h.logger.Error("failed to create api key", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to create api key")
+		return
+	}
+
+	h.json(w, http.StatusCreated, map[string]string{"api_key": key})
+}
+
+func (h *Handlers) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
+		if !okStr {
+			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+			return
+		}
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
+			return
+		}
+	}
+
+	keys, err := h.svc.ListAPIKeys(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("failed to list api keys", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to list api keys")
+		return
+	}
+
+	h.json(w, http.StatusOK, keys)
+}
+
+func (h *Handlers) RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid api key id")
+		return
+	}
+
+	if err := h.svc.RevokeAPIKey(r.Context(), id); err != nil {
+		h.logger.Error("failed to revoke api key", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to revoke api key")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
+func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
+		if !okStr {
+			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+			return
+		}
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
+			return
+		}
+	}
+
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	sa, secret, err := h.svc.CreateServiceAccount(r.Context(), orgID, req.Name, req.Description)
+	if err != nil {
+		h.logger.Error("failed to create service account", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to create service account")
+		return
+	}
+
+	h.json(w, http.StatusCreated, map[string]any{
+		"service_account": sa,
+		"client_secret":   secret, // Only shown once
+	})
+}
+
+func (h *Handlers) ListServiceAccounts(w http.ResponseWriter, r *http.Request) {
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
+		if !okStr {
+			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+			return
+		}
+		var err error
+		orgID, err = uuid.Parse(orgIDStr)
+		if err != nil {
+			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
+			return
+		}
+	}
+
+	accounts, err := h.svc.ListServiceAccounts(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("failed to list service accounts", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to list service accounts")
+		return
+	}
+
+	h.json(w, http.StatusOK, accounts)
+}
+
+func (h *Handlers) EmergencyRevoke(w http.ResponseWriter, r *http.Request) {
+	// Only superadmins should be able to do this, handled by RBAC middleware ideally
+	if err := h.svc.EmergencyRevoke(r.Context()); err != nil {
+		h.logger.Error("emergency revoke failed", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to trigger emergency revoke")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]string{"status": "emergency_revoke_triggered"})
 }

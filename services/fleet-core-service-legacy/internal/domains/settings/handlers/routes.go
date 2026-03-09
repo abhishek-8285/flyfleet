@@ -54,4 +54,6 @@ func (h *SettingsHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.GetSystemLimits)
 		r.Put("/", h.UpdateSystemLimits)
 	})
+
+	r.Post("/audit/cleanup", h.CleanupAuditLogs)
 }

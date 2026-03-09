@@ -52,15 +52,18 @@ func (r *MaintenanceRepositoryImpl) CreateSchedule(ctx context.Context, schedule
 		schedule.CreatedBy, now, now,
 	).Scan(&schedule.ID, &schedule.CreatedAt, &schedule.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create maintenance schedule: %w", err)
+	}
+	return nil
 }
 
 // GetScheduleByID retrieves a maintenance schedule by its ID
 func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id string) (*models.MaintenanceSchedule, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, type, name, description, due_date, due_odometer, 
+		SELECT id, org_id, vehicle_id, type, name, description, due_date, due_odometer,
 		       due_engine_hours, assigned_to, priority, status, estimated_cost, actual_cost,
-		       parts_required, service_items, notes, reminders, recurring, 
+		       parts_required, service_items, notes, reminders, recurring,
 		       created_by, created_at, updated_at, completed_at, completed_by
 		FROM maintenance_schedules WHERE id = $1`
 
@@ -78,14 +81,25 @@ func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id stri
 	)
 
 	if err != nil {
-		return nil, err
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get maintenance schedule: %w", err)
 	}
 
 	// Parse JSON fields
-	json.Unmarshal(partsRequiredJSON, &schedule.PartsRequired)
-	json.Unmarshal(serviceItemsJSON, &schedule.ServiceItems)
-	json.Unmarshal(remindersJSON, &schedule.Reminders)
-	json.Unmarshal(recurringJSON, &schedule.Recurring)
+	if err := json.Unmarshal(partsRequiredJSON, &schedule.PartsRequired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal parts required: %w", err)
+	}
+	if err := json.Unmarshal(serviceItemsJSON, &schedule.ServiceItems); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal service items: %w", err)
+	}
+	if err := json.Unmarshal(remindersJSON, &schedule.Reminders); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal reminders: %w", err)
+	}
+	if err := json.Unmarshal(recurringJSON, &schedule.Recurring); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal recurring: %w", err)
+	}
 
 	return &schedule, nil
 }
@@ -260,7 +274,7 @@ func (r *MaintenanceRepositoryImpl) UpdateSchedule(ctx context.Context, id strin
 
 	result, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to update maintenance schedule: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -275,7 +289,7 @@ func (r *MaintenanceRepositoryImpl) DeleteSchedule(ctx context.Context, id strin
 	query := "DELETE FROM maintenance_schedules WHERE id = $1"
 	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete maintenance schedule: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
@@ -289,7 +303,7 @@ func (r *MaintenanceRepositoryImpl) DeleteSchedule(ctx context.Context, id strin
 func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.MaintenanceLog) error {
 	query := `
 		INSERT INTO maintenance_logs (
-			id, org_id, vehicle_id, schedule_id, type, name, description, start_date, 
+			id, org_id, vehicle_id, schedule_id, type, name, description, start_date,
 			end_date, duration_minutes, performed_by, cost, odometer, engine_hours,
 			parts_used, service_items, notes, documents, status, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
@@ -313,13 +327,16 @@ func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.M
 		log.Notes, documentsJSON, log.Status, now, now,
 	).Scan(&log.ID, &log.CreatedAt, &log.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create maintenance log: %w", err)
+	}
+	return nil
 }
 
 // GetLogByID retrieves a maintenance log by its ID
 func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (*models.MaintenanceLog, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, schedule_id, type, name, description, start_date, 
+		SELECT id, org_id, vehicle_id, schedule_id, type, name, description, start_date,
 		       end_date, duration_minutes, performed_by, cost, odometer, engine_hours,
 		       parts_used, service_items, notes, documents, status, created_at, updated_at
 		FROM maintenance_logs WHERE id = $1`
@@ -336,13 +353,22 @@ func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (
 	)
 
 	if err != nil {
-		return nil, err
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get maintenance log: %w", err)
 	}
 
 	// Parse JSON fields
-	json.Unmarshal(partsUsedJSON, &log.PartsUsed)
-	json.Unmarshal(serviceItemsJSON, &log.ServiceItems)
-	json.Unmarshal(documentsJSON, &log.Documents)
+	if err := json.Unmarshal(partsUsedJSON, &log.PartsUsed); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal parts used: %w", err)
+	}
+	if err := json.Unmarshal(serviceItemsJSON, &log.ServiceItems); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal service items: %w", err)
+	}
+	if err := json.Unmarshal(documentsJSON, &log.Documents); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal documents: %w", err)
+	}
 
 	return &log, nil
 }

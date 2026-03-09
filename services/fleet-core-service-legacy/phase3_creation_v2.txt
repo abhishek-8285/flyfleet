@@ -1,0 +1,8 @@
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+X-Request-Id: unknown/WkCIZj9HDv-000004
+X-Trace-Id: unknown/WkCIZj9HDv-000004
+Date: Sat, 07 Mar 2026 16:59:38 GMT
+Content-Length: 132
+
+{"error":"Key: 'CreateDriverRequest.EmergencyContact.Relation' Error:Field validation for 'Relation' failed on the 'required' tag"}

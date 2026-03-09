@@ -1,0 +1,29 @@
+groups:
+  - name: FlyFleetAlerts
+    rules:
+      - alert: DeviceOfflineSpike
+        expr: diagnostics_devices_total - diagnostics_devices_online > 100
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Significant increase in offline devices"
+          description: "Over 100 devices have gone offline in the last 2 minutes."
+
+      - alert: FirmwareRolloutFailure
+        expr: diagnostics_commands_failed_total / diagnostics_rollouts_active > 0.05
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Firmware rollout failure rate elevated"
+          description: "The failure rate for active rollouts has exceeded 5%."
+
+      - alert: HighApiLatency
+        expr: http_request_duration_seconds{quantile="0.95"} > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API Latency"
+          description: "95th percentile of API responses is above 300ms."

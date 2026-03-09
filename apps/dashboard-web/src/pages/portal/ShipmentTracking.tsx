@@ -45,7 +45,7 @@ const ShipmentTracking: React.FC = () => {
     const fetchShipment = async () => {
       try {
         // This endpoint is public as per backend implementation
-        const res = await axios.get(`/api/v1/customer/shipments/${id}`);
+        const res = await axios.get(`/api/v1/portal/shipments/${id}`);
         setShipment(res.data);
       } catch (err: any) {
         console.error("Failed to fetch shipment", err);

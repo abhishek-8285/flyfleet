@@ -81,77 +81,86 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 			return ""
 		}
 
-		// Simple mapping (Case sensitive for now, ideally strictly defined)
-		vehicleReq.VIN = getVal("vin")
-		vehicleReq.LicensePlate = getVal("license_plate")
-		vehicleReq.Make = getVal("make")
-		vehicleReq.Model = getVal("model")
-		
+		// Simple mapping (CSV columns to enterprise model fields)
+		vinVal := getVal("vin")
+		var vinPtr *string
+		if vinVal != "" {
+			vinPtr = &vinVal
+		}
+		regNo := getVal("license_plate")
+		vehicleReq.RegistrationNumber = regNo
+		if vehicleReq.RegistrationNumber == "" {
+			vehicleReq.RegistrationNumber = getVal("registration_number")
+		}
+		makeVal := getVal("make")
+		if makeVal != "" {
+			vehicleReq.Make = &makeVal
+		}
+		modelVal := getVal("model")
+		if modelVal != "" {
+			vehicleReq.Model = &modelVal
+		}
+
 		yearStr := getVal("year")
 		if yearStr != "" {
 			year, err := strconv.Atoi(yearStr)
 			if err == nil {
-				vehicleReq.Year = year
+				vehicleReq.Year = &year
 			} else {
 				rowErr = fmt.Errorf("invalid year format")
 			}
 		}
 
-		vehicleReq.Color = getVal("color")
+		colorVal := getVal("color")
+		if colorVal != "" {
+			vehicleReq.Color = &colorVal
+		}
 		vehicleReq.FuelType = getVal("fuel_type")
-		vehicleReq.Registration = getVal("registration")
-		vehicleReq.Insurance = getVal("insurance")
-		
-		capacityStr := getVal("capacity")
-		if capacityStr != "" {
-			cap, err := strconv.Atoi(capacityStr)
-			if err == nil {
-				vehicleReq.Capacity = cap
-			}
+		if vehicleReq.FuelType == "" {
+			vehicleReq.FuelType = "DIESEL"
+		}
+		vehicleReq.VehicleType = getVal("vehicle_type")
+		if vehicleReq.VehicleType == "" {
+			vehicleReq.VehicleType = "TRUCK"
+		}
+		vehicleReq.OwnershipType = getVal("ownership_type")
+		if vehicleReq.OwnershipType == "" {
+			vehicleReq.OwnershipType = "OWNED"
 		}
 
 		// Validation
-		if vehicleReq.VIN == "" || vehicleReq.LicensePlate == "" {
-			rowErr = fmt.Errorf("missing mandatory fields (vin, license_plate)")
+		if vehicleReq.RegistrationNumber == "" {
+			rowErr = fmt.Errorf("missing mandatory field: registration_number / license_plate")
 		}
 
 		// Process Row
 		status := "success"
 		errMsg := ""
-		
-		if rowErr == nil {
-			// Helpers for pointers
-			color := vehicleReq.Color
-			capacity := vehicleReq.Capacity
-			fuelType := vehicleReq.FuelType
-			registration := vehicleReq.Registration
-			insurance := vehicleReq.Insurance
-			odometer := int64(0)
 
-			// Try to create vehicle
+		if rowErr == nil {
+			// Build enterprise vehicle aggregate
 			vehicle := &models.Vehicle{
-				ID:           uuid.New(),
-				OrgID:        orgID,
-				LicensePlate: vehicleReq.LicensePlate,
-				Model:        vehicleReq.Model,
-				Make:         vehicleReq.Make,
-				Year:         vehicleReq.Year,
-				Color:        &color,
-				Capacity:     &capacity,
-				FuelType:     &fuelType,
-				VIN:          vehicleReq.VIN,
-				Registration: &registration,
-				Insurance:    &insurance,
-				Status:       "active",
-				Odometer:     &odometer,
-				CreatedAt:    time.Now(),
-				UpdatedAt:    time.Now(),
+				ID:                 uuid.New(),
+				TenantID:           orgID,
+				RegistrationNumber: vehicleReq.RegistrationNumber,
+				VINNumber:          vinPtr,
+				VehicleType:        vehicleReq.VehicleType,
+				FuelType:           vehicleReq.FuelType,
+				OwnershipType:      vehicleReq.OwnershipType,
+				Make:               vehicleReq.Make,
+				Model:              vehicleReq.Model,
+				Year:               vehicleReq.Year,
+				Color:              vehicleReq.Color,
+				Status:             models.StatusActive,
+				CreatedAt:          time.Now(),
+				UpdatedAt:          time.Now(),
 			}
-			
+
 			if err := p.vehicleRepo.Create(ctx, vehicle); err != nil {
 				rowErr = err
 			}
 		}
+
 
 		if rowErr != nil {
 			status = "failed"

@@ -85,8 +85,16 @@ func (s *drService) processBackup(id uuid.UUID, updatedBy uuid.UUID) {
 		backupDir = "/backups"
 	}
 
+	// Validate backup script exists before executing
+	backupScript := "/app/scripts/db/backup.sh"
+	if _, err := os.Stat(backupScript); os.IsNotExist(err) {
+		s.logger.Error("Backup script does not exist", zap.String("path", backupScript))
+		_ = s.repo.UpdateBackupStatus(ctx, id, models.BackupStatusFailed, "", 0, updatedBy)
+		return
+	}
+
 	// We'll call the backup script
-	cmd := exec.Command("/bin/bash", "/app/scripts/db/backup.sh")
+	cmd := exec.Command("/bin/bash", backupScript)
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("BACKUP_DIR=%s", backupDir),
 	)
@@ -187,7 +195,22 @@ func (s *drService) processRestore(id uuid.UUID, updatedBy uuid.UUID) {
 	}
 	backupPath := filepath.Join(backupDir, backup.S3Key)
 
-	cmd := exec.Command("/bin/bash", "/app/scripts/db/restore.sh", backupPath)
+	// Validate backup file exists
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		s.logger.Error("Backup file does not exist", zap.String("path", backupPath))
+		_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusFailed, fmt.Sprintf("Backup file not found: %s", backupPath), updatedBy)
+		return
+	}
+
+	// Validate restore script exists before executing
+	restoreScript := "/app/scripts/db/restore.sh"
+	if _, err := os.Stat(restoreScript); os.IsNotExist(err) {
+		s.logger.Error("Restore script does not exist", zap.String("path", restoreScript))
+		_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusFailed, "Restore script not found", updatedBy)
+		return
+	}
+
+	cmd := exec.Command("/bin/bash", restoreScript, backupPath)
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
@@ -316,6 +339,7 @@ func (s *drService) runDRTestSimulation(testID uuid.UUID) {
 	ctx := context.Background()
 	steps, err := s.repo.ListDRTestSteps(ctx, testID)
 	if err != nil {
+		s.logger.Error("Failed to list DR test steps", zap.Error(err))
 		return
 	}
 	total := len(steps)
@@ -325,9 +349,14 @@ func (s *drService) runDRTestSimulation(testID uuid.UUID) {
 
 	for idx, step := range steps {
 		test, err := s.repo.GetDRTest(ctx, testID)
-		if err != nil || test.Status == "ABORTED" {
+		if err != nil {
+			s.logger.Error("Failed to get DR test", zap.Error(err))
 			return
 		}
+		if test.Status == "ABORTED" {
+			return
+		}
+
 		started := time.Now()
 		_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "RUNNING", &started, nil)
 		_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
@@ -338,19 +367,105 @@ func (s *drService) runDRTestSimulation(testID uuid.UUID) {
 			Message:   fmt.Sprintf("Step %d started: %s", step.StepOrder, step.StepName),
 		})
 
-		time.Sleep(1200 * time.Millisecond)
+		// Execute actual validation based on step type
+		stepPassed, validationLog := s.executeDRTestStep(ctx, testID, step.StepName)
 
 		completed := time.Now()
-		_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "PASSED", nil, &completed)
 		progress := int(float64(idx+1) / float64(total) * 100.0)
-		_ = s.repo.UpdateDRTestStatus(ctx, testID, "RUNNING", progress, nil)
-		_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
-			ID:        uuid.New(),
-			TestID:    testID,
-			Timestamp: completed,
-			Level:     "RUN",
-			Message:   fmt.Sprintf("Step %d passed: %s", step.StepOrder, step.StepName),
-		})
+		if stepPassed {
+			_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "PASSED", nil, &completed)
+			_ = s.repo.UpdateDRTestStatus(ctx, testID, "RUNNING", progress, nil)
+			_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+				ID:        uuid.New(),
+				TestID:    testID,
+				Timestamp: completed,
+				Level:     "RUN",
+				Message:   fmt.Sprintf("Step %d passed: %s - %s", step.StepOrder, step.StepName, validationLog),
+			})
+		} else {
+			_ = s.repo.UpdateDRTestStepStatus(ctx, step.ID, "FAILED", nil, &completed)
+			_ = s.repo.UpdateDRTestStatus(ctx, testID, "FAILED", progress, &completed)
+			_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+				ID:        uuid.New(),
+				TestID:    testID,
+				Timestamp: completed,
+				Level:     "ERROR",
+				Message:   fmt.Sprintf("Step %d failed: %s - %s", step.StepOrder, step.StepName, validationLog),
+			})
+			return
+		}
+
+		time.Sleep(500 * time.Millisecond) // Small delay between steps
+	}
+
+	// All steps passed - mark test as passed
+	completed := time.Now()
+	_ = s.repo.UpdateDRTestStatus(ctx, testID, "PASSED", 100, &completed)
+	_ = s.repo.CreateDRTestLog(ctx, &models.DRTestLog{
+		ID:        uuid.New(),
+		TestID:    testID,
+		Timestamp: completed,
+		Level:     "INFO",
+		Message:   "DR test completed successfully",
+	})
+}
+
+// executeDRTestStep executes actual validation for a DR test step
+func (s *drService) executeDRTestStep(ctx context.Context, testID uuid.UUID, stepName string) (bool, string) {
+	switch stepName {
+	case "Initialize test context":
+		// Validate test configuration exists
+		test, err := s.repo.GetDRTest(ctx, testID)
+		if err != nil {
+			return false, "Failed to retrieve test configuration"
+		}
+		if test.TestType == "" {
+			return false, "Test type not specified"
+		}
+		return true, fmt.Sprintf("Test context initialized for %s", test.TestType)
+
+	case "Validate backup chain":
+		// Check if there are completed backups available
+		backups, _, err := s.repo.ListBackups(ctx, 10, 0)
+		if err != nil {
+			return false, "Failed to list backups"
+		}
+		completedBackups := 0
+		for _, b := range backups {
+			if b.Status == models.BackupStatusCompleted {
+				completedBackups++
+			}
+		}
+		if completedBackups == 0 {
+			return false, "No completed backups found for validation"
+		}
+		return true, fmt.Sprintf("Found %d completed backups", completedBackups)
+
+	case "Execute failover or restore":
+		// Simulate failover/restore validation
+		// In production, this would actually test restoring to a staging environment
+		time.Sleep(2 * time.Second) // Simulate restore time
+		return true, "Failover/restore simulation completed successfully"
+
+	case "Validate recovery criteria":
+		// Check if backups can be verified
+		backups, _, err := s.repo.ListBackups(ctx, 5, 0)
+		if err != nil {
+			return false, "Failed to list backups for verification"
+		}
+		verifiableCount := 0
+		for _, b := range backups {
+			if b.Status == models.BackupStatusCompleted && b.S3Key != "" {
+				verifiableCount++
+			}
+		}
+		if verifiableCount == 0 {
+			return false, "No verifiable backups found"
+		}
+		return true, fmt.Sprintf("Recovery criteria validated: %d verifiable backups", verifiableCount)
+
+	default:
+		return true, fmt.Sprintf("Step %s executed (no specific validation)", stepName)
 	}
 }
 

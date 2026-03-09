@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fleet-core-service
+  namespace: flyfleet
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fleet-core-service
+  template:
+    metadata:
+      labels:
+        app: fleet-core-service
+    spec:
+      containers:
+        - name: fleet-core-service
+          image: flyfleet/fleet-core-service:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flyfleet-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: flyfleet-secrets
+                  key: redis-url
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleet-core-service
+  namespace: flyfleet
+spec:
+  selector:
+    app: fleet-core-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

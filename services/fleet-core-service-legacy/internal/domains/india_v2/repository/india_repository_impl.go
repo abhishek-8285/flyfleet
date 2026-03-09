@@ -9,6 +9,7 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/models"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -103,7 +104,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetFASTagTransaction(ctx context.Contex
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("fastag transaction not found")
 		}
 		return nil, fmt.Errorf("failed to get fastag transaction: %w", err)
@@ -370,8 +371,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id str
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("e-way bill not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get e-way bill: %w", err)
 	}
@@ -708,8 +709,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Cont
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("vehicle verification not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get vehicle verification: %w", err)
 	}
@@ -1008,8 +1009,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Conte
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("driver verification not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get driver verification: %w", err)
 	}
@@ -1307,8 +1308,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermit(ctx context.Context, id 
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("local permit not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get local permit: %w", err)
 	}
@@ -1572,8 +1573,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetGSTCompliance(ctx context.Context, i
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("gst compliance not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get gst compliance: %w", err)
 	}
@@ -1815,8 +1816,8 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 	)
 
 	if err != nil {
-		if err.Error() == "no rows in result set" {
-			return nil, errors.New("integration config not found")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get integration config: %w", err)
 	}

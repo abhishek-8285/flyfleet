@@ -51,7 +51,11 @@ func (s *SettingsService) logAudit(ctx context.Context, entityType string, entit
 
 // Platform Settings
 func (s *SettingsService) GetPlatformSettings(ctx context.Context) (*models.PlatformSettings, error) {
-	return s.repo.GetPlatformSettings(ctx)
+	settings, err := s.repo.GetPlatformSettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get platform settings: %w", err)
+	}
+	return settings, nil
 }
 
 func (s *SettingsService) ListAuditLogs(ctx context.Context, query models.AuditLogQuery) ([]models.AuditLog, error) {
@@ -59,40 +63,45 @@ func (s *SettingsService) ListAuditLogs(ctx context.Context, query models.AuditL
 		query.Limit = 50
 	}
 	if query.Limit < 1 || query.Limit > 500 {
-		return nil, fmt.Errorf("invalid limit: must be between 1 and 500")
+		return nil, fmt.Errorf("invalid limit: must be between 1 and 500: %w", ErrInvalidValue)
 	}
 	if query.Offset < 0 {
-		return nil, errors.New("invalid offset: must be >= 0")
+		return nil, fmt.Errorf("invalid offset: must be >= 0: %w", ErrInvalidValue)
 	}
 	query.EntityType = strings.ToUpper(strings.TrimSpace(query.EntityType))
 	query.Action = strings.ToUpper(strings.TrimSpace(query.Action))
-	return s.repo.ListAuditLogs(ctx, query)
+
+	logs, err := s.repo.ListAuditLogs(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list audit logs: %w", err)
+	}
+	return logs, nil
 }
 
 func (s *SettingsService) GetSettingsExport(ctx context.Context) (*models.SettingsExport, error) {
 	platform, err := s.repo.GetPlatformSettings(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get platform settings: %w", err)
 	}
 	flags, err := s.repo.ListFeatureFlags(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list feature flags: %w", err)
 	}
 	localization, err := s.repo.GetLocalizationSettings(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get localization settings: %w", err)
 	}
 	templates, err := s.repo.ListTemplates(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list templates: %w", err)
 	}
 	channels, err := s.ListNotificationChannels(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list notification channels: %w", err)
 	}
 	limits, err := s.repo.GetSystemLimits(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get system limits: %w", err)
 	}
 
 	return &models.SettingsExport{
@@ -329,22 +338,30 @@ func (s *SettingsService) UpdatePlatformSettings(ctx context.Context, settings *
 
 // Feature Flags
 func (s *SettingsService) ListFeatureFlags(ctx context.Context) ([]models.FeatureFlag, error) {
-	return s.repo.ListFeatureFlags(ctx)
+	flags, err := s.repo.ListFeatureFlags(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list feature flags: %w", err)
+	}
+	return flags, nil
 }
 
 func (s *SettingsService) GetFeatureFlag(ctx context.Context, id uuid.UUID) (*models.FeatureFlag, error) {
-	return s.repo.GetFeatureFlag(ctx, id)
+	flag, err := s.repo.GetFeatureFlag(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get feature flag: %w", err)
+	}
+	return flag, nil
 }
 
 func (s *SettingsService) CreateFeatureFlag(ctx context.Context, f *models.FeatureFlag) error {
 	if f.Key == "" {
-		return errors.New("flag key is required")
+		return fmt.Errorf("flag key is required: %w", ErrRequiredField)
 	}
 	userID := s.getUserID(ctx)
 	f.CreatedBy = userID
 	f.UpdatedBy = userID
 	if err := s.repo.CreateFeatureFlag(ctx, f); err != nil {
-		return err
+		return fmt.Errorf("failed to create feature flag: %w", err)
 	}
 	s.logAudit(ctx, "FEATURE_FLAG", &f.ID, "CREATE", map[string]any{"key": f.Key})
 	return nil
@@ -353,7 +370,7 @@ func (s *SettingsService) CreateFeatureFlag(ctx context.Context, f *models.Featu
 func (s *SettingsService) UpdateFeatureFlag(ctx context.Context, f *models.FeatureFlag) error {
 	f.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateFeatureFlag(ctx, f); err != nil {
-		return err
+		return fmt.Errorf("failed to update feature flag: %w", err)
 	}
 	s.logAudit(ctx, "FEATURE_FLAG", &f.ID, "UPDATE", map[string]any{"key": f.Key, "enabled": f.Enabled})
 	return nil
@@ -361,7 +378,7 @@ func (s *SettingsService) UpdateFeatureFlag(ctx context.Context, f *models.Featu
 
 func (s *SettingsService) DeleteFeatureFlag(ctx context.Context, id uuid.UUID) error {
 	if err := s.repo.DeleteFeatureFlag(ctx, id); err != nil {
-		return err
+		return fmt.Errorf("failed to delete feature flag: %w", err)
 	}
 	s.logAudit(ctx, "FEATURE_FLAG", &id, "DELETE", nil)
 	return nil
@@ -370,12 +387,12 @@ func (s *SettingsService) DeleteFeatureFlag(ctx context.Context, id uuid.UUID) e
 func (s *SettingsService) ToggleFeatureFlag(ctx context.Context, id uuid.UUID) error {
 	flag, err := s.repo.GetFeatureFlag(ctx, id)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get feature flag: %w", err)
 	}
 	flag.Enabled = !flag.Enabled
 	flag.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateFeatureFlag(ctx, flag); err != nil {
-		return err
+		return fmt.Errorf("failed to toggle feature flag: %w", err)
 	}
 	s.logAudit(ctx, "FEATURE_FLAG", &flag.ID, "TOGGLE", map[string]any{"enabled": flag.Enabled})
 	return nil
@@ -383,18 +400,22 @@ func (s *SettingsService) ToggleFeatureFlag(ctx context.Context, id uuid.UUID) e
 
 // Localization
 func (s *SettingsService) GetLocalizationSettings(ctx context.Context) ([]models.LocalizationSettings, error) {
-	return s.repo.GetLocalizationSettings(ctx)
+	settings, err := s.repo.GetLocalizationSettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get localization settings: %w", err)
+	}
+	return settings, nil
 }
 
 func (s *SettingsService) UpdateLocalizationSettings(ctx context.Context, l *models.LocalizationSettings) error {
 	if l.LanguageCode == "" {
-		return errors.New("language code is required")
+		return fmt.Errorf("language code is required: %w", ErrRequiredField)
 	}
 	userID := s.getUserID(ctx)
 	l.CreatedBy = userID
 	l.UpdatedBy = userID
 	if err := s.repo.UpdateLocalizationSettings(ctx, l); err != nil {
-		return err
+		return fmt.Errorf("failed to update localization settings: %w", err)
 	}
 	s.logAudit(ctx, "LOCALIZATION", &l.ID, "UPDATE", map[string]any{"code": l.LanguageCode})
 	return nil
@@ -402,22 +423,30 @@ func (s *SettingsService) UpdateLocalizationSettings(ctx context.Context, l *mod
 
 // Templates
 func (s *SettingsService) ListTemplates(ctx context.Context) ([]models.Template, error) {
-	return s.repo.ListTemplates(ctx)
+	templates, err := s.repo.ListTemplates(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list templates: %w", err)
+	}
+	return templates, nil
 }
 
 func (s *SettingsService) GetTemplate(ctx context.Context, id uuid.UUID) (*models.Template, error) {
-	return s.repo.GetTemplate(ctx, id)
+	template, err := s.repo.GetTemplate(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get template: %w", err)
+	}
+	return template, nil
 }
 
 func (s *SettingsService) CreateTemplate(ctx context.Context, t *models.Template) error {
 	if t.Key == "" {
-		return errors.New("template key is required")
+		return fmt.Errorf("template key is required: %w", ErrRequiredField)
 	}
 	userID := s.getUserID(ctx)
 	t.CreatedBy = userID
 	t.UpdatedBy = userID
 	if err := s.repo.CreateTemplate(ctx, t); err != nil {
-		return err
+		return fmt.Errorf("failed to create template: %w", err)
 	}
 	s.logAudit(ctx, "TEMPLATE", &t.ID, "CREATE", map[string]any{"key": t.Key})
 	return nil
@@ -426,7 +455,7 @@ func (s *SettingsService) CreateTemplate(ctx context.Context, t *models.Template
 func (s *SettingsService) UpdateTemplate(ctx context.Context, t *models.Template) error {
 	t.UpdatedBy = s.getUserID(ctx)
 	if err := s.repo.UpdateTemplate(ctx, t); err != nil {
-		return err
+		return fmt.Errorf("failed to update template: %w", err)
 	}
 	s.logAudit(ctx, "TEMPLATE", &t.ID, "UPDATE", map[string]any{"subject": t.Subject})
 	return nil
@@ -436,7 +465,7 @@ func (s *SettingsService) UpdateTemplate(ctx context.Context, t *models.Template
 func (s *SettingsService) ListNotificationChannels(ctx context.Context) ([]models.NotificationChannel, error) {
 	channels, err := s.repo.ListNotificationChannels(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list notification channels: %w", err)
 	}
 	// Decrypt configs
 	for i := range channels {
@@ -455,7 +484,7 @@ func (s *SettingsService) ListNotificationChannels(ctx context.Context) ([]model
 
 func (s *SettingsService) UpdateNotificationChannel(ctx context.Context, c *models.NotificationChannel) error {
 	if c.ChannelType == "" {
-		return errors.New("channel type is required")
+		return fmt.Errorf("channel type is required: %w", ErrRequiredField)
 	}
 
 	// Encrypt Config
@@ -463,11 +492,11 @@ func (s *SettingsService) UpdateNotificationChannel(ctx context.Context, c *mode
 		if _, ok := c.Config["_encrypted"]; !ok {
 			configBytes, err := json.Marshal(c.Config)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to marshal config: %w", err)
 			}
 			encrypted, err := utils.Encrypt(string(configBytes))
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to encrypt config: %w", err)
 			}
 			c.Config = map[string]any{"_encrypted": encrypted}
 		}
@@ -478,7 +507,7 @@ func (s *SettingsService) UpdateNotificationChannel(ctx context.Context, c *mode
 	c.UpdatedBy = userID
 
 	if err := s.repo.UpdateNotificationChannel(ctx, c); err != nil {
-		return err
+		return fmt.Errorf("failed to update notification channel: %w", err)
 	}
 	s.logAudit(ctx, "NOTIFICATION_CHANNEL", &c.ID, "UPDATE", map[string]any{"provider": c.Provider})
 	return nil
@@ -486,18 +515,22 @@ func (s *SettingsService) UpdateNotificationChannel(ctx context.Context, c *mode
 
 // System Limits
 func (s *SettingsService) GetSystemLimits(ctx context.Context) (*models.SystemLimit, error) {
-	return s.repo.GetSystemLimits(ctx)
+	limits, err := s.repo.GetSystemLimits(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get system limits: %w", err)
+	}
+	return limits, nil
 }
 
 func (s *SettingsService) UpdateSystemLimits(ctx context.Context, l *models.SystemLimit) error {
 	if l.APIRateLimit < 0 {
-		return errors.New("api rate limit cannot be negative")
+		return fmt.Errorf("api rate limit cannot be negative: %w", ErrNegativeValue)
 	}
 	userID := s.getUserID(ctx)
 	l.CreatedBy = userID
 	l.UpdatedBy = userID
 	if err := s.repo.UpdateSystemLimits(ctx, l); err != nil {
-		return err
+		return fmt.Errorf("failed to update system limits: %w", err)
 	}
 	s.logAudit(ctx, "SYSTEM_LIMITS", &l.ID, "UPDATE", map[string]any{"rate_limit": l.APIRateLimit})
 	return nil
@@ -513,4 +546,32 @@ func (s *SettingsService) getUserID(ctx context.Context) uuid.UUID {
 		return uuid.Nil
 	}
 	return uid
+}
+
+// CleanupOldAuditLogs removes audit logs older than the configured retention period
+func (s *SettingsService) CleanupOldAuditLogs(ctx context.Context) (int64, error) {
+	// Get system limits to determine retention period
+	limits, err := s.repo.GetSystemLimits(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get system limits: %w", err)
+	}
+
+	// Default to 1 year if not specified
+	retentionPeriod := "1 year"
+	if limits.AuditRetention != "" {
+		retentionPeriod = limits.AuditRetention
+	}
+
+	deleted, err := s.repo.CleanupOldAuditLogs(ctx, retentionPeriod)
+	if err != nil {
+		return 0, fmt.Errorf("failed to cleanup audit logs: %w", err)
+	}
+
+	s.logAudit(ctx, "AUDIT_CLEANUP", nil, "CLEANUP", map[string]any{
+		"deleted_count": deleted,
+		"retention":     retentionPeriod,
+	})
+
+	s.logger.Info("Audit log cleanup completed", zap.Int64("deleted", deleted), zap.String("retention", retentionPeriod))
+	return deleted, nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -14,12 +15,17 @@ import (
 )
 
 type FuelHandler struct {
-	svc    service.FuelService
-	logger *zap.Logger
+	svc      service.FuelService
+	logger   *zap.Logger
+	validate *validator.Validate
 }
 
 func NewFuelHandler(svc service.FuelService, logger *zap.Logger) *FuelHandler {
-	return &FuelHandler{svc: svc, logger: logger}
+	return &FuelHandler{
+		svc:      svc,
+		logger:   logger,
+		validate: validator.New(),
+	}
 }
 
 func (h *FuelHandler) RegisterRoutes(r chi.Router) {
@@ -40,9 +46,16 @@ func (h *FuelHandler) RegisterRoutes(r chi.Router) {
 func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 
 	var req models.CreateFuelLogRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -59,6 +72,10 @@ func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 // GetLog godoc
 func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
@@ -77,6 +94,10 @@ func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 // ListLogs godoc
 func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 
 	query := r.URL.Query()
 	filter := models.FuelLogFilter{
@@ -113,6 +134,10 @@ func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 // UpdateLog godoc
 func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
@@ -121,6 +146,10 @@ func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 
 	var req models.UpdateFuelLogRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -137,6 +166,10 @@ func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 // DeleteLog godoc
 func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
@@ -154,6 +187,10 @@ func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 // ChangeStatus godoc
 func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid ID", nil)
@@ -162,6 +199,10 @@ func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 
 	var req models.ChangeFuelLogStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -177,6 +218,10 @@ func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 // GetStats godoc
 func (h *FuelHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	stats, err := h.svc.GetStats(r.Context(), orgID, models.FuelLogFilter{})
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -188,6 +233,10 @@ func (h *FuelHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 // GetSettings godoc
 func (h *FuelHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 	settings, err := h.svc.GetSettings(r.Context(), orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -199,9 +248,17 @@ func (h *FuelHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 // UpdateSettings godoc
 func (h *FuelHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	userID := h.getUserID(r)
+	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
 
 	var req models.UpdateFuelSettingsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -237,22 +294,46 @@ func (h *FuelHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 
 func (h *FuelHandler) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}
+	}
+	if id, err := uuid.Parse(r.Header.Get("X-Organization-ID")); err == nil {
+		return id
 	}
 	return uuid.Nil
 }
 
 func (h *FuelHandler) getUserID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}
 	}
+	if id, err := uuid.Parse(r.Header.Get("X-User-ID")); err == nil {
+		return id
+	}
 	return uuid.Nil
+}
+
+func (h *FuelHandler) ensureAuthIDs(w http.ResponseWriter, orgID uuid.UUID, userID uuid.UUID) bool {
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "missing organization id", nil)
+		return false
+	}
+	if userID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "missing user id", nil)
+		return false
+	}
+	return true
 }

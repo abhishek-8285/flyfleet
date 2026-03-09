@@ -56,43 +56,72 @@ func (s *RouteOptimizationServiceImpl) CreateOptimizationRequest(ctx context.Con
 	request.Status = "pending"
 
 	// Save the request
-	return s.repo.CreateOptimizationRequest(ctx, request)
+	if err := s.repo.CreateOptimizationRequest(ctx, request); err != nil {
+		return fmt.Errorf("failed to save optimization request: %w", err)
+	}
+	return nil
 }
 
 // GetOptimizationRequest retrieves a route optimization request by ID
 func (s *RouteOptimizationServiceImpl) GetOptimizationRequest(ctx context.Context, id string) (*models.RouteOptimizationRequest, error) {
-	return s.repo.GetOptimizationRequest(ctx, id)
+	request, err := s.repo.GetOptimizationRequest(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get optimization request: %w", err)
+	}
+	return request, nil
 }
 
 // UpdateOptimizationRequest updates an existing route optimization request
 func (s *RouteOptimizationServiceImpl) UpdateOptimizationRequest(ctx context.Context, id string, updates map[string]interface{}) error {
 	updates["updated_at"] = time.Now()
-	return s.repo.UpdateOptimizationRequest(ctx, id, updates)
+	if err := s.repo.UpdateOptimizationRequest(ctx, id, updates); err != nil {
+		return fmt.Errorf("failed to update optimization request: %w", err)
+	}
+	return nil
 }
 
 // DeleteOptimizationRequest deletes a route optimization request
 func (s *RouteOptimizationServiceImpl) DeleteOptimizationRequest(ctx context.Context, id string) error {
-	return s.repo.DeleteOptimizationRequest(ctx, id)
+	if err := s.repo.DeleteOptimizationRequest(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete optimization request: %w", err)
+	}
+	return nil
 }
 
 // ListOptimizationRequests retrieves route optimization requests for an organization
 func (s *RouteOptimizationServiceImpl) ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
-	return s.repo.ListOptimizationRequests(ctx, orgID, limit, offset)
+	requests, total, err := s.repo.ListOptimizationRequests(ctx, orgID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list optimization requests: %w", err)
+	}
+	return requests, total, nil
 }
 
 // GetOptimizationResult retrieves a route optimization result by ID
 func (s *RouteOptimizationServiceImpl) GetOptimizationResult(ctx context.Context, id string) (*models.RouteOptimizationResult, error) {
-	return s.repo.GetOptimizationResult(ctx, id)
+	result, err := s.repo.GetOptimizationResult(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get optimization result: %w", err)
+	}
+	return result, nil
 }
 
 // GetOptimizationResultByRequestID retrieves a route optimization result by request ID
 func (s *RouteOptimizationServiceImpl) GetOptimizationResultByRequestID(ctx context.Context, requestID string) (*models.RouteOptimizationResult, error) {
-	return s.repo.GetOptimizationResultByRequestID(ctx, requestID)
+	result, err := s.repo.GetOptimizationResultByRequestID(ctx, requestID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get optimization result by request ID: %w", err)
+	}
+	return result, nil
 }
 
 // ListOptimizationResults retrieves route optimization results for a request
 func (s *RouteOptimizationServiceImpl) ListOptimizationResults(ctx context.Context, requestID string, limit, offset int) ([]*models.RouteOptimizationResult, int, error) {
-	return s.repo.ListOptimizationResults(ctx, requestID, limit, offset)
+	results, total, err := s.repo.ListOptimizationResults(ctx, requestID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list optimization results: %w", err)
+	}
+	return results, total, nil
 }
 
 // SubmitOptimizationJob submits a route optimization job for processing
@@ -117,16 +146,14 @@ func (s *RouteOptimizationServiceImpl) SubmitOptimizationJob(ctx context.Context
 	}
 
 	// Save the job
-	err = s.repo.CreateOptimizationJob(ctx, job)
-	if err != nil {
+	if err := s.repo.CreateOptimizationJob(ctx, job); err != nil {
 		return fmt.Errorf("failed to create optimization job: %w", err)
 	}
 
 	// Update the request status
-	err = s.repo.UpdateOptimizationRequest(ctx, requestID, map[string]interface{}{
+	if err := s.repo.UpdateOptimizationRequest(ctx, requestID, map[string]interface{}{
 		"status": "processing",
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("failed to update request status: %w", err)
 	}
 
@@ -139,12 +166,20 @@ func (s *RouteOptimizationServiceImpl) SubmitOptimizationJob(ctx context.Context
 
 // GetOptimizationJob retrieves an optimization job by ID
 func (s *RouteOptimizationServiceImpl) GetOptimizationJob(ctx context.Context, id string) (*models.OptimizationJob, error) {
-	return s.repo.GetOptimizationJob(ctx, id)
+	job, err := s.repo.GetOptimizationJob(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get optimization job: %w", err)
+	}
+	return job, nil
 }
 
 // ListOptimizationJobs retrieves optimization jobs for a request
 func (s *RouteOptimizationServiceImpl) ListOptimizationJobs(ctx context.Context, requestID string, status string, limit, offset int) ([]*models.OptimizationJob, int, error) {
-	return s.repo.ListOptimizationJobs(ctx, requestID, status, limit, offset)
+	jobs, total, err := s.repo.ListOptimizationJobs(ctx, requestID, status, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list optimization jobs: %w", err)
+	}
+	return jobs, total, nil
 }
 
 // validateOptimizationRequest validates the optimization request

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -23,21 +24,35 @@ import (
 // @Router /drivers/{id}/duty-status [post]
 func (h *DriverHandler) UpdateDutyStatus(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
+
 	var req models.DutyStatusLog
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	if err := h.service.UpdateDutyStatus(r.Context(), driverID, &req); err != nil {
+	if err := h.service.UpdateDutyStatus(r.Context(), driverID, orgID, &req); err != nil {
 		h.logger.Error("failed to update duty status", zap.Error(err))
-		http.Error(w, "Failed to update duty status", http.StatusInternalServerError)
+		
+		// Map domain errors to status codes
+		statusCode := http.StatusInternalServerError
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "safety violation") || 
+		   strings.Contains(errMsg, "limit exceeded") ||
+		   strings.Contains(errMsg, "break required") ||
+		   strings.Contains(errMsg, "mandatory rest") {
+			statusCode = http.StatusForbidden // HOOS violation
+		} else if errMsg == "invalid driver id" {
+			statusCode = http.StatusBadRequest
+		}
+
+		h.writeErrorResponse(w, statusCode, err.Error(), nil)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(req)
+	h.writeJSONResponse(w, http.StatusOK, req)
 }
 
 // SendMessage godoc
@@ -69,7 +84,10 @@ func (h *DriverHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		req.Type = "TEXT"
 	}
 
-	msg, err := h.service.SendMessage(r.Context(), driverID, req.Content, req.Type, req.AttachmentURL)
+	// Extract orgID from context
+	orgID := h.getOrgID(r)
+
+	msg, err := h.service.SendMessage(r.Context(), driverID, orgID.String(), req.Content, req.Type, req.AttachmentURL)
 	if err != nil {
 		h.logger.Error("failed to send message", zap.Error(err))
 		http.Error(w, "Failed to send message", http.StatusInternalServerError)
@@ -100,7 +118,10 @@ func (h *DriverHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 	if pageSize < 1 { pageSize = 20 }
 
-	messages, err := h.service.GetMessages(r.Context(), driverID, page, pageSize)
+	// Extract orgID from context
+	orgID := h.getOrgID(r)
+
+	messages, err := h.service.GetMessages(r.Context(), driverID, orgID.String(), page, pageSize)
 	if err != nil {
 		h.logger.Error("failed to get messages", zap.Error(err))
 		http.Error(w, "Failed to get messages", http.StatusInternalServerError)
@@ -130,7 +151,10 @@ func (h *DriverHandler) SubmitExpense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expense, err := h.service.SubmitExpense(r.Context(), driverID, &req)
+	// Extract orgID from context
+	orgID := h.getOrgID(r)
+
+	expense, err := h.service.SubmitExpense(r.Context(), driverID, orgID.String(), &req)
 	if err != nil {
 		h.logger.Error("failed to submit expense", zap.Error(err))
 		http.Error(w, "Failed to submit expense", http.StatusInternalServerError)
@@ -153,7 +177,10 @@ func (h *DriverHandler) SubmitExpense(w http.ResponseWriter, r *http.Request) {
 func (h *DriverHandler) GetExpenses(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
 
-	expenses, err := h.service.GetExpenses(r.Context(), driverID)
+	// Extract orgID from context
+	orgID := h.getOrgID(r)
+
+	expenses, err := h.service.GetExpenses(r.Context(), driverID, orgID.String())
 	if err != nil {
 		h.logger.Error("failed to get expenses", zap.Error(err))
 		http.Error(w, "Failed to get expenses", http.StatusInternalServerError)
@@ -176,19 +203,53 @@ func (h *DriverHandler) GetExpenses(w http.ResponseWriter, r *http.Request) {
 // @Router /drivers/{id}/sos [post]
 func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
+	h.logger.Info("TriggerSOS handler called", zap.String("driver_id", driverID))
+
 	var loc models.Location
 	if err := json.NewDecoder(r.Body).Decode(&loc); err != nil {
-		h.logger.Error("invalid request body", zap.Error(err))
+		h.logger.Error("invalid request body in TriggerSOS", zap.Error(err))
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.service.TriggerSOS(r.Context(), driverID, &loc); err != nil {
-		h.logger.Error("failed to trigger SOS", zap.Error(err))
-		http.Error(w, "Failed to trigger SOS", http.StatusInternalServerError)
+	// Extract orgID from context or header
+	orgID := h.getOrgID(r)
+	h.logger.Info("TriggerSOS: extracted orgID", zap.String("org_id", orgID.String()))
+
+	if err := h.service.TriggerSOS(r.Context(), driverID, orgID.String(), &loc); err != nil {
+		h.logger.Error("failed to trigger SOS in service", zap.Error(err))
+		http.Error(w, "Failed to trigger SOS: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "SOS triggered"})
+}
+// GetPerformance godoc
+// @Summary Get driver performance summary
+// @Description Get comprehensive performance metrics for a driver
+// @Tags driver-mobile
+// @Accept json
+// @Produce json
+// @Param id path string true "Driver ID"
+// @Success 200 {object} map[string]interface{}
+// @Router /drivers/{id}/performance [get]
+func (h *DriverHandler) GetPerformance(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	
+	// Extract orgID from context
+	orgID := h.getOrgID(r)
+	
+	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), driverID, orgID.String())
+	if err != nil {
+		h.logger.Error("failed to get driver performance summary", zap.Error(err))
+		statusCode := http.StatusInternalServerError
+		if err.Error() == "unauthorized access to driver data" {
+			statusCode = http.StatusForbidden
+		}
+		h.writeErrorResponse(w, statusCode, "Failed to get performance summary", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, summary)
 }
