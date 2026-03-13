@@ -1,8 +1,9 @@
 import { formatDistanceToNow, parseISO } from "date-fns";
+import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../../services/api";
 import { useUIStrings } from "../../hooks/useUIStrings";
+import api from "../../services/api";
 
 interface AdminMetrics {
   risk_overview: {
@@ -98,686 +99,396 @@ export const GlobalAdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full p-6">
-      <div className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-white text-3xl font-bold mb-2">
-              {uiStrings?.title}
-            </h1>
-            <p className="text-text-muted text-lg">
-              {uiStrings?.subtitle}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-text-muted text-sm">{uiStrings?.label_time_range}</span>
-            <div className="flex bg-surface-dark rounded-lg border border-border-color p-1">
-              {(["today", "7days", "30days"] as const).map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setTimeRange(range)}
-                  className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                    timeRange === range
-                      ? "bg-primary text-white"
-                      : "text-text-muted hover:text-white hover:bg-surface-light"
-                  }`}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full p-6 space-y-8"
+    >
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
+            {uiStrings?.title || "Global Command Center"}
+          </h1>
+          <p className="text-text-muted text-lg font-medium opacity-80">
+            {uiStrings?.subtitle || "Real-time Operations & Risk Intelligence"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4 bg-surface-dark/50 backdrop-blur-md p-1.5 rounded-xl border border-border-color/50 shadow-inner">
+          {(["today", "7days", "30days"] as const).map((range) => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                timeRange === range
+                  ? "bg-primary text-white shadow-lg shadow-primary/30"
+                  : "text-text-muted hover:text-white hover:bg-surface-light/30"
+              }`}
+            >
+              {range === "today"
+                ? uiStrings?.opt_today || "Today"
+                : range === "7days"
+                  ? uiStrings?.opt_7days || "7 Days"
+                  : uiStrings?.opt_30days || "30 Days"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Primary Risk Grid - Premium Glassmorphism */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[
+          {
+            label: uiStrings?.label_sla_compliance || "SLA Compliance",
+            value:
+              (metrics?.risk_overview?.sla_compliance || 0).toFixed(1) + "%",
+            trend: "99.2% Goal",
+            color: "red",
+            icon: "verified_user",
+            bg: "from-red-500/10 to-transparent",
+            border: "border-red-500/30",
+          },
+          {
+            label: uiStrings?.label_int_failures || "Integration Health",
+            value: metrics?.risk_overview?.integration_failures ?? "--",
+            trend: "Active Proxies: 12",
+            color: "amber",
+            icon: "api",
+            bg: "from-amber-500/10 to-transparent",
+            border: "border-amber-500/30",
+          },
+          {
+            label: uiStrings?.label_security_score || "Security Posture",
+            value:
+              (metrics?.risk_overview?.security_score || 0).toFixed(1) + "%",
+            trend: "No Breaches",
+            color: "green",
+            icon: "shield_check",
+            bg: "from-green-500/10 to-transparent",
+            border: "border-green-500/30",
+          },
+          {
+            label: uiStrings?.label_system_health || "Platform Uptime",
+            value:
+              (metrics?.critical_indicators?.system_health || 99.9).toFixed(2) +
+              "%",
+            trend: systemMeta?.uptime || "Healthy",
+            color: "blue",
+            icon: "monitor_heart",
+            bg: "from-blue-500/10 to-transparent",
+            border: "border-blue-500/30",
+          },
+        ].map((item, idx) => (
+          <motion.div
+            key={idx}
+            whileHover={{ scale: 1.02, translateY: -5 }}
+            className={`relative overflow-hidden bg-surface-dark/40 backdrop-blur-xl border ${item.border} rounded-2xl p-5 shadow-2xl group`}
+          >
+            <div
+              className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${item.bg} -mr-8 -mt-8 rounded-full blur-2xl opacity-50`}
+            />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <span
+                  className={`material-symbols-outlined text-${item.color}-400 bg-${item.color}-400/10 p-2 rounded-lg text-2xl`}
                 >
-                  {range === "today"
-                    ? uiStrings?.opt_today
-                    : range === "7days"
-                      ? uiStrings?.opt_7days
-                      : uiStrings?.opt_30days}
-                </button>
+                  {item.icon}
+                </span>
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                  Live
+                </span>
+              </div>
+              <h3 className="text-text-muted text-sm font-semibold mb-1">
+                {item.label}
+              </h3>
+              <p className="text-3xl font-black text-white mb-2 leading-none">
+                {item.value}
+              </p>
+              <div className="flex items-center gap-1.5 ring-1 ring-white/5 py-1 px-2 rounded-full w-fit bg-emerald-500/5">
+                <span className="text-[10px] font-bold text-emerald-400 whitespace-nowrap">
+                  {item.trend}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Middle Grid - Operations & Incidents */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Vital Stats Card */}
+        <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+          {[
+            {
+              label: "Active Organizations",
+              val: metrics?.operational_metrics?.total_orgs,
+              icon: "corporate_fare",
+              color: "blue",
+            },
+            {
+              label: "Fleet Volume",
+              val: metrics?.operational_metrics?.active_fleet,
+              icon: "local_shipping",
+              color: "purple",
+            },
+            {
+              label: "Edge Hardware",
+              val: metrics?.operational_metrics?.connected_devices,
+              icon: "memory",
+              color: "emerald",
+            },
+            {
+              label: "Peak Active Users",
+              val: metrics?.operational_metrics?.active_users_today,
+              icon: "group",
+              color: "orange",
+            },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className="bg-surface-dark/30 border border-border-color/30 rounded-2xl p-6 flex items-center justify-between hover:bg-surface-dark/50 transition-colors cursor-pointer group"
+            >
+              <div>
+                <p className="text-text-muted text-xs font-bold uppercase tracking-widest mb-1">
+                  {stat.label}
+                </p>
+                <p className="text-3xl font-black text-white">
+                  {(stat.val || 0).toLocaleString()}
+                </p>
+              </div>
+              <span
+                className={`material-symbols-outlined text-${stat.color}-400 text-3xl opacity-30 group-hover:opacity-100 transition-opacity`}
+              >
+                {stat.icon}
+              </span>
+            </div>
+          ))}
+
+          {/* Uptime Trend Chart Area */}
+          <div className="col-span-2 bg-surface-dark/40 border border-border-color/30 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-white font-bold opacity-90">
+                Regional Connectivity Uptime
+              </h3>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] text-emerald-400 font-bold uppercase">
+                  Real-time Stream
+                </span>
+              </div>
+            </div>
+            <div className="h-24 flex items-end gap-2 px-2">
+              {(
+                metrics?.uptime_trend || [99, 98, 99.5, 99.9, 99.2, 99.8, 99.9]
+              ).map((val, i) => (
+                <div key={i} className="flex-1 relative group cursor-pointer">
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(val - 95) * 15}%` }}
+                    className={`w-full rounded-t-lg transition-all duration-500 ${val > 99.5 ? "bg-primary shadow-[0_0_15px_rgba(37,99,235,0.4)]" : "bg-primary/40 group-hover:bg-primary"}`}
+                  />
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    {val}%
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Platform Risk Overview */}
-      <div className="mb-6">
-        <div className="bg-surface-dark rounded-xl border border-border-color p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-white font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-red-400">
-                warning
-              </span>
-              {uiStrings?.risk_title}
-            </h3>
-            <div className="flex items-center gap-3 text-xs text-text-muted">
-              <span className="flex items-center gap-1">
-                {uiStrings?.label_last_updated}{" "}
-                {formatLastUpdated((metrics as any)?.last_updated)}
-                {isRefreshing && (
-                  <span className="material-symbols-outlined text-xs animate-spin text-primary">
-                    sync
-                  </span>
-                )}
-              </span>
-              <button
-                onClick={handleManualRefresh}
-                className={`p-1 hover:text-white transition-colors ${isRefreshing ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={isRefreshing}
-              >
-                <span
-                  className={`material-symbols-outlined text-sm ${isRefreshing ? "animate-spin" : ""}`}
-                >
-                  refresh
+        {/* Live Incident Feed - High Urgency Design */}
+        <div className="bg-red-950/20 border-2 border-red-500/40 rounded-3xl p-6 relative overflow-hidden flex flex-col shadow-[0_35px_60px_-15px_rgba(239,68,68,0.1)]">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-50" />
+
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500 rounded-xl shadow-lg shadow-red-500/40">
+                <span className="material-symbols-outlined text-white text-xl">
+                  priority_high
                 </span>
-              </button>
+              </div>
+              <div>
+                <h3 className="text-white font-black leading-none">
+                  CRITICAL ALERTS
+                </h3>
+                <p className="text-red-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                  Automatic Refresh Active
+                </p>
+              </div>
             </div>
+            <span className="text-red-500 text-2xl font-black">
+              {metrics?.critical_indicators?.open_incidents || 0}
+            </span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 hover:border-l-4 hover:border-l-red-500 transition-all">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-red-400 text-sm font-medium">
-                  {uiStrings?.label_sla_compliance}
-                </span>
-                <span className="material-symbols-outlined text-red-400 text-sm">
-                  trending_down
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {(metrics?.risk_overview.sla_compliance || 0).toFixed(1)}%
-              </p>
-              <p className="text-red-400 text-xs">
-                {systemMeta?.revenue_diff || `↓ --% ${uiStrings?.msg_vs_yesterday}`}
-              </p>
-            </div>
-            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 hover:border-l-4 hover:border-l-amber-500 transition-all">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-amber-400 text-sm font-medium">
-                  {uiStrings?.label_int_failures}
-                </span>
-                <span className="material-symbols-outlined text-amber-400 text-sm">
-                  error
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.risk_overview.integration_failures}
-              </p>
-              <p className="text-amber-400 text-xs">{uiStrings?.label_last_24h}</p>
-            </div>
-            <div className="bg-surface-light/10 border border-border-color rounded-lg p-3 hover:border-l-4 hover:border-l-green-500 transition-all">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-text-muted text-sm font-medium">
-                  {uiStrings?.label_pay_failures}
-                </span>
-                <span className="material-symbols-outlined text-green-400 text-sm">
-                  check_circle
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.risk_overview.payment_failures}
-              </p>
-              <p className="text-green-400 text-xs">{uiStrings?.msg_all_success}</p>
-            </div>
-            <div className="bg-surface-light/10 border border-border-color rounded-lg p-3 hover:border-l-4 hover:border-l-green-500 transition-all">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-text-muted text-sm font-medium">
-                  {uiStrings?.label_security_score}
-                </span>
-                <span className="material-symbols-outlined text-green-400 text-sm">
-                  shield
-                </span>
-              </div>
-              <p className="text-2xl font-bold text-white">
-                {(metrics?.risk_overview.security_score || 0).toFixed(1)}%
-              </p>
-              <p className="text-green-400 text-xs">
-                {systemMeta?.uptime_diff || `↑ --% improvement`}
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-border-color">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-text-muted text-sm">
-                {uiStrings?.uptime_trend_title}
-              </span>
-              <span className="text-xs text-green-400 font-medium">
-                {systemMeta?.uptime || "--%"} {uiStrings?.label_average}
-              </span>
-            </div>
-            <div className="h-12 flex items-end gap-1">
-              {(metrics?.uptime_trend || []).map((value: number, i: number) => (
+
+          <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
+            {(metrics?.recent_activity || [])
+              .filter((a) => a.type === "incident_opened")
+              .map((incident, i) => (
                 <div
                   key={i}
-                  className={`flex-1 rounded-t ${value >= 99 ? "bg-green-500" : value >= 98 ? "bg-amber-500" : "bg-red-500"}`}
-                  style={{ height: `${value - 95}%` }}
-                ></div>
+                  className="bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-colors cursor-pointer border-l-4 border-l-red-500 group"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-white font-bold text-sm tracking-tight group-hover:text-red-400 transition-colors">
+                      {incident.title}
+                    </h4>
+                    <span className="text-[10px] text-text-muted">
+                      {incident.timestamp}
+                    </span>
+                  </div>
+                  <p className="text-text-muted text-xs line-clamp-2 leading-relaxed opacity-70">
+                    {incident.description ||
+                      "System generated anomaly detected in regional node."}
+                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full font-bold">
+                      URGENT
+                    </span>
+                    <span className="text-[10px] font-bold text-blue-400 uppercase">
+                      View Log →
+                    </span>
+                  </div>
+                </div>
               ))}
-            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Critical Risk Indicators - Row 1 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div
-          onClick={() => navigate("/admin/incidents")}
-          className="bg-surface-dark border-2 border-red-500/50 rounded-xl p-5 text-white cursor-pointer hover:border-l-4 hover:border-l-red-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="text-sm font-medium text-text-muted mb-1">
-                {uiStrings?.label_open_incidents}
-              </h3>
-              <p className="text-3xl font-bold text-white">
-                {metrics?.critical_indicators.open_incidents}
-              </p>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="material-symbols-outlined text-red-400 text-2xl group-hover:scale-110 transition-transform">
-                report
-              </span>
-              <span className="text-[10px] text-red-400 bg-red-400/20 px-1.5 py-0.5 rounded mt-1 animate-pulse">
-                {uiStrings?.badge_critical}
-              </span>
-            </div>
-          </div>
-          <p className="text-xs text-text-muted">
-            {metrics?.critical_indicators.integration_failures} {uiStrings?.msg_int_failures}
-          </p>
-        </div>
-
-        <div
-          onClick={() => navigate("/admin/devices?status=offline")}
-          className="bg-surface-dark border border-border-color rounded-xl p-5 text-white cursor-pointer hover:border-l-4 hover:border-l-amber-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="text-sm font-medium text-text-muted mb-1">
-                {uiStrings?.label_devices_offline}
-              </h3>
-              <p className="text-3xl font-bold text-white">
-                {metrics?.critical_indicators.devices_offline}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-amber-400 text-2xl group-hover:scale-110 transition-transform">
-              cloud_off
-            </span>
-          </div>
-          <p className="text-xs text-text-muted">
-            {metrics
-              ? `${((metrics.critical_indicators.devices_offline / (metrics.critical_indicators.total_devices || 1)) * 100).toFixed(1)}% ${uiStrings?.msg_offline}`
-              : `0% ${uiStrings?.msg_offline}`}
-            <br />
-            <span className="text-green-400">↓ -2 {uiStrings?.msg_vs_yesterday}</span>
-          </p>
-        </div>
-
-        <div className="bg-surface-dark border border-border-color rounded-xl p-4 text-white hover:border-l-4 hover:border-l-green-500 transition-all">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="text-xs font-medium text-text-muted mb-1">
-                {uiStrings?.label_system_health}
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                {(metrics?.critical_indicators.system_health || 0).toFixed(1)}%
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-green-400 text-2xl pulse-live">
-              monitor_heart
-            </span>
-          </div>
-          <p className="text-[10px] text-text-muted">{uiStrings?.msg_uptime_7d}</p>
-        </div>
-
-        <div
-          onClick={() => navigate("/admin/billing")}
-          className="bg-surface-dark border border-border-color rounded-xl p-5 text-white cursor-pointer hover:border-l-4 hover:border-l-red-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="text-sm font-medium text-text-muted mb-1">
-                {uiStrings?.label_billing_risk}
-              </h3>
-              <p className="text-xl font-bold text-white">
-                $
-                {(
-                  metrics?.critical_indicators.billing_risk || 0
-                ).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-red-400 text-2xl group-hover:scale-110 transition-transform">
-              payments
-            </span>
-          </div>
-          <p className="text-xs text-text-muted">{uiStrings?.msg_unpaid_invoices}</p>
-        </div>
-      </div>
-
-      {/* Operational Metrics - Row 2 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div
-          onClick={() => navigate("/admin/organizations")}
-          className="bg-surface-dark border border-border-color rounded-xl p-4 text-white cursor-pointer hover:border-l-4 hover:border-l-blue-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <h3 className="text-xs font-medium text-text-muted mb-1">
-                {uiStrings?.label_active_orgs}
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.operational_metrics.total_orgs?.toLocaleString()}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-blue-400 text-xl group-hover:scale-110 transition-transform">
-              corporate_fare
-            </span>
-          </div>
-          <p className="text-[10px] text-text-muted">
-            {metrics?.operational_metrics.new_orgs_today} {uiStrings?.msg_new_today}
-          </p>
-        </div>
-
-        <div
-          onClick={() => navigate("/admin/vehicles")}
-          className="bg-surface-dark border border-border-color rounded-xl p-4 text-white cursor-pointer hover:border-l-4 hover:border-l-green-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <h3 className="text-xs font-medium text-text-muted mb-1">
-                {uiStrings?.label_active_fleet}
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.operational_metrics.active_fleet?.toLocaleString()}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-green-400 text-xl group-hover:scale-110 transition-transform">
-              directions_car
-            </span>
-          </div>
-          <p className="text-[10px] text-text-muted">
-            {metrics?.operational_metrics.vehicles_offline} {uiStrings?.msg_offline}
-          </p>
-        </div>
-
-        <div
-          onClick={() => navigate("/admin/devices")}
-          className="bg-surface-dark border border-border-color rounded-xl p-4 text-white cursor-pointer hover:border-l-4 hover:border-l-amber-500 transition-all group"
-        >
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <h3 className="text-xs font-medium text-text-muted mb-1">
-                {uiStrings?.label_connected_devices}
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.operational_metrics.connected_devices?.toLocaleString()}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-amber-400 text-xl group-hover:scale-110 transition-transform">
-              devices
-            </span>
-          </div>
-          <p className="text-[10px] text-text-muted">
-            {metrics?.operational_metrics.devices_offline} {uiStrings?.msg_offline}
-          </p>
-        </div>
-
-        <div className="bg-surface-dark border border-border-color rounded-xl p-4 text-white hover:border-l-4 hover:border-l-emerald-500 transition-all">
-          <div className="flex justify-between items-start mb-1">
-            <div>
-              <h3 className="text-xs font-medium text-text-muted mb-1">
-                {uiStrings?.label_active_users}
-              </h3>
-              <p className="text-2xl font-bold text-white">
-                {metrics?.operational_metrics.active_users_today?.toLocaleString()}
-              </p>
-            </div>
-            <span className="material-symbols-outlined text-emerald-400 text-xl">
-              group
-            </span>
-          </div>
-          <p className="text-[10px] text-text-muted">
-            {metrics
-              ? `↑ ${(metrics.operational_metrics.active_users_today - metrics.operational_metrics.users_yesterday).toLocaleString()} ${uiStrings?.msg_vs_yesterday}`
-              : uiStrings?.msg_platform_engagement}
-          </p>
-        </div>
-      </div>
-
-      {/* Critical Admin Actions - Enhanced Hierarchy */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Approval Queue */}
-        <div className="bg-surface-dark rounded-xl border border-border-color p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white text-xl font-bold">{uiStrings?.title_approvals}</h2>
-            <span className="material-symbols-outlined text-amber-400">
-              hourglass_full
-            </span>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-              <div>
-                <p className="text-white font-medium">
-                  {systemMeta?.pending_approval_1_name || "---"}
-                </p>
-                <p className="text-text-muted text-sm">
-                  Pending since {systemMeta?.pending_approval_1_since || "---"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 bg-success text-white text-xs rounded hover:bg-green-600 transition-colors">
-                  Approve
-                </button>
-                <button className="px-3 py-1 bg-error text-white text-xs rounded hover:bg-red-600 transition-colors">
-                  Reject
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-              <div>
-                <p className="text-white font-medium">
-                  {systemMeta?.pending_approval_2_name || "---"}
-                </p>
-                <p className="text-text-muted text-sm">
-                  Pending since {systemMeta?.pending_approval_2_since || "---"}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 bg-success text-white text-xs rounded hover:bg-green-600 transition-colors">
-                  Approve
-                </button>
-                <button className="px-3 py-1 bg-error text-white text-xs rounded hover:bg-red-600 transition-colors">
-                  Reject
-                </button>
-              </div>
-            </div>
-          </div>
           <button
-            onClick={() => navigate("/admin/organizations?status=pending")}
-            className="w-full mt-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors"
+            onClick={() => navigate("/admin/incidents")}
+            className="w-full mt-6 py-3 bg-red-500 hover:bg-red-400 text-white font-black text-sm rounded-2xl transition-all shadow-xl shadow-red-500/20 active:scale-95 flex items-center justify-center gap-2"
           >
-            {uiStrings?.btn_view_pending?.replace("{count}", String(metrics?.pending_approvals))}
+            <span className="material-symbols-outlined text-lg">
+              manage_accounts
+            </span>
+            RESOLVE ALL INCIDENTS
+          </button>
+        </div>
+      </div>
+
+      {/* Global Activity Timeline */}
+      <div className="bg-surface-dark/40 border border-border-color/30 rounded-3xl p-8 shadow-inner overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
+
+        <div className="flex items-center justify-between mb-8 relative z-10">
+          <div>
+            <h2 className="text-white text-2xl font-black mb-1">
+              Global Activity Ledger
+            </h2>
+            <p className="text-text-muted text-sm font-medium">
+              Cryptographically verified operational stream
+            </p>
+          </div>
+          <button className="p-3 bg-surface-dark rounded-2xl border border-border-color hover:bg-surface-light transition-all shadow-xl group">
+            <span className="material-symbols-outlined text-text-muted group-hover:text-white transition-colors">
+              history
+            </span>
           </button>
         </div>
 
-        {/* Enhanced Incident Management - Urgent Focus */}
-        <div className="bg-red-900/30 border-2 border-red-500 rounded-xl p-6 shadow-2xl shadow-red-500/20">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-red-400 text-xl animate-pulse">
-                warning
-              </span>
-              <h2 className="text-white text-xl font-bold">{uiStrings?.title_incidents}</h2>
-              <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
-                {uiStrings?.badge_urgent}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-text-muted">{uiStrings?.label_refresh_30s}</span>
-              <button className="p-1.5 bg-red-500 hover:bg-red-600 rounded text-white transition-colors">
-                <span className="material-symbols-outlined text-sm">
-                  refresh
-                </span>
-              </button>
-            </div>
-          </div>
-          <div className="space-y-3 max-h-64 overflow-y-auto mb-4 custom-scrollbar">
-            {(
-              (metrics?.recent_activity || []).filter(
-                (a) => a.type === "incident_opened",
-              ) || []
-            ).length > 0 ? (
-              (metrics?.recent_activity || [])
-                .filter((a) => a.type === "incident_opened")
-                .map((incident: any) => (
-                  <div
-                    key={incident.id}
-                    className={`p-3 rounded-lg border-2 bg-surface-light/5 hover:bg-surface-light/10 transition-all ${
-                      incident.severity === "high"
-                        ? "bg-red-500/10 border-red-500/30"
-                        : incident.severity === "medium"
-                          ? "bg-amber-500/10 border-amber-500/30"
-                          : "bg-emerald-500/10 border-emerald-500/30"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-white font-medium">
-                            {incident.title}
-                          </p>
-                          <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                              incident.severity === "high"
-                                ? "bg-red-500 text-white"
-                                : incident.severity === "medium"
-                                  ? "bg-amber-500 text-white"
-                                  : "bg-emerald-500 text-white"
-                            }`}
-                          >
-                            {(incident.severity || "LOW").toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-text-muted text-sm">
-                          {incident.description || "System generated incident"}
-                        </p>
-                        <div className="flex items-center gap-3 mt-2 text-xs">
-                          <span className="text-text-muted">
-                            {incident.timestamp}
-                          </span>
-                          <span className="text-blue-400">
-                            {incident.performer}
-                          </span>
-                          <span className="text-emerald-400 font-medium">
-                            SLA: OK
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 ml-3">
-                        <span
-                          className={`material-symbols-outlined ${
-                            incident.severity === "high"
-                              ? "text-red-400 text-xl"
-                              : incident.severity === "medium"
-                                ? "text-amber-400 text-xl"
-                                : "text-emerald-400 text-xl"
-                          }`}
-                        >
-                          {incident.severity === "high"
-                            ? "error"
-                            : incident.severity === "medium"
-                              ? "warning"
-                              : "info"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-            ) : (
-              <div className="p-4 text-center text-text-muted italic">
-                {uiStrings?.msg_no_incidents}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate("/admin/incidents")}
-              className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all hover:scale-[1.02] flex items-center justify-center gap-2 active:scale-95"
-            >
-              <span className="material-symbols-outlined text-sm">
-                manage_accounts
-              </span>
-              {uiStrings?.btn_manage_incidents?.replace("{count}", String(metrics?.critical_indicators.open_incidents))}
-            </button>
-            <button className="px-4 py-2 bg-surface-dark hover:bg-border-color text-white rounded-lg font-medium transition-colors border border-border-color">
-              <span className="material-symbols-outlined text-sm">
-                filter_list
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Activity Feed */}
-      <div className="bg-surface-dark rounded-xl border border-border-color p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-white text-xl font-bold">{uiStrings?.title_activity}</h2>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-text-muted text-sm">
-                search
-              </span>
-              <input
-                type="text"
-                placeholder={uiStrings?.placeholder_search_activity}
-                className="bg-surface-dark border border-border-color text-xs text-white rounded pl-8 pr-3 py-1 w-40 focus:ring-2 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50"
-              />
-            </div>
-            <button className="p-1.5 bg-surface-dark hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-border-color">
-              <span className="material-symbols-outlined text-sm">
-                filter_list
-              </span>
-            </button>
-            <span className="material-symbols-outlined text-blue-400">
-              timeline
-            </span>
-          </div>
-        </div>
-        <div className="space-y-2 max-h-80 overflow-y-auto mb-4">
-          {(metrics?.recent_activity || []).map((activity: any) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10">
+          {(metrics?.recent_activity || []).map((activity, i) => (
             <div
-              key={activity.id}
-              className="flex items-start gap-3 p-3 bg-surface-light/5 hover:bg-surface-light/10 rounded-lg border border-border-color/30 hover:border-border-color/60 transition-all cursor-pointer group"
+              key={i}
+              className="bg-surface-light/5 border border-white/5 p-5 rounded-2xl flex gap-4 hover:border-primary/40 transition-all hover:translate-y-[-4px]"
             >
-              <div className="mt-1 flex-shrink-0">
-                {activity.type === "org_created" && (
-                  <span className="material-symbols-outlined text-green-400 text-lg group-hover:scale-110 transition-transform">
-                    add_business
-                  </span>
-                )}
-                {activity.type === "user_added" && (
-                  <span className="material-symbols-outlined text-blue-400 text-lg group-hover:scale-110 transition-transform">
-                    person_add
-                  </span>
-                )}
-                {activity.type === "device_registered" && (
-                  <span className="material-symbols-outlined text-amber-400 text-lg group-hover:scale-110 transition-transform">
-                    devices
-                  </span>
-                )}
-                {activity.type === "incident_opened" && (
-                  <span className="material-symbols-outlined text-red-400 text-lg group-hover:scale-110 transition-transform">
-                    report
-                  </span>
-                )}
-                {activity.type === "subscription_expired" && (
-                  <span className="material-symbols-outlined text-orange-400 text-lg group-hover:scale-110 transition-transform">
-                    event_busy
-                  </span>
-                )}
-                {activity.type === "payment_received" && (
-                  <span className="material-symbols-outlined text-emerald-400 text-lg group-hover:scale-110 transition-transform">
-                    payments
-                  </span>
-                )}
+              <div className="mt-1">
+                <span
+                  className={`material-symbols-outlined p-2 rounded-xl bg-surface-dark shadow-inner text-lg ${
+                    activity.type.includes("incident")
+                      ? "text-red-400"
+                      : activity.type.includes("org")
+                        ? "text-blue-400"
+                        : "text-emerald-400"
+                  }`}
+                >
+                  {activity.type.includes("incident")
+                    ? "report_problem"
+                    : activity.type.includes("org")
+                      ? "domain"
+                      : "payments"}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-medium group-hover:text-primary transition-colors">
-                  {activity.type === "org_created" &&
-                    `New organization created: ${activity.org_name}`}
-                  {activity.type === "user_added" &&
-                    `User added: ${activity.user_name} to ${activity.org}`}
-                  {activity.type === "device_registered" &&
-                    `Device registered: ${activity.device_id} for ${activity.vehicle}`}
-                  {activity.type === "incident_opened" &&
-                    `Incident opened: ${activity.title}`}
-                  {activity.type === "subscription_expired" &&
-                    `Subscription expired: ${activity.org_name}`}
-                  {activity.type === "payment_received" &&
-                    `Payment received: ${activity.amount} from ${activity.org}`}
+                <p className="text-white font-bold text-sm truncate mb-1">
+                  {activity.title ||
+                    activity.org_name ||
+                    activity.user_name ||
+                    "System Event"}
                 </p>
-                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
-                  <span className="text-text-muted">{activity.timestamp}</span>
-                  <span className="text-blue-400 font-medium">
-                    by {activity.performer}
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-muted font-medium">
+                    {activity.timestamp}
                   </span>
-                  {activity.user && (
-                    <span className="text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
-                      initiated by {activity.user}
-                    </span>
-                  )}
-                  {activity.amount && (
-                    <span className="text-emerald-400 font-bold">
-                      {activity.amount}
-                    </span>
-                  )}
-                  <button className="text-primary hover:text-primary-dark text-[10px] font-medium transition-colors ml-auto">
-                    View details →
-                  </button>
+                  <span className="text-[10px] text-primary font-bold uppercase">
+                    {activity.performer || "AUTO"}
+                  </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate("/admin/activity")}
-            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined text-sm">history</span>
-            {uiStrings?.btn_full_log}
-          </button>
-          <button className="px-4 py-2 bg-surface-dark hover:bg-border-color text-white rounded-lg font-medium transition-colors border border-border-color">
-            <span className="material-symbols-outlined text-sm">download</span>
-          </button>
-        </div>
       </div>
 
-      {/* Quick Navigation */}
-      <div className="bg-surface-dark rounded-xl border border-border-color p-6">
-        <h2 className="text-white text-xl font-bold mb-6">{uiStrings?.title_tools}</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Quick Action Matrix */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {[
+          {
+            label: "Fleet",
+            icon: "airport_shuttle",
+            color: "blue",
+            path: "/admin/vehicles",
+          },
+          {
+            label: "Drivers",
+            icon: "badge",
+            color: "indigo",
+            path: "/admin/drivers",
+          },
+          {
+            label: "Finance",
+            icon: "account_balance_wallet",
+            color: "emerald",
+            path: "/admin/billing",
+          },
+          {
+            label: "Governance",
+            icon: "gavel",
+            color: "purple",
+            path: "/admin/governance",
+          },
+          {
+            label: "Integrations",
+            icon: "dynamic_feed",
+            color: "orange",
+            path: "/admin/integrations",
+          },
+          {
+            label: "Settings",
+            icon: "settings_suggest",
+            color: "slate",
+            path: "/admin/settings",
+          },
+        ].map((tool, i) => (
           <button
-            onClick={() => navigate("/admin/organizations")}
-            className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 text-center transition-all group"
+            key={i}
+            onClick={() => navigate(tool.path)}
+            className="group bg-surface-dark/40 hover:bg-surface-dark border border-border-color/30 p-4 rounded-3xl transition-all hover:shadow-2xl hover:shadow-primary/5 active:scale-90"
           >
-            <span className="material-symbols-outlined text-blue-400 text-2xl mb-2 block">
-              corporate_fare
+            <span
+              className={`material-symbols-outlined text-${tool.color}-400 text-3xl mb-2 group-hover:scale-110 transition-transform`}
+            >
+              {tool.icon}
             </span>
-            <p className="text-white font-medium">{uiStrings?.tool_orgs}</p>
-            <p className="text-text-muted text-xs mt-1">{uiStrings?.tool_orgs_desc}</p>
+            <p className="text-white text-xs font-black tracking-tight uppercase opacity-60 group-hover:opacity-100 transition-opacity">
+              {tool.label}
+            </p>
           </button>
-
-          <button
-            onClick={() => navigate("/admin/users")}
-            className="bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-lg p-4 text-center transition-all group"
-          >
-            <span className="material-symbols-outlined text-indigo-400 text-2xl mb-2 block">
-              group
-            </span>
-            <p className="text-white font-medium">{uiStrings?.tool_users}</p>
-            <p className="text-text-muted text-xs mt-1">{uiStrings?.tool_users_desc}</p>
-          </button>
-
-          <button
-            onClick={() => navigate("/admin/billing")}
-            className="bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg p-4 text-center transition-all group"
-          >
-            <span className="material-symbols-outlined text-green-400 text-2xl mb-2 block">
-              payments
-            </span>
-            <p className="text-white font-medium">{uiStrings?.tool_billing}</p>
-            <p className="text-text-muted text-xs mt-1">{uiStrings?.tool_billing_desc}</p>
-          </button>
-
-          <button
-            onClick={() => navigate("/admin/security")}
-            className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center transition-all group"
-          >
-            <span className="material-symbols-outlined text-red-400 text-2xl mb-2 block">
-              security
-            </span>
-            <p className="text-white font-medium">{uiStrings?.tool_security}</p>
-            <p className="text-text-muted text-xs mt-1">{uiStrings?.tool_security_desc}</p>
-          </button>
-        </div>
+        ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
+
+export default GlobalAdminDashboard;

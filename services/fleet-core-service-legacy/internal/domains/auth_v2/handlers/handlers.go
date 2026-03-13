@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	internalmw "github.com/flyfleet/fleet-core-service/internal/middleware"
 	pb "github.com/flyfleet/proto/auth/v1"
 	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -36,33 +38,42 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.Post("/revoke", h.RevokeToken)
 		r.Post("/register", h.Register)
 		r.Post("/validate-token", h.ValidateToken)
-
-		// MFA endpoints
-		r.Post("/mfa/generate-secret", h.GenerateMFASecret)
-		r.Post("/mfa/enable", h.EnableMFA)
-		r.Post("/mfa/disable", h.DisableMFA)
-		r.Post("/mfa/verify", h.VerifyMFA)
 		r.Post("/login/mfa/verify", h.VerifyLoginMFA)
 		r.Post("/login/mfa/setup", h.SetupAdminMFA)
 		r.Post("/login/oidc/{provider}", h.LoginOIDC)
-
-		// Session endpoints
-		r.Get("/users/{id}/sessions", h.GetSessions)
-		r.Post("/users/{id}/sessions/{session_id}/revoke", h.RevokeSession)
-
-		// Password Reset endpoints
 		r.Post("/password/reset/request", h.RequestPasswordReset)
 		r.Post("/password/reset/confirm", h.ConfirmPasswordReset)
 
-		r.Get("/users/{id}", h.GetUser)
-		r.Get("/organizations/{id}", h.GetOrganization)
-		r.Get("/organizations", h.ListOrganizations)
-		r.Get("/stats", h.GetStats)
-		r.Get("/security-telemetry", h.GetSecurityTelemetry)
-		r.Get("/audit-logs", h.GetAuditLogs)
-		
-		// Admin Console endpoints
+		// Protected auth endpoints
 		r.Group(func(r chi.Router) {
+			// Extract JWKS endpoint for middleware
+			// JWKS URL for middleware - configurable for tests
+			jwksURL := os.Getenv("JWKS_URL")
+			if jwksURL == "" {
+				jwksURL = "http://localhost:8084/api/v1/auth/.well-known/jwks.json"
+			}
+			authGate := internalmw.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", h.logger)
+			r.Use(authGate.Handler)
+
+			// MFA Management
+			r.Post("/mfa/generate-secret", h.GenerateMFASecret)
+			r.Post("/mfa/setup", h.GenerateMFASecret) // Frontend Alias for Init
+			r.Post("/mfa/enable", h.EnableMFA)
+			r.Post("/mfa/disable", h.DisableMFA)
+			r.Post("/mfa/verify", h.VerifyMFAAuthenticated)
+
+			// Session endpoints
+			r.Get("/users/{id}/sessions", h.GetSessions)
+			r.Post("/users/{id}/sessions/{session_id}/revoke", h.RevokeSession)
+
+			r.Get("/users/{id}", h.GetUser)
+			r.Get("/organizations/{id}", h.GetOrganization)
+			r.Get("/organizations", h.ListOrganizations)
+			r.Get("/stats", h.GetStats)
+			r.Get("/security-telemetry", h.GetSecurityTelemetry)
+			r.Get("/audit-logs", h.GetAuditLogs)
+			
+			// Admin Console endpoints
 			r.Post("/api-keys", h.CreateAPIKey)
 			r.Get("/api-keys", h.ListAPIKeys)
 			r.Post("/api-keys/{id}/revoke", h.RevokeAPIKey)
@@ -72,8 +83,9 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			
 			r.Post("/emergency-revoke", h.EmergencyRevoke)
 		})
+
+		r.Get("/.well-known/jwks.json", h.GetJWKS)
 	})
-	r.Get("/.well-known/jwks.json", h.GetJWKS)
 }
 
 func (h *Handlers) json(w http.ResponseWriter, status int, v any) {
@@ -98,7 +110,14 @@ func (h *Handlers) clientIP(r *http.Request) string {
 			return strings.TrimSpace(parts[0])
 		}
 	}
-	return r.RemoteAddr
+	// Strip port from RemoteAddr
+	ip := r.RemoteAddr
+	if lastColon := strings.LastIndex(ip, ":"); lastColon != -1 {
+		ip = ip[:lastColon]
+	}
+	// Also handle IPv6 [::1] case if needed, but Chi usually provides it normalized.
+	// We'll keep it simple for now as most prod environments use X-Forwarded-For.
+	return strings.Trim(ip, "[]")
 }
 
 func (h *Handlers) allowRate(ctx context.Context, key string, limit int, window time.Duration) bool {
@@ -135,6 +154,10 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, h.clientIP(r), r.UserAgent())
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
+		if strings.Contains(err.Error(), "locked") {
+			h.errorJSON(w, http.StatusForbidden, "account_locked")
+			return
+		}
 		h.errorJSON(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -302,15 +325,28 @@ func (h *Handlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
 // MFA Handlers
 
 func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.Header.Get("X-User-ID")
-	if userIDStr == "" {
-		h.errorJSON(w, http.StatusBadRequest, "user ID required")
-		return
+	var userID uuid.UUID
+	var err error
+
+	// Try extracting from context first (modern)
+	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
+		if id, ok := val.(uuid.UUID); ok {
+			userID = id
+		} else if idStr, ok := val.(string); ok {
+			userID, _ = uuid.Parse(idStr)
+		}
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+	// Fallback to header (legacy/manual)
+	if userID == uuid.Nil {
+		userIDStr := r.Header.Get("X-User-ID")
+		if userIDStr != "" {
+			userID, err = uuid.Parse(userIDStr)
+		}
+	}
+
+	if userID == uuid.Nil {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
 		return
 	}
 
@@ -332,18 +368,6 @@ func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.Header.Get("X-User-ID")
-	if userIDStr == "" {
-		h.errorJSON(w, http.StatusBadRequest, "user ID required")
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
-		return
-	}
-
 	var req struct {
 		Secret string `json:"secret"`
 		Code   string `json:"code"`
@@ -351,6 +375,38 @@ func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
+	}
+
+	// Try extracting userID from context
+	var userID uuid.UUID
+	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
+		if id, ok := val.(uuid.UUID); ok {
+			userID = id
+		} else if idStr, ok := val.(string); ok {
+			userID, _ = uuid.Parse(idStr)
+		}
+	}
+
+	if userID == uuid.Nil {
+		userIDStr := r.Header.Get("X-User-ID")
+		if userIDStr != "" {
+			userID, _ = uuid.Parse(userIDStr)
+		}
+	}
+
+	if userID == uuid.Nil {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
+		return
+	}
+
+	// If secret is missing, fetch from user profile
+	if req.Secret == "" {
+		user, err := h.svc.GetUserByID(r.Context(), userID)
+		if err != nil || user.MfaSecret.String == "" {
+			h.errorJSON(w, http.StatusBadRequest, "MFA secret not found for user")
+			return
+		}
+		req.Secret = user.MfaSecret.String
 	}
 
 	codes, err := h.svc.EnableMFA(r.Context(), userID, req.Secret, req.Code)
@@ -415,6 +471,46 @@ func (h *Handlers) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 
 	if !valid {
 		h.errorJSON(w, http.StatusBadRequest, "invalid code")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]bool{"valid": true})
+}
+
+// VerifyMFA (authenticated)
+func (h *Handlers) VerifyMFAAuthenticated(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Try extracting userID from context
+	var userID uuid.UUID
+	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
+		if id, ok := val.(uuid.UUID); ok {
+			userID = id
+		} else if idStr, ok := val.(string); ok {
+			userID, _ = uuid.Parse(idStr)
+		}
+	}
+
+	if userID == uuid.Nil {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
+		return
+	}
+
+	user, err := h.svc.GetUserByID(r.Context(), userID)
+	if err != nil || user.MfaSecret.String == "" {
+		h.errorJSON(w, http.StatusBadRequest, "MFA secret not found")
+		return
+	}
+
+	valid, err := h.svc.VerifyTOTP(user.MfaSecret.String, req.Code)
+	if err != nil || !valid {
+		h.errorJSON(w, http.StatusUnauthorized, "invalid MFA code")
 		return
 	}
 

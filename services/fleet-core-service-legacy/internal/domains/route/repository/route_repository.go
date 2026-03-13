@@ -29,6 +29,10 @@ type RouteOptimizationRepository interface {
 	UpdateOptimizationJobStatus(ctx context.Context, id, status string, completedAt *time.Time, error *string) error
 	ListOptimizationJobs(ctx context.Context, requestID string, status string, limit, offset int) ([]*models.OptimizationJob, int, error)
 
+	ListRoadRestrictions(ctx context.Context, roadIDs []string) ([]*models.RoadRestriction, error)
+	ListRoadTimeRestrictions(ctx context.Context, roadIDs []string) ([]*models.RoadTimeRestriction, error)
+	GetVehiclePermits(ctx context.Context, vehicleID string) ([]*models.VehiclePermit, error)
+
 	HealthCheck(ctx context.Context) error
 	Ping(ctx context.Context) error
 }

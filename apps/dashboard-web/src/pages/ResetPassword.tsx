@@ -1,8 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import AuthButton from "../components/auth/AuthButton";
+import AuthInput from "../components/auth/AuthInput";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
+import PasswordStrengthMeter from "../components/auth/PasswordStrengthMeter";
 import { useUIStrings } from "../hooks/useUIStrings";
+import api from "../services/api";
 
 const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -51,23 +55,11 @@ const ResetPassword: React.FC = () => {
     setError("");
 
     try {
-      const response = await fetch("/api/v1/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          uiStrings?.error_reset_failed ||
-            "Failed to reset password. The link may have expired.",
-        );
-      }
-
+      await api.resetPassword({ token, newPassword: password });
       setSuccess(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
@@ -109,106 +101,53 @@ const ResetPassword: React.FC = () => {
 
       {!success && !error.includes("expired reset token") && (
         <form onSubmit={handleReset} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-              {uiStrings?.label_new_password || "New Password"}
-            </label>
-            <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 group-focus-within:text-primary transition-colors text-xl">
-                key
-              </span>
-              <input
-                type="password"
-                required
-                className="w-full bg-slate-800/30 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-600"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {/* Password Strength Indicator */}
-            <div className="mt-2 px-1">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  {uiStrings?.strength_label || "Security Strength"}
-                </span>
-                <span
-                  className={`text-[10px] font-bold uppercase tracking-widest ${
-                    passwordStrength <= 25
-                      ? "text-red-500"
-                      : passwordStrength <= 50
-                        ? "text-yellow-500"
-                        : passwordStrength <= 75
-                          ? "text-blue-500"
-                          : "text-green-500"
-                  }`}
-                >
-                  {passwordStrength <= 25
-                    ? uiStrings?.strength_weak || "Weak"
-                    : passwordStrength <= 50
-                      ? uiStrings?.strength_fair || "Fair"
-                      : passwordStrength <= 75
-                        ? uiStrings?.strength_good || "Good"
-                        : uiStrings?.strength_strong || "Strong"}
-                </span>
-              </div>
-              <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${passwordStrength}%` }}
-                  className={`h-full transition-colors duration-500 ${
-                    passwordStrength <= 25
-                      ? "bg-red-500"
-                      : passwordStrength <= 50
-                        ? "bg-yellow-500"
-                        : passwordStrength <= 75
-                          ? "bg-blue-500"
-                          : "bg-green-500"
-                  }`}
-                />
-              </div>
-            </div>
-          </div>
+          <AuthInput
+            label={uiStrings?.label_new_password || "New Password"}
+            icon="key"
+            type="password"
+            required
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-              {uiStrings?.label_confirm_password || "Confirm Password"}
-            </label>
-            <div className="relative group">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 group-focus-within:text-primary transition-colors text-xl">
-                password
-              </span>
-              <input
-                type="password"
-                required
-                className="w-full bg-slate-800/30 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-600"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-          </div>
+          <PasswordStrengthMeter
+            strength={passwordStrength}
+            label={uiStrings?.strength_label}
+            strengthLabels={{
+              weak: uiStrings?.strength_weak || "Weak",
+              fair: uiStrings?.strength_fair || "Fair",
+              good: uiStrings?.strength_good || "Good",
+              strong: uiStrings?.strength_strong || "Strong",
+            }}
+          />
 
-          <button
+          <AuthInput
+            label={uiStrings?.label_confirm_password || "Confirm Password"}
+            icon="password"
+            type="password"
+            required
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+
+          <AuthButton
             type="submit"
-            disabled={loading || !token}
-            className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm uppercase tracking-widest mt-4"
+            disabled={!token}
+            loading={loading}
+            loadingText={uiStrings?.btn_updating || "Updating Credentials..."}
           >
-            {loading
-              ? uiStrings?.btn_updating || "Updating Credentials..."
-              : uiStrings?.btn_update || "Update Password"}
-          </button>
+            {uiStrings?.btn_update || "Update Password"}
+          </AuthButton>
         </form>
       )}
 
       {(error.includes("expired reset token") || success) && (
         <div className="mt-8 pt-4">
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full bg-slate-800/50 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all border border-white/5 text-sm uppercase tracking-widest"
-          >
+          <AuthButton variant="secondary" onClick={() => navigate("/login")}>
             {uiStrings?.btn_back_to_signin || "Return to Login"}
-          </button>
+          </AuthButton>
         </div>
       )}
     </EnterpriseAuthLayout>

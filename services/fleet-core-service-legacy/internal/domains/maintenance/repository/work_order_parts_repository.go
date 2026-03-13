@@ -29,14 +29,17 @@ func (r *WorkOrderPartsRepository) AssignPart(ctx context.Context, workOrderID, 
 		UnitCost:    unitCost,
 	}
 
+	totalCost := float64(quantity) * unitCost
+	part.TotalCost = totalCost
+
 	query := `
-		INSERT INTO work_order_parts (work_order_id, part_id, quantity, unit_cost)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, total_cost, created_at
+		INSERT INTO work_order_parts (work_order_id, part_id, quantity, unit_cost, total_cost)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at
 	`
 	err := r.db.QueryRow(ctx, query,
-		workOrderID, partID, quantity, unitCost,
-	).Scan(&part.ID, &part.TotalCost, &part.CreatedAt)
+		workOrderID, partID, quantity, unitCost, totalCost,
+	).Scan(&part.ID, &part.CreatedAt)
 
 	return part, err
 }

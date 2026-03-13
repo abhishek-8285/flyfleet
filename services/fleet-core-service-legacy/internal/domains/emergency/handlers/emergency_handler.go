@@ -42,6 +42,7 @@ func (h *EmergencyHandlers) RegisterRoutes(r chi.Router) {
 	r.Post("/incidents/{id}/false-alarm", h.MarkAsFalseAlarm)
 	r.Post("/incidents/{id}/media", h.UploadMedia)
 	r.Post("/incidents/{id}/feedback", h.SubmitDriverFeedback)
+	r.Get("/incidents/{id}/timeline", h.GetIncidentTimeline)
 	
 	// Analytics
 	r.Get("/analytics", h.GetIncidentAnalytics)
@@ -58,7 +59,93 @@ func (h *EmergencyHandlers) RegisterRoutes(r chi.Router) {
 		r.Post("/fleet-resume", h.FleetResume)
 		r.Post("/contacts", h.CreateContact)
 		r.Get("/contacts", h.ListContacts)
+		r.Get("/export", h.Export)
 	})
+
+	// Health
+	r.Get("/health", h.Health)
+
+	// Phase 7: Drill simulation endpoint
+	r.Post("/drill", h.TriggerDrill)
+}
+
+func (h *EmergencyHandlers) Health(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	health, err := h.service.CheckHealth(ctx)
+	if err != nil {
+		h.logger.Error("Health check failed", zap.Error(err))
+		http.Error(w, "Failed to perform health check", http.StatusInternalServerError)
+		return
+	}
+
+	status := "healthy"
+	for _, v := range health {
+		if v != "healthy" && v != "not_configured" {
+			status = "unhealthy"
+			break
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    status,
+		"details":   health,
+		"timestamp": time.Now(),
+	})
+}
+
+func (h *EmergencyHandlers) Export(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	orgID := middleware.GetOrgID(ctx)
+	if orgID == uuid.Nil {
+		http.Error(w, "Unauthorized: missing organization context", http.StatusUnauthorized)
+		return
+	}
+
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+
+	start := time.Now().AddDate(0, 0, -30) // Default 30 days
+	end := time.Now()
+
+	if startStr != "" {
+		if t, err := time.Parse(time.RFC3339, startStr); err == nil {
+			start = t
+		}
+	}
+	if endStr != "" {
+		if t, err := time.Parse(time.RFC3339, endStr); err == nil {
+			end = t
+		}
+	}
+
+	incidents, err := h.service.ExportIncidents(ctx, orgID, start, end)
+	if err != nil {
+		h.logger.Error("Failed to export incidents", zap.Error(err))
+		http.Error(w, "Failed to export incidents", http.StatusInternalServerError)
+		return
+	}
+
+	format := r.URL.Query().Get("format")
+	if format == "csv" {
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=incidents_export_%s.csv", time.Now().Format("20060102")))
+		
+		fmt.Fprintf(w, "ID,VehicleID,Timestamp,Status,Severity,Type,Latitude,Longitude,Address\n")
+		for _, inc := range incidents {
+			addr := ""
+			if inc.LocationAddress != nil {
+				addr = *inc.LocationAddress
+			}
+			fmt.Fprintf(w, "%s,%s,%s,%s,%s,%s,%f,%f,\"%s\"\n",
+				inc.ID, inc.VehicleID, inc.Timestamp.Format(time.RFC3339),
+				inc.Status, inc.Severity, inc.IncidentType, inc.Latitude, inc.Longitude, addr)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(incidents)
 }
 
 func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Request) {
@@ -149,9 +236,12 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	req.OrgID = orgID
 	incident, err := h.service.TriggerSOS(r.Context(), req)
 	if err != nil {
+		if err == service.ErrDuplicateSOS {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
 		h.logger.Error("Failed to trigger SOS", zap.Error(err))
 		http.Error(w, "Failed to trigger SOS", http.StatusInternalServerError)
 		return
@@ -354,13 +444,22 @@ func (h *EmergencyHandlers) GetSafetyDashboard(w http.ResponseWriter, r *http.Re
 
 func (h *EmergencyHandlers) GetIncidentAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
+			if id, err := uuid.Parse(headerID); err == nil {
+				orgID = id
+			}
+		}
+	}
+
 	analytics, err := h.analyticsService.GetIncidentAnalytics(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("Failed to get incident analytics", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	writeJSONResponse(w, http.StatusOK, analytics)
+
+	writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": analytics})
 }
 
 func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Request) {
@@ -477,4 +576,97 @@ func (h *EmergencyHandlers) SubmitDriverFeedback(w http.ResponseWriter, r *http.
 	}
 
 	writeJSONResponse(w, http.StatusOK, map[string]string{"status": "feedback_updated"})
+}
+
+// TriggerDrill handles POST /api/v1/emergency/drill — Phase 7: Drill Simulation.
+// It creates a simulated SOS incident but suppresses all real authority notifications.
+func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("Emergency drill triggered")
+
+	var req models.EmergencyDrillRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.validator.Struct(req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		if id, err := uuid.Parse(req.OrgID); err == nil {
+			orgID = id
+		} else {
+			http.Error(w, "Organization ID required", http.StatusBadRequest)
+			return
+		}
+	}
+
+	sosReq := models.CreateSOSRequest{
+		OrgID:        orgID,
+		VehicleID:    req.VehicleID,
+		Latitude:     req.Latitude,
+		Longitude:    req.Longitude,
+		IncidentType: models.IncidentType(req.IncidentType),
+		SimulationMode: true,
+	}
+
+	incident, err := h.service.TriggerDrill(r.Context(), sosReq)
+	if err != nil {
+		h.logger.Error("Drill simulation failed", zap.Error(err))
+		http.Error(w, "Failed to trigger drill", http.StatusInternalServerError)
+		return
+	}
+
+	h.logger.Info("Drill simulation completed", zap.String("incident_id", incident.ID.String()),
+		zap.String("org_id", orgID.String()))
+	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
+		"status":     "drill_triggered",
+		"incident_id": incident.ID,
+		"simulation": true,
+	})
+}
+
+func (h *EmergencyHandlers) GetIncidentTimeline(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	incidentID, err := uuid.Parse(idStr)
+	if err != nil {
+		h.respondWithError(w, http.StatusBadRequest, "Invalid incident ID")
+		return
+	}
+
+	orgIDStr := r.Header.Get("X-Organization-ID")
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		h.respondWithError(w, http.StatusUnauthorized, "Missing or invalid organization ID")
+		return
+	}
+
+	timeline, err := h.service.GetIncidentTimeline(r.Context(), incidentID, orgID)
+	if err != nil {
+		if err == service.ErrIncidentNotFound {
+			h.respondWithError(w, http.StatusNotFound, "Incident not found")
+		} else if err == service.ErrUnauthorized {
+			h.respondWithError(w, http.StatusForbidden, "Unauthorized access to incident")
+		} else {
+			h.logger.Error("Failed to get incident timeline", zap.Error(err))
+			h.respondWithError(w, http.StatusInternalServerError, "Internal Server Error")
+		}
+		return
+	}
+
+	h.respondWithJSON(w, http.StatusOK, timeline)
+}
+
+func (h *EmergencyHandlers) respondWithError(w http.ResponseWriter, code int, message string) {
+	h.respondWithJSON(w, code, map[string]string{"error": message})
+}
+
+func (h *EmergencyHandlers) respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, _ := json.Marshal(payload)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(response)
 }

@@ -91,3 +91,7 @@ func (e *violationEngineImpl) createViolation(ctx context.Context, driverID uuid
 		e.logger.Error("failed to record violation", zap.Error(err))
 	}
 }
+
+func ptrTime(t time.Time) *time.Time {
+	return &t
+}

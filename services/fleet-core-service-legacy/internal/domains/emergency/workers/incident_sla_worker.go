@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/emergency"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
 	"github.com/google/uuid"
@@ -28,7 +29,7 @@ func NewIncidentSLAWorker(repo repository.EmergencyRepository, nc *nats.Conn, lo
 
 func (w *IncidentSLAWorker) Run(ctx context.Context) {
 	w.log.Info("Starting Incident SLA Worker")
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -56,7 +57,8 @@ func (w *IncidentSLAWorker) checkSLAs(ctx context.Context) {
 		}
 
 		duration := time.Since(incident.Timestamp)
-		limit := w.getSLALimit(incident.Severity)
+		// Phase 4: Standardize to 2 minutes for enterprise hardening alerts
+		limit := 2 * time.Minute
 
 		if duration > limit {
 			w.log.Warn("SLA Breach detected",
@@ -64,21 +66,10 @@ func (w *IncidentSLAWorker) checkSLAs(ctx context.Context) {
 				zap.String("severity", string(incident.Severity)),
 				zap.Duration("duration", duration),
 			)
+			// Phase 7: Metric increment
+			emergency.SLABreachesTotal.WithLabelValues(incident.OrgID.String(), string(incident.Severity)).Inc()
 			w.publishSLABreach(ctx, incident, duration)
 		}
-	}
-}
-
-func (w *IncidentSLAWorker) getSLALimit(severity models.SOSSeverity) time.Duration {
-	switch severity {
-	case models.SeverityCritical:
-		return 2 * time.Minute
-	case models.SeverityHigh:
-		return 5 * time.Minute
-	case models.SeverityMedium:
-		return 10 * time.Minute
-	default:
-		return 15 * time.Minute
 	}
 }
 
@@ -88,7 +79,7 @@ func (w *IncidentSLAWorker) publishSLABreach(ctx context.Context, incident model
 		ID:         uuid.New(),
 		IncidentID: incident.ID,
 		Severity:   incident.Severity,
-		BreachType: "ACKNOWLEDGEMENT_DELAY",
+		BreachType: "SLA_BREACH_THRESHOLD_EXCEEDED",
 		BreachTime: time.Now(),
 		CreatedAt:  time.Now(),
 	}
@@ -112,7 +103,8 @@ func (w *IncidentSLAWorker) publishSLABreach(ctx context.Context, incident model
 	}
 
 	data, _ := json.Marshal(payload)
-	if err := w.nc.Publish("emergency.sla.breach", data); err != nil {
-		w.log.Error("Failed to publish SLA breach event", zap.Error(err))
+	// Phase 4: Subject standardized
+	if err := w.nc.Publish("emergency.sla.violation", data); err != nil {
+		w.log.Error("Failed to publish SLA violation event", zap.Error(err))
 	}
 }

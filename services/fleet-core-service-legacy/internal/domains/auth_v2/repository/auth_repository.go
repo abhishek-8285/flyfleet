@@ -94,7 +94,7 @@ func (r *AuthRepository) CreateRefreshToken(ctx context.Context, token *models.R
 }
 
 func (r *AuthRepository) GetRefreshToken(ctx context.Context, tokenStr string) (*models.RefreshToken, error) {
-	query := "SELECT id, user_id, token, expires_at, created_at, revoked, revoked_at, ip_address, user_agent, last_used_at FROM refresh_tokens WHERE token = $1 AND revoked = false AND expires_at > NOW()"
+	query := "SELECT id, user_id, token, expires_at, created_at, revoked, revoked_at, ip_address::text, user_agent, last_used_at FROM refresh_tokens WHERE token = $1 AND expires_at > NOW()"
 	var rt models.RefreshToken
 	err := r.db.QueryRow(ctx, query, tokenStr).Scan(
 		&rt.ID, &rt.UserID, &rt.Token, &rt.ExpiresAt, &rt.CreatedAt, &rt.Revoked, &rt.RevokedAt, &rt.IPAddress, &rt.UserAgent, &rt.LastUsedAt,
@@ -498,7 +498,7 @@ func (r *AuthRepository) AnonymizeUser(ctx context.Context, userID uuid.UUID) er
 }
 
 func (r *AuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error) {
-	query := `SELECT id, org_id, user_id, name, prefix, secret_hash, created_at, expires_at, last_used_at, revoked FROM api_keys WHERE org_id = $1 ORDER BY created_at DESC`
+	query := `SELECT id, org_id, name, prefix, secret_hash, created_at, expires_at, last_used_at, revoked FROM api_keys WHERE org_id = $1 ORDER BY created_at DESC`
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
 		return nil, err
@@ -508,7 +508,7 @@ func (r *AuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]mo
 	var keys []models.APIKey
 	for rows.Next() {
 		var k models.APIKey
-		if err := rows.Scan(&k.ID, &k.OrgID, &k.UserID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked); err != nil {
+		if err := rows.Scan(&k.ID, &k.OrgID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked); err != nil {
 			return nil, err
 		}
 		keys = append(keys, k)
@@ -517,7 +517,7 @@ func (r *AuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]mo
 }
 
 func (r *AuthRepository) RevokeAPIKey(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE api_keys SET revoked = true, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE api_keys SET revoked = true WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
 	return err
 }
@@ -551,4 +551,77 @@ func (r *AuthRepository) DeleteServiceAccount(ctx context.Context, id uuid.UUID)
 	query := `DELETE FROM service_accounts WHERE id = $1`
 	_, err := r.db.Exec(ctx, query, id)
 	return err
+}
+func (r *AuthRepository) CreateRole(ctx context.Context, role *models.Role) error {
+	query := `INSERT INTO roles (id, name, organization_id, description, is_system, created_at, updated_at) 
+			  VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.db.Exec(ctx, query, role.ID, role.Name, role.OrgID, role.Description, role.IsSystem, role.CreatedAt, role.UpdatedAt)
+	return err
+}
+
+func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, orgID uuid.UUID) error {
+	query := `INSERT INTO user_roles (user_id, role_id, organization_id, granted_at) 
+			  VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING`
+	_, err := r.db.Exec(ctx, query, userID, roleID, orgID)
+	return err
+}
+
+func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error) {
+	query := `SELECT r.id, r.name, r.organization_id, r.description, r.is_system, r.created_at, r.updated_at 
+			  FROM roles r
+			  JOIN user_roles ur ON r.id = ur.role_id
+			  WHERE ur.user_id = $1 AND ur.organization_id = $2`
+	
+	rows, err := r.db.Query(ctx, query, userID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		if err := rows.Scan(&role.ID, &role.Name, &role.OrgID, &role.Description, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt); err != nil {
+			return nil, err
+		}
+		roles = append(roles, role)
+	}
+	return roles, rows.Err()
+}
+
+func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error) {
+	query := `SELECT DISTINCT p.name 
+			  FROM permissions p
+			  JOIN role_permissions rp ON p.id = rp.permission_id
+			  JOIN user_roles ur ON rp.role_id = ur.role_id
+			  WHERE ur.user_id = $1 AND ur.organization_id = $2`
+	
+	rows, err := r.db.Query(ctx, query, userID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var permissions []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		permissions = append(permissions, p)
+	}
+	return permissions, rows.Err()
+}
+
+func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, orgID uuid.UUID, permission string) (bool, error) {
+	query := `SELECT EXISTS (
+				SELECT 1 
+				FROM permissions p
+				JOIN role_permissions rp ON p.id = rp.permission_id
+				JOIN user_roles ur ON rp.role_id = ur.role_id
+				WHERE ur.user_id = $1 AND ur.organization_id = $2 AND p.name = $3
+			  )`
+	var exists bool
+	err := r.db.QueryRow(ctx, query, userID, orgID, permission).Scan(&exists)
+	return exists, err
 }

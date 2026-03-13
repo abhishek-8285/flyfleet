@@ -20,11 +20,24 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/database"
 	"github.com/flyfleet/fleet-core-service/internal/docs"
 	"github.com/flyfleet/fleet-core-service/internal/gateway"
-	// "github.com/flyfleet/fleet-core-service/internal/logadapter"
+	"github.com/flyfleet/fleet-core-service/internal/logadapter"
 	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
-	// dashHandlers "github.com/flyfleet/fleet-core-service/internal/handlers"
+	dashHandlers "github.com/flyfleet/fleet-core-service/internal/handlers"
 	"github.com/fleet-platform/shared/pkg/cache"
-	// monitorSvc "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
+	monitorSvc "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
+	monitoringrepo "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
+	adminsupportsupportrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/repository"
+	adminsupportsupportservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/service"
+	adminsupportsupporthandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/handlers"
+	adminsupportdrrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/repository"
+	adminsupportdrservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/service"
+	adminsupportdrhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/handlers"
+	adminsupportorgrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/repository"
+	adminsupportorgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/service"
+	adminsupportorghandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/handlers"
+	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/emergency/service"
+	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/emergency/handlers"
+	"github.com/flyfleet/fleet-core-service/internal/repository"
 
 	// Domains
 	governanceHandlers "github.com/flyfleet/fleet-core-service/internal/domains/governance/handlers"
@@ -39,6 +52,7 @@ import (
 	integrationsv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/handlers"
 	integrationsv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/repository"
 	integrationsv2service  "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/service"
+	integrations           "github.com/flyfleet/fleet-core-service/internal/domains/integrations"
 	reportsv2handlers  "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/handlers"
 	reportsv2queue     "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/queue"
 	reportsv2repo      "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/repository"
@@ -72,6 +86,29 @@ import (
 	maintenRepo     "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
 	maintenService  "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
 
+	fuelHandlers "github.com/flyfleet/fleet-core-service/internal/domains/fuel/handlers"
+	fuelRepo     "github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
+	fuelService  "github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
+
+	routeHandlers "github.com/flyfleet/fleet-core-service/internal/domains/route/handlers"
+	routeRepo     "github.com/flyfleet/fleet-core-service/internal/domains/route/repository"
+	routeService  "github.com/flyfleet/fleet-core-service/internal/domains/route/service"
+
+	diagHandlers "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/handlers"
+	diagRepo     "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/repository"
+	diagService  "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+
+	platformcompathandlers "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/handlers"
+	platformcompatservice  "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
+
+	// iamhandlers "github.com/flyfleet/fleet-core-service/internal/platform/iam/handlers"
+	// iamrepo     "github.com/flyfleet/fleet-core-service/internal/platform/iam/repository"
+	// iamservice  "github.com/flyfleet/fleet-core-service/internal/platform/iam/service"
+
+	authv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/handlers"
+	authv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/repository"
+	authv2service  "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
+
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/nats-io/nats.go"
@@ -101,7 +138,7 @@ func main() {
 	defer stop()
 
 	// 2. Initialize Logger
-	logger, _ := zap.NewProduction()
+	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 
 	// 3. Load Config
@@ -164,7 +201,8 @@ func main() {
 	}
 
 	// 6. Initialize Global Pulse Service (Observability)
-	// pulseService := monitorSvc.NewPulseService(sharedDB, redisCache, nc, logger)
+		monitoringRepo := monitoringrepo.NewMonitoringRepository(db)
+		pulseService := monitorSvc.NewPulseService(sharedDB, redisCache, nc, logger, monitoringRepo)
 
 	// 5. Initialize Router
 	r := chi.NewRouter()
@@ -175,6 +213,7 @@ func main() {
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
+	r.Use(coremiddleware.CORSMiddleware)
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
 	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENFORCE_BFF_AUTH_GATE")), "true") {
 		r.Use(coremiddleware.NewBFFAuthGate(cfg.JWTSecret, []string{
@@ -193,7 +232,6 @@ func main() {
 	// Pre-initialize Repositories (needed by multiple routes and workers)
 	vRepo := vehRepo.NewVehicleRepository(db, logger)
 	vBulkRepo := vehRepo.NewBulkRepository(db)
-	mRepo := maintenRepo.NewMaintenanceRepository(db)
 	// tRepo := tripRepo.NewTripRepository(db)
 
 	// Health check
@@ -207,6 +245,16 @@ func main() {
 
 	// 6. Initialize Domains & Register Routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// IAM Domain (Superseded by auth_v2)
+		/*
+		orgR := iamrepo.NewOrganizationRepository(dbSQL)
+		orgS := iamservice.NewOrganizationService(orgR)
+		iamR := iamrepo.NewIAMRepository(db)
+		iamS := iamservice.NewIAMService(iamR, orgS, cfg.JWTSecret)
+		iamH := iamhandlers.NewIAMHandlers(iamS)
+		iamH.RegisterRoutes(r)
+		*/
+
 		// Vehicle Domain
 		vService := vehService.NewVehicleService(vRepo, logger)
 		vHandlers := vehHandlers.NewVehicleHandlers(vService, logger)
@@ -225,83 +273,28 @@ func main() {
 
 
 
-		// Maintenance Domain
-		mService := maintenService.NewMaintenanceService(mRepo, logger)
-		mHandlers := maintenHandlers.NewMaintenanceHandler(mService, logger)
-		r.Route("/maintenance", func(r chi.Router) {
-			mHandlers.RegisterRoutes(r)
-		})
-		// Compatibility alias for maintenance-service route shape.
-		r.Get("/vehicles/{vehicle_id}/maintenance-history", mHandlers.GetVehicleMaintenanceHistory)
 
-		// Work Order Domain
-		woRepo := maintenRepo.NewWorkOrderRepository(db)
-		woPartsRepo := maintenRepo.NewWorkOrderPartsRepository(db)
-		woInvRepo := maintenRepo.NewInventoryRepository(db)
-		woSettingsRepo := maintenRepo.NewSettingsRepository(db)
-		woVendorRepo := maintenRepo.NewVendorRepository(db)
-		woInspectionRepo := maintenRepo.NewInspectionRepository(db)
-		woService := maintenService.NewWorkOrderService(woRepo, woPartsRepo, woInvRepo, woSettingsRepo, woVendorRepo, woInspectionRepo, logger)
-		woHandlers := maintenHandlers.NewWorkOrderHandler(woService, logger)
-		r.Route("/work-orders", func(r chi.Router) {
-			woHandlers.RegisterRoutes(r)
-		})
-
-		// Vendors Domain
-		vHandler := maintenHandlers.NewVendorHandler(woVendorRepo, logger)
-		r.Route("/vendors", func(r chi.Router) {
-			vHandler.RegisterRoutes(r)
-		})
-
-		// Inspections Domain
-		iHandler := maintenHandlers.NewInspectionHandler(woInspectionRepo, logger)
-		r.Route("/inspections", func(r chi.Router) {
-			iHandler.RegisterRoutes(r)
-		})
-
-		// Inventory Domain
-		invRepo := maintenRepo.NewInventoryRepository(db)
-		invHandlers := maintenHandlers.NewInventoryHandler(invRepo, logger)
-		r.Route("/inventory", func(r chi.Router) {
-			invHandlers.RegisterRoutes(r)
-		})
-
-		// Geofencing Domain
-		gRepo := geoRepo.NewGeofenceRepository(db)
-		gService := geoService.NewGeofenceService(gRepo, nc, logger)
-		gHandlers := geoHandlers.NewGeofenceHandler(gService, logger)
-		r.Route("/geofencing", func(r chi.Router) {
-			gHandlers.RegisterRoutes(r)
-		})
-
-/*
-		// Fuel Domain
-		fLogRepo := fuelRepo.NewFuelLogRepository(db)
-		fSettingsRepo := fuelRepo.NewSettingsRepository(db)
-		fService := fuelService.NewFuelService(fLogRepo, fSettingsRepo, logger)
-		fHandlers := fuelHandlers.NewFuelHandler(fService, logger)
-		r.Route("/fuel", func(r chi.Router) {
-			fHandlers.RegisterRoutes(r)
-		})
 
 		// Route Optimization Domain
 		roRepo := routeRepo.NewRouteOptimizationRepository(db)
-		roService := routeService.NewRouteOptimizationService(roRepo)
+		roService := routeService.NewRouteOptimizationService(roRepo, "") // osrmURL is currently empty as per existing pattern
 		roHandlers := routeHandlers.NewRouteOptimizationHandler(roService, logger)
 		r.Route("/routes", func(r chi.Router) {
 			roHandlers.RegisterRoutes(r)
 		})
-		platformCompatHandlers := platformcompathandlers.NewHandlers()
+
+		// Initialize Platform Compatibility Service
+		compatService := platformcompatservice.NewPlatformCompatService(logger)
+		platformCompatHandlers := platformcompathandlers.NewHandlers(compatService, logger)
 		platformCompatHandlers.RegisterRoutes(r)
 
 		// Diagnostics Domain
-		diagR := diagRepo.NewRepository(dbSQL, logger)
+		diagR := diagRepo.NewRepository(db, logger)
 		diagS := diagService.NewDeviceDiagnosticsService(diagR, logger)
 		diagH := diagHandlers.NewHandlers(diagS, logger)
 		r.Route("/diagnostics", func(r chi.Router) {
 			diagH.RegisterRoutes(r)
 		})
-*/
 
 		// Reports Domain (migrated v2 in monolith)
 		reportsRepo := reportsv2repo.NewPostgresRepository(db)
@@ -324,7 +317,26 @@ func main() {
 		// India Integration Domain (migrated in monolith)
 		indiaRepo := indiav2repo.NewIndiaIntegrationRepository(db)
 		indiaService := indiav2service.NewIndiaIntegrationService(indiaRepo)
-		indiaHandlers := indiav2handlers.NewIndiaIntegrationHandlers(indiaService)
+		
+		// Initialize India V2 sub-services
+		gstService := indiav2service.NewGSTIntegrationService(indiaRepo, logger)
+		fastagService := indiav2service.NewFastagIntegrationService(indiaRepo, logger)
+		vahanService := indiav2service.NewVahanIntegrationService(indiaRepo, sharedRedisClient, logger)
+		sarathiService := indiav2service.NewSarathiIntegrationService(indiaRepo, sharedRedisClient, logger)
+		ewaybillService := indiav2service.NewEWayBillIntegrationService(indiaRepo, logger)
+		bulkService := indiav2service.NewBulkVerificationService(vahanService)
+		encryptionService := indiav2service.NewEncryptionService()
+		
+		indiaHandlers := indiav2handlers.NewIndiaIntegrationHandlers(
+			indiaService, 
+			fastagService, 
+			ewaybillService, 
+			vahanService, 
+			sarathiService, 
+			gstService, 
+			bulkService, 
+			encryptionService,
+		)
 		r.Route("/india", func(r chi.Router) {
 			r.Route("/fastag", func(r chi.Router) {
 				r.Post("/transactions", indiaHandlers.CreateFASTagTransaction)
@@ -412,29 +424,29 @@ func main() {
 			govHandler.RegisterRoutes(r, govRateLimiter)
 		})
 
-/*
 		// Admin Support Domains (migrated in monolith, non-overlapping surfaces)
-		adminSupportRepo := adminsupportsupportrepo.NewTicketRepository(db, logger)
-		adminSupportService := adminsupportsupportservice.NewTicketService(adminSupportRepo, logger)
-		adminSupportHandler := adminsupportsupporthandlers.NewTicketHandlers(adminSupportService, logger)
-		adminSupportHandler.RegisterRoutes(r)
+		adminTicketRepo := adminsupportsupportrepo.NewTicketRepository(db, logger)
+		notificationCh := make(chan adminsupportsupportservice.NotificationEvent, 100)
+		adminTicketService := adminsupportsupportservice.NewTicketService(adminTicketRepo, logger, notificationCh)
+		adminTicketHandler := adminsupportsupporthandlers.NewTicketHandlers(adminTicketService, logger)
+		adminTicketHandler.RegisterRoutes(r)
 
-		adminDrRepo := adminsupportdrrepo.NewDrRepository(db, logger)
-		adminDrService := adminsupportdrservice.NewDrService(adminDrRepo, logger)
-		adminDrHandler := adminsupportdrhandlers.NewDrHandlers(adminDrService, logger)
-		adminDrHandler.RegisterRoutes(r)
+		adminDRRepo := adminsupportdrrepo.NewDrRepository(db, logger)
+		adminDRService := adminsupportdrservice.NewDrService(adminDRRepo, logger)
+		adminDRHandler := adminsupportdrhandlers.NewDrHandlers(adminDRService, logger)
+		adminDRHandler.RegisterRoutes(r)
 
 		adminOrgRepo := adminsupportorgrepo.NewOrganizationRepository(db, logger)
 		adminOrgService := adminsupportorgservice.NewOrganizationService(adminOrgRepo, logger)
 		adminOrgHandler := adminsupportorghandlers.NewOrganizationHandlers(adminOrgService, logger)
 		adminOrgHandler.RegisterRoutes(r)
 
-		if nc != nil {
-			adminEmergencySvc := adminsupportemergencyservice.NewEmergencyService(nc, logger)
-			adminEmergencyHandler := adminsupportemergencyhandlers.NewEmergencyHandler(adminEmergencySvc, logger)
-			adminEmergencyHandler.RegisterRoutes(r)
+		adminEmergencyService, err := adminsupportemergencyservice.NewEmergencyService(nc, logger)
+		if err != nil {
+			logger.Fatal("Failed to initialize emergency service", zap.Error(err))
 		}
-*/
+		adminEmergencyHandler := adminsupportemergencyhandlers.NewEmergencyHandler(adminEmergencyService, logger)
+		adminEmergencyHandler.RegisterRoutes(r)
 
 /*
 		// Alert Domains (migrated in monolith)
@@ -475,13 +487,19 @@ func main() {
 			}
 */
 
-/*
 		// Auth Domain (migrated in monolith via REST gateway)
 		authLog := logadapter.New(logger)
-		authRepo := authv2repo.NewAuthRepository(dbSQL, authLog)
-		authSvc := authv2service.NewAuthService(authLog, authRepo, cfg.JWTSecret)
-		authHandler := authv2handlers.NewHandlers(authSvc, logger)
+		authRepo := authv2repo.NewAuthRepository(db, authLog)
+		identitySvc := authv2service.NewIdentityService(authRepo, logger)
+		authSvc := authv2service.NewAuthService(authLog, authRepo, identitySvc, cfg.JWTSecret)
+		authHandler := authv2handlers.NewHandlers(authSvc, logger, sharedRedisClient)
 		authHandler.RegisterRoutes(r)
+
+		// UI Configuration
+		uiHandlers := &dashHandlers.UIHandlers{}
+		r.Get("/ui/global_config", uiHandlers.GetGlobalConfig)
+		r.Get("/ui/misc/legal_docs", uiHandlers.GetLegalDocs)
+
 
 		// Dashboard & Support Domain (consolidated from BFF)
 		supportRepo := repository.NewSupportRepository(db, logger)
@@ -490,7 +508,10 @@ func main() {
 		supportHandlers := dashHandlers.NewSupportCompatHandlers(logger, authSvc, adminOrgService, supportRepo)
 
 		r.Get("/dashboard/stats", dashboardHandlers.GetGlobalStats)
+		r.Get("/dashboard/overview", dashboardHandlers.GetAdminDashboardData)
+		r.Get("/dashboard/data", dashboardHandlers.GetAdminDashboardData)
 		r.Get("/admin/dashboard/data", dashboardHandlers.GetAdminDashboardData)
+		r.Get("/auth/profile", dashboardHandlers.GetProfile)
 
 		r.Route("/support", func(r chi.Router) {
 			r.Get("/dashboard/trends", dashboardHandlers.GetDashboardTrends)
@@ -533,10 +554,6 @@ func main() {
 			})
 		})
 
-		// UI Configuration
-		uiHandlers := &dashHandlers.UIHandlers{}
-		r.Get("/ui/global_config", uiHandlers.GetGlobalConfig)
-
 		// Monitoring Domain
 		r.Get("/monitoring/health", monitorHandlers.GetSystemHealth)
 		r.Get("/monitoring/sla", monitorHandlers.GetSLAMetrics)
@@ -549,7 +566,6 @@ func main() {
 				r.Handle("/ml/*", mlProxy)
 			}
 		}
-*/
 
 /*
 		// Compliance Domain (migrated in monolith via REST gateway)
@@ -579,6 +595,48 @@ func main() {
 		r.Route("/finance", func(r chi.Router) {
 			finHandlers.RegisterRoutes(r)
 		})
+
+		// Fuel Domain
+		fuelLogRepo := fuelRepo.NewFuelLogRepository(db)
+		fuelSettingsRepo := fuelRepo.NewSettingsRepository(db)
+		anomalySvc := fuelService.NewAnomalyDetectionService(nil, logger)
+		taxSvc := financeService.NewTaxCalculationService()
+		eventBus := integrations.NewInMemoryEventBus(logger)
+		fuelSvc := fuelService.NewFuelService(fuelLogRepo, fuelSettingsRepo, anomalySvc, taxSvc, eventBus, logger)
+		fuelHandler := fuelHandlers.NewFuelHandler(fuelSvc, logger)
+		r.Route("/fuel", func(r chi.Router) {
+			fuelHandler.RegisterRoutes(r)
+		})
+
+		// Maintenance Domain
+		maintenRepository := maintenRepo.NewMaintenanceRepository(db)
+		workOrderRepo := maintenRepo.NewWorkOrderRepository(db)
+		partsRepo := maintenRepo.NewWorkOrderPartsRepository(db)
+		inventoryRepo := maintenRepo.NewInventoryRepository(db)
+		maintenSettingsRepo := maintenRepo.NewSettingsRepository(db)
+		vendorRepo := maintenRepo.NewVendorRepository(db)
+		inspectionRepo := maintenRepo.NewInspectionRepository(db)
+		
+		workOrderService := maintenService.NewWorkOrderService(
+			workOrderRepo, 
+			partsRepo, 
+			inventoryRepo, 
+			maintenSettingsRepo, 
+			vendorRepo, 
+			inspectionRepo, 
+			maintenRepository,
+			nc, 
+			logger,
+		)
+		maintenServiceSvc := maintenService.NewMaintenanceService(maintenRepository, logger)
+		maintenHandler := maintenHandlers.NewMaintenanceHandler(maintenServiceSvc, logger)
+		workOrderHandler := maintenHandlers.NewWorkOrderHandler(workOrderService, logger)
+		r.Route("/maintenance", func(r chi.Router) {
+			maintenHandler.RegisterRoutes(r)
+		})
+		r.Route("/work-orders", func(r chi.Router) {
+			workOrderHandler.RegisterRoutes(r)
+		})
 /*
 		// Billing Domain (migrated v2 in monolith)
 		billRepo := billingv2repo.NewBillingRepository(db)
@@ -590,7 +648,32 @@ func main() {
 		// Emergency Domain
 		emRepo := emergencyRepo.NewEmergencyRepository(db)
 		emAnalyticsSvc := emergencyService.NewEmergencyAnalyticsService(emRepo)
-		emService := emergencyService.NewEmergencyService(emRepo, liveCacheRepo, nc, sharedRedisClient, logger)
+		emRetry := emergencyService.NewNotificationRetryService(nc, logger)
+		emGeo := emergencyService.NewEmergencyGeoService()
+		emAuth := emergencyService.NewEmergencyAuthorityService(emRepo, nc, logger)
+		emSeverity := emergencyService.NewEmergencySeverityEngine()
+		emHealth := emergencyService.NewProviderHealthService(sharedRedisClient, logger)
+		emFallback := emergencyService.NewProviderFallbackManager(emHealth, logger)
+
+		emService := emergencyService.NewEmergencyService(
+			emRepo,
+			liveCacheRepo,
+			nc,
+			sharedRedisClient,
+			logger,
+			emRetry,
+			emGeo,
+			emAuth,
+			emSeverity,
+			emFallback,
+		)
+		// Geofencing Domain
+		gRepo := geoRepo.NewGeofenceRepository(db)
+		gService := geoService.NewGeofenceService(gRepo, nc, logger)
+		gHandlers := geoHandlers.NewGeofenceHandler(gService, logger)
+		r.Route("/geofencing", func(r chi.Router) {
+			gHandlers.RegisterRoutes(r)
+		})
 		emHandlers := emergencyHandlers.NewEmergencyHandlers(emService, emAnalyticsSvc, logger)
 		r.Route("/emergency", func(r chi.Router) {
 			emHandlers.RegisterRoutes(r)
@@ -610,7 +693,24 @@ func main() {
 	// India legacy compatibility routes (/api/*) for existing Web-BFF mappings.
 	indiaRepoLegacy := indiav2repo.NewIndiaIntegrationRepository(db)
 	indiaServiceLegacy := indiav2service.NewIndiaIntegrationService(indiaRepoLegacy)
-	indiaHandlersLegacy := indiav2handlers.NewIndiaIntegrationHandlers(indiaServiceLegacy)
+	fastagServiceLegacy := indiav2service.NewFastagIntegrationService(indiaRepoLegacy, logger)
+	ewayBillServiceLegacy := indiav2service.NewEWayBillIntegrationService(indiaRepoLegacy, logger)
+	vahanServiceLegacy := indiav2service.NewVahanIntegrationService(indiaRepoLegacy, sharedRedisClient, logger)
+	sarathiServiceLegacy := indiav2service.NewSarathiIntegrationService(indiaRepoLegacy, sharedRedisClient, logger)
+	gstServiceLegacy := indiav2service.NewGSTIntegrationService(indiaRepoLegacy, logger)
+	bulkServiceLegacy := indiav2service.NewBulkVerificationService(vahanServiceLegacy)
+	encryptServiceLegacy := indiav2service.NewEncryptionService()
+
+	indiaHandlersLegacy := indiav2handlers.NewIndiaIntegrationHandlers(
+		indiaServiceLegacy,
+		fastagServiceLegacy,
+		ewayBillServiceLegacy,
+		vahanServiceLegacy,
+		sarathiServiceLegacy,
+		gstServiceLegacy,
+		bulkServiceLegacy,
+		encryptServiceLegacy,
+	)
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/fastag", func(r chi.Router) {
 			r.Post("/transactions", indiaHandlersLegacy.CreateFASTagTransaction)

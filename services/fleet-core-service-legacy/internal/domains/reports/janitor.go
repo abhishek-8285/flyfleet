@@ -60,7 +60,8 @@ func (j *Janitor) sweep(ctx context.Context) {
 	} else {
 		for _, report := range expired {
 			if report.FileURL != "" {
-				key := report.ID.String() + "/export.csv.gz"
+				// Pattern: tenant-id/report-id/export.csv.gz
+				key := report.TenantID.String() + "/" + report.ID.String() + "/export.csv.gz"
 				if delErr := j.storage.Delete(ctx, key); delErr != nil {
 					j.logger.Warn("Janitor: failed to delete storage file",
 						zap.String("report_id", report.ID.String()),
@@ -75,7 +76,7 @@ func (j *Janitor) sweep(ctx context.Context) {
 	if err != nil {
 		j.logger.Error("Janitor cleanup failed", zap.Error(err))
 	} else {
-		j.logger.Info("Janitor cleanup complete", zap.Int64("deleted", deleted))
+		j.logger.Info("Janitor cleanup complete", zap.Int64("deleted_db_records", deleted))
 	}
 }
 

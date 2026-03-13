@@ -137,9 +137,55 @@ func (m *MockEmergencyRepo) GetEmergencyContacts(ctx context.Context, orgID uuid
 }
 
 func (m *MockEmergencyRepo) CreateMedia(ctx context.Context, media *models.IncidentMedia) error { return nil }
-func (m *MockEmergencyRepo) CreateVehicleSnapshot(ctx context.Context, snapshot *models.IncidentVehicleSnapshot) error { return nil }
-func (m *MockEmergencyRepo) GetTimeline(ctx context.Context, incidentID uuid.UUID) ([]models.IncidentTimeline, error) { return nil, nil }
-func (m *MockEmergencyRepo) ListActiveIncidents(ctx context.Context) ([]models.SOSIncident, error) { return nil, nil }
+func (m *MockEmergencyRepo) CreateVehicleSnapshot(ctx context.Context, snapshot *models.IncidentVehicleSnapshot) error {
+	return nil
+}
+func (m *MockEmergencyRepo) RecordContactNotification(ctx context.Context, incidentID, contactID uuid.UUID) error {
+	return nil
+}
+func (m *MockEmergencyRepo) UpdateContactResponse(ctx context.Context, incidentID, contactID uuid.UUID, status, notes string) error {
+	return nil
+}
+func (m *MockEmergencyRepo) GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error) {
+	return nil, nil
+}
+func (m *MockEmergencyRepo) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
+	return 0, nil
+}
+func (m *MockEmergencyRepo) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
+	return nil, nil
+}
+func (m *MockEmergencyRepo) EnqueueDeviceEvent(ctx context.Context, vehicleID uuid.UUID, eventType string, payload []byte) error {
+	return nil
+}
+func (m *MockEmergencyRepo) GetPendingDeviceEvents(ctx context.Context, limit int) ([]models.DeviceEventQueueItem, error) {
+	return nil, nil
+}
+func (m *MockEmergencyRepo) MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+func (m *MockEmergencyRepo) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
+	return nil
+}
+func (m *MockEmergencyRepo) LogAuthorityDelivery(ctx context.Context, log *models.AuthorityDeliveryLog) error {
+	return nil
+}
+func (m *MockEmergencyRepo) UpdateAuthorityDelivery(ctx context.Context, id uuid.UUID, status string, responseCode int, responseBody string) error {
+	return nil
+}
+func (m *MockEmergencyRepo) CreateTimelineEvent(ctx context.Context, event *models.TimelineEvent) error {
+	return nil
+}
+func (m *MockEmergencyRepo) GetTimelineEvents(ctx context.Context, incidentID uuid.UUID) ([]models.TimelineEvent, error) {
+	return nil, nil
+}
+func (m *MockEmergencyRepo) GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error) {
+	return nil, nil
+}
+func (m *MockEmergencyRepo) Ping(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
 
 type MockTrackingRepo struct {
 	mock.Mock
@@ -165,7 +211,7 @@ func TestEmergencyService_OrgIDIsolation(t *testing.T) {
 	repo := new(MockEmergencyRepo)
 	trackingRepo := new(MockTrackingRepo)
 	logger := zap.NewNop()
-	svc := service.NewEmergencyService(repo, trackingRepo, nil, rdb, logger)
+	svc := service.NewEmergencyService(repo, trackingRepo, nil, rdb, logger, nil, nil, nil, nil, nil)
 
 	orgA := uuid.New()
 	orgB := uuid.New()
@@ -204,7 +250,7 @@ func TestEmergencyService_SimulationMode(t *testing.T) {
 	repo := new(MockEmergencyRepo)
 	trackingRepo := new(MockTrackingRepo)
 	logger := zap.NewNop()
-	svc := service.NewEmergencyService(repo, trackingRepo, nil, rdb, logger)
+	svc := service.NewEmergencyService(repo, trackingRepo, nil, rdb, logger, nil, nil, nil, nil, nil)
 
 	orgID := uuid.New()
 	vehicleID := uuid.New()

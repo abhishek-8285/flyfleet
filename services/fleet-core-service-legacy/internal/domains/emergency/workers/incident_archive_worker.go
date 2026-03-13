@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/emergency"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
 	"go.uber.org/zap"
 )
@@ -51,13 +52,16 @@ func (w *IncidentArchiveWorker) archiveOldData(ctx context.Context) {
 		w.log.Info("Archived old snapshots", zap.Int64("count", rows))
 	}
 
-	// 2. Incident archive: 2 years (marking as ARCHIVED)
-	incidentLimit := time.Now().AddDate(-2, 0, 0)
+	// 2. Incident archive: 365 days (Phase 5: Move to archive table)
+	incidentLimit := time.Now().AddDate(0, 0, -365)
 	rows, err = w.repo.ArchiveOldIncidents(ctx, incidentLimit)
 	if err != nil {
 		w.log.Error("Failed to archive old incidents", zap.Error(err))
 	} else {
-		w.log.Info("Marked old incidents as ARCHIVED", zap.Int64("count", rows))
+		w.log.Info("Archived old incidents to archive table", zap.Int64("count", rows))
+		if rows > 0 {
+			emergency.ArchivedIncidentsTotal.Add(float64(rows))
+		}
 	}
 
 	// 3. Media retention: 1 year (Enterprise requirement)

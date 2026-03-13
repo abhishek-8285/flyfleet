@@ -543,6 +543,107 @@ func (r *RouteOptimizationRepositoryImpl) ListOptimizationJobs(ctx context.Conte
 	return jobs, total, nil
 }
 
+// ListRoadRestrictions lists road restrictions for a set of road IDs
+func (r *RouteOptimizationRepositoryImpl) ListRoadRestrictions(ctx context.Context, roadIDs []string) ([]*models.RoadRestriction, error) {
+	if len(roadIDs) == 0 {
+		return []*models.RoadRestriction{}, nil
+	}
+
+	query := `
+		SELECT id, road_id, restriction_type, allowed_vehicle_classes, permit_required, max_weight, max_height
+		FROM road_restrictions
+		WHERE road_id = ANY($1)
+	`
+
+	rows, err := r.db.Query(ctx, query, roadIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list road restrictions: %w", err)
+	}
+	defer rows.Close()
+
+	var restrictions []*models.RoadRestriction
+	for rows.Next() {
+		var rst models.RoadRestriction
+		var allowedClassesJSON []byte
+		err := rows.Scan(&rst.ID, &rst.RoadID, &rst.RestrictionType, &allowedClassesJSON, &rst.PermitRequired, &rst.MaxWeight, &rst.MaxHeight)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan road restriction: %w", err)
+		}
+		if len(allowedClassesJSON) > 0 {
+			json.Unmarshal(allowedClassesJSON, &rst.AllowedVehicleClasses)
+		}
+		restrictions = append(restrictions, &rst)
+	}
+
+	return restrictions, nil
+}
+
+// ListRoadTimeRestrictions lists time-based road restrictions
+func (r *RouteOptimizationRepositoryImpl) ListRoadTimeRestrictions(ctx context.Context, roadIDs []string) ([]*models.RoadTimeRestriction, error) {
+	if len(roadIDs) == 0 {
+		return []*models.RoadTimeRestriction{}, nil
+	}
+
+	query := `
+		SELECT id, road_id, start_time, end_time, allowed_vehicle_classes
+		FROM road_time_restrictions
+		WHERE road_id = ANY($1)
+	`
+
+	rows, err := r.db.Query(ctx, query, roadIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list road time restrictions: %w", err)
+	}
+	defer rows.Close()
+
+	var restrictions []*models.RoadTimeRestriction
+	for rows.Next() {
+		var rst models.RoadTimeRestriction
+		var allowedClassesJSON []byte
+		err := rows.Scan(&rst.ID, &rst.RoadID, &rst.StartTime, &rst.EndTime, &allowedClassesJSON)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan road time restriction: %w", err)
+		}
+		if len(allowedClassesJSON) > 0 {
+			json.Unmarshal(allowedClassesJSON, &rst.AllowedVehicleClasses)
+		}
+		restrictions = append(restrictions, &rst)
+	}
+
+	return restrictions, nil
+}
+
+// GetVehiclePermits retrieves all permits for a specific vehicle
+func (r *RouteOptimizationRepositoryImpl) GetVehiclePermits(ctx context.Context, vehicleID string) ([]*models.VehiclePermit, error) {
+	query := `
+		SELECT id, vehicle_id, permit_type, valid_states, expiry_date
+		FROM vehicle_permits
+		WHERE vehicle_id = $1
+	`
+
+	rows, err := r.db.Query(ctx, query, vehicleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vehicle permits: %w", err)
+	}
+	defer rows.Close()
+
+	var permits []*models.VehiclePermit
+	for rows.Next() {
+		var pmt models.VehiclePermit
+		var validStatesJSON []byte
+		err := rows.Scan(&pmt.ID, &pmt.VehicleID, &pmt.PermitType, &validStatesJSON, &pmt.ExpiryDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan vehicle permit: %w", err)
+		}
+		if len(validStatesJSON) > 0 {
+			json.Unmarshal(validStatesJSON, &pmt.ValidStates)
+		}
+		permits = append(permits, &pmt)
+	}
+
+	return permits, nil
+}
+
 // HealthCheck performs a health check on the database
 func (r *RouteOptimizationRepositoryImpl) HealthCheck(ctx context.Context) error {
 	return r.db.Ping(ctx)

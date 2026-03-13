@@ -19,10 +19,10 @@ func NewEmergencyAnalyticsService(repo repository.EmergencyRepository) *Emergenc
 
 func (s *EmergencyAnalyticsService) GetIncidentAnalytics(ctx context.Context, orgID uuid.UUID) (*models.IncidentAnalyticsResponse, error) {
 	now := time.Now()
-	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	last24h := now.Add(-24 * time.Hour)
 	weekStart := now.AddDate(0, 0, -7)
 
-	todayMetrics, err := s.repo.GetIncidentMetrics(ctx, orgID, todayStart, now)
+	todayMetrics, err := s.repo.GetIncidentMetrics(ctx, orgID, time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now)
 	if err != nil {
 		return nil, err
 	}
@@ -32,17 +32,20 @@ func (s *EmergencyAnalyticsService) GetIncidentAnalytics(ctx context.Context, or
 		return nil, err
 	}
 
-	typeDist, err := s.repo.GetIncidentTypeDistribution(ctx, orgID)
-	if err != nil {
-		return nil, err
-	}
+	last24hCount, _ := s.repo.GetIncidentsCount(ctx, orgID, last24h)
+	topLocations, _ := s.repo.GetTopLocations(ctx, orgID, 5)
+	typeDist, _ := s.repo.GetIncidentTypeDistribution(ctx, orgID)
 
 	return &models.IncidentAnalyticsResponse{
-		IncidentsToday:        todayMetrics.TotalIncidents,
-		IncidentsThisWeek:     weekMetrics.TotalIncidents,
-		IncidentsByType:       typeDist,
-		AverageResponseTime:   weekMetrics.AvgResponseTimeMin,
-		AverageResolutionTime: weekMetrics.AvgResolutionTimeMin,
+		TotalIncidents:         todayMetrics.TotalIncidents, // Adjust logic if "Total" means all-time or recent
+		AvgResponseTimeSeconds: weekMetrics.AvgResponseTimeMin * 60,
+		IncidentsLast24h:       last24hCount,
+		TopLocations:           topLocations,
+		IncidentsByType:        typeDist,
+		IncidentsToday:         todayMetrics.TotalIncidents,
+		IncidentsThisWeek:      weekMetrics.TotalIncidents,
+		AverageResponseTime:    weekMetrics.AvgResponseTimeMin,
+		AverageResolutionTime:  weekMetrics.AvgResolutionTimeMin,
 	}, nil
 }
 

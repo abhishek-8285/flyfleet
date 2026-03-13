@@ -2,9 +2,11 @@ package reports
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -136,6 +138,12 @@ func (w *Worker) execute(ctx context.Context, job *ReportJob, log *zap.Logger) (
 
 	// Stage 2: STREAMING_ROWS — cursor fetching begins; progress mapped in onProgress
 	w.repo.UpdateReportStatus(ctx, job.ReportID, ReportStatusStreamingRows, 20, "", "")
+	
+	// Check for cancellation before starting streaming
+	if cancelled, _ := w.isCancelled(ctx, job.ReportID); cancelled {
+		return "", 0, errors.New("job cancelled")
+	}
+
 	headers := []string{"id", "report_type", "timestamp", "data"}
 
 	// Stage 3: GENERATING — CSV row writing
@@ -209,6 +217,14 @@ func (w *Worker) failJob(ctx context.Context, job *ReportJob, execErr error, log
 		w.repo.UpdateReportStatus(ctx, job.ReportID, ReportStatusFailed, 0, "",
 			fmt.Sprintf("Attempt %d failed: %s. Retry after %s.", job.Attempts, execErr.Error(), delay))
 	}
+}
+
+func (w *Worker) isCancelled(ctx context.Context, reportID uuid.UUID) (bool, error) {
+	rep, err := w.repo.GetReport(ctx, reportID, uuid.Nil) // Repo needs to handle Nil tenant for internal checks or we need tenantID in job
+	if err != nil {
+		return false, err
+	}
+	return rep != nil && rep.Status == ReportStatusCancelled, nil
 }
 
 // retryDelay computes exponential backoff: 1m → 5m → 15m

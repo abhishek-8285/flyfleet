@@ -1,0 +1,9 @@
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+X-Request-Id: unknown/Oxo0F36hmf-000001
+X-Trace-Id: unknown/Oxo0F36hmf-000001
+Date: Mon, 09 Mar 2026 13:48:47 GMT
+Content-Length: 224
+
+Failed to trigger SOS - ERROR 8888: failed to create incident: failed to create SOS incident: ERROR: insert or update on table "sos_incidents" violates foreign key constraint "sos_incidents_vehicle_id_fkey" (SQLSTATE 23503)

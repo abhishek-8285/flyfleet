@@ -1,13 +1,12 @@
 import {
-  PlayIcon,
-  PauseIcon,
-  StopIcon,
-  ArrowPathIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  ChartBarIcon,
+    ArrowPathIcon,
+    ChartBarIcon,
+    CheckCircleIcon,
+    ClockIcon,
+    ExclamationTriangleIcon,
+    PlayIcon,
+    StopIcon,
+    XCircleIcon
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
@@ -55,7 +54,7 @@ const AnalyticsJobsPage: React.FC = () => {
   };
 
   const handleCancel = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this job?")) return;
+    if (!window.confirm("Are you sure you want to cancel this job?")) return;
     try {
       await api.put(`/admin/analytics/jobs/${id}`, { status: "cancelled" });
       fetchJobs();
@@ -110,15 +109,14 @@ const AnalyticsJobsPage: React.FC = () => {
     }
   };
 
-  const filteredJobs = filter === "all" 
-    ? jobs 
-    : jobs.filter(j => j.status === filter);
+  const filteredJobs =
+    filter === "all" ? jobs : jobs.filter((j) => j.status === filter);
 
   const stats = {
     total: jobs.length,
-    running: jobs.filter(j => j.status === "running").length,
-    completed: jobs.filter(j => j.status === "completed").length,
-    failed: jobs.filter(j => j.status === "failed").length,
+    running: jobs.filter((j) => j.status === "running").length,
+    completed: jobs.filter((j) => j.status === "completed").length,
+    failed: jobs.filter((j) => j.status === "failed").length,
   };
 
   return (
@@ -153,25 +151,31 @@ const AnalyticsJobsPage: React.FC = () => {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <StatCard label="Total Jobs" value={stats.total} color="text-white" />
         <StatCard label="Running" value={stats.running} color="text-blue-400" />
-        <StatCard label="Completed" value={stats.completed} color="text-emerald-400" />
+        <StatCard
+          label="Completed"
+          value={stats.completed}
+          color="text-emerald-400"
+        />
         <StatCard label="Failed" value={stats.failed} color="text-red-400" />
       </div>
 
       {/* Filters */}
       <div className="flex gap-2 mb-6">
-        {["all", "pending", "running", "completed", "failed", "cancelled"].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              filter === status
-                ? "bg-blue-600 text-white"
-                : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </button>
-        ))}
+        {["all", "pending", "running", "completed", "failed", "cancelled"].map(
+          (status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === status
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              }`}
+            >
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </button>
+          ),
+        )}
       </div>
 
       {/* Jobs Table */}
@@ -241,7 +245,7 @@ const AnalyticsJobsPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                        job.status
+                        job.status,
                       )}`}
                     >
                       {getStatusIcon(job.status)}
@@ -256,8 +260,8 @@ const AnalyticsJobsPage: React.FC = () => {
                             job.status === "failed"
                               ? "bg-red-500"
                               : job.status === "completed"
-                              ? "bg-emerald-500"
-                              : "bg-blue-500"
+                                ? "bg-emerald-500"
+                                : "bg-blue-500"
                           }`}
                           style={{ width: `${job.progress}%` }}
                         />
@@ -332,7 +336,10 @@ interface CreateJobModalProps {
   onSuccess: () => void;
 }
 
-const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) => {
+const CreateJobModal: React.FC<CreateJobModalProps> = ({
+  onClose,
+  onSuccess,
+}) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -359,7 +366,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) =
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6">Create Analytics Job</h2>
+        <h2 className="text-xl font-bold text-white mb-6">
+          Create Analytics Job
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -369,7 +378,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) =
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="e.g., Weekly Demand Prediction"
             />
@@ -382,7 +393,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) =
               <select
                 required
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value })
+                }
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="batch">Batch</option>
@@ -397,7 +410,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) =
               <select
                 required
                 value={formData.job_type}
-                onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, job_type: e.target.value })
+                }
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="prediction">Prediction</option>
@@ -413,7 +428,9 @@ const CreateJobModal: React.FC<CreateJobModalProps> = ({ onClose, onSuccess }) =
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               rows={3}
               placeholder="Job description..."
@@ -472,8 +489,8 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, onClose }) => {
                 job.status === "failed"
                   ? "bg-red-500"
                   : job.status === "completed"
-                  ? "bg-emerald-500"
-                  : "bg-blue-500"
+                    ? "bg-emerald-500"
+                    : "bg-blue-500"
               }`}
               style={{ width: `${job.progress}%` }}
             />
@@ -487,7 +504,9 @@ const JobDetailModal: React.FC<JobDetailModalProps> = ({ job, onClose }) => {
           </div>
           <div>
             <div className="text-slate-400 mb-1">Type</div>
-            <div className="text-white">{job.type} / {job.job_type}</div>
+            <div className="text-white">
+              {job.type} / {job.job_type}
+            </div>
           </div>
           <div>
             <div className="text-slate-400 mb-1">Created</div>

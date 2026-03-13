@@ -1,0 +1,9 @@
+HTTP/1.1 500 Internal Server Error
+Content-Type: text/plain; charset=utf-8
+X-Content-Type-Options: nosniff
+X-Request-Id: unknown/qaeLzuyTxJ-000001
+X-Trace-Id: unknown/qaeLzuyTxJ-000001
+Date: Mon, 09 Mar 2026 13:37:35 GMT
+Content-Length: 22
+
+Failed to trigger SOS

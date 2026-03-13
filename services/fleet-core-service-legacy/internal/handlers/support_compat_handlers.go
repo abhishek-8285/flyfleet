@@ -482,3 +482,25 @@ func (h *UIHandlers) GetMenuItems(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(menuItems)
 }
+
+func (h *UIHandlers) GetLegalDocs(w http.ResponseWriter, r *http.Request) {
+	data := map[string]interface{}{
+		"privacy_policy": map[string]interface{}{
+			"last_updated": "2024-03-20",
+			"sections": []map[string]interface{}{
+				{"title": "Data Collection", "content": "We collect minimal telemetry to ensure platform stability."},
+				{"title": "User Rights", "content": "You have the right to export or delete your security logs."},
+			},
+		},
+		"terms_of_service": map[string]interface{}{
+			"effective_date": "2024-03-20",
+			"sections": []map[string]interface{}{
+				{"title": "Acceptable Use", "content": "The system must only be used for authorized fleet operations."},
+				{"title": "Termination", "content": "Unauthorized access will result in immediate multi-region revocation."},
+			},
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"data": data})
+}
+

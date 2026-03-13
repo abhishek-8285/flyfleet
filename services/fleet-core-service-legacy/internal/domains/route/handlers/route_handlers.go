@@ -53,6 +53,32 @@ func (h *RouteOptimizationHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/", h.ListOptimizationJobs)
 		r.Get("/{id}", h.GetOptimizationJob)
 	})
+
+	r.Post("/recalculate", h.RecalculateRoute)
+}
+
+// RecalculateRoute handles POST /api/v1/routes/recalculate
+func (h *RouteOptimizationHandler) RecalculateRoute(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ResultID   string  `json:"result_id" binding:"required"`
+		VehicleID  string  `json:"vehicle_id" binding:"required"`
+		CurrentLat float64 `json:"current_lat" binding:"required"`
+		CurrentLon float64 `json:"current_lon" binding:"required"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	result, err := h.service.RecalculateRoute(r.Context(), req.ResultID, req.VehicleID, req.CurrentLat, req.CurrentLon)
+	if err != nil {
+		h.logger.Error("Failed to recalculate route", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to recalculate route", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, result)
 }
 
 // CreateOptimizationRequest handles POST /api/v1/routes/requests

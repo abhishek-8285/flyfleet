@@ -6,6 +6,12 @@ import {
 } from "../components/drivers/DriverFilters";
 import { DriverTable } from "../components/drivers/DriverTable";
 import { useUIStrings } from "../hooks/useUIStrings";
+import { DriverPerformance } from "../modules/drivers/components/DriverPerformance";
+import { driverService } from "../modules/drivers/DriverService";
+import {
+    Driver as EnterpriseDriver,
+    SafetyScore,
+} from "../modules/drivers/types";
 import { api } from "../services/api";
 import { Driver } from "../types";
 
@@ -16,6 +22,11 @@ const Drivers: React.FC = () => {
   const [safetyFilter, setSafetyFilter] = useState<SafetyScoreFilter>("all");
   const { uiStrings } = useUIStrings("drivers");
   const [systemMeta, setSystemMeta] = useState<any>(null);
+
+  const [selectedDriver, setSelectedDriver] = useState<EnterpriseDriver | null>(
+    null,
+  );
+  const [safetyScore, setSafetyScore] = useState<SafetyScore | null>(null);
 
   useEffect(() => {
     const fetchDrivers = async () => {
@@ -32,15 +43,18 @@ const Drivers: React.FC = () => {
         setDrivers([]);
       } finally {
         setLoading(false);
-        fetch("/api/v1/ui/global_config")
-          .then((res) => res.json())
-          .then((data) => setSystemMeta(data.system_metadata))
-          .catch((err) => console.error("Failed to fetch system config", err));
       }
     };
 
     fetchDrivers();
   }, []);
+
+  const handleDriverClick = async (id: string) => {
+    const driver = await driverService.getDriver(id);
+    const score = await driverService.getSafetyScore(id);
+    setSelectedDriver(driver);
+    setSafetyScore(score);
+  };
 
   const filteredDrivers = useMemo(() => {
     const matchStatus = (driver: Driver) => {
@@ -68,40 +82,31 @@ const Drivers: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden h-full">
-      <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as DriverStatusFilter)
-              }
-              className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors"
-            >
-              <option value="all">
-                {uiStrings?.filter_all || "All Drivers"}
-              </option>
-              <option value="available">
-                {uiStrings?.filter_available || "Available"}
-              </option>
-              <option value="on_trip">
-                {uiStrings?.filter_on_trip || "On Trip"}
-              </option>
-              <option value="off_duty">
-                {uiStrings?.filter_off_duty || "Off Duty"}
-              </option>
-            </select>
-            <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">
-              badge
-            </span>
+      {/* Quick View Overlay if selected */}
+      {selectedDriver && safetyScore && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          onClick={() => setSelectedDriver(null)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DriverPerformance driver={selectedDriver} score={safetyScore} />
           </div>
         </div>
+      )}
+
+      <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
+        <h1 className="text-xl font-bold text-white">
+          Driver Fleet Management
+        </h1>
         <div className="flex items-center gap-3 ml-auto">
           <button className="bg-primary hover:bg-primary/90 text-white text-xs font-medium py-1.5 px-3 rounded flex items-center gap-2 shadow-[0_0_10px_rgba(19,127,236,0.3)] transition-all">
             <span className="material-symbols-outlined text-[16px]">
               person_add
             </span>
-            {uiStrings?.btn_add_driver || "Add Driver"}
+            {uiStrings?.btn_add_driver || "Add New Pilot"}
           </button>
         </div>
       </div>
@@ -114,21 +119,12 @@ const Drivers: React.FC = () => {
       />
 
       <div className="flex-1 overflow-hidden p-6 bg-background-dark">
-        <DriverTable drivers={filteredDrivers} loading={loading} />
+        <DriverTable
+          drivers={filteredDrivers}
+          loading={loading}
+          onDriverClick={(d: Driver) => handleDriverClick(d.id)}
+        />
       </div>
-
-      <footer className="mt-auto text-center text-xs text-[#64748b] pb-2 flex flex-col items-center gap-1 bg-background-dark">
-        <span>
-          {(
-            uiStrings?.footer_copyright ||
-            "© {year} FleetCommand. All rights reserved."
-          ).replace("{year}", new Date().getFullYear().toString())}
-        </span>
-        <span className="text-[10px]">
-          {systemMeta?.version || "v--"} | Server Time:{" "}
-          <span className="font-mono">{systemMeta?.server_time || "---"}</span>
-        </span>
-      </footer>
     </div>
   );
 };

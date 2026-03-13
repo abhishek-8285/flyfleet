@@ -44,10 +44,40 @@ type EmergencyRepository interface {
 	UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, feedback string, notes string) error
 	LogSLAViolation(ctx context.Context, violation *models.SLAViolation) error
 	ArchiveOldMedia(ctx context.Context, olderThan time.Time) (int64, error)
+	// Phase 1: Contact Acknowledgement Tracking
+	RecordContactNotification(ctx context.Context, incidentID, contactID uuid.UUID) error
+	UpdateContactResponse(ctx context.Context, incidentID, contactID uuid.UUID, status string, notes string) error
+	// Phase 6: Analytics
+	GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error)
+	GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error)
+	// Phase 4: Incident Recovery Worker
+	GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error)
+	// Phase 3: Offline SOS Event Queue
+	EnqueueDeviceEvent(ctx context.Context, vehicleID uuid.UUID, eventType string, payload []byte) error
+	GetPendingDeviceEvents(ctx context.Context, limit int) ([]models.DeviceEventQueueItem, error)
+	MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error
+	IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error
+	// Phase 2: Authority Delivery logs
+	LogAuthorityDelivery(ctx context.Context, log *models.AuthorityDeliveryLog) error
+	UpdateAuthorityDelivery(ctx context.Context, id uuid.UUID, status string, responseCode int, responseBody string) error
+	// Phase 5: Incident Timeline Storage
+	CreateTimelineEvent(ctx context.Context, event *models.TimelineEvent) error
+	GetTimelineEvents(ctx context.Context, incidentID uuid.UUID) ([]models.TimelineEvent, error)
+	// Phase 4: Geo Routing
+	GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error)
+	// Phase 10: Production Lockdown
+	Ping(ctx context.Context) error
+	GetCriticalIncidentsForSnapshot(ctx context.Context, since time.Time) ([]models.SOSIncident, error)
+	CreateIncidentSnapshot(ctx context.Context, snapshot *models.IncidentSnapshot) error
+	ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error)
 }
 
 type emergencyRepository struct {
 	db *pgxpool.Pool
+}
+
+func (r *emergencyRepository) Ping(ctx context.Context) error {
+	return r.db.Ping(ctx)
 }
 
 func NewEmergencyRepository(db *pgxpool.Pool) EmergencyRepository {
@@ -630,13 +660,110 @@ func (r *emergencyRepository) ArchiveOldSnapshots(ctx context.Context, olderThan
 	return res.RowsAffected(), nil
 }
 
+func (r *emergencyRepository) GetCriticalIncidentsForSnapshot(ctx context.Context, since time.Time) ([]models.SOSIncident, error) {
+	query := `SELECT * FROM sos_incidents WHERE severity = 'CRITICAL' AND created_at >= $1`
+	rows, err := r.db.Query(ctx, query, since)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var incidents []models.SOSIncident
+	for rows.Next() {
+		var i models.SOSIncident
+		err := rows.Scan(
+			&i.ID, &i.VehicleID, &i.DriverID, &i.TripID, &i.Timestamp, &i.Latitude, &i.Longitude,
+			&i.LocationAddress, &i.Status, &i.Severity, &i.Metadata, &i.CreatedAt, &i.UpdatedAt,
+			&i.IncidentType, &i.PanicSource, &i.Speed, &i.Heading, &i.AcknowledgedBy, &i.ResolvedBy,
+			&i.OrgID, &i.HighRiskLocation, &i.SimulationMode, &i.DriverFeedback, &i.FeedbackNotes,
+			&i.AcknowledgedAt, &i.ResolvedAt, &i.DeviceID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		incidents = append(incidents, i)
+	}
+	return incidents, nil
+}
+
+func (r *emergencyRepository) CreateIncidentSnapshot(ctx context.Context, snapshot *models.IncidentSnapshot) error {
+	query := `
+		INSERT INTO emergency_incident_snapshots (incident_id, vehicle_id, org_id, incident_type, severity, status, latitude, longitude, snapshot_data)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	_, err := r.db.Exec(ctx, query,
+		snapshot.IncidentID, snapshot.VehicleID, snapshot.OrgID,
+		snapshot.IncidentType, snapshot.Severity, snapshot.Status,
+		snapshot.Latitude, snapshot.Longitude, snapshot.SnapshotData)
+	return err
+}
+
+func (r *emergencyRepository) ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
+	query := `
+		SELECT 
+			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
+			status, severity, incident_type, panic_source, speed, heading, metadata,
+			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
+		FROM sos_incidents 
+		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		ORDER BY timestamp DESC
+	`
+	rows, err := r.db.Query(ctx, query, orgID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var incidents []models.SOSIncident
+	for rows.Next() {
+		var i models.SOSIncident
+		err := rows.Scan(
+			&i.ID, &i.VehicleID, &i.DriverID, &i.TripID, &i.Timestamp, &i.Latitude, &i.Longitude,
+			&i.LocationAddress, &i.Status, &i.Severity, &i.IncidentType, &i.PanicSource, &i.Speed, &i.Heading, &i.Metadata,
+			&i.AcknowledgedBy, &i.ResolvedBy, &i.OrgID, &i.HighRiskLocation, &i.SimulationMode,
+			&i.DriverFeedback, &i.FeedbackNotes, &i.AcknowledgedAt, &i.ResolvedAt, &i.CreatedAt, &i.UpdatedAt, &i.DeviceID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		incidents = append(incidents, i)
+	}
+	return incidents, nil
+}
+
 func (r *emergencyRepository) ArchiveOldIncidents(ctx context.Context, olderThan time.Time) (int64, error) {
-	query := `UPDATE sos_incidents SET status = 'ARCHIVED' WHERE status = 'RESOLVED' AND updated_at < $1`
-	res, err := r.db.Exec(ctx, query, olderThan)
+	// Move to archive table and delete from main table
+	moveQuery := `
+		INSERT INTO emergency_incidents_archive (
+			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
+			status, severity, incident_type, panic_source, speed, heading, metadata,
+			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
+		)
+		SELECT 
+			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
+			status, severity, incident_type, panic_source, speed, heading, metadata,
+			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
+		FROM sos_incidents
+		WHERE (status = 'RESOLVED' OR status = 'FALSE_ALARM') AND updated_at < $1
+	`
+	res, err := r.db.Exec(ctx, moveQuery, olderThan)
 	if err != nil {
 		return 0, err
 	}
-	return res.RowsAffected(), nil
+	
+	count := res.RowsAffected()
+	if count > 0 {
+		deleteQuery := `DELETE FROM sos_incidents WHERE (status = 'RESOLVED' OR status = 'FALSE_ALARM') AND updated_at < $1`
+		_, err = r.db.Exec(ctx, deleteQuery, olderThan)
+		if err != nil {
+			return count, fmt.Errorf("archive succeeded but delete failed: %w", err)
+		}
+	}
+	
+	return count, nil
 }
 func (r *emergencyRepository) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, feedback string, notes string) error {
 	query := `UPDATE sos_incidents SET driver_feedback = $2, feedback_notes = $3, updated_at = $4 WHERE id = $1`
@@ -661,4 +788,219 @@ func (r *emergencyRepository) ArchiveOldMedia(ctx context.Context, olderThan tim
 		return 0, err
 	}
 	return res.RowsAffected(), nil
+}
+
+func (r *emergencyRepository) RecordContactNotification(ctx context.Context, incidentID, contactID uuid.UUID) error {
+	query := `
+		INSERT INTO emergency_contact_responses (incident_id, contact_id, response_status, created_at)
+		VALUES ($1, $2, 'NOTIFIED', NOW())
+	`
+	_, err := r.db.Exec(ctx, query, incidentID, contactID)
+	return err
+}
+
+func (r *emergencyRepository) UpdateContactResponse(ctx context.Context, incidentID, contactID uuid.UUID, status string, notes string) error {
+	query := `
+		UPDATE emergency_contact_responses
+		SET response_status = $1, responded_at = NOW(), notes = $2
+		WHERE incident_id = $3 AND contact_id = $4
+	`
+	_, err := r.db.Exec(ctx, query, status, notes, incidentID, contactID)
+	return err
+}
+
+func (r *emergencyRepository) GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error) {
+	query := `
+		SELECT location_address 
+		FROM sos_incidents 
+		WHERE org_id = $1 AND location_address IS NOT NULL AND location_address != ''
+		GROUP BY location_address 
+		ORDER BY COUNT(*) DESC 
+		LIMIT $2
+	`
+	rows, err := r.db.Query(ctx, query, orgID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var locations []string
+	for rows.Next() {
+		var loc string
+		if err := rows.Scan(&loc); err == nil {
+			locations = append(locations, loc)
+		}
+	}
+	return locations, nil
+}
+
+func (r *emergencyRepository) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
+	query := `SELECT COUNT(*) FROM sos_incidents WHERE org_id = $1 AND created_at >= $2`
+	var count int
+	err := r.db.QueryRow(ctx, query, orgID, since).Scan(&count)
+	return count, err
+}
+
+// Phase 4: GetStalledIncidents returns TRIGGERED incidents not updated within stalledFor duration.
+func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
+	cutoff := time.Now().Add(-stalledFor)
+	query := `
+		SELECT id, vehicle_id, driver_id, org_id, status, severity, incident_type, latitude, longitude,
+		       simulation_mode, created_at, updated_at
+		FROM sos_incidents
+		WHERE status = 'TRIGGERED' AND updated_at < $1
+		ORDER BY updated_at ASC
+		LIMIT 50
+	`
+	rows, err := r.db.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var incidents []models.SOSIncident
+	for rows.Next() {
+		var inc models.SOSIncident
+		if err := rows.Scan(&inc.ID, &inc.VehicleID, &inc.DriverID, &inc.OrgID, &inc.Status, &inc.Severity,
+			&inc.IncidentType, &inc.Latitude, &inc.Longitude, &inc.SimulationMode,
+			&inc.CreatedAt, &inc.UpdatedAt); err != nil {
+			continue
+		}
+		incidents = append(incidents, inc)
+	}
+	return incidents, nil
+}
+
+// Phase 3: EnqueueDeviceEvent stores a pending SOS event for later delivery.
+func (r *emergencyRepository) EnqueueDeviceEvent(ctx context.Context, vehicleID uuid.UUID, eventType string, payload []byte) error {
+	query := `
+		INSERT INTO device_event_queue (vehicle_id, event_type, payload, next_retry_at)
+		VALUES ($1, $2, $3, NOW())
+	`
+	_, err := r.db.Exec(ctx, query, vehicleID, eventType, payload)
+	return err
+}
+
+// Phase 3: GetPendingDeviceEvents retrieves pending events ready for retry.
+func (r *emergencyRepository) GetPendingDeviceEvents(ctx context.Context, limit int) ([]models.DeviceEventQueueItem, error) {
+	query := `
+		SELECT id, vehicle_id, event_type, payload, retry_count, status, created_at, next_retry_at
+		FROM device_event_queue
+		WHERE status = 'PENDING' AND next_retry_at <= NOW()
+		ORDER BY next_retry_at ASC
+		LIMIT $1
+	`
+	rows, err := r.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.DeviceEventQueueItem
+	for rows.Next() {
+		var item models.DeviceEventQueueItem
+		if err := rows.Scan(&item.ID, &item.VehicleID, &item.EventType, &item.Payload,
+			&item.RetryCount, &item.Status, &item.CreatedAt, &item.NextRetryAt); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
+// Phase 3: MarkDeviceEventDelivered marks a queued event as delivered.
+func (r *emergencyRepository) MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `UPDATE device_event_queue SET status='DELIVERED' WHERE id=$1`, id)
+	return err
+}
+
+// Phase 3: IncrementDeviceEventRetry increments retry count and schedules next attempt.
+func (r *emergencyRepository) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE device_event_queue SET retry_count = retry_count + 1, next_retry_at = $2,
+		 status = CASE WHEN retry_count >= 5 THEN 'FAILED' ELSE 'PENDING' END
+		 WHERE id = $1`, id, nextRetryAt)
+	return err
+}
+
+// Phase 2: LogAuthorityDelivery logs an attempt to notify authorities.
+func (r *emergencyRepository) LogAuthorityDelivery(ctx context.Context, log *models.AuthorityDeliveryLog) error {
+	query := `
+		INSERT INTO authority_delivery_logs (id, incident_id, authority_type, delivery_status, response_code, response_body, retry_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := r.db.Exec(ctx, query, log.ID, log.IncidentID, log.AuthorityType, log.DeliveryStatus, log.ResponseCode, log.ResponseBody, log.RetryCount)
+	return err
+}
+
+// Phase 2: UpdateAuthorityDelivery updates an existing delivery log entry.
+func (r *emergencyRepository) UpdateAuthorityDelivery(ctx context.Context, id uuid.UUID, status string, responseCode int, responseBody string) error {
+	query := `
+		UPDATE authority_delivery_logs
+		SET delivery_status = $1, response_code = $2, response_body = $3, updated_at = NOW()
+		WHERE id = $4
+	`
+	_, err := r.db.Exec(ctx, query, status, responseCode, responseBody, id)
+	return err
+}
+
+// Phase 5: CreateTimelineEvent logs a new incident timeline event.
+func (r *emergencyRepository) CreateTimelineEvent(ctx context.Context, event *models.TimelineEvent) error {
+	query := `
+		INSERT INTO incident_timeline_events (id, incident_id, event_type, event_data)
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err := r.db.Exec(ctx, query, event.ID, event.IncidentID, event.EventType, event.EventData)
+	return err
+}
+
+// Phase 5: GetTimelineEvents retrieves all timeline events for an incident.
+func (r *emergencyRepository) GetTimelineEvents(ctx context.Context, incidentID uuid.UUID) ([]models.TimelineEvent, error) {
+	query := `
+		SELECT id, incident_id, event_type, event_data, created_at
+		FROM incident_timeline_events
+		WHERE incident_id = $1
+		ORDER BY created_at ASC
+	`
+	rows, err := r.db.Query(ctx, query, incidentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []models.TimelineEvent
+	for rows.Next() {
+		var event models.TimelineEvent
+		if err := rows.Scan(&event.ID, &event.IncidentID, &event.EventType, &event.EventData, &event.CreatedAt); err != nil {
+			continue
+		}
+		events = append(events, event)
+	}
+	return events, nil
+}
+
+// Phase 4: GetAuthoritiesByLocation finds authorities covering an incident location using PostGIS.
+func (r *emergencyRepository) GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error) {
+	query := `
+		SELECT id, authority_type, zone_name, contact_number, api_endpoint, priority
+		FROM emergency_authority_zones
+		WHERE ST_Contains(zone_polygon, ST_SetSRID(ST_Point($1, $2), 4326))
+		ORDER BY priority ASC
+	`
+	rows, err := r.db.Query(ctx, query, lng, lat) // Point(lng, lat) for SRID 4326
+	if err != nil {
+		return nil, fmt.Errorf("failed to query authorities by location: %w", err)
+	}
+	defer rows.Close()
+
+	var units []models.EmergencyResponseUnit
+	for rows.Next() {
+		var u models.EmergencyResponseUnit
+		var priority int
+		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.ContactNumber, &u.APIEndpoint, &priority); err != nil {
+			continue
+		}
+		units = append(units, u)
+	}
+	return units, nil
 }

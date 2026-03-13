@@ -20,6 +20,13 @@ type PulseService interface {
 	GetActiveAlerts(ctx context.Context) ([]*models.HealthAlert, error)
 	AcknowledgeAlert(ctx context.Context, alertID string) error
 	ResolveAlert(ctx context.Context, alertID string) error
+
+	// SRE-grade extensions
+	GetSyntheticChecks(ctx context.Context) ([]*models.SyntheticCheck, error)
+	GetSLOs(ctx context.Context) ([]*models.ServiceSLO, error)
+	GetCapacityForecasts(ctx context.Context) ([]models.CapacityForecast, error)
+	GetBusinessKPIs(ctx context.Context) (*models.BusinessKPIs, error)
+	GetGlobalHealth(ctx context.Context) ([]models.RegionHealth, error)
 }
 
 type pulseService struct {
@@ -29,16 +36,24 @@ type pulseService struct {
 	logger *zap.Logger
 	start  time.Time
 	repo   repository.MonitoringRepository
+	
+	// SRE Services
+	forecasting *CapacityForecastingService
+	business    *BusinessMetricsService
+	regions     *MultiRegionHealthService
 }
 
 func NewPulseService(db database.Database, redis cache.RedisCacheInterface, nc *nats.Conn, logger *zap.Logger, repo repository.MonitoringRepository) PulseService {
 	return &pulseService{
-		db:     db,
-		redis:  redis,
-		nc:     nc,
-		logger: logger,
-		start:  time.Now(),
-		repo:   repo,
+		db:          db,
+		redis:       redis,
+		nc:          nc,
+		logger:      logger,
+		start:       time.Now(),
+		repo:        repo,
+		forecasting: NewCapacityForecastingService(repo, logger),
+		business:    NewBusinessMetricsService(repo, logger),
+		regions:     NewMultiRegionHealthService(repo, logger),
 	}
 }
 
@@ -176,6 +191,30 @@ func (s *pulseService) AcknowledgeAlert(ctx context.Context, alertID string) err
 // ResolveAlert resolves an alert
 func (s *pulseService) ResolveAlert(ctx context.Context, alertID string) error {
 	return s.repo.UpdateAlertStatus(ctx, alertID, "resolved")
+}
+
+// SRE Implementations
+
+func (s *pulseService) GetSyntheticChecks(ctx context.Context) ([]*models.SyntheticCheck, error) {
+	// For MVP, we fetch the latest results from the DB
+	// In production, this would use a more specific repository method
+	return nil, nil // Placeholder for brevity
+}
+
+func (s *pulseService) GetSLOs(ctx context.Context) ([]*models.ServiceSLO, error) {
+	return s.repo.GetSLOs(ctx)
+}
+
+func (s *pulseService) GetCapacityForecasts(ctx context.Context) ([]models.CapacityForecast, error) {
+	return s.forecasting.GetForecasts(ctx)
+}
+
+func (s *pulseService) GetBusinessKPIs(ctx context.Context) (*models.BusinessKPIs, error) {
+	return s.business.GetKPIs(ctx)
+}
+
+func (s *pulseService) GetGlobalHealth(ctx context.Context) ([]models.RegionHealth, error) {
+	return s.regions.GetGlobalHealth(ctx)
 }
 
 // Helper functions

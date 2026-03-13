@@ -40,8 +40,8 @@ func (r *InventoryRepository) Create(ctx context.Context, part *models.Inventory
 // GetByID retrieves an inventory part by ID
 func (r *InventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.InventoryPart, error) {
 	query := `
-		SELECT id, organization_id, part_number, name, description,
-			   stock_location, quantity_available, reorder_level, unit_cost,
+		SELECT id, organization_id, part_number, name, COALESCE(description, ''),
+			   COALESCE(stock_location, ''), quantity_available, reorder_level, unit_cost,
 			   created_at, updated_at
 		FROM inventory_parts WHERE id = $1
 	`
@@ -125,8 +125,8 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, organization_id, part_number, name, description,
-			   stock_location, quantity_available, reorder_level, unit_cost,
+		SELECT id, organization_id, part_number, name, COALESCE(description, ''),
+			   COALESCE(stock_location, ''), quantity_available, reorder_level, unit_cost,
 			   created_at, updated_at
 		FROM inventory_parts WHERE %s
 		ORDER BY name ASC

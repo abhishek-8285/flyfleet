@@ -36,6 +36,7 @@ type FASTagTransaction struct {
 // EWayBill represents an E-Way Bill
 type EWayBill struct {
 	ID                      string    `json:"id" db:"id" validate:"required"`
+	OrganizationID          uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
 	EWayBillNumber          string    `json:"eway_bill_number" db:"eway_bill_number" validate:"required"`
 	EWayBillDate            time.Time `json:"eway_bill_date" db:"eway_bill_date" validate:"required"`
 	EWayBillValidTill       time.Time `json:"eway_bill_valid_till" db:"eway_bill_valid_till" validate:"required"`
@@ -213,6 +214,18 @@ type IntegrationConfig struct {
 	UpdatedBy      uuid.UUID `json:"updated_by" db:"updated_by"`
 }
 
+// IntegrationLog represents an audit log for India integrations
+type IntegrationLog struct {
+	ID              string      `json:"id" db:"id"`
+	ServiceType     string      `json:"service_type" db:"service_type"`
+	RequestPayload  interface{} `json:"request_payload" db:"request_payload"`
+	ResponsePayload interface{} `json:"response_payload" db:"response_payload"`
+	Status          int         `json:"status" db:"status"`
+	ErrorMessage    string      `json:"error_message" db:"error_message"`
+	OrganizationID  *uuid.UUID  `json:"organization_id,omitempty" db:"organization_id"`
+	CreatedAt       time.Time   `json:"created_at" db:"created_at"`
+}
+
 // CreateFASTagTransactionRequest represents a request to create a FASTag transaction
 type CreateFASTagTransactionRequest struct {
 	TagNumber       string    `json:"tag_number" validate:"required"`
@@ -249,12 +262,15 @@ type CreateEWayBillRequest struct {
 
 // VerifyVehicleRequest represents a request to verify a vehicle
 type VerifyVehicleRequest struct {
+	OrganizationID     uuid.UUID `json:"organization_id" validate:"required,uuid"`
 	VehicleID          uuid.UUID `json:"vehicle_id" validate:"required,uuid"`
 	RegistrationNumber string    `json:"registration_number" validate:"required"`
 }
 
 // VerifyDriverRequest represents a request to verify a driver
 type VerifyDriverRequest struct {
+	OrganizationID uuid.UUID `json:"organization_id" validate:"required,uuid"`
 	DriverID      uuid.UUID `json:"driver_id" validate:"required,uuid"`
 	LicenseNumber string    `json:"license_number" validate:"required"`
+	DateOfBirth   string    `json:"date_of_birth" validate:"required"` // Format: YYYY-MM-DD
 }

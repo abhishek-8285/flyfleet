@@ -19,6 +19,7 @@ type TelemetryRepository interface {
 	GetNearby(ctx context.Context, tenantID uuid.UUID, q models.NearbyQuery) ([]models.LiveLocation, error)
 	GetLatestByVehicle(ctx context.Context, tenantID uuid.UUID, vehicleID uuid.UUID) (*models.TelemetryEvent, error)
 	GetTrackingConfig(ctx context.Context, targetID uuid.UUID) (map[string]any, error)
+	BulkIngest(ctx context.Context, events []models.TelemetryEvent) error
 }
 
 // PostgresTelemetryRepository implements TelemetryRepository using pgxpool + PostGIS.
@@ -188,13 +189,37 @@ func (r *PostgresTelemetryRepository) GetLatestByVehicle(ctx context.Context, te
 	return &e, nil
 }
 
-// GetTrackingConfig fetches custom thresholds for a vehicle or tenant.
-func (r *PostgresTelemetryRepository) GetTrackingConfig(ctx context.Context, targetID uuid.UUID) (map[string]any, error) {
-	const query = `SELECT config FROM tracking_config WHERE target_id = $1 LIMIT 1`
-	var config map[string]any
-	err := r.db.QueryRow(ctx, query, targetID).Scan(&config)
-	if err == pgx.ErrNoRows {
-		return nil, nil // Fallback to defaults
+// BulkIngest inserts multiple telemetry events efficiently using COPY FROM.
+func (r *PostgresTelemetryRepository) BulkIngest(ctx context.Context, events []models.TelemetryEvent) error {
+	if len(events) == 0 {
+		return nil
 	}
-	return config, err
+
+	rows := make([][]any, len(events))
+	for i, e := range events {
+		rows[i] = []any{
+			e.EventID, e.VehicleID, e.DeviceID, e.TenantID,
+			e.Lat, e.Lng, e.Speed, e.Heading, e.Ignition,
+			e.FuelLevel, e.Odometer, e.EventType, e.SequenceNo,
+			e.RecordedAt, e.ReceivedAt,
+		}
+	}
+
+	_, err := r.db.CopyFrom(ctx,
+		pgx.Identifier{"telemetry_points"},
+		[]string{
+			"event_id", "vehicle_id", "device_id", "tenant_id",
+			"lat", "lng", "speed", "heading", "ignition",
+			"fuel_level", "odometer", "event_type", "sequence_no",
+			"recorded_at", "received_at",
+		},
+		pgx.CopyFromRows(rows),
+	)
+
+	if err != nil {
+		r.logger.Error("failed bulk ingestion", zap.Int("count", len(events)), zap.Error(err))
+		return err
+	}
+
+	return nil
 }

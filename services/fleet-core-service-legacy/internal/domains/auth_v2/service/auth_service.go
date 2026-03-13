@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
+	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
@@ -59,7 +61,12 @@ type AuthRepositoryInterface interface {
 	UsePasswordResetToken(ctx context.Context, token string) error
 
 	// RBAC Operations
-	GetRolePermissions(ctx context.Context, role string) ([]string, error)
+	CreateRole(ctx context.Context, role *models.Role) error
+	AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, orgID uuid.UUID) error
+	GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error)
+	GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error)
+	CheckPermission(ctx context.Context, userID uuid.UUID, orgID uuid.UUID, permission string) (bool, error)
+	GetRolePermissions(ctx context.Context, role string) ([]string, error) // Legacy support
 
 	// MFA Recovery Codes
 	SaveRecoveryCodes(ctx context.Context, userID uuid.UUID, codeHashes []string) error
@@ -93,6 +100,10 @@ type AuthRepositoryInterface interface {
 	CreateServiceAccount(ctx context.Context, sa *models.ServiceAccount) error
 	ListServiceAccounts(ctx context.Context, orgID uuid.UUID) ([]models.ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
+
+	// Organization operations
+	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
+	ListOrganizations(ctx context.Context, limit, offset int32) ([]models.Organization, int32, error)
 
 	// Compliance & Admin
 	RevokeAllTokensGlobal(ctx context.Context) error
@@ -135,15 +146,17 @@ func (e ValidationError) Error() string {
 }
 
 type AuthService struct {
-	logger    logger.Logger
-	repo      AuthRepositoryInterface
-	jwtSecret string
+	logger        logger.Logger
+	repo          AuthRepositoryInterface
+	identity      IdentityService
+	jwtSecret     string
 }
 
-func NewAuthService(logger logger.Logger, repo AuthRepositoryInterface, jwtSecret string) *AuthService {
+func NewAuthService(logger logger.Logger, repo AuthRepositoryInterface, identity IdentityService, jwtSecret string) *AuthService {
 	return &AuthService{
 		logger:    logger,
 		repo:      repo,
+		identity:  identity,
 		jwtSecret: jwtSecret,
 	}
 }
@@ -182,9 +195,10 @@ func (s *AuthService) Login(ctx context.Context, email, password, ipAddress, use
 		return nil, errors.New("security check failed: unusual activity detected. account locked for your safety")
 	}
 
-	if ok, err := s.comparePassword(password, user.PasswordHash); err != nil || !ok {
+	ok, err := s.comparePassword(password, user.PasswordHash)
+	if err != nil || !ok {
 		// ... existing failure logic ...
-		newAttempts := user.FailedLoginAttempts + 1
+		newAttempts := int(user.FailedLoginAttempts.Int64) + 1
 		var lockedUntil *time.Time
 		if newAttempts >= MaxLoginAttempts {
 			until := time.Now().Add(LockoutDuration)
@@ -250,8 +264,12 @@ func (s *AuthService) Login(ctx context.Context, email, password, ipAddress, use
 }
 
 func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddress, userAgent string) (*models.AuthResponse, error) {
-	// Fetch permissions
-	permissions, _ := s.repo.GetRolePermissions(ctx, user.Role)
+	// Fetch permissions via IdentityService/Repository (New RBAC)
+	permissions, _ := s.repo.GetUserPermissions(ctx, user.ID, user.OrgID)
+	if len(permissions) == 0 {
+		// Fallback to legacy role-based permissions if no multi-roles assigned
+		permissions, _ = s.repo.GetRolePermissions(ctx, user.Role)
+	}
 
 	// Generate tokens
 	accessToken, err := s.generateAccessToken(user, permissions)
@@ -369,7 +387,11 @@ func (s *AuthService) VerifyLoginMFA(ctx context.Context, tempTokenStr, code, ip
 			mfaVerified = true
 		}
 	} else {
-		valid, err := s.VerifyTOTP(user.MfaSecret, code)
+		secret := ""
+		if user.MfaSecret.Valid {
+			secret = user.MfaSecret.String
+		}
+		valid, err := s.VerifyTOTP(secret, code)
 		if err == nil && valid {
 			mfaVerified = true
 		}
@@ -387,37 +409,8 @@ func (s *AuthService) VerifyLoginMFA(ctx context.Context, tempTokenStr, code, ip
 		return nil, errors.New("invalid MFA code")
 	}
 
-	// Fetch permissions
-	permissions, _ := s.repo.GetRolePermissions(ctx, user.Role)
-
-	// 4. Generate actual tokens
-	accessToken, err := s.generateAccessToken(user, permissions)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.generateRefreshToken(ctx, user.ID, ipAddress, userAgent)
-	if err != nil {
-		return nil, err
-	}
-
-	// Log successful login
-	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-		UserID:    user.ID,
-		EventType: "LOGIN_SUCCESS",
-		IPAddress: "",
-		UserAgent: "",
-		Metadata:  "MFA verified",
-	})
-
-	return &models.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    int64(AccessTokenExpiry.Seconds()),
-		User:         user,
-		Permissions:  permissions,
-	}, nil
+	// 4. Issue tokens
+	return s.issueTokens(ctx, user, ipAddress, userAgent)
 }
 
 func (s *AuthService) SetupAdminMFA(ctx context.Context, tempTokenStr, secret, code, ipAddress, userAgent string) (*models.AuthResponse, error) {
@@ -464,38 +457,8 @@ func (s *AuthService) SetupAdminMFA(ctx context.Context, tempTokenStr, secret, c
 	// Reload user to get updated state
 	user, _ = s.repo.GetUserByID(ctx, user.ID)
 
-	// 5. Generate actual tokens
-	permissions, _ := s.repo.GetRolePermissions(ctx, user.ID.String()) // Wait, GetRolePermissions takes 'role' string.
-	// user.Role is available.
-	permissions, _ = s.repo.GetRolePermissions(ctx, user.Role)
-
-	accessToken, err := s.generateAccessToken(user, permissions)
-	if err != nil {
-		return nil, err
-	}
-
-	refreshToken, err := s.generateRefreshToken(ctx, user.ID, ipAddress, userAgent)
-	if err != nil {
-		return nil, err
-	}
-
-	// Log successful login & setup
-	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
-		UserID:    user.ID,
-		EventType: "LOGIN_SUCCESS",
-		IPAddress: "",
-		UserAgent: "",
-		Metadata:  "MFA setup completed",
-	})
-
-	return &models.AuthResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    int64(AccessTokenExpiry.Seconds()),
-		User:         user,
-		Permissions:  permissions,
-	}, nil
+	// 5. Issue tokens
+	return s.issueTokens(ctx, user, ipAddress, userAgent)
 }
 
 func (s *AuthService) generateAccessToken(user *models.User, permissions []string) (string, error) {
@@ -513,16 +476,31 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 	if block == nil {
 		return "", errors.New("failed to parse private key PEM")
 	}
-	privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse RSA private key: %w", err)
+
+	var privKey *rsa.PrivateKey
+	// Try PKCS1 first
+	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+		privKey = key
+	} else {
+		// Try PKCS8
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse RSA private key (tried PKCS1 and PKCS8): %w", err)
+		}
+		rsaKey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return "", errors.New("parsed key is not an RSA private key")
+		}
+		privKey = rsaKey
 	}
 
 	jti := uuid.New().String()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":         user.ID.String(),
-		"org":         user.OrgID.String(),
+		"iss":         "FlyFleet",
+		"aud":         "fleet-dashboard",
+		"org_id":      user.OrgID.String(),
 		"rol":         user.Role,
 		"type":        "access",
 		"prm":         permissions,
@@ -693,7 +671,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 		MfaEnabled:         false,
 		MfaMethods:         []string{},
 		LastPasswordChange: now,
-		FailedLoginAttempts: 0,
+		FailedLoginAttempts: sql.NullInt64{Int64: 0, Valid: true},
 	}
 
 	if err := s.repo.CreateUser(ctx, user); err != nil {
@@ -727,7 +705,7 @@ func (s *AuthService) GenerateMFASecret(ctx context.Context, userID uuid.UUID) (
 		return "", "", fmt.Errorf("failed to generate secret: %w", err)
 	}
 
-	secretBase32 := strings.ToUpper(base64.StdEncoding.EncodeToString(secret))
+	secretBase32 := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secret)
 	// Remove padding and non-alphanumeric chars for base32
 	secretBase32 = strings.ReplaceAll(secretBase32, "=", "")
 	secretBase32 = strings.ReplaceAll(secretBase32, "0", "")
@@ -740,9 +718,9 @@ func (s *AuthService) GenerateMFASecret(ctx context.Context, userID uuid.UUID) (
 		TOTPIssuer, user.Email, secretBase32, TOTPIssuer, TOTPDigits, TOTPPeriod)
 
 	// Save secret to user
-	// Note: In production, encrypt the secret before storing
-	_ = "UPDATE users SET mfa_secret = $1, updated_at = NOW() WHERE id = $2"
-	// This would need a new repository method, for now we'll return it directly
+	if err := s.repo.UpdateMFASecret(ctx, userID, secretBase32); err != nil {
+		s.logger.Warn("failed to update MFA secret in repo", zap.Error(err), zap.String("user_id", userID.String()))
+	}
 
 	return secretBase32, otpauthURI, nil
 }
@@ -763,7 +741,7 @@ func (s *AuthService) VerifyTOTP(secret, code string) (bool, error) {
 	timeStep := unix / TOTPPeriod
 
 	// Decode secret
-	secretBytes, err := base64.StdEncoding.DecodeString(secret)
+	secretBytes, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret)
 	if err != nil {
 		return false, fmt.Errorf("invalid secret: %w", err)
 	}
@@ -847,7 +825,11 @@ func (s *AuthService) DisableMFA(ctx context.Context, userID uuid.UUID, code str
 	}
 
 	// Verify current code
-	valid, err := s.VerifyTOTP(user.MfaSecret, code)
+	secret := ""
+	if user.MfaSecret.Valid {
+		secret = user.MfaSecret.String
+	}
+	valid, err := s.VerifyTOTP(secret, code)
 	if err != nil || !valid {
 		return errors.New("invalid TOTP code")
 	}
@@ -901,7 +883,15 @@ func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*mode
 	}
 
 	claims, _ := token.Claims.(jwt.MapClaims)
-	userIDStr, _ := claims["user_id"].(string)
+	
+	if iss, _ := claims["iss"].(string); iss != "FlyFleet" {
+		return nil, errors.New("invalid token issuer")
+	}
+
+	userIDStr, ok := claims["sub"].(string)
+	if !ok {
+		userIDStr, _ = claims["user_id"].(string)
+	}
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		return nil, errors.New("invalid user_id in claims")

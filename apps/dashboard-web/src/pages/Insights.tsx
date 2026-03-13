@@ -8,8 +8,7 @@ import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { AppDispatch, RootState } from "../store";
-import { acknowledgeAlert, fetchAlerts } from "../store/alertsSlice";
-import { Alert } from "../types";
+import { acknowledgeAlert, Alert, fetchAlerts } from "../store/alertsSlice";
 
 const Insights: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -148,7 +147,7 @@ const Insights: React.FC = () => {
                       {uiStrings?.badge_prediction || "AI PREDICTION"}
                     </span>
                     <span className="text-lg font-bold text-white tracking-tight">
-                      {alert.type}
+                      {alert.type || alert.severity}
                     </span>
                     <span className="text-sm text-text-muted">
                       {new Date(alert.timestamp).toLocaleString()}
@@ -187,7 +186,7 @@ const Insights: React.FC = () => {
                     {uiStrings?.label_vehicle || "Vehicle ID"}
                   </p>
                   <p className="font-mono text-white bg-[#0f151b] px-3 py-1.5 rounded text-sm mb-4 truncate max-w-[150px]">
-                    {alert.vehicle_id || "Unknown"}
+                    {alert.vehicleId || "Unknown"}
                   </p>
 
                   {!alert.acknowledged ? (

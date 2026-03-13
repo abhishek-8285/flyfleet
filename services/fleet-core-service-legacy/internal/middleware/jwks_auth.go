@@ -41,15 +41,19 @@ type JWKSAuthGate struct {
 	jwksURL string
 	logger  *zap.Logger
 	keys    map[string]*rsa.PublicKey
+	issuer  string
+	audience string
 	mu      sync.RWMutex
 }
 
 // NewJWKSAuthGate creates a new JWKSAuthGate
-func NewJWKSAuthGate(jwksURL string, logger *zap.Logger) *JWKSAuthGate {
+func NewJWKSAuthGate(jwksURL, issuer, audience string, logger *zap.Logger) *JWKSAuthGate {
 	gate := &JWKSAuthGate{
-		jwksURL: jwksURL,
-		logger:  logger,
-		keys:    make(map[string]*rsa.PublicKey),
+		jwksURL:  jwksURL,
+		logger:   logger,
+		issuer:   issuer,
+		audience: audience,
+		keys:     make(map[string]*rsa.PublicKey),
 	}
 
 	// Initial fetch
@@ -158,10 +162,21 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 			g.mu.RUnlock()
 
 			if !ok {
-				return nil, fmt.Errorf("unknown kid: %s", kid)
+				// Try a single on-demand refresh if key is missing
+				g.logger.Info("KID not found, attempting on-demand JWKS refresh", zap.String("kid", kid))
+				if err := g.refreshKeys(); err == nil {
+					g.mu.RLock()
+					pubKey, ok = g.keys[kid]
+					g.mu.RUnlock()
+				}
 			}
+
+			if !ok {
+				return nil, fmt.Errorf("unknown kid after refresh: %s", kid)
+			}
+			
 			return pubKey, nil
-		})
+		}, jwt.WithIssuer(g.issuer), jwt.WithAudience(g.audience))
 
 		if err != nil || !token.Valid {
 			g.logger.Warn("Invalid token", zap.Error(err))

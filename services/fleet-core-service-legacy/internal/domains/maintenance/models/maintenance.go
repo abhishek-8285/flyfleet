@@ -9,11 +9,11 @@ import (
 // MaintenanceSchedule represents a scheduled maintenance task
 type MaintenanceSchedule struct {
 	ID              string            `json:"id" db:"id"`
-	OrgID           uuid.UUID         `json:"org_id" db:"org_id"`
+	OrgID           uuid.UUID         `json:"org_id" db:"organization_id"`
 	VehicleID       uuid.UUID         `json:"vehicle_id" db:"vehicle_id"`
 	Type            string            `json:"type" db:"type"` // routine, preventive, corrective, emergency
 	Name            string            `json:"name" db:"name"`
-	Description     string            `json:"description" db:"description"`
+	Description     *string           `json:"description,omitempty" db:"description"`
 	DueDate         time.Time         `json:"due_date" db:"due_date"`
 	DueOdometer     *int              `json:"due_odometer,omitempty" db:"due_odometer"`
 	DueEngineHours  *float64          `json:"due_engine_hours,omitempty" db:"due_engine_hours"`
@@ -37,12 +37,12 @@ type MaintenanceSchedule struct {
 // MaintenanceLog represents a completed maintenance record
 type MaintenanceLog struct {
 	ID              string        `json:"id" db:"id"`
-	OrgID           uuid.UUID     `json:"org_id" db:"org_id"`
+	OrgID           uuid.UUID     `json:"org_id" db:"organization_id"`
 	VehicleID       uuid.UUID     `json:"vehicle_id" db:"vehicle_id"`
 	ScheduleID      *string       `json:"schedule_id,omitempty" db:"schedule_id"`
 	Type            string        `json:"type" db:"type"` // routine, preventive, corrective, emergency
 	Name            string        `json:"name" db:"name"`
-	Description     string        `json:"description" db:"description"`
+	Description     *string       `json:"description,omitempty" db:"description"`
 	StartDate       time.Time     `json:"start_date" db:"start_date"`
 	EndDate         time.Time     `json:"end_date" db:"end_date"`
 	DurationMinutes int           `json:"duration_minutes" db:"duration_minutes"`

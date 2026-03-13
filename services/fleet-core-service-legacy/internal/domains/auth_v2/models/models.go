@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -18,9 +19,9 @@ type User struct {
 	UpdatedBy          uuid.UUID `json:"updated_by"`
 	MfaEnabled         bool      `json:"mfa_enabled"`
 	MfaMethods         []string  `json:"mfa_methods"`
-	MfaSecret          string    `json:"-"`
-	LastPasswordChange time.Time `json:"last_password_change"`
-	FailedLoginAttempts int       `json:"-"`
+	MfaSecret          sql.NullString `json:"-"`
+	LastPasswordChange time.Time      `json:"last_password_change"`
+	FailedLoginAttempts sql.NullInt64 `json:"-"`
 	LockedUntil         *time.Time `json:"-"`
 	Permissions         []string   `json:"permissions,omitempty"`
 }
@@ -30,11 +31,27 @@ type Permission struct {
 	Name        string    `json:"name"`
 	Category    string    `json:"category"`
 	Description string    `json:"description"`
+	IsGlobal    bool      `json:"is_global"`
+	OrgID       *uuid.UUID `json:"org_id,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-type RolePermission struct {
-	Role           string `json:"role"`
-	PermissionName string `json:"permission_name"`
+type Role struct {
+	ID             uuid.UUID `json:"id"`
+	Name           string    `json:"name"`
+	OrgID          *uuid.UUID `json:"org_id,omitempty"`
+	Description    string    `json:"description"`
+	IsSystem       bool      `json:"is_system"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	Permissions    []Permission `json:"permissions,omitempty"`
+}
+
+type UserRole struct {
+	UserID         uuid.UUID `json:"user_id"`
+	RoleID         uuid.UUID `json:"role_id"`
+	OrgID          uuid.UUID `json:"org_id"`
+	GrantedAt      time.Time `json:"granted_at"`
 }
 
 type SecurityEvent struct {
@@ -166,6 +183,8 @@ type APIKey struct {
 type Organization struct {
 	ID                uuid.UUID `json:"id"`
 	Name              string    `json:"name"`
+	Domain            string    `json:"domain"`
+	DefaultTheme      string    `json:"default_theme"`
 	Status            string    `json:"status"` // trial, active, suspended, billing_hold, deleted
 	MaxUsersLimit     int       `json:"max_users_limit"`
 	MaxApiKeysLimit   int       `json:"max_api_keys_limit"`

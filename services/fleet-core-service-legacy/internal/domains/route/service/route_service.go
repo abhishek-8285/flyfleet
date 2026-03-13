@@ -26,18 +26,35 @@ type RouteOptimizationService interface {
 	SubmitOptimizationJob(ctx context.Context, requestID string) error
 	GetOptimizationJob(ctx context.Context, id string) (*models.OptimizationJob, error)
 	ListOptimizationJobs(ctx context.Context, requestID string, status string, limit, offset int) ([]*models.OptimizationJob, int, error)
+
+	// Phase 10: Real-time rerouting
+	RecalculateRoute(ctx context.Context, resultID string, vehicleID string, currentLat, currentLon float64) (*models.RouteOptimizationResult, error)
 }
 
 // RouteOptimizationServiceImpl implements the RouteOptimizationService interface
 type RouteOptimizationServiceImpl struct {
-	repo repository.RouteOptimizationRepository
+	repo             repository.RouteOptimizationRepository
+	distanceProvider DistanceMatrixProvider
+	solver           VRPSolver
+	validationEngine RouteValidationEngine
 }
 
 // NewRouteOptimizationService creates a new instance of RouteOptimizationService
-func NewRouteOptimizationService(repo repository.RouteOptimizationRepository) *RouteOptimizationServiceImpl {
-	return &RouteOptimizationServiceImpl{
-		repo: repo,
+func NewRouteOptimizationService(repo repository.RouteOptimizationRepository, osrmURL string) *RouteOptimizationServiceImpl {
+	distanceProvider := &OSRMDistanceProvider{
+		BaseURL: osrmURL,
+		Fallback: &HaversineDistanceProvider{},
 	}
+	
+	s := &RouteOptimizationServiceImpl{
+		repo:             repo,
+		distanceProvider: distanceProvider,
+	}
+	
+	// Upgrade to ClarkeWrightSolver for better savings-based routing
+	s.solver = &ClarkeWrightSolver{Service: s}
+	s.validationEngine = &DefaultValidationEngine{Service: s}
+	return s
 }
 
 // CreateOptimizationRequest creates a new route optimization request
@@ -267,8 +284,8 @@ func (s *RouteOptimizationServiceImpl) processOptimizationJob(jobID string) {
 		return
 	}
 
-	// Calculate the optimization using Nearest Neighbor heuristic
-	result, err := s.performNearestNeighborOptimization(request)
+	// Calculate the optimization using the configured solver
+	result, err := s.solver.Solve(ctx, request)
 	if err != nil {
 		// Mark job as failed
 		errorMsg := fmt.Sprintf("Optimization failed: %v", err)
@@ -326,7 +343,7 @@ func (s *RouteOptimizationServiceImpl) processOptimizationJob(jobID string) {
 }
 
 // performNearestNeighborOptimization implements a greedy Nearest Neighbor algorithm for VRP
-func (s *RouteOptimizationServiceImpl) performNearestNeighborOptimization(request *models.RouteOptimizationRequest) (*models.RouteOptimizationResult, error) {
+func (s *RouteOptimizationServiceImpl) performNearestNeighborOptimization(ctx context.Context, request *models.RouteOptimizationRequest) (*models.RouteOptimizationResult, error) {
 	startTime := time.Now()
 
 	result := &models.RouteOptimizationResult{
@@ -368,13 +385,28 @@ func (s *RouteOptimizationServiceImpl) performNearestNeighborOptimization(reques
 		bestStopIdx := -1
 		bestVehicleIdx := -1
 		minDist := math.MaxFloat64
+		minTravelTime := 0
 
 		for i, stop := range unassignedStops {
+			// Check if vehicle is compatible with stop
+			// This check should ideally be done after selecting a vehicle, or for each vehicle.
+			// For now, we'll assume it's done per vehicle.
+
 			stopLoc := models.Location{Latitude: stop.Latitude, Longitude: stop.Longitude}
 			for vIdx, vLoc := range vehicleLocations {
-				dist := s.haversineDistance(vLoc.Latitude, vLoc.Longitude, stopLoc.Latitude, stopLoc.Longitude)
+				// Also check if this specific vehicle is compatible with the stop
+				if !s.isVehicleCompatibleWithStop(&request.Vehicles[vIdx], &stop) {
+					continue
+				}
+
+				// PHASE 2 & 3: Check road restrictions for the destination at arrivalTime
+				// For the greedy search, we use a preliminary arrivalTime check
+				// We'll calculate the accurate arrivalTime after choosing the best stop.
+				
+				dist, travelTime, _ := s.distanceProvider.GetDistanceAndTime(ctx, vLoc, stopLoc, &request.Vehicles[vIdx])
 				if dist < minDist {
 					minDist = dist
+					minTravelTime = travelTime
 					bestStopIdx = i
 					bestVehicleIdx = vIdx
 				}
@@ -394,18 +426,20 @@ func (s *RouteOptimizationServiceImpl) performNearestNeighborOptimization(reques
 		// Calculate timing
 		var arrivalTime time.Time
 		if len(route.Stops) == 0 {
-			speed := 40.0
-			if request.Vehicles[bestVehicleIdx].Speed > 0 {
-				speed = request.Vehicles[bestVehicleIdx].Speed
-			}
-			arrivalTime = request.StartTime.Add(time.Duration(minDist/speed*60) * time.Minute)
+			arrivalTime = request.StartTime.Add(time.Duration(minTravelTime) * time.Minute)
 		} else {
 			lastStop := route.Stops[len(route.Stops)-1]
-			travelTime := 30.0
-			if request.Vehicles[bestVehicleIdx].Speed > 0 {
-				travelTime = minDist / request.Vehicles[bestVehicleIdx].Speed * 60
-			}
-			arrivalTime = lastStop.DepartureTime.Add(time.Duration(travelTime) * time.Minute)
+			arrivalTime = lastStop.DepartureTime.Add(time.Duration(minTravelTime) * time.Minute)
+		}
+
+		// PHASE 2 & 3: Check road restrictions for the destination at arrivalTime
+		if !s.isVehicleAllowedOnRoad(ctx, &request.Vehicles[bestVehicleIdx], stop.ID, arrivalTime) {
+			continue
+		}
+
+		// PHASE 4: Check state permits
+		if !s.hasPermitForState(ctx, &request.Vehicles[bestVehicleIdx], stop.State) {
+			continue
 		}
 
 		departureTime := arrivalTime.Add(time.Duration(stop.ServiceDuration) * time.Minute)
@@ -478,4 +512,285 @@ func (s *RouteOptimizationServiceImpl) haversineDistance(lat1, lon1, lat2, lon2 
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
 	return R * c
+}
+
+// isVehicleCompatibleWithStop checks if a vehicle class is allowed at a stop
+func (s *RouteOptimizationServiceImpl) isVehicleCompatibleWithStop(vehicle *models.VehicleProfile, stop *models.Stop) bool {
+	if len(stop.AllowedVehicleClasses) == 0 {
+		return true // No restrictions
+	}
+
+	for _, allowedClass := range stop.AllowedVehicleClasses {
+		if vehicle.VehicleClass == allowedClass {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isVehicleAllowedOnRoad checks if a vehicle is allowed on a specific road/path at a given time
+func (s *RouteOptimizationServiceImpl) isVehicleAllowedOnRoad(ctx context.Context, vehicle *models.VehicleProfile, roadID string, currentTime time.Time) bool {
+	// Standard restrictions
+	restrictions, err := s.repo.ListRoadRestrictions(ctx, []string{roadID})
+	if err == nil && len(restrictions) > 0 {
+		for _, rst := range restrictions {
+			// Check Vehicle Class
+			classAllowed := false
+			if len(rst.AllowedVehicleClasses) == 0 {
+				classAllowed = true
+			} else {
+				for _, allowedClass := range rst.AllowedVehicleClasses {
+					if vehicle.VehicleClass == allowedClass {
+						classAllowed = true
+						break
+					}
+				}
+			}
+			if !classAllowed {
+				return false
+			}
+
+			// Check Weight/Height
+			if rst.MaxWeight > 0 && vehicle.Weight > rst.MaxWeight {
+				return false
+			}
+			if rst.MaxHeight > 0 && vehicle.Height > rst.MaxHeight {
+				return false
+			}
+
+			// Check Permit
+			if rst.PermitRequired {
+				permits, err := s.repo.GetVehiclePermits(ctx, vehicle.ID)
+				if err != nil || len(permits) == 0 {
+					return false
+				}
+			}
+			
+			if rst.RestrictionType == models.RestrictionNoEntry {
+				return false
+			}
+		}
+	}
+
+	// PHASE 3: Time-based restrictions
+	timeRestrictions, err := s.repo.ListRoadTimeRestrictions(ctx, []string{roadID})
+	if err == nil && len(timeRestrictions) > 0 {
+		for _, tr := range timeRestrictions {
+			// Check if vehicle is in restricted class for this time window
+			classInRestriction := false
+			if len(tr.AllowedVehicleClasses) == 0 {
+				classInRestriction = true
+			} else {
+				for _, allowedClass := range tr.AllowedVehicleClasses {
+					if vehicle.VehicleClass == allowedClass {
+						classInRestriction = true
+						break
+					}
+				}
+			}
+
+			if classInRestriction {
+				// Parse HH:MM
+				currentStr := currentTime.Format("15:04")
+				if currentStr >= tr.StartTime && currentStr <= tr.EndTime {
+					// Within restricted time window
+					// The models say "AllowedVehicleClasses", usually meaning only these are allowed.
+					// If vehicle class is NOT in the allowed list during this time, it's restricted.
+					// Let's re-read: "allowed_vehicle_classes" in RoadTimeRestriction.
+					// If current time is within window, and vehicle class is NOT allowed, return false.
+					allowed := false
+					for _, ac := range tr.AllowedVehicleClasses {
+						if vehicle.VehicleClass == ac {
+							allowed = true
+							break
+						}
+					}
+					if !allowed {
+						return false
+					}
+				}
+			}
+		}
+	}
+
+	return true
+}
+
+// hasPermitForState checks if a vehicle has the necessary permits to enter a state
+func (s *RouteOptimizationServiceImpl) hasPermitForState(ctx context.Context, vehicle *models.VehicleProfile, state string) bool {
+	if state == "" {
+		return true // No state specified, assume allowed
+	}
+
+	// First, check if vehicle has an "All India Permit"
+	for _, pt := range vehicle.PermitTypes {
+		if pt == "All India Permit" || pt == "National Permit" {
+			return true
+		}
+	}
+
+	// Then, check specific state permits from repository
+	permits, err := s.repo.GetVehiclePermits(ctx, vehicle.ID)
+	if err != nil {
+		return false
+	}
+
+	for _, pmt := range permits {
+		// Check expiry
+		if pmt.ExpiryDate.Before(time.Now()) {
+			continue
+		}
+
+		for _, vs := range pmt.ValidStates {
+			if vs == state {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// clusterStops groups stops into clusters using K-Means
+func (s *RouteOptimizationServiceImpl) clusterStops(stops []models.Stop, k int) map[int][]models.Stop {
+	if k <= 0 || len(stops) == 0 {
+		return nil
+	}
+	if k > len(stops) {
+		k = len(stops)
+	}
+
+	// 1. Initialize centroids (randomly from existing stops)
+	centroids := make([]models.Location, k)
+	for i := 0; i < k; i++ {
+		centroids[i] = models.Location{
+			Latitude:  stops[i].Latitude,
+			Longitude: stops[i].Longitude,
+		}
+	}
+
+	clusters := make(map[int][]models.Stop)
+	
+	// Limited iterations for performance
+	for iter := 0; iter < 10; iter++ {
+		newClusters := make(map[int][]models.Stop)
+		
+		// 2. Assign stops to nearest centroid
+		for _, stop := range stops {
+			minDist := math.MaxFloat64
+			bestCentroid := 0
+			for i, centroid := range centroids {
+				dist := HaversineDistance(stop.Latitude, stop.Longitude, centroid.Latitude, centroid.Longitude)
+				if dist < minDist {
+					minDist = dist
+					bestCentroid = i
+				}
+			}
+			newClusters[bestCentroid] = append(newClusters[bestCentroid], stop)
+		}
+
+		// 3. Update centroids
+		changed := false
+		for i := 0; i < k; i++ {
+			clusterStops := newClusters[i]
+			if len(clusterStops) == 0 {
+				continue
+			}
+
+			var sumLat, sumLon float64
+			for _, stop := range clusterStops {
+				sumLat += stop.Latitude
+				sumLon += stop.Longitude
+			}
+			newLat := sumLat / float64(len(clusterStops))
+			newLon := sumLon / float64(len(clusterStops))
+
+			if newLat != centroids[i].Latitude || newLon != centroids[i].Longitude {
+				centroids[i].Latitude = newLat
+				centroids[i].Longitude = newLon
+				changed = true
+			}
+		}
+
+		clusters = newClusters
+		if !changed {
+			break
+		}
+	}
+
+	return clusters
+}
+
+// RecalculateRoute recalculates the route for a specific vehicle starting from its current location
+func (s *RouteOptimizationServiceImpl) RecalculateRoute(ctx context.Context, resultID string, vehicleID string, currentLat, currentLon float64) (*models.RouteOptimizationResult, error) {
+	// 1. Fetch existing result
+	result, err := s.repo.GetOptimizationResult(ctx, resultID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Fetch original request to get constraints
+	request, err := s.repo.GetOptimizationRequest(ctx, result.RequestID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Find the specific route for the vehicle
+	var targetRoute *models.Route
+	for i := range result.Routes {
+		if result.Routes[i].VehicleID == vehicleID {
+			targetRoute = &result.Routes[i]
+			break
+		}
+	}
+
+	if targetRoute == nil {
+		return nil, fmt.Errorf("route for vehicle %s not found in result %s", vehicleID, resultID)
+	}
+
+	// 4. Filter out completed stops (simulated: all stops are uncompleted for rerouting)
+	// In a real system, we'd check which stops the vehicle has already visited
+	uncompletedStops := []models.Stop{}
+	for _, rs := range targetRoute.Stops {
+		// Find original stop details
+		for _, s := range request.Stops {
+			if s.ID == rs.StopID {
+				uncompletedStops = append(uncompletedStops, s)
+				break
+			}
+		}
+	}
+
+	// 5. Create a new sub-request for just this vehicle and uncompleted stops
+	subRequest := &models.RouteOptimizationRequest{
+		ID:          uuid.New().String(),
+		StartTime:   time.Now(),
+		Constraints: request.Constraints,
+		Vehicles: []models.VehicleProfile{
+			{
+				ID:            vehicleID,
+				StartLocation: models.Location{Latitude: currentLat, Longitude: currentLon},
+				// Keep other vehicle parameters if available in request.Vehicles
+			},
+		},
+		Stops: uncompletedStops,
+	}
+	
+	// Copy vehicle profile details if found in original request
+	for _, v := range request.Vehicles {
+		if v.ID == vehicleID {
+			subRequest.Vehicles[0] = v
+			subRequest.Vehicles[0].StartLocation = models.Location{Latitude: currentLat, Longitude: currentLon}
+			break
+		}
+	}
+
+	// 6. Run solver
+	newResult, err := s.solver.Solve(ctx, subRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return newResult, nil
 }

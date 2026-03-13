@@ -2,8 +2,7 @@ import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { AppDispatch, RootState } from "../store";
-import { acknowledgeAlert, fetchAlerts } from "../store/alertsSlice";
-import { Alert } from "../types";
+import { acknowledgeAlert, Alert, fetchAlerts } from "../store/alertsSlice";
 
 const Alerts: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();

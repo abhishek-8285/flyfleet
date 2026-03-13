@@ -19,13 +19,13 @@ const (
 
 // ReportCache wraps Redis to cache identical report requests by a stable hash key.
 type ReportCache struct {
-	client *redis.Client
+	Client *redis.Client
 	logger *zap.Logger
 }
 
 func NewReportCache(client *redis.Client, logger *zap.Logger) *ReportCache {
 	return &ReportCache{
-		client: client,
+		Client: client,
 		logger: logger,
 	}
 }
@@ -65,7 +65,7 @@ func normalizeParams(params map[string]interface{}) map[string]interface{} {
 
 // Get returns the cached report ID for an identical request, or ("", false).
 func (c *ReportCache) Get(ctx context.Context, key string) (string, bool) {
-	val, err := c.client.Get(ctx, key).Result()
+	val, err := c.Client.Get(ctx, key).Result()
 	if err != nil {
 		return "", false
 	}
@@ -74,7 +74,7 @@ func (c *ReportCache) Get(ctx context.Context, key string) (string, bool) {
 
 // Set caches the report ID under the given key with a 1h TTL.
 func (c *ReportCache) Set(ctx context.Context, key, reportID string) {
-	err := c.client.Set(ctx, key, reportID, reportCacheTTL).Err()
+	err := c.Client.Set(ctx, key, reportID, reportCacheTTL).Err()
 	if err != nil {
 		c.logger.Warn("Failed to cache report", zap.String("key", key), zap.Error(err))
 	}
@@ -82,5 +82,5 @@ func (c *ReportCache) Set(ctx context.Context, key, reportID string) {
 
 // Invalidate removes a cached entry.
 func (c *ReportCache) Invalidate(ctx context.Context, key string) {
-	c.client.Del(ctx, key)
+	c.Client.Del(ctx, key)
 }

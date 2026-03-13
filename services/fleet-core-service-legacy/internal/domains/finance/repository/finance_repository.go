@@ -447,3 +447,8 @@ func (r *FinanceRepository) CreateTollTransaction(ctx context.Context, toll *mod
 	_, err := r.db.Exec(ctx, query, toll.ID, toll.VehicleID, toll.FASTagID, toll.TollPlaza, toll.Amount, toll.Currency, toll.TransactionTime, toll.ExternalTransactionID, toll.Metadata, time.Now())
 	return err
 }
+
+func (r *FinanceRepository) RefreshFinanceDashboardSummary(ctx context.Context) error {
+	// Stub for refreshing materialized views
+	return nil
+}

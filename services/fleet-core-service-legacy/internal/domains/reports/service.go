@@ -3,6 +3,8 @@ package reports
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,6 +20,7 @@ type Service interface {
 	// Templates
 	CreateTemplate(ctx context.Context, tmpl *ReportTemplate) error
 	ListTemplates(ctx context.Context) ([]ReportTemplate, error)
+	CancelReport(ctx context.Context, id, tenantID uuid.UUID) error
 }
 
 type service struct {
@@ -80,6 +83,22 @@ func (s *service) CreateReport(ctx context.Context, req CreateReportRequest, ten
 				ReportID: cachedUUID,
 				Status:   ReportStatusQueued,
 			}, nil
+		}
+	}
+
+	// Rate limiting: 10 reports per tenant per hour
+	if s.cache != nil {
+		limitKey := fmt.Sprintf("reports:tenant:%s:hour", tenantID.String())
+		count, err := s.cache.Client.Incr(ctx, limitKey).Result()
+		if err != nil {
+			s.logger.Error("Failed to increment rate limit counter", zap.Error(err))
+		} else {
+			if count == 1 {
+				s.cache.Client.Expire(ctx, limitKey, 1*time.Hour)
+			}
+			if count > 10 {
+				return nil, errors.New("report rate limit exceeded")
+			}
 		}
 	}
 
@@ -165,6 +184,11 @@ func (s *service) ListReports(ctx context.Context, tenantID uuid.UUID, limit, of
 }
 
 func (s *service) CreateTemplate(ctx context.Context, tmpl *ReportTemplate) error {
+	// SQL Validation: Only allow SELECT queries
+	if !isSelectOnly(tmpl.QueryTemplate) {
+		return errors.New("invalid SQL: only SELECT queries are allowed")
+	}
+
 	if tmpl.ID == uuid.Nil {
 		tmpl.ID = uuid.New()
 	}
@@ -184,4 +208,46 @@ func (s *service) CreateTemplate(ctx context.Context, tmpl *ReportTemplate) erro
 
 func (s *service) ListTemplates(ctx context.Context) ([]ReportTemplate, error) {
 	return s.repo.ListReportTemplates(ctx)
+}
+
+func (s *service) CancelReport(ctx context.Context, id, tenantID uuid.UUID) error {
+	report, err := s.repo.GetReport(ctx, id, tenantID)
+	if err != nil {
+		return err
+	}
+	if report == nil {
+		return errors.New("report not found")
+	}
+
+	if report.Status == ReportStatusCompleted {
+		return errors.New("cannot cancel a completed report")
+	}
+
+	if report.Status == ReportStatusCancelled {
+		return nil
+	}
+
+	// Update report status to CANCELLED
+	if err := s.repo.UpdateReportStatus(ctx, id, ReportStatusCancelled, 0, "", "cancelled by user"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isSelectOnly(query string) bool {
+	forbidden := []string{"INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE"}
+	q := strings.ToUpper(query)
+	
+	trimmed := strings.TrimSpace(q)
+	if !strings.HasPrefix(trimmed, "SELECT") {
+		return false
+	}
+
+	for _, cmd := range forbidden {
+		if strings.Contains(q, cmd) {
+			return false
+		}
+	}
+	return true
 }

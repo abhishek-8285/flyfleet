@@ -99,8 +99,8 @@ func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
 		OrganizationID:    orgID,
 		PartNumber:        req.PartNumber,
 		Name:              req.Name,
-		Description:       req.Description,
-		StockLocation:     req.StockLocation,
+		Description:       &req.Description,
+		StockLocation:     &req.StockLocation,
 		QuantityAvailable: req.QuantityAvailable,
 		ReorderLevel:      req.ReorderLevel,
 		UnitCost:          req.UnitCost,
@@ -169,10 +169,10 @@ func (h *InventoryHandler) UpdatePart(w http.ResponseWriter, r *http.Request) {
 		part.Name = *req.Name
 	}
 	if req.Description != nil {
-		part.Description = *req.Description
+		part.Description = req.Description
 	}
 	if req.StockLocation != nil {
-		part.StockLocation = *req.StockLocation
+		part.StockLocation = req.StockLocation
 	}
 	if req.QuantityAvailable != nil {
 		part.QuantityAvailable = *req.QuantityAvailable

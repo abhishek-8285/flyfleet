@@ -7,6 +7,7 @@ import (
 // FuelTransaction represents a fuel purchase event
 type FuelTransaction struct {
 	ID                    string    `json:"id" db:"id"`
+	OrgID                 string    `json:"org_id" db:"org_id"`
 	VehicleID             string    `json:"vehicle_id" db:"vehicle_id"`
 	DriverID              *string   `json:"driver_id,omitempty" db:"driver_id"` // Nullable
 	CardID                *string   `json:"card_id,omitempty" db:"card_id"`

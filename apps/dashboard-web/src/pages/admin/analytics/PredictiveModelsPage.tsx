@@ -1,12 +1,10 @@
 import {
-  PlusIcon,
-  TrashIcon,
-  PencilIcon,
-  ArrowPathIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
+    ArrowPathIcon,
+    ExclamationTriangleIcon,
+    PencilIcon,
+    PlusIcon,
+    TrashIcon,
+    XCircleIcon
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
@@ -29,7 +27,9 @@ const PredictiveModelsPage: React.FC = () => {
   const [models, setModels] = useState<PredictiveModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<PredictiveModel | null>(null);
+  const [selectedModel, setSelectedModel] = useState<PredictiveModel | null>(
+    null,
+  );
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const PredictiveModelsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this model?")) return;
+    if (!window.confirm("Are you sure you want to delete this model?")) return;
     try {
       await api.delete(`/admin/analytics/models/${id}`);
       fetchModels();
@@ -87,9 +87,8 @@ const PredictiveModelsPage: React.FC = () => {
     }
   };
 
-  const filteredModels = filter === "all" 
-    ? models 
-    : models.filter(m => m.status === filter);
+  const filteredModels =
+    filter === "all" ? models : models.filter((m) => m.status === filter);
 
   return (
     <div className="p-6 bg-slate-900 min-h-screen">
@@ -158,15 +157,19 @@ const PredictiveModelsPage: React.FC = () => {
             >
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">{getModelTypeIcon(model.model_type)}</span>
+                  <span className="text-3xl">
+                    {getModelTypeIcon(model.model_type)}
+                  </span>
                   <div>
-                    <h3 className="text-lg font-bold text-white">{model.name}</h3>
+                    <h3 className="text-lg font-bold text-white">
+                      {model.name}
+                    </h3>
                     <p className="text-sm text-slate-400">v{model.version}</p>
                   </div>
                 </div>
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatusColor(
-                    model.status
+                    model.status,
                   )}`}
                 >
                   {model.status.toUpperCase()}
@@ -176,7 +179,9 @@ const PredictiveModelsPage: React.FC = () => {
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Algorithm</span>
-                  <span className="text-white">{model.algorithm.replace("_", " ")}</span>
+                  <span className="text-white">
+                    {model.algorithm.replace("_", " ")}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Accuracy</span>
@@ -242,7 +247,10 @@ interface CreateModelModalProps {
   onSuccess: () => void;
 }
 
-const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess }) => {
+const CreateModelModal: React.FC<CreateModelModalProps> = ({
+  onClose,
+  onSuccess,
+}) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -271,7 +279,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6">Create Predictive Model</h2>
+        <h2 className="text-xl font-bold text-white mb-6">
+          Create Predictive Model
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -281,7 +291,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="e.g., Demand Forecasting"
             />
@@ -295,7 +307,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
                 type="text"
                 required
                 value={formData.version}
-                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, version: e.target.value })
+                }
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 placeholder="1.0.0"
               />
@@ -307,7 +321,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
               <select
                 required
                 value={formData.model_type}
-                onChange={(e) => setFormData({ ...formData, model_type: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, model_type: e.target.value })
+                }
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               >
                 <option value="regression">Regression</option>
@@ -323,7 +339,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
             <select
               required
               value={formData.algorithm}
-              onChange={(e) => setFormData({ ...formData, algorithm: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, algorithm: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
             >
               <option value="random_forest">Random Forest</option>
@@ -341,7 +359,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
               type="text"
               required
               value={formData.output_variable}
-              onChange={(e) => setFormData({ ...formData, output_variable: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, output_variable: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               placeholder="e.g., predicted_demand"
             />
@@ -352,7 +372,9 @@ const CreateModelModal: React.FC<CreateModelModalProps> = ({ onClose, onSuccess 
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
               rows={3}
               placeholder="Model description..."
@@ -386,14 +408,21 @@ interface ModelDetailModalProps {
   onClose: () => void;
 }
 
-const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ model, onClose }) => {
+const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
+  model,
+  onClose,
+}) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-2xl p-6 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-3">
             <span className="text-4xl">
-              {model.model_type === "regression" ? "📈" : model.model_type === "classification" ? "🏷️" : "🔵"}
+              {model.model_type === "regression"
+                ? "📈"
+                : model.model_type === "classification"
+                  ? "🏷️"
+                  : "🔵"}
             </span>
             <div>
               <h2 className="text-2xl font-bold text-white">{model.name}</h2>
@@ -410,15 +439,21 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ model, onClose }) =
 
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">Model Info</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">
+              Model Info
+            </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Algorithm</span>
-                <span className="text-white">{model.algorithm.replace("_", " ")}</span>
+                <span className="text-white">
+                  {model.algorithm.replace("_", " ")}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Type</span>
-                <span className="text-white capitalize">{model.model_type}</span>
+                <span className="text-white capitalize">
+                  {model.model_type}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Status</span>
@@ -427,19 +462,27 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ model, onClose }) =
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-300 mb-3">Performance</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">
+              Performance
+            </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-400">Accuracy</span>
-                <span className="text-emerald-400">{(model.accuracy * 100).toFixed(1)}%</span>
+                <span className="text-emerald-400">
+                  {(model.accuracy * 100).toFixed(1)}%
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Trained</span>
-                <span className="text-white">{format(new Date(model.trained_at), "MMM d, yyyy")}</span>
+                <span className="text-white">
+                  {format(new Date(model.trained_at), "MMM d, yyyy")}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Expires</span>
-                <span className="text-amber-400">{format(new Date(model.expires_at), "MMM d, yyyy")}</span>
+                <span className="text-amber-400">
+                  {format(new Date(model.expires_at), "MMM d, yyyy")}
+                </span>
               </div>
             </div>
           </div>
@@ -447,7 +490,9 @@ const ModelDetailModal: React.FC<ModelDetailModalProps> = ({ model, onClose }) =
 
         {model.description && (
           <div className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-300 mb-2">Description</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-2">
+              Description
+            </h3>
             <p className="text-slate-400 text-sm">{model.description}</p>
           </div>
         )}

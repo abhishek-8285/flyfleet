@@ -13,6 +13,8 @@ func (h *IndiaIntegrationHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/transactions/{id}", h.GetFASTagTransaction)
 		r.Put("/transactions/{id}", h.UpdateFASTagTransaction)
 		r.Delete("/transactions/{id}", h.DeleteFASTagTransaction)
+		r.Post("/sync", h.SyncFASTag)
+		r.Post("/webhook", h.HandleFASTagWebhook)
 	})
 
 	// E-Way Bill routes
@@ -23,16 +25,20 @@ func (h *IndiaIntegrationHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/number/{number}", h.GetEWayBillByNumber)
 		r.Put("/{id}", h.UpdateEWayBill)
 		r.Delete("/{id}", h.DeleteEWayBill)
+		r.Post("/validate", h.ValidateEWayBill)
+		r.Post("/webhook", h.HandleEWayBillWebhook)
 	})
 
 	// Vehicle Verification (VAHAN) routes
 	r.Route("/vahan", func(r chi.Router) {
-		r.Post("/verify", h.CreateVehicleVerification)
+		r.Post("/register-internal", h.CreateVehicleVerification) // Renamed for clarity
+		r.Post("/verify", h.VerifyVehicle)
 		r.Get("/verifications", h.ListVehicleVerifications)
 		r.Get("/verifications/{id}", h.GetVehicleVerification)
 		r.Get("/verifications/reg/{reg_number}", h.GetVehicleVerificationByRegNumber)
 		r.Put("/verifications/{id}", h.UpdateVehicleVerification)
 		r.Delete("/verifications/{id}", h.DeleteVehicleVerification)
+		r.Post("/verify/bulk", h.BulkVerifyVahan)
 	})
 
 	// Driver Verification (SARATHI) routes
@@ -43,6 +49,7 @@ func (h *IndiaIntegrationHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/verifications/license/{license_number}", h.GetDriverVerificationByLicenseNumber)
 		r.Put("/verifications/{id}", h.UpdateDriverVerification)
 		r.Delete("/verifications/{id}", h.DeleteDriverVerification)
+		r.Post("/verify/bulk", h.BulkVerifySarathi)
 	})
 
 	// Local Permit routes
@@ -63,6 +70,7 @@ func (h *IndiaIntegrationHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/compliance/gstin/{gstin}", h.GetGSTComplianceByGSTIN)
 		r.Put("/compliance/{id}", h.UpdateGSTCompliance)
 		r.Delete("/compliance/{id}", h.DeleteGSTCompliance)
+		r.Post("/webhook", h.HandleGSTWebhook)
 	})
 
 	// Integration Config routes

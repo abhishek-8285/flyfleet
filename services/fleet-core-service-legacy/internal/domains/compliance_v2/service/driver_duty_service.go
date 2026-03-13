@@ -37,7 +37,7 @@ func NewDriverDutyService(logger logger.Logger, repo repository.ComplianceReposi
 
 func (s *driverDutyServiceImpl) RecordDutyStatus(ctx context.Context, driverID, vehicleID uuid.UUID, status models.DriverDutyStatus, location, notes string) (*models.DriverDutyLog, error) {
 	currentStatus, err := s.repo.GetLatestDutyStatus(ctx, driverID)
-	if err != nil && err.Error() != "sql: no rows in result set" {
+	if err != nil {
 		s.logger.Error("failed to get current duty status", zap.Error(err))
 		return nil, err
 	}
@@ -82,14 +82,14 @@ func (s *driverDutyServiceImpl) RecordDutyStatus(ctx context.Context, driverID, 
 func (s *driverDutyServiceImpl) GetLatestDutyStatus(ctx context.Context, driverID uuid.UUID) (*models.DriverDutyLog, error) {
 	log, err := s.repo.GetLatestDutyStatus(ctx, driverID)
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			// Default to Off Duty 
-			return &models.DriverDutyLog{
-				DriverID: driverID,
-				Status:   models.DutyStatusOffDuty,
-			}, nil
-		}
 		return nil, err
+	}
+	if log == nil {
+		// Default to Off Duty 
+		return &models.DriverDutyLog{
+			DriverID: driverID,
+			Status:   models.DutyStatusOffDuty,
+		}, nil
 	}
 	return log, nil
 }

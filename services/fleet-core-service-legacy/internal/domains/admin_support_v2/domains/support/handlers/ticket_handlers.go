@@ -25,20 +25,18 @@ func NewTicketHandlers(service service.TicketService, logger *zap.Logger) *Ticke
 }
 
 func (h *TicketHandlers) RegisterRoutes(r chi.Router) {
-	r.Route("/support", func(r chi.Router) {
-		// Dashboard APIs
-		r.Get("/dashboard/summary", h.GetDashboardSummary)
-		r.Get("/dashboard/recent-activity", h.GetRecentActivity)
+	// Dashboard APIs
+	r.Get("/dashboard/summary", h.GetDashboardSummary)
+	r.Get("/dashboard/recent-activity", h.GetRecentActivity)
 
-		// Incident Management
-		r.Get("/incidents", h.ListTickets)
-		r.Post("/incidents", h.CreateTicket)
-		r.Get("/incidents/{id}", h.GetTicket)
-		r.Patch("/incidents/{id}/status", h.UpdateTicketStatus)
-		r.Post("/incidents/{id}/assign", h.AssignTicket)
-		r.Post("/incidents/{id}/comment", h.AddComment)
-		r.Get("/incidents/{id}/comments", h.GetTicketComments)
-	})
+	// Incident Management
+	r.Get("/incidents", h.ListTickets)
+	r.Post("/incidents", h.CreateTicket)
+	r.Get("/incidents/{id}", h.GetTicket)
+	r.Patch("/incidents/{id}/status", h.UpdateTicketStatus)
+	r.Post("/incidents/{id}/assign", h.AssignTicket)
+	r.Post("/incidents/{id}/comment", h.AddComment)
+	r.Get("/incidents/{id}/comments", h.GetTicketComments)
 }
 
 // Dashboard APIs

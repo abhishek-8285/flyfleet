@@ -31,6 +31,10 @@ var (
 	ErrEscalationFailed    = errors.New("failed to escalate incident")
 	ErrNotificationFailed  = errors.New("failed to send notification")
 	ErrUnauthorized        = errors.New("unauthorized access to emergency incident")
+	ErrAllProvidersFailed  = errors.New("all notification providers failed")
+
+	// Drill errors
+	ErrDrillAlreadyActive = errors.New("a drill is already in progress")
 )
 
 // EmergencyError represents an emergency domain error

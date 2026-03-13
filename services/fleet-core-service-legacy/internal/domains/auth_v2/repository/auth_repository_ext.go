@@ -4,22 +4,14 @@ import (
 	"context"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/models"
 	"github.com/google/uuid"
 )
 
-type Organization struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Domain       string    `json:"domain"`
-	DefaultTheme string    `json:"default_theme"`
-	Status       string    `json:"status"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-}
 
-func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*Organization, error) {
+func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
 	query := "SELECT id, name, domain, default_theme, status, created_at, updated_at FROM organizations WHERE id = $1 AND is_deleted = false"
-	var org Organization
+	var org models.Organization
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&org.ID, &org.Name, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt,
 	)
@@ -29,8 +21,8 @@ func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) 
 	return &org, nil
 }
 
-func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset int32) ([]Organization, int64, error) {
-	var total int64
+func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset int32) ([]models.Organization, int32, error) {
+	var total int32
 	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM organizations WHERE is_deleted = false").Scan(&total)
 	if err != nil {
 		return nil, 0, err
@@ -43,9 +35,9 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 	}
 	defer rows.Close()
 
-	var orgs []Organization
+	var orgs []models.Organization
 	for rows.Next() {
-		var org Organization
+		var org models.Organization
 		if err := rows.Scan(&org.ID, &org.Name, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt); err != nil {
 			return nil, 0, err
 		}

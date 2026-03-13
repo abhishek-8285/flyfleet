@@ -41,4 +41,66 @@ var (
 		Name: "flyfleet_emergency_call_alerts_total",
 		Help: "The total number of emergency voice call alerts sent",
 	}, []string{"organization_id"})
+
+	SLABreachesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_sla_breaches_total",
+		Help: "The total number of emergency SLA breaches detected",
+	}, []string{"organization_id", "severity"})
+
+	NotificationFailuresTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_notification_failures_total",
+		Help: "The total number of emergency notifications that failed after all retries",
+	}, []string{"organization_id", "channel"})
+
+	// Phase 8: Additional Prometheus Metrics
+	AuthorityNotificationsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_authority_notifications_total",
+		Help: "Total number of AIS-140 authority notifications dispatched",
+	}, []string{"authority_type", "severity"})
+
+	NotificationRetriesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_notification_retries_total",
+		Help: "Total number of notification provider retries (per provider, per channel)",
+	}, []string{"provider", "channel"})
+
+	IncidentRecoveryTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_incident_recovery_total",
+		Help: "Total number of stalled incidents resumed by the recovery worker",
+	}, []string{"status"})
+
+	DrillEventsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_drill_events_total",
+		Help: "Total number of emergency drill simulations triggered",
+	}, []string{"organization_id"})
+
+	// Phase 3 Metrics
+	ProviderFailuresTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_provider_failures_total",
+		Help: "Total number of notification provider failures tracked by health service",
+	}, []string{"provider"})
+
+	AuthorityDeliverySuccessTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_authority_delivery_success_total",
+		Help: "Total number of successful emergency authority deliveries",
+	}, []string{"authority_type", "status"})
+
+	IncidentSeverityTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_incident_severity_total",
+		Help: "Total number of incidents classified by severity level",
+	}, []string{"level"})
+
+	TimelineEventsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_timeline_events_total",
+		Help: "Total number of fine-grained timeline events recorded",
+	}, []string{"event_type"})
+
+	BackupSnapshotsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_backup_snapshots_total",
+		Help: "Total number of critical incident backup snapshots created",
+	})
+
+	ArchivedIncidentsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "flyfleet_emergency_archived_incidents_total",
+		Help: "Total number of incidents moved to archival storage",
+	})
 )

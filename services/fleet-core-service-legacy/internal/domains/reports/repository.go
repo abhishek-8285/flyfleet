@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -41,6 +42,7 @@ type Repository interface {
 	ReleaseSchedulerLock(ctx context.Context)
 
 	RecordAuditLog(ctx context.Context, log *ReportAuditLog) error
+	ExecuteReportQuery(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error)
 }
 
 type repository struct {
@@ -83,14 +85,21 @@ func (r *repository) GetReport(ctx context.Context, id uuid.UUID, tenantID uuid.
 		SELECT id, tenant_id, report_type, status, parameters, requested_by, requested_at, 
 		       started_at, completed_at, progress, file_url, error_message, retry_count, checksum
 		FROM reports
-		WHERE id = $1 AND tenant_id = $2
+		WHERE id = $1
 	`
+	var args []interface{}
+	args = append(args, id)
+
+	if tenantID != uuid.Nil {
+		query += " AND tenant_id = $2"
+		args = append(args, tenantID)
+	}
 
 	var report Report
 	var paramsJSON []byte
 	var fileUrl, errorMessage, checksum *string
 
-	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
+	err := r.db.QueryRow(ctx, query, args...).Scan(
 		&report.ID, &report.TenantID, &report.Type, &report.Status, &paramsJSON,
 		&report.RequestedBy, &report.RequestedAt, &report.StartedAt, &report.CompletedAt,
 		&report.Progress, &fileUrl, &errorMessage, &report.RetryCount, &checksum,
@@ -518,4 +527,64 @@ func (r *repository) RequeueDLQJob(ctx context.Context, jobID uuid.UUID) error {
 	r.db.Exec(ctx, "DELETE FROM report_dlq WHERE job_id = $1", jobID)
 	return nil
 }
+
+func (r *repository) ExecuteReportQuery(ctx context.Context, query string, args ...interface{}) (pgx.Rows, error) {
+	conn, err := r.db.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// Note: conn must be released by the caller when rows.Close() is called.
+	// pgxpool.Rows.Close() normally handles this if created via pool, but we are using conn.
+	// To ensure release, we wrap the rows or expect the caller to handle it.
+	// Actually, pgxpool.Pool.Query returns Rows that handle release.
+	// But we need to SET LOCAL, which requires a single connection.
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		conn.Release()
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, "SET LOCAL statement_timeout = '60s'")
+	if err != nil {
+		tx.Rollback(ctx)
+		conn.Release()
+		return nil, err
+	}
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		tx.Rollback(ctx)
+		conn.Release()
+		return nil, err
+	}
+
+	// We return rows. The caller is responsible for closing rows,
+	// but we also need to commit/rollback the transaction and release the connection.
+	// Since row streaming might take a long time, we'll return a special rows wrapper if needed,
+	// or just use Exec for SET LOCAL if pgx supports it differently.
+	// pgx v5 has a better way: SET statement_timeout in the Config.
+	
+	return &txRows{rows: rows, tx: tx, conn: conn}, nil
+}
+
+type txRows struct {
+	pgx.Rows
+	rows pgx.Rows
+	tx   pgx.Tx
+	conn *pgxpool.Conn
+}
+
+func (tr *txRows) Close() {
+	tr.rows.Close()
+	tr.tx.Rollback(context.Background())
+	tr.conn.Release()
+}
+
+func (tr *txRows) Next() bool { return tr.rows.Next() }
+func (tr *txRows) Scan(dest ...any) error { return tr.rows.Scan(dest...) }
+func (tr *txRows) Err() error { return tr.rows.Err() }
+func (tr *txRows) FieldDescriptions() []pgconn.FieldDescription { return tr.rows.FieldDescriptions() }
+func (tr *txRows) CommandTag() pgconn.CommandTag { return tr.rows.CommandTag() }
+func (tr *txRows) Conn() *pgx.Conn { return tr.rows.Conn() }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
 	"github.com/google/uuid"
@@ -12,6 +11,44 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 )
+
+type mockAggregator struct {
+	mock.Mock
+}
+
+func (m *mockAggregator) AggregateData(ctx context.Context, userID, orgID uuid.UUID) (*models.DSARData, error) {
+	args := m.Called(ctx, userID, orgID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DSARData), args.Error(1)
+}
+
+type mockMasker struct {
+	mock.Mock
+}
+
+func (m *mockMasker) MaskData(data *models.DSARData, rules json.RawMessage) *models.DSARData {
+	args := m.Called(data, rules)
+	return args.Get(0).(*models.DSARData)
+}
+
+type mockGenerator struct {
+	mock.Mock
+}
+
+func (m *mockGenerator) GenerateJSON(data *models.DSARData, targetPath string) (int64, string, error) {
+	args := m.Called(data, targetPath)
+	return args.Get(0).(int64), args.String(1), args.Error(2)
+}
+
+func (m *mockGenerator) GenerateCSV(data *models.DSARData, targetPath string) (int64, string, error) {
+	return 0, "", nil
+}
+
+func (m *mockGenerator) GeneratePDF(data *models.DSARData, targetPath string) (int64, string, error) {
+	return 0, "", nil
+}
 
 func TestExportService_ProcessExportRequest_Compliance(t *testing.T) {
 	mockRepo := new(MockRepo)

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -146,9 +147,9 @@ type MLTrainingResponse struct {
 
 // RouteOptimizationRequest represents route optimization request
 type RouteOptimizationRequest struct {
-	Locations []string `json:"locations"`
-	VehicleID string   `json:"vehicle_id,omitempty"`
-	StartTime string   `json:"start_time,omitempty"`
+	Locations []Location `json:"locations"`
+	VehicleID string     `json:"vehicle_id,omitempty"`
+	StartTime string     `json:"start_time,omitempty"`
 }
 
 // RouteOptimizationResponse represents route optimization response
@@ -184,6 +185,27 @@ type Location struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	Address   string  `json:"address,omitempty"`
+}
+
+func (l *Location) UnmarshalJSON(data []byte) error {
+	type Alias Location
+	aux := struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if l.Latitude == 0 && aux.Lat != 0 {
+		l.Latitude = aux.Lat
+	}
+	if l.Longitude == 0 && aux.Lng != 0 {
+		l.Longitude = aux.Lng
+	}
+	return nil
 }
 
 // ErrorResponse represents a standard error response

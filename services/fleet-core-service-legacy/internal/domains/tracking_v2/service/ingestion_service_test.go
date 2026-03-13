@@ -106,15 +106,25 @@ func (m *mockOutboxRepo) GetPending(_ context.Context, _ int) ([]repository.Outb
 func (m *mockOutboxRepo) MarkProcessed(_ context.Context, _ int64) error { return nil }
 func (m *mockOutboxRepo) MarkFailed(_ context.Context, _ int64, _ error) error { return nil }
 
+type mockMessageBroker struct{}
+
+func (m *mockMessageBroker) Publish(_ string, _ any) error                    { return nil }
+func (m *mockMessageBroker) PublishJS(_ string, _ any) error                  { return nil }
+func (m *mockMessageBroker) Subscribe(_ string, _ func([]byte)) error          { return nil }
+func (m *mockMessageBroker) SubscribeJS(_ string, _, _ string, _ func([]byte)) error { return nil }
+func (m *mockMessageBroker) Close() error                                     { return nil }
+
 // ── Setup helper ───────────────────────────────────────────────────────────────
 
 func setupIngestionService() (*IngestionService, *mockTelemetryRepo, *mockDevRegRepo) {
 	telemRepo := newMockTelemetryRepo()
 	devRepo := newMockDevRegRepo()
 	outbox := &mockOutboxRepo{}
+	mb := &mockMessageBroker{}
 	engine := NewAnomalyEngine(DefaultAnomalyConfig())
 	cfg := DefaultIngestionConfig()
-	svc := NewIngestionService(nil, telemRepo, devRepo, outbox, nil, engine, cfg, zap.NewNop())
+	cfg.BufferEnabled = false // Test sync path by default in existing tests
+	svc := NewIngestionService(nil, mb, telemRepo, devRepo, outbox, nil, engine, nil, cfg, zap.NewNop())
 	return svc, telemRepo, devRepo
 }
 

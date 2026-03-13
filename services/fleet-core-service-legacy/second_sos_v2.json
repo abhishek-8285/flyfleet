@@ -1,0 +1,29 @@
+Note: Unnecessary use of -X or --request, POST is already inferred.
+* Host localhost:8085 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8085...
+* Connected to localhost (::1) port 8085
+> POST /api/v1/emergency/sos-trigger HTTP/1.1
+> Host: localhost:8085
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> X-Organization-ID: 00000000-0000-0000-0000-000000000001
+> Content-Length: 127
+> 
+} [127 bytes data]
+< HTTP/1.1 500 Internal Server Error
+< Content-Type: text/plain; charset=utf-8
+< X-Content-Type-Options: nosniff
+< X-Request-Id: unknown/dbrzxuwVTn-000002
+< X-Trace-Id: unknown/dbrzxuwVTn-000002
+< Date: Mon, 09 Mar 2026 13:26:17 GMT
+< Content-Length: 22
+< 
+{ [22 bytes data]
+100   149  100    22  100   127  22587   127k --:--:-- --:--:-- --:--:--  145k
+* Connection #0 to host localhost left intact
+Internal Server Error

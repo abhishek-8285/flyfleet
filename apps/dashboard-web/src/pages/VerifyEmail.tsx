@@ -1,8 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import AuthButton from "../components/auth/AuthButton";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useUIStrings } from "../hooks/useUIStrings";
+import api from "../services/api";
 
 const VerifyEmail: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -25,29 +27,18 @@ const VerifyEmail: React.FC = () => {
       }
 
       try {
-        const response = await fetch(
-          `/api/v1/auth/verify-email?token=${token}`,
-          {
-            method: "GET",
-          },
-        );
-
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || "Verification failed");
-        }
-
+        await api.verifyEmail(token);
         setSuccess(true);
         setTimeout(() => navigate("/login"), 3000);
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || "Verification failed");
       } finally {
         setLoading(false);
       }
     };
 
     verify();
-  }, [token, navigate]);
+  }, [token, navigate, uiStrings]);
 
   return (
     <EnterpriseAuthLayout
@@ -89,14 +80,14 @@ const VerifyEmail: React.FC = () => {
               <p className="text-slate-400 text-sm mb-6 max-w-[280px] mx-auto">
                 {error}
               </p>
-              <button
+              <AuthButton
+                variant="secondary"
                 onClick={() => navigate("/login")}
-                className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors"
               >
                 {uiStrings?.btn_back_to_signin || "Back to Login"}
-              </button>
+              </AuthButton>
             </motion.div>
-          ) : (
+          ) : success ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -120,7 +111,7 @@ const VerifyEmail: React.FC = () => {
                   "Redirecting to Access Portal..."}
               </p>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </EnterpriseAuthLayout>

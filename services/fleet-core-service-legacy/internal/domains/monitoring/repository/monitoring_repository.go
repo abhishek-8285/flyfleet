@@ -23,6 +23,23 @@ type MonitoringRepository interface {
 	UpdateAlertStatus(ctx context.Context, alertID, status string) error
 	GetAlertThresholds(ctx context.Context) ([]*models.AlertThreshold, error)
 	SaveAlertThreshold(ctx context.Context, threshold *models.AlertThreshold) error
+	
+	// SRE-grade operations
+	SaveSyntheticCheck(ctx context.Context, check *models.SyntheticCheck) error
+	GetSLOs(ctx context.Context) ([]*models.ServiceSLO, error)
+	GetSLO(ctx context.Context, serviceName string) (*models.ServiceSLO, error)
+	SaveSLO(ctx context.Context, slo *models.ServiceSLO) error
+	GetErrorBudget(ctx context.Context, serviceName string) (*models.ErrorBudget, error)
+	SaveErrorBudget(ctx context.Context, budget *models.ErrorBudget) error
+	
+	// Alert grouping & Remediation
+	GetOrCreateAlertGroup(ctx context.Context, groupKey string, component, metric, severity string) (*models.AlertGroup, error)
+	UpdateAlertGroup(ctx context.Context, group *models.AlertGroup) error
+	SaveRemediationAction(ctx context.Context, action *models.RemediationAction) error
+	
+	// Incidents
+	CreateIncident(ctx context.Context, incident *models.Incident) error
+	UpdateIncident(ctx context.Context, incident *models.Incident) error
 }
 
 type monitoringRepository struct {
@@ -246,4 +263,160 @@ func (r *monitoringRepository) SaveAlertThreshold(ctx context.Context, threshold
 		return fmt.Errorf("failed to save alert threshold: %w", err)
 	}
 	return nil
+}
+
+// SaveSyntheticCheck inserts a new synthetic check result
+func (r *monitoringRepository) SaveSyntheticCheck(ctx context.Context, check *models.SyntheticCheck) error {
+	query := `
+		INSERT INTO synthetic_checks (id, check_name, status, response_time_ms, error, timestamp)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	if check.ID == uuid.Nil {
+		check.ID = uuid.New()
+	}
+	_, err := r.db.Exec(ctx, query, check.ID, check.CheckName, check.Status, check.ResponseTimeMS, check.Error, check.Timestamp)
+	return err
+}
+
+// GetSLOs retrieves all service SLOs
+func (r *monitoringRepository) GetSLOs(ctx context.Context) ([]*models.ServiceSLO, error) {
+	query := `SELECT id, service_name, availability_target, latency_target_ms, error_rate_target, period_days, created_at, updated_at FROM service_slos`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var slos []*models.ServiceSLO
+	for rows.Next() {
+		var s models.ServiceSLO
+		if err := rows.Scan(&s.ID, &s.ServiceName, &s.AvailabilityTarget, &s.LatencyTargetMS, &s.ErrorRateTarget, &s.PeriodDays, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			return nil, err
+		}
+		slos = append(slos, &s)
+	}
+	return slos, nil
+}
+
+// GetSLO retrieves a specific service SLO
+func (r *monitoringRepository) GetSLO(ctx context.Context, serviceName string) (*models.ServiceSLO, error) {
+	query := `SELECT id, service_name, availability_target, latency_target_ms, error_rate_target, period_days, created_at, updated_at FROM service_slos WHERE service_name = $1`
+	var s models.ServiceSLO
+	err := r.db.QueryRow(ctx, query, serviceName).Scan(&s.ID, &s.ServiceName, &s.AvailabilityTarget, &s.LatencyTargetMS, &s.ErrorRateTarget, &s.PeriodDays, &s.CreatedAt, &s.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// SaveSLO saves or updates a service SLO
+func (r *monitoringRepository) SaveSLO(ctx context.Context, slo *models.ServiceSLO) error {
+	query := `
+		INSERT INTO service_slos (id, service_name, availability_target, latency_target_ms, error_rate_target, period_days, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+		ON CONFLICT (service_name) DO UPDATE SET
+			availability_target = EXCLUDED.availability_target,
+			latency_target_ms = EXCLUDED.latency_target_ms,
+			error_rate_target = EXCLUDED.error_rate_target,
+			period_days = EXCLUDED.period_days,
+			updated_at = NOW()
+	`
+	if slo.ID == uuid.Nil {
+		slo.ID = uuid.New()
+	}
+	_, err := r.db.Exec(ctx, query, slo.ID, slo.ServiceName, slo.AvailabilityTarget, slo.LatencyTargetMS, slo.ErrorRateTarget, slo.PeriodDays)
+	return err
+}
+
+// GetErrorBudget retrieves the error budget for a service
+func (r *monitoringRepository) GetErrorBudget(ctx context.Context, serviceName string) (*models.ErrorBudget, error) {
+	query := `SELECT id, service_name, allowed_downtime_minutes, consumed_minutes, period_start, period_end, updated_at FROM error_budgets WHERE service_name = $1`
+	var b models.ErrorBudget
+	err := r.db.QueryRow(ctx, query, serviceName).Scan(&b.ID, &b.ServiceName, &b.AllowedDowntimeMinutes, &b.ConsumedMinutes, &b.PeriodStart, &b.PeriodEnd, &b.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &b, nil
+}
+
+// SaveErrorBudget saves or updates an error budget
+func (r *monitoringRepository) SaveErrorBudget(ctx context.Context, budget *models.ErrorBudget) error {
+	query := `
+		INSERT INTO error_budgets (id, service_name, allowed_downtime_minutes, consumed_minutes, period_start, period_end, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+		ON CONFLICT (service_name) DO UPDATE SET
+			allowed_downtime_minutes = EXCLUDED.allowed_downtime_minutes,
+			consumed_minutes = EXCLUDED.consumed_minutes,
+			period_start = EXCLUDED.period_start,
+			period_end = EXCLUDED.period_end,
+			updated_at = NOW()
+	`
+	if budget.ID == uuid.Nil {
+		budget.ID = uuid.New()
+	}
+	_, err := r.db.Exec(ctx, query, budget.ID, budget.ServiceName, budget.AllowedDowntimeMinutes, budget.ConsumedMinutes, budget.PeriodStart, budget.PeriodEnd)
+	return err
+}
+
+// GetOrCreateAlertGroup retrieves or creates an alert group
+func (r *monitoringRepository) GetOrCreateAlertGroup(ctx context.Context, groupKey string, component, metric, severity string) (*models.AlertGroup, error) {
+	query := `
+		INSERT INTO alert_groups (id, group_key, component, metric_name, severity, status, alert_count, first_triggered, last_triggered)
+		VALUES ($1, $2, $3, $4, $5, 'ACTIVE', 1, NOW(), NOW())
+		ON CONFLICT (group_key) DO UPDATE SET
+			alert_count = alert_groups.alert_count + 1,
+			last_triggered = NOW()
+		RETURNING id, group_key, component, metric_name, severity, status, alert_count, first_triggered, last_triggered
+	`
+	var g models.AlertGroup
+	err := r.db.QueryRow(ctx, query, uuid.New(), groupKey, component, metric, severity).Scan(
+		&g.ID, &g.GroupKey, &g.Component, &g.MetricName, &g.Severity, &g.Status, &g.AlertCount, &g.FirstTriggered, &g.LastTriggered,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &g, nil
+}
+
+// UpdateAlertGroup updates an alert group
+func (r *monitoringRepository) UpdateAlertGroup(ctx context.Context, group *models.AlertGroup) error {
+	query := `UPDATE alert_groups SET status = $1, alert_count = $2, last_triggered = $3 WHERE group_key = $4`
+	_, err := r.db.Exec(ctx, query, group.Status, group.AlertCount, group.LastTriggered, group.GroupKey)
+	return err
+}
+
+// SaveRemediationAction saves a remediation action
+func (r *monitoringRepository) SaveRemediationAction(ctx context.Context, action *models.RemediationAction) error {
+	query := `
+		INSERT INTO remediation_actions (id, group_key, action_type, status, result_metadata, triggered_at, completed_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	if action.ID == uuid.Nil {
+		action.ID = uuid.New()
+	}
+	_, err := r.db.Exec(ctx, query, action.ID, action.GroupKey, action.ActionType, action.Status, action.ResultMetadata, action.TriggeredAt, action.CompletedAt)
+	return err
+}
+
+// CreateIncident creates a new incident
+func (r *monitoringRepository) CreateIncident(ctx context.Context, incident *models.Incident) error {
+	query := `
+		INSERT INTO incidents (id, title, severity, status, group_key, service_name, detected_at, external_ref_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+	if incident.ID == uuid.Nil {
+		incident.ID = uuid.New()
+	}
+	_, err := r.db.Exec(ctx, query, incident.ID, incident.Title, incident.Severity, incident.Status, incident.GroupKey, incident.ServiceName, incident.DetectedAt, incident.ExternalRefID)
+	return err
+}
+
+// UpdateIncident updates an incident
+func (r *monitoringRepository) UpdateIncident(ctx context.Context, incident *models.Incident) error {
+	query := `
+		UPDATE incidents SET status = $1, acknowledged_at = $2, resolved_at = $3, external_ref_id = $4
+		WHERE id = $5
+	`
+	_, err := r.db.Exec(ctx, query, incident.Status, incident.AcknowledgedAt, incident.ResolvedAt, incident.ExternalRefID, incident.ID)
+	return err
 }

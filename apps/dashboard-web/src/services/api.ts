@@ -91,6 +91,109 @@ class ApiService {
     localStorage.removeItem("token");
   }
 
+  // Auth Extensions
+  async signup(data: any): Promise<any> {
+    return this.client.post("/auth/register", data);
+  }
+
+  async verifyEmail(token: string): Promise<any> {
+    return this.client.post("/auth/verify-email", { token });
+  }
+
+  async resetPassword(data: any): Promise<any> {
+    return this.client.post("/auth/reset-password", data);
+  }
+
+  async changePassword(data: any): Promise<any> {
+    return this.client.post("/auth/change-password", data);
+  }
+
+  async approveDevice(fingerprint: string, approve: boolean): Promise<any> {
+    return this.client.post("/auth/device/approve", { fingerprint, approve });
+  }
+
+  async ssoCallback(data: any): Promise<any> {
+    return this.client.post("/auth/sso/callback", data);
+  }
+
+  // MFA Enrollment
+  async setupMFA(): Promise<any> {
+    return this.client.post("/auth/mfa/setup");
+  }
+
+  async verifyMFA(code: string): Promise<any> {
+    return this.client.post("/auth/mfa/verify", { code });
+  }
+
+  // Trusted Devices
+  async getDevices(): Promise<any> {
+    return this.client.get("/auth/devices");
+  }
+
+  async revokeDevice(id: string): Promise<any> {
+    return this.client.delete(`/auth/devices/${id}`);
+  }
+
+  // Security Keys (FIDO2)
+  async registerSecurityKey(data: any): Promise<any> {
+    return this.client.post("/auth/security-keys/register", data);
+  }
+
+  async deleteSecurityKey(id: string): Promise<any> {
+    return this.client.delete(`/auth/security-keys/${id}`);
+  }
+
+  async getSecurityKeys(): Promise<any> {
+    return this.client.get("/auth/security-keys");
+  }
+
+  // Password Policy
+  async getPasswordPolicy(): Promise<any> {
+    return this.client.get("/auth/password-policy");
+  }
+
+  // Account Lock
+  async getLockStatus(): Promise<any> {
+    return this.client.get("/auth/lock-status");
+  }
+
+  // Risk Challenge
+  async resolveRiskChallenge(challengeId: string, data: any): Promise<any> {
+    return this.client.post("/auth/challenge", { challengeId, ...data });
+  }
+
+  // Phase 3: Advanced Security Management
+  async getAPIKeys(): Promise<any> {
+    return this.client.get("/auth/api-keys");
+  }
+
+  async createAPIKey(name: string): Promise<any> {
+    return this.client.post("/auth/api-keys", { name });
+  }
+
+  async revokeAPIKey(id: string): Promise<any> {
+    return this.client.delete(`/auth/api-keys/${id}/revoke`);
+  }
+
+  async getSecurityTelemetry(): Promise<any> {
+    return this.client.get("/auth/security-telemetry");
+  }
+
+  async getAuthStats(): Promise<any> {
+    return this.client.get("/auth/stats");
+  }
+
+  async getUserSessions(userId?: string): Promise<any> {
+    const url = userId ? `/auth/users/${userId}/sessions` : "/auth/sessions";
+    return this.client.get(url);
+  }
+
+  async revokeUserSession(userId: string, sessionId: string): Promise<any> {
+    return this.client.delete(
+      `/auth/users/${userId}/sessions/${sessionId}/revoke`,
+    );
+  }
+
   // Vehicles
   async getVehicles(params?: any): Promise<any> {
     return this.client.get("/vehicles", { params });

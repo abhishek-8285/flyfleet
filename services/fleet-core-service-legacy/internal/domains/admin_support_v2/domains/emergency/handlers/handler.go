@@ -24,11 +24,9 @@ func NewEmergencyHandler(svc service.EmergencyService, logger *zap.Logger) *Emer
 }
 
 func (h *EmergencyHandler) RegisterRoutes(r chi.Router) {
-	r.Route("/emergency", func(r chi.Router) {
-		r.Post("/halt", h.GlobalHalt)
-		r.Post("/clear", h.ClearHalt)
-		r.Get("/status", h.GetStatus)
-	})
+	r.Post("/halt", h.GlobalHalt)
+	r.Post("/clear", h.ClearHalt)
+	r.Get("/status", h.GetStatus)
 }
 
 func (h *EmergencyHandler) GlobalHalt(w http.ResponseWriter, r *http.Request) {

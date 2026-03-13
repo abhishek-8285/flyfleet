@@ -60,13 +60,22 @@ import PortalDashboard from "./pages/portal/PortalDashboard";
 import ShipmentsList from "./pages/portal/ShipmentsList";
 import ShipmentTracking from "./pages/portal/ShipmentTracking";
 // RouteOptimization import moved to consolidated block
+import SessionTimeoutWarning from "./components/auth/SessionTimeoutWarning";
 import LiveMap from "./components/LiveMap";
 import ScenarioSwitcher from "./components/ScenarioSwitcher";
+import ControlTower from "./modules/control-tower/ControlTower";
+import Alerts from "./modules/dashboard/pages/Alerts";
+import Analytics from "./modules/dashboard/pages/Analytics";
+import Dashboard from "./modules/dashboard/pages/Dashboard";
+import TimelinePage from "./modules/dashboard/pages/TimelinePage";
+import AccessDenied from "./pages/AccessDenied";
+import AccountLocked from "./pages/AccountLocked";
 import AnalyticsJobsPage from "./pages/admin/analytics/AnalyticsJobsPage";
 import DriverBehaviorPage from "./pages/admin/analytics/DriverBehaviorPage";
 import FleetAnalyticsPage from "./pages/admin/analytics/FleetAnalyticsPage";
 import PredictiveMaintenancePage from "./pages/admin/analytics/PredictiveMaintenancePage";
 import PredictiveModelsPage from "./pages/admin/analytics/PredictiveModelsPage";
+import DispatchCenter from "./pages/admin/DispatchCenter";
 import EmergencyDashboard from "./pages/admin/emergency/EmergencyDashboard";
 import ExpenseApprovals from "./pages/admin/finance/ExpenseApprovals";
 import FuelDashboard from "./pages/admin/finance/FuelDashboard";
@@ -77,11 +86,13 @@ import ForecastingDashboard from "./pages/admin/revenue/ForecastingDashboard";
 import RouteOptimization from "./pages/admin/RouteOptimization";
 import AccessReview from "./pages/admin/security/AccessReview";
 import ActiveSessions from "./pages/admin/security/ActiveSessions";
-import APIKeys from "./pages/admin/security/APIKeys";
+import AuthStats from "./pages/admin/security/AuthStats";
 import IPControls from "./pages/admin/security/IPControls";
 import LoginActivityLogs from "./pages/admin/security/LoginActivityLogs";
 import MFACenter from "./pages/admin/security/MFACenter";
+import SecurityTelemetry from "./pages/admin/security/SecurityTelemetry";
 import ThreatAlerts from "./pages/admin/security/ThreatAlerts";
+import UserSessionAdmin from "./pages/admin/security/UserSessionAdmin";
 import FeatureFlags from "./pages/admin/settings/FeatureFlags";
 import Localization from "./pages/admin/settings/Localization";
 import NotificationChannels from "./pages/admin/settings/NotificationChannels";
@@ -98,11 +109,9 @@ import {
 } from "./pages/admin/Trips";
 import { Users } from "./pages/admin/Users";
 import VideoTelematics from "./pages/admin/VideoTelematics";
-import Alerts from "./pages/Alerts";
-import Analytics from "./pages/Analytics";
 import AuditCenter from "./pages/audit/AuditCenter";
-import CommandCenter from "./pages/CommandCenter";
-import Dashboard from "./pages/Dashboard";
+import AuthError from "./pages/AuthError";
+import DeviceApproval from "./pages/DeviceApproval";
 import DeviceDashboard from "./pages/devices/DeviceDashboard";
 import DeviceDiagnostics from "./pages/devices/DeviceDiagnostics";
 import DeviceTelemetry from "./pages/devices/DeviceTelemetry";
@@ -113,7 +122,6 @@ import Drivers from "./pages/Drivers";
 import ErrorScreen from "./pages/ErrorScreen";
 import ForgotPassword from "./pages/ForgotPassword";
 import FuelSettingsView from "./pages/FuelSettingsView";
-import Geofences from "./pages/Geofences";
 import GovernanceSettingsView from "./pages/governance/GovernanceSettingsView";
 import NewRequest from "./pages/governance/NewRequest";
 import RequestDetail from "./pages/governance/RequestDetail";
@@ -137,6 +145,7 @@ import {
 import MFAExceptions from "./pages/MFAExceptions";
 import MFAOverrides from "./pages/MFAOverrides";
 import MFAPolicyEditor from "./pages/MFAPolicyEditor";
+import MFASetup from "./pages/MFASetup";
 import MFAVerify from "./pages/MFAVerify";
 import MonitoringLayout from "./pages/monitoring/layout/MonitoringLayout";
 import LogViewer from "./pages/monitoring/LogViewer";
@@ -147,9 +156,16 @@ import SystemHealth from "./pages/monitoring/SystemHealth";
 import OrgSelection from "./pages/OrgSelection";
 import Reports from "./pages/Reports";
 import ResetPassword from "./pages/ResetPassword";
+import RiskChallenge from "./pages/RiskChallenge";
 import SearchPage from "./pages/SearchPage";
+import APIKeyManagement from "./pages/security/APIKeys";
+import ChangePassword from "./pages/security/ChangePassword";
+import SecurityDevices from "./pages/security/Devices";
+import PasswordPolicy from "./pages/security/PasswordPolicy";
+import SecurityKeys from "./pages/security/SecurityKeys";
 import SessionExpired from "./pages/SessionExpired";
 import Signup from "./pages/Signup";
+import SSOCallback from "./pages/SSOCallback";
 import IncidentDetail from "./pages/support/IncidentDetail";
 import IncidentManagement from "./pages/support/IncidentManagement";
 import OrganizationHub from "./pages/support/OrganizationHub";
@@ -157,7 +173,6 @@ import SLAReports from "./pages/support/SLAReports";
 import SupportDashboard from "./pages/support/SupportDashboard";
 import TroubleshootingLogs from "./pages/support/TroubleshootingLogs";
 import UserConsole from "./pages/support/UserConsole";
-import TimelinePage from "./pages/TimelinePage";
 import Trips from "./pages/Trips";
 import TrustedDevices from "./pages/TrustedDevices";
 import VehicleDetails from "./pages/VehicleDetails";
@@ -175,6 +190,9 @@ function App() {
     <Provider store={store}>
       <AuthProvider>
         <RBACProvider>
+          <SessionTimeoutWarning
+            onLogout={() => (window.location.href = "/login")}
+          />
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
@@ -184,6 +202,37 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route
+                path="/security/change-password"
+                element={<ChangePassword />}
+              />
+              <Route path="/security/devices" element={<SecurityDevices />} />
+              <Route path="/security/api-keys" element={<APIKeyManagement />} />
+              <Route
+                path="/security/security-keys"
+                element={<SecurityKeys />}
+              />
+              <Route
+                path="/security/password-policy"
+                element={<PasswordPolicy />}
+              />
+              <Route path="/mfa-setup" element={<MFASetup />} />
+              <Route path="/account-locked" element={<AccountLocked />} />
+              <Route path="/auth/challenge" element={<RiskChallenge />} />
+              <Route
+                path="/admin/security/telemetry"
+                element={<SecurityTelemetry />}
+              />
+              <Route path="/admin/security/stats" element={<AuthStats />} />
+              <Route
+                path="/admin/security/user-sessions"
+                element={<UserSessionAdmin />}
+              />
+              <Route path="/device-approval" element={<DeviceApproval />} />
+              <Route path="/auth/callback" element={<SSOCallback />} />
+              <Route path="/auth/error" element={<AuthError />} />
+              <Route path="/403" element={<AccessDenied />} />
 
               {/* Customer Portal Public Routes */}
               <Route path="/portal/login" element={<CustomerLogin />} />
@@ -205,17 +254,19 @@ function App() {
                 }
               >
                 <Route index element={<Dashboard />} />
-                <Route path="search" element={<SearchPage />} />
-                <Route path="timeline" element={<TimelinePage />} />
-                <Route path="command-center" element={<CommandCenter />} />
+                <Route path="kpi" element={<Analytics />} />
+                <Route path="activity" element={<TimelinePage />} />
+                <Route path="alerts" element={<Alerts />} />
+                <Route path="analytics" element={<Analytics />} />
                 <Route path="map" element={<LiveMap />} />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
                 <Route path="trips" element={<Trips />} />
-                <Route path="geofences" element={<Geofences />} />
-                <Route path="alerts" element={<Alerts />} />
+                <Route path="drivers" element={<Drivers />} />
                 <Route path="insights" element={<Insights />} />
-                <Route path="analytics" element={<Analytics />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="search" element={<SearchPage />} />
+                <Route path="timeline" element={<TimelinePage />} />
                 <Route
                   path="analytics/models"
                   element={<PredictiveModelsPage />}
@@ -259,7 +310,7 @@ function App() {
                 <Route path="exceptions" element={<MFAExceptions />} />
                 <Route path="overrides" element={<MFAOverrides />} />
                 <Route path="audit" element={<AuditCenter />} />
-                <Route path="api-keys" element={<APIKeys />} />
+                <Route path="api-keys" element={<APIKeyManagement />} />
               </Route>
 
               {/* Admin Portal */}
@@ -352,6 +403,10 @@ function App() {
 
                 {/* Emergency Module */}
                 <Route path="emergency" element={<EmergencyDashboard />} />
+
+                {/* Control Tower Module */}
+                <Route path="control-tower" element={<ControlTower />} />
+                <Route path="dispatch" element={<DispatchCenter />} />
 
                 {/* Revenue Module */}
                 <Route

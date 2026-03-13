@@ -10,15 +10,18 @@ import (
 func LoggingMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
+			// Skip logging for high-frequency telemetry ingestion to prevent log flooding
+			if r.URL.Path == "/api/v1/tracking/ingest" || r.URL.Path == "/api/v1/tracking/ingest/v2" || r.URL.Path == "/api/v1/compat/telemetry" {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-			// Create a custom response writer to capture the status code
+			start := time.Now()
 			sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 
 			next.ServeHTTP(sw, r)
 
 			duration := time.Since(start)
-
 			logger.Info("HTTP request",
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),

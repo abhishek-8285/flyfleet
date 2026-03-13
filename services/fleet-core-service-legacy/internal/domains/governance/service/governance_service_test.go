@@ -45,7 +45,11 @@ func (m *MockRepo) UpdateRequestStatus(ctx context.Context, id uuid.UUID, orgID 
 }
 
 func (m *MockRepo) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error) {
-	return &models.GovernanceSettings{DownloadTTLHours: 48}, nil
+	args := m.Called(ctx, orgID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.GovernanceSettings), args.Error(1)
 }
 
 func (m *MockRepo) UpsertSettings(ctx context.Context, settings *models.GovernanceSettings) error {
@@ -65,7 +69,10 @@ func (m *MockRepo) ExpireRequests(ctx context.Context) ([]models.ExpiredRequestI
 	return args.Get(0).([]models.ExpiredRequestInfo), args.Error(1)
 }
 
-func (m *MockRepo) CreateExport(ctx context.Context, export *models.GovernanceExport) error { return nil }
+func (m *MockRepo) CreateExport(ctx context.Context, export *models.GovernanceExport) error {
+	args := m.Called(ctx, export)
+	return args.Error(0)
+}
 func (m *MockRepo) GetExportByRequestID(ctx context.Context, requestID uuid.UUID) (*models.GovernanceExport, error) { return nil, nil }
 func (m *MockRepo) CreateDownloadToken(ctx context.Context, token *models.DownloadToken) error { return nil }
 func (m *MockRepo) GetExportByToken(ctx context.Context, token uuid.UUID) (*models.GovernanceExport, error) { return nil, nil }

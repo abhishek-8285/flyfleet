@@ -1,6 +1,23 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import api from '../services/api';
-import { Alert } from '../types';
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+export interface Alert {
+  id: string;
+  type: string;
+  vehicleId: string;
+  severity: "critical" | "warning" | "info";
+  message: string;
+  timestamp: string;
+  acknowledged: boolean;
+  metadata?: any;
+}
+
+export const fetchAlerts = createAsyncThunk(
+  "alerts/fetchAlerts",
+  async (_: any) => {
+    const response = await fetch("/api/v1/alerts");
+    return (await response.json()) as Alert[];
+  },
+);
 
 interface AlertsState {
   alerts: Alert[];
@@ -16,55 +33,45 @@ const initialState: AlertsState = {
   error: null,
 };
 
-export const fetchAlerts = createAsyncThunk('alerts/fetchAll', async (params: any = {}) => {
-  const response = await api.getAlerts(params);
-  return response.alerts || response;
-});
-
-export const acknowledgeAlert = createAsyncThunk('alerts/acknowledge', async (id: string, { rejectWithValue }) => {
-  try {
-    await api.acknowledgeAlert(id);
-    return id;
-  } catch (error: any) {
-    return rejectWithValue(error.response?.data?.message || 'Failed to acknowledge alert');
-  }
-});
-
 const alertsSlice = createSlice({
-  name: 'alerts',
+  name: "alerts",
   initialState,
   reducers: {
-    addAlert: (state, action) => {
+    setAlerts: (state, action: PayloadAction<Alert[]>) => {
+      state.alerts = action.payload;
+      state.unreadCount = action.payload.filter((a) => !a.acknowledged).length;
+      state.loading = false;
+    },
+    addAlertEvent: (state, action: PayloadAction<Alert>) => {
       state.alerts.unshift(action.payload);
       if (!action.payload.acknowledged) {
         state.unreadCount += 1;
       }
+      if (state.alerts.length > 500) state.alerts.pop();
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(fetchAlerts.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchAlerts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.alerts = action.payload;
-        state.unreadCount = action.payload.filter((a: Alert) => !a.acknowledged).length;
-      })
-      .addCase(fetchAlerts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to fetch alerts';
-      })
-      .addCase(acknowledgeAlert.fulfilled, (state, action) => {
-        const alert = state.alerts.find((a) => a.id === action.payload);
-        if (alert && !alert.acknowledged) {
-          alert.acknowledged = true;
-          state.unreadCount -= 1;
-        }
-      });
+    acknowledgeAlert: (state, action: PayloadAction<string>) => {
+      const alert = state.alerts.find((a) => a.id === action.payload);
+      if (alert && !alert.acknowledged) {
+        alert.acknowledged = true;
+        state.unreadCount = Math.max(0, state.unreadCount - 1);
+      }
+    },
+    setAlertsLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
+    },
+    setAlertsError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+      state.loading = false;
+    },
   },
 });
 
-export const { addAlert } = alertsSlice.actions;
+export const {
+  setAlerts,
+  addAlertEvent,
+  acknowledgeAlert,
+  setAlertsLoading,
+  setAlertsError,
+} = alertsSlice.actions;
+
 export default alertsSlice.reducer;

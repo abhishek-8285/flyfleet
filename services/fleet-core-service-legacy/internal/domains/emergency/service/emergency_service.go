@@ -14,6 +14,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"os"
 )
 
 const (
@@ -24,21 +25,119 @@ const (
 )
 
 type EmergencyService struct {
-	repo         repository.EmergencyRepository
-	trackingRepo trackingRepo.LiveCacheRepository
-	nc           *nats.Conn
-	redis        *redis.Client
-	log          *zap.Logger
+	repo          repository.EmergencyRepository
+	trackingRepo  trackingRepo.LiveCacheRepository
+	nc            *nats.Conn
+	redis         *redis.Client
+	log           *zap.Logger
+	retry         *NotificationRetryService
+	geo            *EmergencyGeoService
+	authority      *EmergencyAuthorityService
+	severityEngine *EmergencySeverityEngine
+	fallback       *ProviderFallbackManager
 }
 
-func NewEmergencyService(repo repository.EmergencyRepository, trackingRepo trackingRepo.LiveCacheRepository, nc *nats.Conn, rdb *redis.Client, log *zap.Logger) *EmergencyService {
-	return &EmergencyService{
-		repo:         repo,
-		trackingRepo: trackingRepo,
-		nc:           nc,
-		redis:        rdb,
-		log:          log,
+func (s *EmergencyService) ValidateConfig() error {
+	requiredEnv := []string{
+		"EMERGENCY_SMS_PROVIDER",
+		"EMERGENCY_CALL_PROVIDER",
+		"NATS_URL",
+		"REDIS_URL",
+		"POSTGRES_URL",
 	}
+
+	for _, env := range requiredEnv {
+		if os.Getenv(env) == "" {
+			return fmt.Errorf("missing required environment variable: %s", env)
+		}
+	}
+	return nil
+}
+
+func (s *EmergencyService) CheckHealth(ctx context.Context) (map[string]string, error) {
+	health := make(map[string]string)
+	
+	// Providers
+	if s.fallback != nil {
+		providerHealth := s.fallback.CheckProvidersHealth(ctx)
+		for k, v := range providerHealth {
+			health["provider_"+k] = v
+		}
+	} else {
+		health["providers"] = "not_configured"
+	}
+
+	// Database
+	if err := s.repo.Ping(ctx); err != nil {
+		health["database"] = "unhealthy: " + err.Error()
+	} else {
+		health["database"] = "healthy"
+	}
+
+	// Redis
+	if s.redis != nil {
+		if err := s.redis.Ping(ctx).Err(); err != nil {
+			health["redis"] = "unhealthy: " + err.Error()
+		} else {
+			health["redis"] = "healthy"
+		}
+	} else {
+		health["redis"] = "not_configured"
+	}
+
+	// NATS
+	if s.nc != nil {
+		if s.nc.Status() != nats.CONNECTED {
+			health["nats"] = "unhealthy: status " + s.nc.Status().String()
+		} else {
+			health["nats"] = "healthy"
+		}
+	} else {
+		health["nats"] = "not_configured"
+	}
+
+	return health, nil
+}
+
+func NewEmergencyService(
+	repo repository.EmergencyRepository,
+	trackingRepo trackingRepo.LiveCacheRepository,
+	nc *nats.Conn,
+	rdb *redis.Client,
+	log *zap.Logger,
+	retry *NotificationRetryService,
+	geo *EmergencyGeoService,
+	authority *EmergencyAuthorityService,
+	severityEngine *EmergencySeverityEngine,
+	fallback *ProviderFallbackManager,
+) *EmergencyService {
+	return &EmergencyService{
+		repo:           repo,
+		trackingRepo:   trackingRepo,
+		nc:             nc,
+		redis:          rdb,
+		log:            log,
+		retry:          retry,
+		geo:            geo,
+		authority:      authority,
+		severityEngine: severityEngine,
+		fallback:       fallback,
+	}
+}
+
+func (s *EmergencyService) logEnhancedTimelineEvent(ctx context.Context, incidentID uuid.UUID, eventType string, data interface{}) {
+	eventData, _ := json.Marshal(data)
+	event := &models.TimelineEvent{
+		ID:         uuid.New(),
+		IncidentID: incidentID,
+		EventType:  eventType,
+		EventData:  eventData,
+		CreatedAt:  time.Now(),
+	}
+	if err := s.repo.CreateTimelineEvent(ctx, event); err != nil {
+		s.log.Error("Failed to log enhanced timeline event", zap.Error(err))
+	}
+	emergency.TimelineEventsTotal.WithLabelValues(eventType).Inc()
 }
 
 func (s *EmergencyService) CalculateSeverity(incidentType models.IncidentType) models.SOSSeverity {
@@ -76,18 +175,32 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 	}
 
 	// Auto-calculate severity for standardization
-	severity := s.CalculateSeverity(req.IncidentType)
+	// 1.3 Determine severity automatically (Phase 3)
+	collisionDetected := false // Check if req.Metadata indicates collision
+	panicButtonPressed := true 
+	driverHealthSignal := true
+	severity := s.severityEngine.Classify(float64(req.Speed), collisionDetected, panicButtonPressed, driverHealthSignal)
+	
+	// Record severity metric
+	emergency.IncidentSeverityTotal.WithLabelValues(string(severity)).Inc()
 
-	// Check for duplicate SOS within window
-	// Check for duplicate SOS within window
-	recent, _ := s.repo.GetRecentSOSByVehicle(ctx, vehicleID, DuplicateSOSWindow, req.IncidentType)
-	if recent != nil && recent.Status == models.StatusTriggered {
-		return nil, ErrDuplicateSOS
+	// Phase 3: Check for duplicate SOS within window using Redis
+	if s.redis != nil {
+		dedupKey := fmt.Sprintf("sos_dedup:%s", vehicleID)
+		set, err := s.redis.SetNX(ctx, dedupKey, "triggered", 5*time.Minute).Result()
+		if err != nil {
+			s.log.Error("Redis deduplication check failed", zap.Error(err))
+		} else if !set {
+			return nil, ErrDuplicateSOS
+		}
+	} else {
+		s.log.Warn("Redis not initialized, skipping deduplication check")
 	}
 
 	// SOS Rate limiting (5 incidents / 10 mins)
-	// SOS Rate limiting (5 incidents / 10 mins)
 	limited, err := s.isRateLimited(ctx, vehicleID)
+	if err != nil {
+		s.log.Error("Rate limit check failed", zap.Error(err))
 	} else if limited {
 		return nil, fmt.Errorf("SOS rate limit exceeded for vehicle")
 	}
@@ -112,6 +225,24 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 		SimulationMode:  req.SimulationMode,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
+	}
+
+	// Phase 5: Geo Context Enrichment
+	if s.geo != nil {
+		geoContext := s.geo.EnrichWithNearbyResources(ctx, incident.Latitude, incident.Longitude)
+		// Merge with existing metadata if any
+		meta := make(map[string]interface{})
+		if len(incident.Metadata) > 0 {
+			_ = json.Unmarshal(incident.Metadata, &meta)
+			if meta == nil {
+				meta = make(map[string]interface{})
+			}
+		}
+		for k, v := range geoContext {
+			meta[k] = v
+		}
+		data, _ := json.Marshal(meta)
+		incident.Metadata = data
 	}
 
 	// 1.5 Geo Risk Tagging (Rule-based Enterprise logic)
@@ -155,6 +286,12 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 		"severity": incident.Severity,
 		"type":     incident.IncidentType,
 	})
+	s.logEnhancedTimelineEvent(ctx, incident.ID, "SOS_TRIGGERED", map[string]interface{}{
+		"source":   incident.PanicSource,
+		"severity": incident.Severity,
+		"type":     incident.IncidentType,
+		"location": map[string]float64{"lat": incident.Latitude, "lng": incident.Longitude},
+	})
 
 	// 4. Metrics
 	emergency.IncidentsTotal.WithLabelValues(incident.OrgID.String(), string(incident.IncidentType), string(incident.Severity)).Inc()
@@ -192,6 +329,9 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 	s.logTimelineEvent(ctx, incident.ID, "ESCALATION_STARTED", "SYSTEM", map[string]interface{}{
 		"timeout": EscalationTimeout.Seconds(),
 	})
+	s.logEnhancedTimelineEvent(ctx, incident.ID, "ESCALATION_STARTED", map[string]interface{}{
+		"timeout": EscalationTimeout.Seconds(),
+	})
 
 	contacts, err := s.repo.GetEmergencyContacts(ctx, incident.OrgID)
 	if err != nil {
@@ -217,7 +357,8 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 			return // Resolved or cancelled
 		}
 
-		s.log.Info("Notifying emergency contact", zap.String("contact", contact.Name), zap.String("incident", incident.ID.String()), zap.Int("priority", contact.Priority))
+		// Phase 1: Record that we are notifying this contact
+		s.repo.RecordContactNotification(ctx, incident.ID, contact.ID)
 
 		escalation := &models.EmergencyEscalation{
 			ID:                  uuid.New(),
@@ -229,10 +370,27 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 		}
 		s.repo.CreateEscalation(ctx, escalation)
 
+		// Phase 2: Use NotificationRetryService
+		if s.retry != nil {
+			s.retry.SendWithRetry(ctx, NotificationRequest{
+				IncidentID: incident.ID,
+				OrgID:      incident.OrgID,
+				ContactID:  contact.ID,
+				Type:       "SMS",
+				Target:     contact.Phone,
+				Content:    fmt.Sprintf("EMERGENCY: SOS triggered for Vehicle %s. Please acknowledge.", incident.VehicleID),
+			})
+		}
+
 		// Cost Monitoring
 		emergency.SMSSentTotal.WithLabelValues(incident.OrgID.String()).Inc()
 
 		s.logTimelineEvent(ctx, incident.ID, "CONTACT_NOTIFIED", "SYSTEM", map[string]interface{}{
+			"contact_name": contact.Name,
+			"priority":     contact.Priority,
+			"channel":      "SMS",
+		})
+		s.logEnhancedTimelineEvent(ctx, incident.ID, "CONTACT_NOTIFIED", map[string]interface{}{
 			"contact_name": contact.Name,
 			"priority":     contact.Priority,
 			"channel":      "SMS",
@@ -265,6 +423,10 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 	// If still triggered after all contacts, notify authorities if critical
 	if incident.Severity == models.SeverityCritical {
 		s.routeToAuthorities(ctx, incident)
+		// Phase 2: AIS-140 authority service – skip for drills/simulations
+		if s.authority != nil && !incident.SimulationMode {
+			s.authority.NotifyAuthorities(ctx, incident)
+		}
 	}
 }
 
@@ -297,6 +459,11 @@ func (s *EmergencyService) routeToAuthorities(ctx context.Context, incident *mod
 		if shouldNotify {
 			s.log.Info("Notifying authority unit", zap.String("unit", unit.Name), zap.String("type", unit.Type))
 			s.logTimelineEvent(ctx, incident.ID, "AUTHORITY_NOTIFIED", "SYSTEM", map[string]interface{}{
+				"unit_name": unit.Name,
+				"unit_type": unit.Type,
+				"contact":   unit.ContactNumber,
+			})
+			s.logEnhancedTimelineEvent(ctx, incident.ID, "AUTHORITY_ALERTED", map[string]interface{}{
 				"unit_name": unit.Name,
 				"unit_type": unit.Type,
 				"contact":   unit.ContactNumber,
@@ -396,6 +563,10 @@ func (s *EmergencyService) AcknowledgeIncident(ctx context.Context, id uuid.UUID
 
 	s.logAction(ctx, id, &userID, "ACKNOWLEDGED", notes)
 	s.logTimelineEvent(ctx, id, "ACKNOWLEDGED", userID.String(), map[string]string{"notes": notes})
+	s.logEnhancedTimelineEvent(ctx, id, "ACKNOWLEDGED", map[string]interface{}{
+		"user_id": userID,
+		"notes":   notes,
+	})
 
 	// Publish update
 	incident.Status = models.StatusAcknowledged
@@ -433,6 +604,10 @@ func (s *EmergencyService) ResolveIncident(ctx context.Context, id uuid.UUID, or
 
 	s.logAction(ctx, id, &userID, string(status), notes)
 	s.logTimelineEvent(ctx, id, string(status), userID.String(), map[string]string{"notes": notes})
+	s.logEnhancedTimelineEvent(ctx, id, string(status), map[string]interface{}{
+		"user_id": userID,
+		"notes":   notes,
+	})
 
 	// Publish update
 	incident.Status = status
@@ -557,6 +732,34 @@ func (s *EmergencyService) TriggerSimulatedSOS(ctx context.Context, req models.C
 	return s.TriggerSOS(ctx, req)
 }
 
+// TriggerDrill creates a drill incident: simulation_mode=true, metrics recorded, authority alerts suppressed.
+func (s *EmergencyService) TriggerDrill(ctx context.Context, req models.CreateSOSRequest) (*models.SOSIncident, error) {
+	req.SimulationMode = true
+
+	meta := make(map[string]interface{})
+	if len(req.Metadata) > 0 {
+		json.Unmarshal(req.Metadata, &meta)
+	}
+	meta["drill"] = true
+	meta["alerts_suppressed"] = true
+	req.Metadata, _ = json.Marshal(meta)
+
+	// Use TriggerSOS but the authority service will check simulation_mode before dispatching
+	incident, err := s.TriggerSOS(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Phase 8: Record drill metric
+	emergency.DrillEventsTotal.WithLabelValues(incident.OrgID.String()).Inc()
+
+	s.log.Info("Emergency drill completed",
+		zap.String("incident_id", incident.ID.String()),
+		zap.String("org_id", incident.OrgID.String()),
+	)
+	return incident, nil
+}
+
 func (s *EmergencyService) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, orgID uuid.UUID, feedback string, notes string) error {
 	// Security check: ensure incident belongs to org
 	incident, err := s.repo.GetIncidentByID(ctx, incidentID)
@@ -598,6 +801,23 @@ func (s *EmergencyService) notifyDriverApp(ctx context.Context, driverID, vehicl
 	}
 
 	s.publishEvent("mobile.push.emergency_update", payload)
+}
+
+func (s *EmergencyService) ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
+	return s.repo.ExportIncidents(ctx, orgID, start, end)
+}
+
+func (s *EmergencyService) GetIncidentTimeline(ctx context.Context, incidentID, orgID uuid.UUID) ([]models.TimelineEvent, error) {
+	// Security check
+	incident, err := s.repo.GetIncidentByID(ctx, incidentID)
+	if err != nil || incident == nil {
+		return nil, ErrIncidentNotFound
+	}
+	if incident.OrgID != orgID {
+		return nil, ErrUnauthorized
+	}
+
+	return s.repo.GetTimelineEvents(ctx, incidentID)
 }
 
 func (s *EmergencyService) isHighRiskArea(lat, lng float64) bool {

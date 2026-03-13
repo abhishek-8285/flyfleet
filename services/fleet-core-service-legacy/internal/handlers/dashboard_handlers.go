@@ -160,3 +160,38 @@ func (h *DashboardHandlers) GetTopErrors(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(errors)
 }
+func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Extract user ID from header (X-User-ID)
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "invalid user id", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.authSvc.GetUserByID(ctx, userID)
+	if err != nil {
+		h.logger.Error("user not found", zap.Error(err), zap.String("user_id", userIDStr))
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	orgID := user.OrgID
+	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, orgID)
+	
+	// Use orgSvc to get organizations
+	orgs, _, _ := h.orgSvc.GetOrganizations(ctx, 1, 100, "")
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"user":        user,
+		"permissions": permissions,
+		"orgs":        orgs,
+	})
+}

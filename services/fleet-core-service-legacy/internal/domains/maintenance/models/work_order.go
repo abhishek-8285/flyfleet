@@ -46,6 +46,7 @@ const (
 	WOMaintenanceTypeCorrective MaintenanceTypeEnum = "corrective"
 	WOMaintenanceTypeInspection MaintenanceTypeEnum = "inspection"
 	WOMaintenanceTypeBreakdown  MaintenanceTypeEnum = "breakdown"
+	WOMaintenanceTypeRoutine    MaintenanceTypeEnum = "routine"
 )
 
 // WorkOrder represents a maintenance work order
@@ -54,7 +55,7 @@ type WorkOrder struct {
 	OrganizationID  uuid.UUID           `json:"organization_id" db:"organization_id"`
 	VehicleID       uuid.UUID           `json:"vehicle_id" db:"vehicle_id"`
 	Title           string              `json:"title" db:"title"`
-	Description     string              `json:"description" db:"description"`
+	Description     *string             `json:"description,omitempty" db:"description"`
 	MaintenanceType MaintenanceTypeEnum `json:"type" db:"maintenance_type"`
 	Priority        WorkOrderPriority   `json:"priority" db:"priority"`
 	Status          WorkOrderStatus     `json:"status" db:"status"`
@@ -123,8 +124,8 @@ type InventoryPart struct {
 	OrganizationID    uuid.UUID `json:"organization_id" db:"organization_id"`
 	PartNumber        string    `json:"part_number" db:"part_number"`
 	Name              string    `json:"name" db:"name"`
-	Description       string    `json:"description,omitempty" db:"description"`
-	StockLocation     string    `json:"location,omitempty" db:"stock_location"`
+	Description       *string   `json:"description,omitempty" db:"description"`
+	StockLocation     *string   `json:"location,omitempty" db:"stock_location"`
 	QuantityAvailable int      `json:"quantity" db:"quantity_available"`
 	ReorderLevel      int       `json:"reorder_level" db:"reorder_level"`
 	UnitCost          float64   `json:"unit_price" db:"unit_cost"`

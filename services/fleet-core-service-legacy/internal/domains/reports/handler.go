@@ -46,6 +46,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.ListReports)
 	r.Get("/{id}", h.GetReportStatus)
 	r.Get("/{id}/download", h.DownloadReport)
+	r.Post("/{id}/cancel", h.CancelReport)
 	r.Delete("/{id}", h.DeleteReport)
 
 	// Templates
@@ -203,6 +204,35 @@ func (h *Handler) DownloadReport(w http.ResponseWriter, r *http.Request) {
 		zap.String("tenant_id", tenantID.String()))
 
 	http.Redirect(w, r, signedURL, http.StatusFound)
+}
+
+func (h *Handler) CancelReport(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.CancelReport(r.Context(), id, tenantID); err != nil {
+		if err.Error() == "report not found" {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		if err.Error() == "cannot cancel a completed report" {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) DeleteReport(w http.ResponseWriter, r *http.Request) {

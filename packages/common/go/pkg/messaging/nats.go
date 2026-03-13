@@ -16,6 +16,7 @@ type MessageBroker interface {
 	
 	// JetStream capabilities
 	PublishJS(subject string, data interface{}) error
+	SubscribeJS(subject, durable, queue string, handler func([]byte)) error
 	JetStream() (nats.JetStreamContext, error)
 	
 	Close() error
@@ -114,10 +115,8 @@ func (nc *NATSClient) Subscribe(subject string, handler func([]byte)) error {
 		
 		handler(msg.Data)
 		
-		// Acknowledge the message
-		if err := msg.Ack(); err != nil {
-			nc.logger.Error("Failed to acknowledge message", zap.Error(err))
-		}
+		// Acknowledge the message if it's a synchronous subscription or similar
+		// For standard NATS, Ack is not required unless it's a request/pull
 	})
 	
 	if err != nil {
@@ -128,6 +127,31 @@ func (nc *NATSClient) Subscribe(subject string, handler func([]byte)) error {
 	}
 
 	nc.logger.Info("Subscribed to subject", zap.String("subject", subject))
+	return nil
+}
+
+func (nc *NATSClient) SubscribeJS(subject, durable, queue string, handler func([]byte)) error {
+	_, err := nc.js.Subscribe(subject, func(msg *nats.Msg) {
+		nc.logger.Debug("JetStream message received",
+			zap.String("subject", subject),
+			zap.String("durable", durable),
+			zap.Int("payload_size", len(msg.Data)))
+		
+		handler(msg.Data)
+		
+		if err := msg.Ack(); err != nil {
+			nc.logger.Error("Failed to acknowledge JetStream message", zap.Error(err))
+		}
+	}, nats.Durable(durable), nats.Bind(queue, durable), nats.ManualAck())
+	
+	if err != nil {
+		nc.logger.Error("Failed to subscribe to JetStream",
+			zap.String("subject", subject),
+			zap.Error(err))
+		return err
+	}
+
+	nc.logger.Info("Subscribed to JetStream", zap.String("subject", subject), zap.String("durable", durable))
 	return nil
 }
 

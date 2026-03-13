@@ -11,6 +11,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/messaging"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/repository"
@@ -25,36 +26,40 @@ const maxTimestampDriftSeconds = 300
 
 // IngestionConfig holds tunable ingestion parameters.
 type IngestionConfig struct {
-	MaxSpeedKmh             float64
+	MaxSpeedKmh              float64
 	MaxTimestampDriftSeconds int
-	HMACSecret              string // if non-empty, require X-HMAC-Signature
+	HMACSecret               string // if non-empty, require X-HMAC-Signature
+	BufferEnabled            bool   // if true, use NATS for async ingestion
 }
 
 // DefaultIngestionConfig returns sensible production defaults.
 func DefaultIngestionConfig() IngestionConfig {
 	return IngestionConfig{
-		MaxSpeedKmh:             300,
+		MaxSpeedKmh:              300,
 		MaxTimestampDriftSeconds: maxTimestampDriftSeconds,
+		BufferEnabled:            true, // Default to async for production safety
 	}
 }
 
 // IngestionService validates, deduplicates, and persists inbound telemetry.
 // It also updates the Redis live-cache and hands events to the anomaly engine.
 type IngestionService struct {
-	db           *pgxpool.Pool
-	telemRepo    repository.TelemetryRepository
-	devRegRepo   repository.DeviceRegistryRepository
-	outboxRepo   repository.OutboxRepository
-	liveCache    repository.LiveCacheRepository   // may be nil
+	db            *pgxpool.Pool
+	mb            messaging.MessageBroker
+	telemRepo     repository.TelemetryRepository
+	devRegRepo    repository.DeviceRegistryRepository
+	outboxRepo    repository.OutboxRepository
+	liveCache     repository.LiveCacheRepository   // may be nil
 	anomalyEngine *AnomalyEngine
 	analytics     analytics.AnalyticsService // optional
-	cfg          IngestionConfig
-	logger       *zap.Logger
+	cfg           IngestionConfig
+	logger        *zap.Logger
 }
 
 // NewIngestionService creates a new IngestionService.
 func NewIngestionService(
 	db *pgxpool.Pool,
+	mb messaging.MessageBroker,
 	telemRepo repository.TelemetryRepository,
 	devRegRepo repository.DeviceRegistryRepository,
 	outboxRepo repository.OutboxRepository,
@@ -65,15 +70,16 @@ func NewIngestionService(
 	logger *zap.Logger,
 ) *IngestionService {
 	return &IngestionService{
-		db:           db,
-		telemRepo:    telemRepo,
-		devRegRepo:   devRegRepo,
-		outboxRepo:   outboxRepo,
-		liveCache:    liveCache,
+		db:            db,
+		mb:            mb,
+		telemRepo:     telemRepo,
+		devRegRepo:    devRegRepo,
+		outboxRepo:    outboxRepo,
+		liveCache:     liveCache,
 		anomalyEngine: anomalyEngine,
-		analytics:    analytics,
-		cfg:          cfg,
-		logger:       logger,
+		analytics:     analytics,
+		cfg:           cfg,
+		logger:        logger,
 	}
 }
 
@@ -132,18 +138,30 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 	// 7 ── Stamp received_at
 	event.ReceivedAt = time.Now().UTC()
 
-	// 8 ── Persist to DB with Outbox (Transactional)
-	if s.db != nil {
-		err = s.transactionalIngest(ctx, event)
-	} else {
-		// Fallback for tests (non-transactional)
-		err = s.telemRepo.IngestEvent(ctx, nil, event)
-		if err == nil {
-			err = s.outboxRepo.AddToOutbox(ctx, nil, event)
+	// 8 ── Persist to DB or Buffer via NATS
+	if s.cfg.BufferEnabled && s.mb != nil {
+		// Asynchronous Path: Buffer to NATS for high-throughput resilience.
+		// Partition key is implicit in the payload; JetStream handle provides ordering.
+		err = s.mb.PublishJS("telemetry.raw", event)
+		if err != nil {
+			s.logger.Error("failed to buffer telemetry to NATS", zap.Error(err))
+			// Fail fast to protect DB from sudden 20k/sec surge if buffer fails.
+			return nil, fmt.Errorf("telemetry buffer unavailable: %w", err)
 		}
-	}
-	if err != nil {
-		return nil, fmt.Errorf("ingest failed: %w", err)
+	} else {
+		// Synchronous Path: Direct DB write (Legacy or non-critical paths)
+		if s.db != nil {
+			err = s.transactionalIngest(ctx, event)
+		} else {
+			// Fallback for tests (non-transactional)
+			err = s.telemRepo.IngestEvent(ctx, nil, event)
+			if err == nil {
+				err = s.outboxRepo.AddToOutbox(ctx, nil, event)
+			}
+		}
+		if err != nil {
+			return nil, fmt.Errorf("ingest failed: %w", err)
+		}
 	}
 
 	// 9 ── Update Redis live cache

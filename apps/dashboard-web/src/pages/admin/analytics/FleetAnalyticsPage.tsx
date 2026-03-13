@@ -1,29 +1,27 @@
 import {
-  TruckIcon,
-  ClockIcon,
-  FuelIcon,
-  CurrencyDollarIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  ExclamationTriangleIcon,
-  ArrowPathIcon,
+    ArrowPathIcon,
+    ArrowTrendingUpIcon,
+    BoltIcon,
+    CurrencyDollarIcon,
+    ExclamationTriangleIcon,
+    TruckIcon
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts";
 import api from "../../../services/api";
 
@@ -61,7 +59,6 @@ const FleetAnalyticsPage: React.FC = () => {
   const [analytics, setAnalytics] = useState<FleetAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("30");
-  const [selectedAnalytics, setSelectedAnalytics] = useState<FleetAnalytics | null>(null);
 
   useEffect(() => {
     fetchAnalytics();
@@ -81,7 +78,7 @@ const FleetAnalyticsPage: React.FC = () => {
           endDate: format(endDate, "yyyy-MM-dd"),
         },
       })) as any;
-      
+
       setAnalytics(response?.data ? [response.data] : []);
     } catch (error) {
       console.error("Failed to fetch fleet analytics", error);
@@ -95,7 +92,9 @@ const FleetAnalyticsPage: React.FC = () => {
   const kpis = [
     {
       title: "Fleet Utilization",
-      value: latest ? `${((latest.active_vehicles / latest.total_vehicles) * 100).toFixed(1)}%` : "--",
+      value: latest
+        ? `${((latest.active_vehicles / latest.total_vehicles) * 100).toFixed(1)}%`
+        : "--",
       change: "+2.5%",
       positive: true,
       icon: <TruckIcon className="h-6 w-6" />,
@@ -111,10 +110,12 @@ const FleetAnalyticsPage: React.FC = () => {
     },
     {
       title: "Fuel Efficiency",
-      value: latest ? `${latest.average_fuel_efficiency.toFixed(1)} km/L` : "--",
+      value: latest
+        ? `${latest.average_fuel_efficiency.toFixed(1)} km/L`
+        : "--",
       change: "-0.8%",
       positive: false,
-      icon: <FuelIcon className="h-6 w-6" />,
+      icon: <BoltIcon className="h-6 w-6" />,
       color: "text-amber-400",
     },
     {
@@ -127,24 +128,37 @@ const FleetAnalyticsPage: React.FC = () => {
     },
   ];
 
-  const tripStatusData = latest ? [
-    { name: "Completed", value: latest.completed_trips, color: "#10b981" },
-    { name: "Cancelled", value: latest.cancelled_trips, color: "#ef4444" },
-    { name: "In Progress", value: latest.total_trips - latest.completed_trips - latest.cancelled_trips, color: "#3b82f6" },
-  ] : [];
+  const tripStatusData = latest
+    ? [
+        { name: "Completed", value: latest.completed_trips, color: "#10b981" },
+        { name: "Cancelled", value: latest.cancelled_trips, color: "#ef4444" },
+        {
+          name: "In Progress",
+          value:
+            latest.total_trips -
+            latest.completed_trips -
+            latest.cancelled_trips,
+          color: "#3b82f6",
+        },
+      ]
+    : [];
 
-  const efficiencyData = latest ? [
-    { day: "Week 1", efficiency: 85 + Math.random() * 10 },
-    { day: "Week 2", efficiency: 82 + Math.random() * 10 },
-    { day: "Week 3", efficiency: 88 + Math.random() * 10 },
-    { day: "Week 4", efficiency: 90 + Math.random() * 10 },
-  ] : [];
+  const efficiencyData = latest
+    ? [
+        { day: "Week 1", efficiency: 85 + Math.random() * 10 },
+        { day: "Week 2", efficiency: 82 + Math.random() * 10 },
+        { day: "Week 3", efficiency: 88 + Math.random() * 10 },
+        { day: "Week 4", efficiency: 90 + Math.random() * 10 },
+      ]
+    : [];
 
-  const costData = latest ? [
-    { category: "Fuel", cost: latest.fuel_cost },
-    { category: "Maintenance", cost: latest.maintenance_cost },
-    { category: "Operations", cost: latest.revenue * 0.3 },
-  ] : [];
+  const costData = latest
+    ? [
+        { category: "Fuel", cost: latest.fuel_cost },
+        { category: "Maintenance", cost: latest.maintenance_cost },
+        { category: "Operations", cost: latest.revenue * 0.3 },
+      ]
+    : [];
 
   return (
     <div className="p-6 bg-slate-900 min-h-screen">
@@ -189,7 +203,9 @@ const FleetAnalyticsPage: React.FC = () => {
               <div className={`p-3 rounded-lg bg-slate-900 ${kpi.color}`}>
                 {kpi.icon}
               </div>
-              <span className={`text-xs font-semibold ${kpi.positive ? "text-emerald-400" : "text-red-400"}`}>
+              <span
+                className={`text-xs font-semibold ${kpi.positive ? "text-emerald-400" : "text-red-400"}`}
+              >
                 {kpi.change}
               </span>
             </div>
@@ -203,7 +219,9 @@ const FleetAnalyticsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Trip Status Pie Chart */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Trip Status Distribution</h3>
+          <h3 className="text-lg font-bold text-white mb-4">
+            Trip Status Distribution
+          </h3>
           {loading || tripStatusData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-slate-500">
               No data available
@@ -240,7 +258,9 @@ const FleetAnalyticsPage: React.FC = () => {
 
         {/* Efficiency Trend */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Fleet Efficiency Trend</h3>
+          <h3 className="text-lg font-bold text-white mb-4">
+            Fleet Efficiency Trend
+          </h3>
           {loading || efficiencyData.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-slate-500">
               No data available
@@ -248,9 +268,23 @@ const FleetAnalyticsPage: React.FC = () => {
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={efficiencyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94a3b8" }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#334155"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="day"
+                  tick={{ fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 100]}
+                />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1e293b",
@@ -286,20 +320,41 @@ const FleetAnalyticsPage: React.FC = () => {
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={costData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="category" tick={{ fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#334155"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="category"
+                  tick={{ fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#94a3b8" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip
+                  formatter={(value: any) => [
+                    `$${Number(value).toLocaleString()}`,
+                    "Cost",
+                  ]}
                   contentStyle={{
                     backgroundColor: "#1e293b",
                     border: "1px solid #334155",
                     borderRadius: "8px",
                     color: "#fff",
-                    formatter: (value: any) => [`$${Number(value).toLocaleString()}`, "Cost"],
                   }}
                 />
                 <Legend />
-                <Bar dataKey="cost" name="Cost ($)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="cost"
+                  name="Cost ($)"
+                  fill="#8b5cf6"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -307,21 +362,77 @@ const FleetAnalyticsPage: React.FC = () => {
 
         {/* Key Metrics */}
         <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Key Performance Metrics</h3>
+          <h3 className="text-lg font-bold text-white mb-4">
+            Key Performance Metrics
+          </h3>
           {loading || !latest ? (
             <div className="h-64 flex items-center justify-center text-slate-500">
               No data available
             </div>
           ) : (
             <div className="space-y-4">
-              <MetricRow label="Safety Score" value={`${latest.safety_score}/100`} color={latest.safety_score >= 80 ? "text-emerald-400" : latest.safety_score >= 60 ? "text-amber-400" : "text-red-400"} />
-              <MetricRow label="Routing Efficiency" value={`${latest.routing_efficiency.toFixed(1)}%`} color="text-blue-400" />
-              <MetricRow label="Idle Time" value={`${latest.idle_time_percentage.toFixed(1)}%`} color={latest.idle_time_percentage < 10 ? "text-emerald-400" : "text-amber-400"} />
-              <MetricRow label="Avg Trip Duration" value={`${latest.average_trip_duration.toFixed(1)} hrs`} color="text-white" />
-              <MetricRow label="Avg Speed" value={`${latest.average_speed.toFixed(1)} km/h`} color="text-white" />
-              <MetricRow label="Geofence Violations" value={latest.geofence_violations.toString()} color={latest.geofence_violations === 0 ? "text-emerald-400" : "text-red-400"} />
-              <MetricRow label="Emergency Stops" value={latest.emergency_stops.toString()} color={latest.emergency_stops === 0 ? "text-emerald-400" : "text-amber-400"} />
-              <MetricRow label="Alerts Triggered" value={latest.alerts_triggered.toString()} color={latest.alerts_triggered === 0 ? "text-emerald-400" : "text-amber-400"} />
+              <MetricRow
+                label="Safety Score"
+                value={`${latest.safety_score}/100`}
+                color={
+                  latest.safety_score >= 80
+                    ? "text-emerald-400"
+                    : latest.safety_score >= 60
+                      ? "text-amber-400"
+                      : "text-red-400"
+                }
+              />
+              <MetricRow
+                label="Routing Efficiency"
+                value={`${latest.routing_efficiency.toFixed(1)}%`}
+                color="text-blue-400"
+              />
+              <MetricRow
+                label="Idle Time"
+                value={`${latest.idle_time_percentage.toFixed(1)}%`}
+                color={
+                  latest.idle_time_percentage < 10
+                    ? "text-emerald-400"
+                    : "text-amber-400"
+                }
+              />
+              <MetricRow
+                label="Avg Trip Duration"
+                value={`${latest.average_trip_duration.toFixed(1)} hrs`}
+                color="text-white"
+              />
+              <MetricRow
+                label="Avg Speed"
+                value={`${latest.average_speed.toFixed(1)} km/h`}
+                color="text-white"
+              />
+              <MetricRow
+                label="Geofence Violations"
+                value={latest.geofence_violations.toString()}
+                color={
+                  latest.geofence_violations === 0
+                    ? "text-emerald-400"
+                    : "text-red-400"
+                }
+              />
+              <MetricRow
+                label="Emergency Stops"
+                value={latest.emergency_stops.toString()}
+                color={
+                  latest.emergency_stops === 0
+                    ? "text-emerald-400"
+                    : "text-amber-400"
+                }
+              />
+              <MetricRow
+                label="Alerts Triggered"
+                value={latest.alerts_triggered.toString()}
+                color={
+                  latest.alerts_triggered === 0
+                    ? "text-emerald-400"
+                    : "text-amber-400"
+                }
+              />
             </div>
           )}
         </div>
@@ -338,19 +449,27 @@ const FleetAnalyticsPage: React.FC = () => {
             {latest.accidents_count > 0 && (
               <div className="bg-red-500/20 rounded-lg p-4">
                 <div className="text-red-400 text-sm mb-1">Accidents</div>
-                <div className="text-2xl font-bold text-white">{latest.accidents_count}</div>
+                <div className="text-2xl font-bold text-white">
+                  {latest.accidents_count}
+                </div>
               </div>
             )}
             {latest.incidents_count > 0 && (
               <div className="bg-amber-500/20 rounded-lg p-4">
                 <div className="text-amber-400 text-sm mb-1">Incidents</div>
-                <div className="text-2xl font-bold text-white">{latest.incidents_count}</div>
+                <div className="text-2xl font-bold text-white">
+                  {latest.incidents_count}
+                </div>
               </div>
             )}
             {latest.cancelled_trips > 0 && (
               <div className="bg-orange-500/20 rounded-lg p-4">
-                <div className="text-orange-400 text-sm mb-1">Cancelled Trips</div>
-                <div className="text-2xl font-bold text-white">{latest.cancelled_trips}</div>
+                <div className="text-orange-400 text-sm mb-1">
+                  Cancelled Trips
+                </div>
+                <div className="text-2xl font-bold text-white">
+                  {latest.cancelled_trips}
+                </div>
               </div>
             )}
           </div>
@@ -360,7 +479,11 @@ const FleetAnalyticsPage: React.FC = () => {
   );
 };
 
-const MetricRow: React.FC<{ label: string; value: string; color: string }> = ({ label, value, color }) => (
+const MetricRow: React.FC<{ label: string; value: string; color: string }> = ({
+  label,
+  value,
+  color,
+}) => (
   <div className="flex justify-between items-center py-3 border-b border-slate-700 last:border-0">
     <span className="text-slate-400">{label}</span>
     <span className={`text-lg font-semibold ${color}`}>{value}</span>

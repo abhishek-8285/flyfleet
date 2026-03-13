@@ -18,6 +18,7 @@ type DriverRow = Driver & {
 interface DriverTableProps {
   drivers: DriverRow[];
   loading: boolean;
+  onDriverClick?: (driver: Driver) => void;
 }
 
 const formatRelativeTime = (value?: string) => {
@@ -43,6 +44,7 @@ const getScoreColor = (score: number) => {
 export const DriverTable: React.FC<DriverTableProps> = ({
   drivers,
   loading,
+  onDriverClick,
 }) => {
   const { uiStrings: rawUiStrings } = useUIStrings("drivers");
   const { uiStrings: commonStrings } = useUIStrings("common");
@@ -140,7 +142,8 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                 return (
                   <tr
                     key={driver.id}
-                    className="hover:bg-[#1d2936] transition-colors group"
+                    className="hover:bg-[#1d2936] transition-colors group cursor-pointer"
+                    onClick={() => onDriverClick?.(driver)}
                   >
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-3">

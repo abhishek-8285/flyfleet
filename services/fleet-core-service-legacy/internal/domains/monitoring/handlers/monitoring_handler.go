@@ -26,6 +26,7 @@ func NewMonitoringHandler(service service.PulseService, logger *zap.Logger) *Mon
 }
 
 // RegisterRoutes registers monitoring routes
+// RegisterRoutes registers monitoring routes
 func (h *MonitoringHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/health", h.GetSystemHealth)
 	r.Get("/sla", h.GetSLAMetrics)
@@ -33,6 +34,13 @@ func (h *MonitoringHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/alerts", h.GetActiveAlerts)
 	r.Post("/alerts/acknowledge", h.AcknowledgeAlert)
 	r.Post("/alerts/resolve", h.ResolveAlert)
+
+	// SRE Endpoints
+	r.Get("/synthetics", h.GetSyntheticChecks)
+	r.Get("/slos", h.GetSLOs)
+	r.Get("/forecasts", h.GetCapacityForecasts)
+	r.Get("/business-metrics", h.GetBusinessKPIs)
+	r.Get("/global-health", h.GetGlobalHealth)
 }
 
 // GetSystemHealth handles GET /health
@@ -173,6 +181,53 @@ func (h *MonitoringHandler) ResolveAlert(w http.ResponseWriter, r *http.Request)
 	h.writeJSONResponse(w, http.StatusOK, map[string]string{
 		"message": "Alert resolved",
 	})
+}
+
+// SRE Handlers
+
+func (h *MonitoringHandler) GetSyntheticChecks(w http.ResponseWriter, r *http.Request) {
+	checks, err := h.service.GetSyntheticChecks(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, checks)
+}
+
+func (h *MonitoringHandler) GetSLOs(w http.ResponseWriter, r *http.Request) {
+	slos, err := h.service.GetSLOs(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, slos)
+}
+
+func (h *MonitoringHandler) GetCapacityForecasts(w http.ResponseWriter, r *http.Request) {
+	forecasts, err := h.service.GetCapacityForecasts(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, forecasts)
+}
+
+func (h *MonitoringHandler) GetBusinessKPIs(w http.ResponseWriter, r *http.Request) {
+	kpis, err := h.service.GetBusinessKPIs(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, kpis)
+}
+
+func (h *MonitoringHandler) GetGlobalHealth(w http.ResponseWriter, r *http.Request) {
+	health, err := h.service.GetGlobalHealth(r.Context())
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, health)
 }
 
 // Helper methods

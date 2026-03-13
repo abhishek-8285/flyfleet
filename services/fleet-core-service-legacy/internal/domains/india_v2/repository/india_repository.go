@@ -65,6 +65,17 @@ type IndiaIntegrationRepository interface {
 	DeleteIntegrationConfig(ctx context.Context, id string) error
 	ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
 	
+	// Bulk operations
+	BulkCreateVehicleVerification(ctx context.Context, verifications []*models.VehicleVerification) error
+	BulkCreateDriverVerification(ctx context.Context, verifications []*models.DriverVerification) error
+
 	HealthCheck(ctx context.Context) error
 	Ping(ctx context.Context) error
+	CreateIntegrationLog(ctx context.Context, log *models.IntegrationLog) error
+
+	// Compliance scan operations
+	GetExpiringVehicleVerifications(ctx context.Context, days int) ([]*models.VehicleVerification, error)
+	GetExpiringDriverVerifications(ctx context.Context, days int) ([]*models.DriverVerification, error)
+	GetExpiringLocalPermits(ctx context.Context, days int) ([]*models.LocalPermit, error)
+	GetNonCompliantGSTRecords(ctx context.Context) ([]*models.GSTCompliance, error)
 }
