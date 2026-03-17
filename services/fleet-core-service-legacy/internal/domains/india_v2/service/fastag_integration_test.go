@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/service"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -92,7 +93,8 @@ func (m *MockIndiaRepository) GetNonCompliantGSTRecords(ctx context.Context) ([]
 func TestFastagIntegrationService_FetchTransactions(t *testing.T) {
 	mockRepo := new(MockIndiaRepository)
 	logger := zap.NewNop()
-	svc := NewFastagIntegrationService(mockRepo, logger)
+	detector := billingv2service.NewDoubleSwipeDetector(mockRepo, nil, logger)
+	svc := NewFastagIntegrationService(mockRepo, detector, logger)
 
 	orgID := uuid.New()
 	tagNumber := "TAG123"

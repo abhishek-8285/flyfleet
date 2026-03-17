@@ -209,6 +209,11 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 			}
 		}
 
+		// Tenant Type
+		if tenantType, ok := claims["ten"].(string); ok {
+			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantType) // Reusing TenantIDKey for type or separate key
+		}
+
 		// Role
 		if role, ok := claims["rol"].(string); ok {
 			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)

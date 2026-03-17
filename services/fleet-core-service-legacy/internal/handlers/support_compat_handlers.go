@@ -471,15 +471,79 @@ func (h *UIHandlers) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(config)
 }
 
-func (h *UIHandlers) GetMenuItems(w http.ResponseWriter, r *http.Request) {
-	menuItems := []map[string]interface{}{
-		{"label": "Dashboard", "icon": "dashboard", "path": "/portal/dashboard"},
-		{"label": "Shipments", "icon": "local_shipping", "path": "/portal/shipments"},
-		{"label": "Bookings", "icon": "add_box", "path": "/portal/bookings"},
-		{"label": "Invoices", "icon": "payments", "path": "/portal/invoices"},
-		{"label": "Settings", "icon": "settings", "path": "/portal/settings"},
-	}
+func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
+	menuId := chi.URLParam(r, "menuId")
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
 	w.Header().Set("Content-Type", "application/json")
+
+	if menuId == "menuItems" {
+		items := []map[string]interface{}{}
+		
+		if role == "user" {
+			json.NewEncoder(w).Encode(items)
+			return
+		}
+		
+		if role == "driver" || role == "staff" || role == "c57c4ec8-5190-4776-9267-06c3da35bc3e" {
+			items = []map[string]interface{}{
+				{"label": "Dashboard", "path": "/dashboard", "icon": "dashboard", "resource": "dashboard", "action": "view"},
+				{"label": "My Trips", "path": "/dashboard/trips", "icon": "map", "resource": "trip", "action": "view"},
+				{"label": "Add Fuel Log", "path": "/dashboard/fuel/add", "icon": "local_gas_station", "resource": "vehicle", "action": "view"},
+			}
+			json.NewEncoder(w).Encode(items)
+			return
+		}
+		
+		// Super Admin / Org Admin / Fleet Manager
+		items = append(items, map[string]interface{}{"label": "Dashboard", "title": "Dashboard", "icon": "dashboard", "path": "/admin/dashboard", "items": []any{}})
+		
+		if role == "super_admin" || role == "org_admin" || role == "a2046939-4bbe-4c0b-a47e-f12d5dd39714" {
+			items = append(items, map[string]interface{}{"label": "Organizations", "title": "Organizations", "icon": "business", "path": "/admin/organizations", "items": []any{}})
+			items = append(items, map[string]interface{}{"label": "Users & Roles", "title": "Users & Roles", "icon": "people", "path": "/admin/users", "items": []any{}})
+			items = append(items, map[string]interface{}{"label": "Billing", "title": "Billing", "icon": "payments", "path": "/admin/billing", "items": []any{}})
+		}
+		
+		items = append(items, map[string]interface{}{"label": "Control Tower", "title": "Control Tower", "icon": "radar", "path": "/admin/control-tower", "items": []any{}})
+		items = append(items, map[string]interface{}{"label": "Fleet Command", "title": "Fleet Command", "icon": "local_shipping", "path": "/admin/vehicles", "items": []any{}})
+		items = append(items, map[string]interface{}{"label": "Dispatch", "title": "Dispatch", "icon": "route", "path": "/admin/dispatch", "items": []any{}})
+
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+	
+	if menuId == "analyticsItems" {
+		items := []map[string]interface{}{}
+		if role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager" {
+			items = []map[string]interface{}{
+				{"label": "Analytics", "path": "/admin/analytics", "icon": "bar_chart"},
+				{"label": "Reports", "path": "/admin/reports", "icon": "summarize"},
+			}
+		}
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+	
+	if menuId == "securityItems" {
+		items := []map[string]interface{}{}
+		if role == "super_admin" || role == "admin" || role == "org_admin" {
+			items = []map[string]interface{}{
+				{"label": "Security Logs", "path": "/admin/security/telemetry", "icon": "security"},
+				{"label": "Access Review", "path": "/admin/security/access-review", "icon": "policy"},
+			}
+		}
+		json.NewEncoder(w).Encode(items)
+		return
+	}
+
+	// Default fallback (e.g. portal)
+	menuItems := []map[string]interface{}{
+		{"label": "Dashboard", "title": "Dashboard", "icon": "dashboard", "path": "/portal/dashboard", "items": []any{}},
+		{"label": "Shipments", "title": "Shipments", "icon": "local_shipping", "path": "/portal/shipments", "items": []any{}},
+		{"label": "Bookings", "title": "Bookings", "icon": "add_box", "path": "/portal/bookings", "items": []any{}},
+		{"label": "Invoices", "title": "Invoices", "icon": "payments", "path": "/portal/invoices", "items": []any{}},
+		{"label": "Settings", "title": "Settings", "icon": "settings", "path": "/portal/settings", "items": []any{}},
+	}
 	json.NewEncoder(w).Encode(menuItems)
 }
 

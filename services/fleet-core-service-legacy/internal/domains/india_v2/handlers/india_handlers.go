@@ -6,10 +6,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/billing_v2"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // IndiaIntegrationHandlers handles HTTP requests for India integration services
@@ -22,6 +24,7 @@ type IndiaIntegrationHandlers struct {
 	gstService        service.GSTIntegrationService
 	bulkService       service.BulkVerificationService
 	encryptService    service.EncryptionService
+	idempotency       *billing_v2.IdempotencyHelper
 }
 
 // NewIndiaIntegrationHandlers creates a new instance of IndiaIntegrationHandlers
@@ -34,7 +37,13 @@ func NewIndiaIntegrationHandlers(
 	gst service.GSTIntegrationService,
 	bulk service.BulkVerificationService,
 	encrypt service.EncryptionService,
+	redisClient *redis.Client,
 ) *IndiaIntegrationHandlers {
+	var helper *billing_v2.IdempotencyHelper
+	if redisClient != nil {
+		helper = billing_v2.NewIdempotencyHelper(redisClient)
+	}
+
 	return &IndiaIntegrationHandlers{
 		service:         svc,
 		fastagService:   fastag,
@@ -44,6 +53,7 @@ func NewIndiaIntegrationHandlers(
 		gstService:      gst,
 		bulkService:     bulk,
 		encryptService:  encrypt,
+		idempotency:     helper,
 	}
 }
 
@@ -59,6 +69,38 @@ func (h *IndiaIntegrationHandlers) writeErrorResponse(w http.ResponseWriter, sta
 
 // CreateFASTagTransaction creates a new FASTag transaction
 func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
+	reqID := r.Header.Get("X-Request-ID")
+	orgID := r.Context().Value("org_id") // standard flyfleet context extraction
+	
+	// Fallback/String casting
+	var orgIDStr string
+	if orgID != nil {
+		if oid, ok := orgID.(string); ok {
+			orgIDStr = oid
+		} else if uuidVal, ok := orgID.(uuid.UUID); ok {
+			orgIDStr = uuidVal.String()
+		}
+	} else {
+		orgIDStr = r.Header.Get("X-Org-ID")
+	}
+
+	if h.idempotency != nil && reqID != "" && orgIDStr != "" {
+		acquired, err := h.idempotency.CheckAndLock(r.Context(), orgIDStr, reqID, 24*time.Hour)
+		if err != nil {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Idempotency check failed", err)
+			return
+		}
+		if !acquired {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error":   "duplicate_transaction",
+				"message": "This transaction is already being processed",
+			})
+			return
+		}
+	}
+
 	var transaction models.FASTagTransaction
 	if err := json.NewDecoder(r.Body).Decode(&transaction); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)

@@ -10,6 +10,7 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/repository"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
 // IndiaIntegrationService defines the service interface for India integrations
@@ -74,13 +75,15 @@ type IndiaIntegrationService interface {
 
 // IndiaIntegrationServiceImpl implements the IndiaIntegrationService interface
 type IndiaIntegrationServiceImpl struct {
-	repo repository.IndiaIntegrationRepository
+	repo  repository.IndiaIntegrationRepository
+	redis *redis.Client
 }
 
 // NewIndiaIntegrationService creates a new instance of IndiaIntegrationService
-func NewIndiaIntegrationService(repo repository.IndiaIntegrationRepository) *IndiaIntegrationServiceImpl {
+func NewIndiaIntegrationService(repo repository.IndiaIntegrationRepository, rc *redis.Client) *IndiaIntegrationServiceImpl {
 	return &IndiaIntegrationServiceImpl{
-		repo: repo,
+		repo:  repo,
+		redis: rc,
 	}
 }
 
@@ -231,6 +234,19 @@ func validateIntegrationConfig(config *models.IntegrationConfig) error {
 func (s *IndiaIntegrationServiceImpl) CreateFASTagTransaction(ctx context.Context, transaction *models.FASTagTransaction) error {
 	if err := validateFASTagTransaction(transaction); err != nil {
 		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Idempotency Shield
+	if s.redis != nil && transaction.TransactionID != "" {
+		lockKey := fmt.Sprintf("fastag:tx_lock:%s", transaction.TransactionID)
+		acquired, err := s.redis.SetNX(ctx, lockKey, "locked", 24*time.Hour).Result()
+		if err != nil {
+			return fmt.Errorf("idempotency check failed: %w", err)
+		}
+		if !acquired {
+			// Duplicate network retry blocked at O(1) speed. Return nil to ACK without action.
+			return nil
+		}
 	}
 
 	userID := s.getUserID(ctx)

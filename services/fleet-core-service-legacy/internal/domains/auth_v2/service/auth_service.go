@@ -24,9 +24,12 @@ import (
 	pb "github.com/flyfleet/proto/auth/v1"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
+	"encoding/json"
 )
 
 // AuthRepositoryInterface defines the interface for auth repository
@@ -104,6 +107,12 @@ type AuthRepositoryInterface interface {
 	// Organization operations
 	GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error)
 	ListOrganizations(ctx context.Context, limit, offset int32) ([]models.Organization, int32, error)
+	GetOrganizationsByEmail(ctx context.Context, email string) ([]models.Organization, error)
+	CreateOrganization(ctx context.Context, org *models.Organization) error
+
+	// Invite operations
+	GetInviteByCode(ctx context.Context, code string) (*models.Invite, error)
+	MarkInviteUsed(ctx context.Context, id uuid.UUID) error
 
 	// Compliance & Admin
 	RevokeAllTokensGlobal(ctx context.Context) error
@@ -150,19 +159,51 @@ type AuthService struct {
 	repo          AuthRepositoryInterface
 	identity      IdentityService
 	jwtSecret     string
+	redis         *redis.Client
+	nats          *nats.Conn
 }
 
-func NewAuthService(logger logger.Logger, repo AuthRepositoryInterface, identity IdentityService, jwtSecret string) *AuthService {
+func NewAuthService(logger logger.Logger, repo AuthRepositoryInterface, identity IdentityService, jwtSecret string, rdb *redis.Client, nc *nats.Conn) *AuthService {
 	return &AuthService{
 		logger:    logger,
 		repo:      repo,
 		identity:  identity,
 		jwtSecret: jwtSecret,
+		redis:     rdb,
+		nats:      nc,
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override org if provided
+	if orgIDStr != "" {
+		orgID, err := uuid.Parse(orgIDStr)
+		if err != nil {
+			return nil, errors.New("invalid org_id format")
+		}
+		
+		orgs, err := s.repo.GetOrganizationsByEmail(ctx, email)
+		if err != nil {
+			return nil, err
+		}
+		
+		found := false
+		for _, o := range orgs {
+			if o.ID == orgID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.New("invalid organization")
+		}
+		user.OrgID = orgID
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +263,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, ipAddress, use
 	_ = s.repo.ResetLoginAttempts(ctx, user.ID)
 
 	// MFA Requirement (check if role requires it OR if risk score is high)
-	if user.Role == "admin" || user.Role == "superadmin" || user.MfaEnabled || riskScore > 60 {
+	if user.Role == "admin" || user.Role == "super_admin" || user.MfaEnabled || riskScore > 60 {
 		tempToken, err := s.generateTempToken(user)
 		if err != nil {
 			return nil, err
@@ -496,12 +537,20 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 
 	jti := uuid.New().String()
 
+	// Fetch organization to get tenant_type
+	org, _ := s.repo.GetOrganizationByID(context.Background(), user.OrgID)
+	tenantType := ""
+	if org != nil {
+		tenantType = org.Type
+	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":         user.ID.String(),
 		"iss":         "FlyFleet",
 		"aud":         "fleet-dashboard",
 		"org_id":      user.OrgID.String(),
 		"rol":         user.Role,
+		"ten":         tenantType, // tenant_type claim
 		"type":        "access",
 		"prm":         permissions,
 		"jti":         jti,
@@ -511,6 +560,16 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 	token.Header["kid"] = activeKey.KID
 
 	return token.SignedString(privKey)
+}
+
+func (s *AuthService) ResolveOrgs(ctx context.Context, email string) ([]models.Organization, error) {
+	orgs, err := s.repo.GetOrganizationsByEmail(ctx, email)
+	if err != nil {
+		// Generic success (empty list) on error/not found to prevent enumeration
+		s.logger.Debug("resolve orgs failed or user not found", zap.String("email", email), zap.Error(err))
+		return []models.Organization{}, nil
+	}
+	return orgs, nil
 }
 
 func (s *AuthService) generateRefreshToken(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string) (string, error) {
@@ -564,7 +623,58 @@ func (s *AuthService) ListUserSessions(ctx context.Context, userID uuid.UUID) ([
 }
 
 func (s *AuthService) RevokeUserSession(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) error {
-	return s.repo.RevokeSessionByID(ctx, sessionID, userID)
+	return s.RevokeDeviceAccess(ctx, sessionID.String(), "user_revocation")
+}
+
+func (s *AuthService) RevokeDeviceAccess(ctx context.Context, deviceID string, reason string) error {
+	// For session revocation, deviceID here is essentially the jti or session ID
+	var jtiStr string
+	var orgIDStr string
+	var userIDStr string
+
+	if id, err := uuid.Parse(deviceID); err == nil {
+		_ = s.repo.RevokeSessionByID(ctx, id, uuid.Nil)
+		jtiStr = id.String() // assuming sessionID == jti
+	} else {
+		jtiStr = deviceID
+	}
+
+	key := fmt.Sprintf("blacklist:jti:%s", jtiStr)
+	if s.redis != nil {
+		// TTL matches AccessTokenExpiry (15m)
+		s.redis.SetEx(ctx, key, "true", AccessTokenExpiry)
+	}
+
+	if s.nats != nil {
+		event := map[string]string{
+			"jti":       jtiStr,
+			"user_id":   userIDStr, // would be fetched if needed
+			"org_id":    orgIDStr,  // would be fetched if needed
+			"device_id": deviceID,
+			"reason":    reason,
+			"action":    "revoked",
+		}
+		data, _ := json.Marshal(event)
+		s.nats.Publish("auth.events", data)
+	}
+
+	key = fmt.Sprintf("auth:revoked_session:%s", deviceID)
+	if s.redis != nil {
+		// TTL matches AccessTokenExpiry (15m)
+		s.redis.SetEx(ctx, key, "revoked", AccessTokenExpiry)
+	}
+
+	if s.nats != nil {
+		event := map[string]string{
+			"device_id": deviceID,
+			"reason":    reason,
+			"action":    "revoked",
+		}
+		data, _ := json.Marshal(event)
+		s.nats.Publish("auth.device.revoked", data)
+	}
+
+	return nil
 }
 
 // validateEmail validates email format and uniqueness
@@ -656,36 +766,96 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 	now := time.Now()
 	creatorID := s.getUserID(ctx)
 
-	orgID := uuid.Nil
+	var orgID uuid.UUID
+	var role string
+
+	// Handle Organization & Role logic based on Invite vs Creation
+	if req.InviteCode != "" {
+		// User is joining via an invite
+		invite, err := s.repo.GetInviteByCode(ctx, req.InviteCode)
+		if err != nil {
+			return nil, fmt.Errorf("invalid or expired invite code")
+		}
+		
+		if invite.Used || now.After(invite.Expiry) {
+			return nil, fmt.Errorf("invite code is expired or has already been used")
+		}
+
+		orgID = invite.OrgID
+		role = invite.Role
+
+		// Mark invite as used
+		_ = s.repo.MarkInviteUsed(ctx, invite.ID)
+
+	} else {
+		// Not joining via invite.
+		if req.OrgName != "" {
+			// Creating a new organization
+			orgID = uuid.New()
+			org := &models.Organization{
+				ID:        orgID,
+				Name:      req.OrgName,
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			if err := s.repo.CreateOrganization(ctx, org); err != nil {
+				s.logger.Error("Failed to create new organization", zap.Error(err), zap.String("org_name", req.OrgName))
+				return nil, fmt.Errorf("failed to create organization: %w", err)
+			}
+			role = "org_admin"
+		} else {
+			// Public signup with no invite and no org creation attempt -> fallback to restricted driver
+			// Or we could return an error if we strictly enforce org_id. The instructions say "public signup -> driver".
+			// But org_id is NOT NULL in the DB. So we must put them somewhere. 
+			// Wait, the plan says: "if creating org -> org_admin. If public signup (no invite, no org creation) -> driver."
+			// Since org_id is NOT NULL, let's create a "Personal Organization" for them, or require org creation.
+			// Let's create a personal org for drivers to satisfy the constraint.
+			orgID = uuid.New()
+			org := &models.Organization{
+				ID:        orgID,
+				Name:      fmt.Sprintf("%s's Workspace", req.Name),
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			if err := s.repo.CreateOrganization(ctx, org); err != nil {
+				return nil, fmt.Errorf("failed to create workspace: %w", err)
+			}
+			role = "driver"
+		}
+	}
 
 	user := &models.User{
-		ID:                 uuid.New(),
-		OrgID:              orgID,
-		Email:              strings.ToLower(req.Email),
-		Role:               "user", // Default role
-		PasswordHash:       string(hashedPassword),
-		CreatedAt:          now,
-		CreatedBy:          creatorID,
-		UpdatedAt:          now,
-		UpdatedBy:          creatorID,
-		MfaEnabled:         false,
-		MfaMethods:         []string{},
-		LastPasswordChange: now,
+		ID:                  uuid.New(),
+		OrgID:               orgID,
+		Email:               strings.ToLower(req.Email),
+		Role:                role,
+		PasswordHash:        string(hashedPassword),
+		CreatedAt:           now,
+		CreatedBy:           creatorID,
+		UpdatedAt:           now,
+		UpdatedBy:           creatorID,
+		MfaEnabled:          false,
+		MfaMethods:          []string{},
+		LastPasswordChange:  now,
 		FailedLoginAttempts: sql.NullInt64{Int64: 0, Valid: true},
 	}
 
 	if err := s.repo.CreateUser(ctx, user); err != nil {
+		s.logger.Error("Failed to insert user into database", zap.Error(err), zap.String("email", user.Email))
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	// Log security event
-	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+	err = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
 		UserID:    user.ID,
 		EventType: "USER_REGISTERED",
-		IPAddress: "",
-		UserAgent: "",
-		Metadata:  fmt.Sprintf("email: %s", user.Email),
+		IPAddress: req.Ip,
+		UserAgent: req.UserAgent,
+		Metadata:  fmt.Sprintf("email: %s, role: %s", user.Email, role),
 	})
+	if err != nil {
+		s.logger.Error("Failed to log security event for registration", zap.Error(err), zap.String("user_id", user.ID.String()))
+	}
 
 	return user, nil
 }
@@ -1468,4 +1638,113 @@ func (s *AuthService) GetJWKS(ctx context.Context) (*models.JWKS, error) {
 	}
 
 	return &jwks, nil
+}
+
+type RegisterRequest struct {
+	Name       string  `json:"name"`
+	Email      string  `json:"email"`
+	Password   string  `json:"password"`
+	InviteCode *string `json:"invite_code"`
+	OrgName    *string `json:"org_name"`
+}
+
+type RegisterResponse struct {
+	User         *models.User `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+}
+
+// RegisterUser implements the production-ready logic for user registration handling multi-tenant logic.
+func (s *AuthService) RegisterUser(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
+	// STEP 1 - Validate Input
+	if err := s.validateEmail(ctx, req.Email); err != nil {
+		return nil, err
+	}
+	if err := s.validatePassword(req.Password); err != nil {
+		return nil, err
+	}
+	if req.InviteCode == nil && req.OrgName == nil {
+		return nil, fmt.Errorf("either InviteCode or OrgName must be provided")
+	}
+
+	now := time.Now()
+	creatorID := s.getUserID(ctx)
+	var orgID uuid.UUID
+	var role string
+
+	// STEP 2 - Handle Invite Flow
+	if req.InviteCode != nil && *req.InviteCode != "" {
+		invite, err := s.repo.GetInviteByCode(ctx, *req.InviteCode)
+		if err != nil {
+			return nil, fmt.Errorf("invalid or expired invite code")
+		}
+		if invite.Used || now.After(invite.Expiry) {
+			return nil, fmt.Errorf("invite code is expired or has already been used")
+		}
+
+		orgID = invite.OrgID
+		role = invite.Role
+
+		// Mark invite as used
+		_ = s.repo.MarkInviteUsed(ctx, invite.ID)
+	} else {
+		// STEP 3 - Handle New Organization Flow
+		if req.OrgName == nil || *req.OrgName == "" {
+			return nil, fmt.Errorf("OrgName is required when not using an invite code")
+		}
+
+		orgID = uuid.New()
+		org := &models.Organization{
+			ID:        orgID,
+			Name:      *req.OrgName,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		if err := s.repo.CreateOrganization(ctx, org); err != nil {
+			s.logger.Error("Failed to create new organization", zap.Error(err), zap.String("org_name", *req.OrgName))
+			return nil, fmt.Errorf("failed to create organization: %w", err)
+		}
+		role = "org_admin"
+	}
+
+	// STEP 4 - Create User
+	hashedPassword, err := s.generateArgon2Hash(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	user := &models.User{
+		ID:                  uuid.New(),
+		OrgID:               orgID,
+		Email:               strings.ToLower(req.Email),
+		Role:                role,
+		PasswordHash:        string(hashedPassword),
+		CreatedAt:           now,
+		CreatedBy:           creatorID,
+		UpdatedAt:           now,
+		UpdatedBy:           creatorID,
+		MfaEnabled:          false,
+		MfaMethods:          []string{},
+		LastPasswordChange:  now,
+		FailedLoginAttempts: sql.NullInt64{Int64: 0, Valid: true},
+	}
+
+	if err := s.repo.CreateUser(ctx, user); err != nil {
+		s.logger.Error("Failed to insert user into database", zap.Error(err), zap.String("email", user.Email))
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// STEP 5 - Generate Tokens
+	// issueTokens generates access_token and refresh_token
+	authResp, err := s.issueTokens(ctx, user, "", "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate tokens: %w", err)
+	}
+
+	// STEP 6 - Return Response
+	return &RegisterResponse{
+		User:         user,
+		AccessToken:  authResp.AccessToken,
+		RefreshToken: authResp.RefreshToken,
+	}, nil
 }

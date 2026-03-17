@@ -2,23 +2,27 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/messaging"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/repository"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 type IndiaComplianceWorker struct {
 	repo   repository.IndiaIntegrationRepository
 	mb     messaging.MessageBroker
+	redis  *redis.Client
 	logger *zap.Logger
 }
 
-func NewIndiaComplianceWorker(repo repository.IndiaIntegrationRepository, mb messaging.MessageBroker, logger *zap.Logger) *IndiaComplianceWorker {
+func NewIndiaComplianceWorker(repo repository.IndiaIntegrationRepository, mb messaging.MessageBroker, rdb *redis.Client, logger *zap.Logger) *IndiaComplianceWorker {
 	return &IndiaComplianceWorker{
 		repo:   repo,
 		mb:     mb,
+		redis:  rdb,
 		logger: logger,
 	}
 }
@@ -53,6 +57,14 @@ func (w *IndiaComplianceWorker) Process(ctx context.Context) {
 	} else {
 		for _, v := range vehicles {
 			w.publishEvent("india.compliance.vehicle_expiry", v)
+			
+			// If insurance is already expired, mark it in Redis for the ingestion worker
+			if v.InsuranceExpiry.Before(time.Now()) {
+				key := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", v.VehicleID.String())
+				if w.redis != nil {
+					w.redis.Set(ctx, key, "true", 0) // Permanent until next check or manual renewal
+				}
+			}
 		}
 	}
 

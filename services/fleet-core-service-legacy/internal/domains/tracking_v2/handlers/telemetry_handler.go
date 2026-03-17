@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/database"
@@ -10,8 +13,11 @@ import (
 	"github.com/fleet-platform/shared/pkg/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/processor"
+	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -36,18 +42,22 @@ type GPSPayload struct {
 type TelemetryHandler struct {
 	db          database.Database
 	mb          messaging.MessageBroker
+	redis       *redis.Client
 	logger      *zap.Logger
 	validator   *validator.Validate
 	binaryCodec *processor.BinaryTelemetryCodec
+	metrics     *trackingv2.Metrics
 }
 
-func NewTelemetryHandler(db database.Database, mb messaging.MessageBroker, logger *zap.Logger) *TelemetryHandler {
+func NewTelemetryHandler(db database.Database, mb messaging.MessageBroker, rc *redis.Client, logger *zap.Logger, metrics *trackingv2.Metrics) *TelemetryHandler {
 	return &TelemetryHandler{
 		db:          db,
 		mb:          mb,
+		redis:       rc,
 		logger:      logger,
 		validator:   validator.New(),
 		binaryCodec: processor.NewBinaryTelemetryCodec(),
+		metrics:     metrics,
 	}
 }
 
@@ -91,20 +101,124 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var vehicleID, orgID uuid.UUID
-	row := h.db.QueryRow(r.Context(),
-		`SELECT vehicle_id, org_id FROM devices WHERE device_id = $1 AND status = 'active'`,
-		payload.DeviceID,
-	)
-	err := row.Scan(&vehicleID, &orgID)
+	var jti string
+	var orgIDStr string
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+		if err == nil {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if jtiClaim, ok := claims["jti"].(string); ok {
+					jti = jtiClaim
+				}
+				if orgClaim, ok := claims["org_id"].(string); ok {
+					orgIDStr = orgClaim
+				}
+			}
+		}
+	}
 
-	if err != nil {
-		h.logger.Error("Device not found or inactive", zap.String("device_id", payload.DeviceID), zap.Error(err))
-		h.errorJSON(w, "Device not registered", http.StatusNotFound)
-		return
+	if h.redis != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Millisecond)
+		defer cancel()
+		
+		// 1. Revocation Check (Zombie Kill Switch)
+		isRevoked, err := h.redis.SIsMember(ctx, "auth:revoked_devices", payload.DeviceID).Result()
+		if err == nil && isRevoked {
+			if h.metrics != nil {
+				h.metrics.TelemetryDroppedTotal.WithLabelValues("blacklisted", payload.DeviceID).Inc()
+			}
+			h.errorJSON(w, "Session Revoked - Device Blacklisted", http.StatusUnauthorized)
+			return
+		}
+
+		sessionID := r.Header.Get("X-Session-ID")
+		if sessionID != "" {
+			sessionRevoked, err := h.redis.Exists(ctx, "auth:revoked_session:"+sessionID).Result()
+			if err == nil && sessionRevoked > 0 {
+				if h.metrics != nil {
+					h.metrics.TelemetryDroppedTotal.WithLabelValues("session_revoked", payload.DeviceID).Inc()
+				}
+				h.errorJSON(w, "Session Revoked - Token Blacklisted", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		if jti != "" {
+			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
+			if err == nil && jtiRevoked > 0 {
+				if h.metrics != nil {
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+				}
+				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", payload.DeviceID))
+				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
+				return
+			}
+		}
+
+		// 2. Deduplication Check (Zero-Defect Scaling)
+		dedupeKey := fmt.Sprintf("dedupe:telemetry:%s:%d", payload.DeviceID, payload.Timestamp)
+		// nx: true means only set if it does not exist
+		added, err := h.redis.SetNX(ctx, dedupeKey, "1", 5*time.Minute).Result()
+		if err != nil {
+			h.logger.Warn("Redis dedupe check failed, continuing without deduplication", zap.Error(err))
+		} else if !added {
+			h.logger.Debug("Duplicate telemetry detected", zap.String("device_id", payload.DeviceID))
+			h.json(w, map[string]interface{}{"status": "duplicate_suppressed"}, http.StatusAccepted)
+			return
+		}
+	}
+
+	var vehicleID, orgID uuid.UUID
+	
+	// Fast Path: Redis Cache
+	if h.redis != nil {
+		cacheKey := "device:resolve:" + payload.DeviceID
+		cachedVal, err := h.redis.Get(r.Context(), cacheKey).Result()
+		if err == nil {
+			parts := strings.Split(cachedVal, "|")
+			if len(parts) == 2 {
+				vehicleID, _ = uuid.Parse(parts[0])
+				orgID, _ = uuid.Parse(parts[1])
+			}
+		}
+	}
+
+	if vehicleID == uuid.Nil {
+		row := h.db.QueryRow(r.Context(),
+			`SELECT vehicle_id, org_id FROM devices WHERE device_id = $1 AND status = 'active'`,
+			payload.DeviceID,
+		)
+		err := row.Scan(&vehicleID, &orgID)
+
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows") {
+				h.logger.Warn("Device not found or inactive", zap.String("device_id", payload.DeviceID))
+				h.errorJSON(w, "Device not registered", http.StatusNotFound)
+			} else {
+				h.logger.Error("Database error during device resolution", zap.String("device_id", payload.DeviceID), zap.Error(err))
+				h.errorJSON(w, "Service Unavailable: Database exhausted", http.StatusServiceUnavailable)
+			}
+			return
+		}
+
+		if h.redis != nil {
+			cacheKey := "device:resolve:" + payload.DeviceID
+			h.redis.Set(r.Context(), cacheKey, vehicleID.String()+"|"+orgID.String(), 15*time.Minute)
+		}
 	}
 
 	timestamp := time.Unix(payload.Timestamp, 0)
+	
+	// Compliance check: Insurance status
+	complianceViolation := false
+	if h.redis != nil {
+		complianceKey := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", vehicleID.String())
+		if exists, _ := h.redis.Exists(r.Context(), complianceKey).Result(); exists > 0 {
+			complianceViolation = true
+		}
+	}
 
 	// Pillar 4: Persistent Ingestion via JetStream
 	// Storage handled by dedicated ingestion-service
@@ -120,25 +234,26 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 		OrgID:     orgID.String(),
 		VehicleID: vehicleID.String(),
 		Data: models.GPSTelemetry{
-			Time:       timestamp,
-			VehicleID:  vehicleID,
-			OrgID:      orgID,
-			Latitude:   payload.Latitude,
-			Longitude:  payload.Longitude,
-			Altitude:   payload.Altitude,
-			Speed:      &payload.Speed,
-			Heading:    &payload.Heading,
-			Accuracy:   &payload.Accuracy,
-			Ignition:   &payload.Ignition,
-			Odometer:   payload.Odometer,
-			Battery:    payload.Battery,
-			Satellites: payload.Satellites,
-			RawData:    nil, // Map json.RawMessage if needed
+			Time:                timestamp,
+			VehicleID:           vehicleID,
+			OrgID:               orgID,
+			Latitude:            payload.Latitude,
+			Longitude:           payload.Longitude,
+			Altitude:            payload.Altitude,
+			Speed:               &payload.Speed,
+			Heading:             &payload.Heading,
+			Accuracy:            &payload.Accuracy,
+			Ignition:            &payload.Ignition,
+			Odometer:            payload.Odometer,
+			Battery:             payload.Battery,
+			Satellites:          payload.Satellites,
+			ComplianceViolation: complianceViolation,
+			RawData:             nil, // Map json.RawMessage if needed
 		},
 	}
 
 	if h.mb != nil {
-		if err := h.mb.PublishJS("telemetry.gps", eventData); err != nil {
+		if err := h.mb.PublishJSWithContext(r.Context(), "telemetry.gps", eventData); err != nil {
 			h.logger.Error("Failed to ingest GPS data to JetStream", zap.Error(err))
 		}
 	} else {
@@ -166,6 +281,49 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.errorJSON(w, "Invalid Request Body", http.StatusBadRequest)
 		return
+	}
+
+	var jti string
+	var orgIDStr string
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+		if err == nil {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if jtiClaim, ok := claims["jti"].(string); ok {
+					jti = jtiClaim
+				}
+				if orgClaim, ok := claims["org_id"].(string); ok {
+					orgIDStr = orgClaim
+				}
+			}
+		}
+	}
+
+	if h.redis != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Millisecond)
+		defer cancel()
+		isRevoked, err := h.redis.SIsMember(ctx, "auth:revoked_devices", payload.DeviceID).Result()
+		if err == nil && isRevoked {
+			if h.metrics != nil {
+				h.metrics.TelemetryDroppedTotal.WithLabelValues("blacklisted", payload.DeviceID).Inc()
+			}
+			h.errorJSON(w, "Session Revoked - Device Blacklisted", http.StatusUnauthorized)
+			return
+		}
+
+		if jti != "" {
+			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
+			if err == nil && jtiRevoked > 0 {
+				if h.metrics != nil {
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+				}
+				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", payload.DeviceID))
+				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
+				return
+			}
+		}
 	}
 
 	var vehicleID, orgID uuid.UUID
@@ -203,7 +361,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.mb != nil {
-		if err := h.mb.PublishJS("telemetry.obd", eventData); err != nil {
+		if err := h.mb.PublishJSWithContext(r.Context(), "telemetry.obd", eventData); err != nil {
 			h.logger.Error("Failed to ingest OBD data to JetStream", zap.Error(err))
 		}
 	} else {
@@ -229,6 +387,49 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 		h.logger.Error("Binary decode failed", zap.Error(err))
 		h.errorJSON(w, "Protocol Error: "+err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	var jti string
+	var orgIDStr string
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+		if err == nil {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if jtiClaim, ok := claims["jti"].(string); ok {
+					jti = jtiClaim
+				}
+				if orgClaim, ok := claims["org_id"].(string); ok {
+					orgIDStr = orgClaim
+				}
+			}
+		}
+	}
+
+	if h.redis != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Millisecond)
+		defer cancel()
+		isRevoked, resErr := h.redis.SIsMember(ctx, "auth:revoked_devices", deviceID).Result()
+		if resErr == nil && isRevoked {
+			if h.metrics != nil {
+				h.metrics.TelemetryDroppedTotal.WithLabelValues("blacklisted", deviceID).Inc()
+			}
+			h.errorJSON(w, "Session Revoked - Device Blacklisted", http.StatusUnauthorized)
+			return
+		}
+
+		if jti != "" {
+			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
+			if err == nil && jtiRevoked > 0 {
+				if h.metrics != nil {
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+				}
+				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", deviceID))
+				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
+				return
+			}
+		}
 	}
 
 	// 3. Resolve Device and Vechicle (Cached path would be better but keeping simple for MVP)
@@ -259,7 +460,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if h.mb != nil {
-		h.mb.PublishJS("telemetry.gps", eventData)
+		h.mb.PublishJSWithContext(r.Context(), "telemetry.gps", eventData)
 	}
 
 	h.json(w, map[string]string{"status": "accepted_binary"}, http.StatusAccepted)

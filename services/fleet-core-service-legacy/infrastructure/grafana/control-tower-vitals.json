@@ -1,0 +1,67 @@
+{
+  "title": "Control Tower Vitals: 100K-Vehicle Scale",
+  "description": "Monitors the $33$ domains of the FlyFleet Monolith, specifically isolating 'Domain Cross-Talk' latency bleed.",
+  "refresh": "5s",
+  "panels": [
+    {
+      "title": "Cross-Domain Latency Bleed (The 'Invisible Fire' Detector)",
+      "type": "timeseries",
+      "description": "Visualizes if a spike in a low-priority domain (e.g., india_v2 FASTag) is causing DB Pool contention leading to latency spikes in critical domains (e.g., billing_v2 or tracking_v2).",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{domain=\"india_v2\"}[1m])) by (le))",
+          "legendFormat": "India V2 P99 Latency (Low Priority Pool)"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{domain=\"billing_v2\"}[1m])) by (le))",
+          "legendFormat": "Billing V2 P99 Latency (High Priority Pool)"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{domain=\"tracking_v2\"}[1m])) by (le))",
+          "legendFormat": "Tracking V2 P99 (Critical Priority Pool)"
+        }
+      ],
+      "alert": {
+        "name": "Domain Cross-Talk Alert",
+        "conditions": [
+          {
+            "evaluator": {"type": "gt", "params": [0.05]}, 
+            "operator": {"type": "and"},
+            "query": {"params": ["A", "1m", "now"]},
+            "reducer": {"type": "avg", "params": []}
+          }
+        ]
+      }
+    },
+    {
+      "title": "Database Pool Saturation (pgxpool) by Domain",
+      "type": "bargauge",
+      "description": "Shows the active vs maximum connections for each of the 4 partitioned pools.",
+      "targets": [
+        {
+          "expr": "pgxpool_acquired_conns{pool=\"Critical\"} / pgxpool_max_conns{pool=\"Critical\"} * 100",
+          "legendFormat": "Critical Pool Saturation (Tracking/Auth/SOS) %"
+        },
+        {
+          "expr": "pgxpool_acquired_conns{pool=\"High\"} / pgxpool_max_conns{pool=\"High\"} * 100",
+          "legendFormat": "High Pool Saturation (Billing/Video) %"
+        },
+        {
+          "expr": "pgxpool_acquired_conns{pool=\"Low\"} / pgxpool_max_conns{pool=\"Low\"} * 100",
+          "legendFormat": "Low Pool Saturation (India/Diagnostics) %"
+        }
+      ]
+    },
+    {
+      "title": "NATS JetStream Volatility (100K 4G Micro-Bursting)",
+      "type": "stat",
+      "description": "Monitors the depth of the telemetry_stream. Used by the HPA to scale pods.",
+      "targets": [
+        {
+          "expr": "sum(nats_consumer_lag_telemetry{stream=\"telemetry_stream\"})",
+          "legendFormat": "Total Unprocessed GPS Pings"
+        }
+      ]
+    }
+  ]
+}

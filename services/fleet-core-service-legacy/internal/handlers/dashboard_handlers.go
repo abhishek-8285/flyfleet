@@ -12,6 +12,9 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+
+	"github.com/fleet-platform/shared/pkg/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 )
 
 type DashboardHandlers struct {
@@ -163,12 +166,24 @@ func (h *DashboardHandlers) GetTopErrors(w http.ResponseWriter, r *http.Request)
 func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Extract user ID from header (X-User-ID)
-	userIDStr := r.Header.Get("X-User-ID")
+	// Attempt extraction from JWKS middleware context first (Modern Monolith Approach)
+	userIDStr := ""
+	if uid, ok := ctx.Value(middleware.UserIDKey).(uuid.UUID); ok {
+		userIDStr = uid.String()
+	} else if sub, ok := ctx.Value(ctxkeys.UserIDKey).(string); ok {
+		userIDStr = sub
+	}
+
+	// Fallback to legacy BFF Header extraction
+	if userIDStr == "" {
+		userIDStr = r.Header.Get("X-User-ID")
+	}
+
 	if userIDStr == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+	
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)

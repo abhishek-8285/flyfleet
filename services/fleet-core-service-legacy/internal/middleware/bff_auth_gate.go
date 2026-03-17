@@ -107,9 +107,23 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 			ctx := r.Context()
 			if userID, ok := claims["user_id"].(string); ok {
 				ctx = context.WithValue(ctx, ctxkeys.UserIDKey, userID)
+				r.Header.Set("X-User-ID", userID)
+			} else if sub, ok := claims["sub"].(string); ok {
+				ctx = context.WithValue(ctx, ctxkeys.UserIDKey, sub)
+				r.Header.Set("X-User-ID", sub)
 			}
+
 			if orgID, ok := claims["org_id"].(string); ok {
 				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID)
+				r.Header.Set("X-Org-ID", orgID)
+			}
+
+			if role, ok := claims["rol"].(string); ok {
+				ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
+				r.Header.Set("X-Role-ID", role)
+			} else if role, ok := claims["role"].(string); ok {
+				ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
+				r.Header.Set("X-Role-ID", role)
 			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))

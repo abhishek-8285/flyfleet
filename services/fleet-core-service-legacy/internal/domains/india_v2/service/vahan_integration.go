@@ -89,6 +89,16 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 		if data, err := json.Marshal(verification); err == nil {
 			s.redis.Set(ctx, cacheKey, data, 24*time.Hour)
 		}
+
+		// Also set compliance flag if insurance is expired
+		if verification.InsuranceExpiry.Before(time.Now()) {
+			complianceKey := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", vehicleID.String())
+			s.redis.Set(ctx, complianceKey, "true", 0)
+		} else {
+			// Ensure it's cleared if now renewed
+			complianceKey := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", vehicleID.String())
+			s.redis.Del(ctx, complianceKey)
+		}
 	}
 
 	return verification, nil

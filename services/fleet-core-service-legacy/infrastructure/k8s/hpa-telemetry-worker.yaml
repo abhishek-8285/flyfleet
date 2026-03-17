@@ -1,0 +1,50 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: telemetry-worker-hpa
+  namespace: flyfleet-tracking
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: telemetry-worker
+  minReplicas: 5
+  maxReplicas: 100
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: nats_consumer_lag_telemetry
+          selector:
+            matchLabels:
+              stream: telemetry_stream
+              consumer: telemetry_worker_group
+        # Target an average of 5,000 backlogged messages per pod.
+        # This prevents over-scaling during micro-bursts but ensures we scale
+        # fast enough when a massive connectivity reconnect (100k vehicles) hits.
+        target:
+          type: AverageValue
+          averageValue: 5k
+  behavior:
+    scaleUp:
+      # Aggressive scale-up: we want to burn through telemetry backlogs
+      # as fast as possible to prevent memory exhaustion on NATS edge nodes.
+      stabilizationWindowSeconds: 15
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 10
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      # Conservative scale-down (The "Cool-down" period).
+      # 100k trucks in remote regions (like Indian highways) frequently drop 4G
+      # and reconnect simultaneously, causing severe flapping.
+      # A 10-minute stabilization holds the pods online through these erratic spikes.
+      stabilizationWindowSeconds: 600
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60

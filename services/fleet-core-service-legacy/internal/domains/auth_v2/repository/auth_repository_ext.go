@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/models"
@@ -10,10 +11,10 @@ import (
 
 
 func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
-	query := "SELECT id, name, domain, default_theme, status, created_at, updated_at FROM organizations WHERE id = $1 AND is_deleted = false"
+	query := "SELECT id, name, type, logo_url, domain, default_theme, status, created_at, updated_at FROM organizations WHERE id = $1 AND is_deleted = false"
 	var org models.Organization
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&org.ID, &org.Name, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt,
+		&org.ID, &org.Name, &org.Type, &org.LogoURL, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 		return nil, 0, err
 	}
 
-	query := "SELECT id, name, domain, default_theme, status, created_at, updated_at FROM organizations WHERE is_deleted = false ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+	query := "SELECT id, name, type, logo_url, domain, default_theme, status, created_at, updated_at FROM organizations WHERE is_deleted = false ORDER BY created_at DESC LIMIT $1 OFFSET $2"
 	rows, err := r.db.Query(ctx, query, limit, offset)
 	if err != nil {
 		return nil, 0, err
@@ -38,12 +39,42 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 	var orgs []models.Organization
 	for rows.Next() {
 		var org models.Organization
-		if err := rows.Scan(&org.ID, &org.Name, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt); err != nil {
+		if err := rows.Scan(&org.ID, &org.Name, &org.Type, &org.LogoURL, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		orgs = append(orgs, org)
 	}
 	return orgs, total, nil
+}
+
+func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email string) ([]models.Organization, error) {
+	query := `
+		SELECT o.id, o.name, o.type, o.logo_url, o.domain, o.default_theme, o.status, o.created_at, o.updated_at
+		FROM organizations o
+		JOIN user_roles ur ON o.id = ur.organization_id
+		JOIN users u ON ur.user_id = u.id
+		WHERE u.email = $1 AND o.is_deleted = false AND u.is_deleted = false
+	`
+	rows, err := r.db.Query(ctx, query, email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []models.Organization
+	for rows.Next() {
+		var org models.Organization
+		if err := rows.Scan(&org.ID, &org.Name, &org.Type, &org.LogoURL, &org.Domain, &org.DefaultTheme, &org.Status, &org.CreatedAt, &org.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan organization: %w", err)
+		}
+		orgs = append(orgs, org)
+	}
+	
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orgs, nil
 }
 
 type UserStats struct {

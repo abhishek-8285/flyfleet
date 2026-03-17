@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/service"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/india_v2/repository"
 	"github.com/google/uuid"
@@ -19,16 +20,18 @@ type FastagIntegrationService interface {
 }
 
 type FastagIntegrationServiceImpl struct {
-	repo    repository.IndiaIntegrationRepository
-	logger  *zap.Logger
-	limiter *rate.Limiter
+	repo     repository.IndiaIntegrationRepository
+	detector *billingv2service.DoubleSwipeDetector
+	logger   *zap.Logger
+	limiter  *rate.Limiter
 }
 
-func NewFastagIntegrationService(repo repository.IndiaIntegrationRepository, logger *zap.Logger) *FastagIntegrationServiceImpl {
+func NewFastagIntegrationService(repo repository.IndiaIntegrationRepository, detector *billingv2service.DoubleSwipeDetector, logger *zap.Logger) *FastagIntegrationServiceImpl {
 	return &FastagIntegrationServiceImpl{
-		repo:    repo,
-		logger:  logger,
-		limiter: rate.NewLimiter(rate.Every(time.Minute/100), 1),
+		repo:     repo,
+		detector: detector,
+		logger:   logger,
+		limiter:  rate.NewLimiter(rate.Every(time.Minute/100), 1),
 	}
 }
 
@@ -61,6 +64,13 @@ func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, or
 	for _, tx := range mockTransactions {
 		if err := s.repo.CreateFASTagTransaction(ctx, tx); err != nil {
 			s.logger.Error("failed to store fastag transaction", zap.Error(err), zap.String("tx_id", tx.TransactionID))
+		}
+
+		// Double-Swipe Detection
+		if s.detector != nil {
+			if err := s.detector.Detect(ctx, tx); err != nil {
+				s.logger.Error("failed to detect double swipe", zap.Error(err), zap.String("tx_id", tx.TransactionID))
+			}
 		}
 	}
 

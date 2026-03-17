@@ -152,7 +152,7 @@ func setupTestServer() {
 		apiKeys:       make(map[uuid.UUID]*models.APIKey),
 	}
 	identitySvc := service.NewIdentityService(mockRepo, zapLogger)
-	authSvc := service.NewAuthService(sharedLogger, mockRepo, identitySvc, "test-jwt-secret-key")
+	authSvc := service.NewAuthService(sharedLogger, mockRepo, identitySvc, "test-jwt-secret-key", nil, nil)
 	h := handlers.NewHandlers(authSvc, zapLogger, redisClient)
 
 	r := chi.NewRouter()

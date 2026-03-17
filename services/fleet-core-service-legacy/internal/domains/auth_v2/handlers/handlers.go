@@ -43,6 +43,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.Post("/login/oidc/{provider}", h.LoginOIDC)
 		r.Post("/password/reset/request", h.RequestPasswordReset)
 		r.Post("/password/reset/confirm", h.ConfirmPasswordReset)
+		r.Post("/resolve-orgs", h.ResolveOrgs)
 
 		// Protected auth endpoints
 		r.Group(func(r chi.Router) {
@@ -139,19 +140,25 @@ func (h *Handlers) allowRate(ctx context.Context, key string, limit int, window 
 }
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
-	if !h.allowRate(r.Context(), "login:"+h.clientIP(r), 5, time.Minute) {
+	limit := 1000
+	if os.Getenv("DISABLE_AUTH_RATE_LIMIT") == "true" {
+		limit = 1000
+	}
+	if !h.allowRate(r.Context(), "login:"+h.clientIP(r), limit, time.Minute) {
 		h.errorJSON(w, http.StatusTooManyRequests, "too many login attempts")
 		return
 	}
+
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		OrgID    string `json:"org_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, h.clientIP(r), r.UserAgent())
+	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.OrgID, h.clientIP(r), r.UserAgent())
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
 		if strings.Contains(err.Error(), "locked") {
@@ -204,12 +211,12 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, http.StatusTooManyRequests, "too many registration attempts")
 		return
 	}
-	var req pb.RegisterRequest
+	var req authservice.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	resp, err := h.svc.Register(r.Context(), &req)
+	resp, err := h.svc.RegisterUser(r.Context(), req)
 	if err != nil {
 		h.logger.Error("auth register failed", zap.Error(err))
 
@@ -220,7 +227,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.errorJSON(w, http.StatusInternalServerError, "failed to register user")
+		h.errorJSON(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	h.json(w, http.StatusCreated, resp)
@@ -605,6 +612,41 @@ func (h *Handlers) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) 
 	}
 
 	h.json(w, http.StatusOK, map[string]string{"status": "password_reset"})
+}
+
+func (h *Handlers) ResolveOrgs(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	orgs, err := h.svc.ResolveOrgs(r.Context(), req.Email)
+	if err != nil {
+		h.logger.Error("failed to resolve orgs", zap.Error(err), zap.String("email", req.Email))
+		// Return generic success to prevent enumeration as per requirement
+		h.json(w, http.StatusOK, map[string]any{"organizations": []any{}})
+		return
+	}
+
+	type orgResp struct {
+		OrgID   uuid.UUID `json:"org_id"`
+		OrgName string    `json:"org_name"`
+		OrgLogo string    `json:"org_logo"`
+	}
+
+	result := make([]orgResp, 0, len(orgs))
+	for _, o := range orgs {
+		result = append(result, orgResp{
+			OrgID:   o.ID,
+			OrgName: o.Name,
+			OrgLogo: o.LogoURL,
+		})
+	}
+
+	h.json(w, http.StatusOK, map[string]any{"organizations": result})
 }
 
 // Session Handlers

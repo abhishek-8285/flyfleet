@@ -111,6 +111,7 @@ type TokenClaims struct {
 	UserID      string   `json:"user_id"`
 	OrgID       string   `json:"org_id"`
 	Role        string   `json:"role"`
+	TenantType  string   `json:"tenant_type,omitempty"`
 	Type        string   `json:"type"` // "access" or "refresh"
 	Permissions []string `json:"permissions,omitempty"`
 }
@@ -183,6 +184,8 @@ type APIKey struct {
 type Organization struct {
 	ID                uuid.UUID `json:"id"`
 	Name              string    `json:"name"`
+	Type              string    `json:"type"` // fleet_owner, government_body, etc.
+	LogoURL           string    `json:"logo_url,omitempty"`
 	Domain            string    `json:"domain"`
 	DefaultTheme      string    `json:"default_theme"`
 	Status            string    `json:"status"` // trial, active, suspended, billing_hold, deleted

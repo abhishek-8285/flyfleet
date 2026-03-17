@@ -1,0 +1,15 @@
+groups:
+  - name: FlyFleet_RDS_Headroom_Guard
+    rules:
+      - alert: RDS_CPU_Critical_Headroom
+        # Trigger when RDS CPU utilizes > 85% computed over a 5 minute rolling window
+        expr: (aws_rds_cpuutilization_maximum{dbinstance_identifier=~"flyfleet-prod-timescaledb.*"} >= 85)
+        # Aggressive threshold: 1m allows a swift kill before cascading query failure
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+          action: trigger_killswitch
+        annotations:
+          summary: "RDS CPU Exceeded 85% Safety Headroom!"
+          description: "Instance {{ $labels.dbinstance_identifier }} CPU is at {{ $value }}%. Automated kill-switch executed to scale down low-priority domains and preserve pool connections for SOS Triggers."

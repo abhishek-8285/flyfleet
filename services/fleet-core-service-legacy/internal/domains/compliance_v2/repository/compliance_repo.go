@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"database/sql"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance_v2/models"
@@ -54,11 +54,11 @@ type ComplianceRepository interface {
 }
 
 type pgComplianceRepository struct {
-	db     *sql.DB
+	db     *pgxpool.Pool
 	logger logger.Logger
 }
 
-func NewComplianceRepository(db *sql.DB, logger logger.Logger) ComplianceRepository {
+func NewComplianceRepository(db *pgxpool.Pool, logger logger.Logger) ComplianceRepository {
 	return &pgComplianceRepository{
 		db:     db,
 		logger: logger,

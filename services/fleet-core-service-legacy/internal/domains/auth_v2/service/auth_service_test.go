@@ -177,7 +177,7 @@ func (m *MockAuthRepository) RevokeSessionByID(ctx context.Context, sessionID uu
 
 func setupTestService(t *testing.T) (*AuthService, *MockAuthRepository) {
 	mockRepo := &MockAuthRepository{}
-	service := NewAuthService(nil, mockRepo, "test-secret-key")
+	service := NewAuthService(nil, mockRepo, nil, "test-secret-key", nil, nil)
 	return service, mockRepo
 }
 
@@ -542,7 +542,7 @@ func TestValidateJWT_TamperingAndAlgConfusion(t *testing.T) {
 func TestValidateJWT_ExactExpirationBoundary(t *testing.T) {
 	// Setup service with instantly expiring token
 	repo := &MockAuthRepository{}
-	svc := NewAuthService(nil, repo, "test-secret")
+	svc := NewAuthService(nil, repo, nil, "test-secret", nil, nil)
 	// Note: Because we can't easily mock the unexported time generation inside GenerateToken 
 	// without refactoring the time.Now() calls to use an interface, we rely on the parser asserting an expired token.
 	

@@ -9,17 +9,21 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type Handlers struct {
 	service service.PlatformCompatService
+	hub     *service.Hub
 	logger  *zap.Logger
 }
 
-func NewHandlers(service service.PlatformCompatService, logger *zap.Logger) *Handlers {
+func NewHandlers(service service.PlatformCompatService, hub *service.Hub, logger *zap.Logger) *Handlers {
 	return &Handlers{
 		service: service,
+		hub:     hub,
 		logger:  logger,
 	}
 }
@@ -66,8 +70,51 @@ func (h *Handlers) writeErrorResponse(w http.ResponseWriter, status int, err err
 }
 
 func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
-	resp := h.service.CheckCompatibility(r.Context(), "/ws")
-	h.writeJSON(w, http.StatusOK, resp)
+	orgIDStr := r.Header.Get("X-Org-ID")
+	if orgIDStr == "" {
+		orgIDStr = r.URL.Query().Get("org_id")
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		if t := r.URL.Query().Get("token"); t != "" {
+			authHeader = "Bearer " + t
+		}
+	}
+
+	if orgIDStr == "" {
+		h.logger.Warn("Websocket connect attempt without X-Org-ID")
+		http.Error(w, "X-Org-ID header required", http.StatusForbidden)
+		return
+	}
+
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		h.logger.Warn("Websocket connect attempt with invalid OrgID", zap.String("org_id", orgIDStr))
+		http.Error(w, "Invalid OrgID", http.StatusForbidden)
+		return
+	}
+
+	var jwtOrgID string
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+		if err == nil {
+			if claims, ok := token.Claims.(jwt.MapClaims); ok {
+				if orgClaim, ok := claims["org_id"].(string); ok {
+					jwtOrgID = orgClaim
+				}
+			}
+		}
+	}
+
+	if jwtOrgID != orgIDStr {
+		h.logger.Warn("Tenant Isolation Violation", zap.String("requested_org", orgIDStr), zap.String("jwt_org", jwtOrgID))
+		http.Error(w, "Tenant isolation violation", http.StatusForbidden)
+		return
+	}
+
+	h.hub.HandleWebsocket(w, r, orgID)
 }
 
 func (h *Handlers) DashboardStats(w http.ResponseWriter, r *http.Request) {
