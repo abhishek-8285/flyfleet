@@ -16,10 +16,10 @@ VALUES ('00000000-0000-0000-0000-000000000014', 'Foxtrot Systems', 'foxtrot.syst
 ON CONFLICT (domain) DO NOTHING;
 
 -- Seed Users for Delta
-INSERT INTO users (id, email, name, password_hash, status, verified)
+INSERT INTO users (id, email, name, password_hash, status, role_id)
 VALUES 
-(gen_random_uuid(), 'admin@delta.io', 'Delta Admin', '$2a$10$X7.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1', 'active', true),
-(gen_random_uuid(), 'driver1@delta.io', 'Delta Driver 1', '$2a$10$X7.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1.1', 'active', true)
+(gen_random_uuid(), 'admin@delta.io', 'Delta Admin', '$2b$12$Z3TNc9LZ5P0jOmnW0.O1T.CfrQ5eucQrm3Ty6RNggRMjoinOLRLd2', 'active', 'a2046939-4bbe-4c0b-a47e-f12d5dd39714'),
+(gen_random_uuid(), 'driver1@delta.io', 'Delta Driver 1', '$2b$12$Z3TNc9LZ5P0jOmnW0.O1T.CfrQ5eucQrm3Ty6RNggRMjoinOLRLd2', 'active', 'c57c4ec8-5190-4776-9267-06c3da35bc3e')
 ON CONFLICT (email) DO NOTHING;
 
 -- Link users to Delta using subquery to get Org ID by domain to be safe, or just use the fixed ID if insert succeeded

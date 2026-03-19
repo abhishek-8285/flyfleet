@@ -13,11 +13,17 @@ const Signup: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<"create" | "invite">("create");
+  const [orgName, setOrgName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const { uiStrings } = useUIStrings("auth_extended");
   const navigate = useNavigate();
 
@@ -31,8 +37,28 @@ const Signup: React.FC = () => {
     setPasswordStrength(strength);
   }, [password]);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError(uiStrings?.invalid_email || "Please enter a valid email address");
+      return;
+    }
+    if (password.length < 8) {
+      setError(uiStrings?.password_too_short || "Password must be at least 8 characters long");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+       setError("Password must contain at least one number");
+       return;
+    }
     if (password !== confirmPassword) {
       setError(uiStrings?.error_mismatch || "Passwords do not match");
       return;
@@ -44,15 +70,47 @@ const Signup: React.FC = () => {
       );
       return;
     }
+    setError("");
+    setStep(2);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mode === "create" && !orgName) {
+      setError("Organization name is required");
+      return;
+    }
+    if (mode === "invite" && !inviteCode) {
+      setError("Invite code is required");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      await api.signup({ email, password, name });
-      setSuccess(true);
-      setTimeout(() => navigate("/login"), 5000);
+      const payload: any = { email, password, name };
+      if (mode === "create") payload.org_name = orgName;
+      else payload.invite_code = inviteCode;
+
+      const res = await api.signup(payload);
+      
+      if (res && res.access_token) {
+        localStorage.setItem("token", res.access_token);
+        if (res.refresh_token) localStorage.setItem("refreshToken", res.refresh_token);
+      }
+      
+      const user = res.user;
+      if (user?.role === "org_admin") navigate("/admin");
+      else if (user?.role === "fleet_manager") navigate("/dashboard");
+      else if (user?.role === "dispatcher") navigate("/dispatch");
+      else if (user?.role === "driver") navigate("/driver");
+      else {
+         setSuccess(true);
+         setTimeout(() => navigate("/login"), 5000);
+      }
     } catch (err: any) {
-      setError(err.message || "Registration failed");
+      setError(err.response?.data?.error || err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -62,7 +120,7 @@ const Signup: React.FC = () => {
     return (
       <EnterpriseAuthLayout
         title={uiStrings?.verify_sent || "Verification Sent"}
-        subtitle={uiStrings?.verify_sub || "Check your corporate inbox"}
+        subtitle={uiStrings?.verify_sub || "Check your operator inbox"}
       >
         <div className="text-center space-y-6">
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/30">
@@ -75,7 +133,7 @@ const Signup: React.FC = () => {
               "We've sent a secure verification link to"}{" "}
             <span className="text-white font-bold">{email}</span>.{" "}
             {uiStrings?.verification_msg_suffix ||
-              "Please follow the link to activate your enterprise account."}
+              "Please follow the link to activate your platform account."}
           </p>
           <div className="pt-4">
             <button
@@ -95,8 +153,8 @@ const Signup: React.FC = () => {
 
   return (
     <EnterpriseAuthLayout
-      title={uiStrings?.signup_title || "Create Account"}
-      subtitle={uiStrings?.signup_sub || "Join your fleet organization"}
+      title={step === 1 ? (uiStrings?.signup_title || "Create Account") : "Organization Setup"}
+      subtitle={step === 1 ? (uiStrings?.signup_sub || "Join your fleet organization") : "Create new or join via invite"}
     >
       <AnimatePresence mode="wait">
         {error && (
@@ -112,97 +170,183 @@ const Signup: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <form onSubmit={handleSignup} className="space-y-4">
-        <AuthInput
-          label={uiStrings?.fullname_label || "Full Name"}
-          icon="person"
-          type="text"
-          required
-          placeholder={uiStrings?.fullname_placeholder || "Full Name"}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-
-        <AuthInput
-          label={uiStrings?.email_label || "Work Email"}
-          icon="mail"
-          type="email"
-          required
-          placeholder={uiStrings?.email_placeholder || "Work Email"}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-
-        <AuthInput
-          label={uiStrings?.password_label || "Set Password"}
-          icon="lock"
-          type="password"
-          required
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-
-        <PasswordStrengthMeter
-          strength={passwordStrength}
-          label={uiStrings?.strength_label}
-          strengthLabels={{
-            weak: uiStrings?.strength_weak || "Weak",
-            fair: uiStrings?.strength_fair || "Fair",
-            good: uiStrings?.strength_good || "Good",
-            strong: uiStrings?.strength_strong || "Strong",
-          }}
-        />
-
-        <AuthInput
-          label={uiStrings?.confirm_password_label || "Confirm Password"}
-          icon="password"
-          type="password"
-          required
-          placeholder="••••••••"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
-
-        <div className="pt-2 px-1">
-          <label className="flex items-start gap-3 cursor-pointer group">
-            <input
-              type="checkbox"
+      <form onSubmit={step === 1 ? handleNextStep : handleSignup} className="space-y-4">
+        {step === 1 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            <AuthInput
+              label={uiStrings?.fullname_label || "Full Name"}
+              icon="person"
+              type="text"
               required
-              className="mt-1 w-4 h-4 rounded border-white/10 bg-slate-800 text-primary focus:ring-primary/50 transition-all cursor-pointer"
-              checked={agreeTerms}
-              onChange={(e) => setAgreeTerms(e.target.checked)}
+              placeholder={uiStrings?.fullname_placeholder || "Full Name"}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
-            <span className="text-xs text-slate-400 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
-              {uiStrings?.agree_text ||
-                "I certify that I have read and agree to the"}
-              <a
-                href="#"
-                className="text-primary hover:underline mx-1"
-                onClick={(e) => e.preventDefault()}
-              >
-                {uiStrings?.terms_link || "Terms of Service"}
-              </a>
-              and
-              <a
-                href="#"
-                className="text-primary hover:underline ml-1"
-                onClick={(e) => e.preventDefault()}
-              >
-                {uiStrings?.privacy_link || "Privacy Policy"}
-              </a>
-              .
-            </span>
-          </label>
-        </div>
 
-        <AuthButton
-          type="submit"
-          loading={loading}
-          loadingText={uiStrings?.btn_creating || "Creating Account..."}
-        >
-          {uiStrings?.register_btn || "Register Now"}
-        </AuthButton>
+            <AuthInput
+              label={uiStrings?.email_label || "Work Email"}
+              icon="mail"
+              type="email"
+              required
+              placeholder={uiStrings?.email_placeholder || "Work Email"}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            <AuthInput
+              label={uiStrings?.password_label || "Set Password"}
+              icon="lock"
+              type={showPassword ? "text" : "password"}
+              required
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-500 hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-2 rounded-lg"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              }
+            />
+
+            {password && password.length > 0 && (
+              <PasswordStrengthMeter
+                strength={passwordStrength}
+                label={uiStrings?.strength_label}
+                strengthLabels={{
+                  weak: uiStrings?.strength_weak || "Weak",
+                  fair: uiStrings?.strength_fair || "Fair",
+                  good: uiStrings?.strength_good || "Good",
+                  strong: uiStrings?.strength_strong || "Strong",
+                }}
+              />
+            )}
+
+            <AuthInput
+              label={uiStrings?.confirm_password_label || "Confirm Password"}
+              icon="password"
+              type={showConfirmPassword ? "text" : "password"}
+              required
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="text-slate-500 hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-2 rounded-lg"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showConfirmPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              }
+            />
+
+            <div className="pt-2 px-1">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  required
+                  className="mt-1 w-4 h-4 rounded border-white/10 bg-slate-800 text-primary focus:ring-primary/50 transition-all cursor-pointer"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                />
+                <span className="text-xs text-slate-400 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
+                  {uiStrings?.agree_text ||
+                    "I certify that I have read and agree to the"}
+                  <a
+                    href="#"
+                    className="text-primary hover:underline mx-1"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {uiStrings?.terms_link || "Terms of Service"}
+                  </a>
+                  and
+                  <a
+                    href="#"
+                    className="text-primary hover:underline ml-1"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {uiStrings?.privacy_link || "Privacy Policy"}
+                  </a>
+                  .
+                </span>
+              </label>
+            </div>
+
+            <AuthButton
+              type="submit"
+              loading={loading}
+              loadingText="Validating..."
+            >
+              Continue
+            </AuthButton>
+          </motion.div>
+        )}
+
+        {step === 2 && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+             <div className="flex bg-slate-800/50 p-1 rounded-xl mb-4">
+               <button type="button" onClick={() => setMode("create")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "create" ? "bg-primary text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                  Create New
+               </button>
+               <button type="button" onClick={() => setMode("invite")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "invite" ? "bg-primary text-white shadow" : "text-slate-400 hover:text-white"}`}>
+                  Join via Invite
+               </button>
+             </div>
+
+             {mode === "create" ? (
+               <div className="space-y-2">
+                 <AuthInput
+                   label="Organization Name"
+                   icon="domain"
+                   type="text"
+                   required
+                   placeholder="Acme Logistics Inc."
+                   value={orgName}
+                   onChange={(e) => setOrgName(e.target.value)}
+                 />
+                 <p className="text-xs text-slate-500 ml-1">You will be designated as the <strong>Organization Admin</strong>.</p>
+               </div>
+             ) : (
+               <div className="space-y-2">
+                 <AuthInput
+                   label="Invite Code"
+                   icon="confirmation_number"
+                   type="text"
+                   required
+                   placeholder="XY79-BK2M"
+                   value={inviteCode}
+                   onChange={(e) => setInviteCode(e.target.value)}
+                 />
+                 <p className="text-xs text-slate-500 ml-1">Your role will be assigned automatically based on the secure invite code.</p>
+               </div>
+             )}
+
+             <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setStep(1)} className="px-4 py-3 border border-slate-700/50 rounded-xl shadow-sm text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700 focus:outline-none transition-colors">
+                   Back
+                </button>
+                <div className="flex-1">
+                  <AuthButton
+                    type="submit"
+                    loading={loading}
+                    loadingText={uiStrings?.btn_creating || "Creating Account..."}
+                  >
+                    {uiStrings?.register_btn || "Complete Registration"}
+                  </AuthButton>
+                </div>
+             </div>
+          </motion.div>
+        )}
       </form>
 
       <div className="mt-8 text-center">

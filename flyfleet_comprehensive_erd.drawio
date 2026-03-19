@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" type="device">
+  <diagram id="flyfleet_erd_1" name="Exhaustive ERD">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="2000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- IAM CLUSTER -->
+        <mxCell id="iam_cluster" value="IDENTITY &amp; ACCESS (IAM)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="table_organizations" value="organizations" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="iam_cluster">
+          <mxGeometry x="10" y="40" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="table_users" value="users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="iam_cluster">
+          <mxGeometry x="10" y="80" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="table_organization_users" value="organization_users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="iam_cluster">
+          <mxGeometry x="10" y="120" width="280" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- LOGISTICS CLUSTER -->
+        <mxCell id="logistics_cluster" value="LOGISTICS &amp; FLEET" style="swimlane;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="40" width="300" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="table_vehicles" value="vehicles" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="logistics_cluster">
+          <mxGeometry x="10" y="40" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="table_drivers" value="drivers" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="logistics_cluster">
+          <mxGeometry x="10" y="80" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="table_trips" value="trips" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="logistics_cluster">
+          <mxGeometry x="10" y="120" width="280" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- BILLING CLUSTER -->
+        <mxCell id="billing_cluster" value="BILLING &amp; REVENUE" style="swimlane;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="300" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="table_billing_subscriptions" value="billing_subscriptions" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="billing_cluster">
+          <mxGeometry x="10" y="40" width="280" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="table_billing_invoices" value="billing_invoices" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="billing_cluster">
+          <mxGeometry x="10" y="80" width="280" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- MAINTENANCE CLUSTER -->
+        <mxCell id="maintenance_cluster" value="MAINTENANCE" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="500" width="300" height="400" as="geometry" />
+        </mxCell>
+        <mxCell id="table_work_orders" value="work_orders" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=4;spacingRight=4;overflow=hidden;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;rotatable=0;whiteSpace=wrap;html=1;fontStyle=1" vertex="1" parent="maintenance_cluster">
+          <mxGeometry x="10" y="40" width="280" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- RELATIONSHIPS -->
+        <mxCell id="rel_org_veh" value="" style="endArrow=classic;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="table_organizations" target="table_vehicles">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_org_bill" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="table_organizations" target="table_billing_subscriptions">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rel_veh_trip" value="" style="endArrow=classic;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="table_vehicles" target="table_trips">
+          <mxGeometry width="50" height="50" relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

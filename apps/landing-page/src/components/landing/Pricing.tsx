@@ -23,7 +23,7 @@ const Pricing = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 font-display">Transparent Enterprise Pricing</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 font-display">Transparent Platform Pricing</h2>
           <div className="flex items-center justify-center gap-4 mb-10">
             <span className="text-sm font-bold text-slate-600 dark:text-text-secondary">Monthly</span>
             <div 
@@ -59,7 +59,7 @@ const Pricing = () => {
                   <button className="w-full py-2 rounded bg-primary text-sm font-bold text-white hover:bg-primary/90 shadow-lg shadow-primary/20">Free Trial</button>
                 </th>
                 <th className="p-6 bg-white dark:bg-surface-dark border-x border-t border-slate-200 dark:border-border-dark rounded-t-xl min-w-[200px]">
-                  <div className="text-lg font-bold text-slate-900 dark:text-white font-display">Enterprise</div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-white font-display">Command</div>
                   <div className="text-3xl font-bold mt-2 text-slate-900 dark:text-white font-display">Custom</div>
                   <button className="w-full py-2 rounded border border-slate-300 dark:border-border-dark text-sm font-bold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-background-dark">Contact Sales</button>
                 </th>

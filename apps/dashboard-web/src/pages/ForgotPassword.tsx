@@ -29,7 +29,7 @@ const ForgotPassword: React.FC = () => {
       // Note: Backend might not return 404 for security reasons (don't reveal users)
       setMessage(
         uiStrings?.msg_email_sent_body ||
-          "If an enterprise account exists for this email, you will receive a reset link shortly.",
+          "If an operator account exists for this email, you will receive a reset link shortly.",
       );
     } catch (err: any) {
       setError(
@@ -83,7 +83,7 @@ const ForgotPassword: React.FC = () => {
         <form onSubmit={handleReset} className="space-y-6">
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
-              {uiStrings?.label_email || "Corporate Email"}
+              {uiStrings?.label_email || "Operator Email"}
             </label>
             <div className="relative group">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 group-focus-within:text-primary transition-colors text-xl">

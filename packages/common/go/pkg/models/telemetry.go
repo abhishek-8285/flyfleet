@@ -18,9 +18,10 @@ type GPSTelemetry struct {
 	Accuracy    *float64  `json:"accuracy,omitempty"`
 	Ignition    *bool     `json:"ignition,omitempty"`
 	Odometer    *float64  `json:"odometer,omitempty"`
-	Battery     *int      `json:"battery_level,omitempty"`
-	Satellites  *int      `json:"satellites,omitempty"`
-	RawData     map[string]interface{} `json:"raw_data,omitempty"`
+	Battery             *int      `json:"battery_level,omitempty"`
+	Satellites          *int      `json:"satellites,omitempty"`
+	ComplianceViolation bool      `json:"compliance_violation"`
+	RawData             map[string]interface{} `json:"raw_data,omitempty"`
 }
 
 type OBDTelemetry struct {

@@ -1,0 +1,17 @@
+INSERT INTO public.users (
+    id, email, password_hash, full_name, role, is_active, 
+    created_at, updated_at, org_id, first_name, last_name, 
+    mfa_enabled, failed_login_attempts, created_by, updated_by, 
+    verified, is_deleted
+) VALUES 
+(gen_random_uuid(), 'superadmin@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test SuperAdmin', 'super_admin', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'SuperAdmin', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'orgadmin@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test OrgAdmin', 'org_admin', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'OrgAdmin', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'fleetmanager@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test FleetManager', 'fleet_manager', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'FleetManager', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'manager@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Manager', 'manager', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Manager', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'dispatcher@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Dispatcher', 'dispatcher', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Dispatcher', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'driver@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Driver', 'driver', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Driver', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'member@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Member', 'member', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Member', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'viewer@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Viewer', 'viewer', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Viewer', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'partner@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Partner', 'partner', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Partner', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false),
+(gen_random_uuid(), 'reseller@flyfleet.com', '$2a$10$J4XbQEebM3lZlbrlyN4nAOc2XzO4vHA5DFIc0iVycghLgtzRrzUPC', 'Test Reseller', 'reseller', true, now(), now(), '00000000-0000-0000-0000-000000000000', 'Test', 'Reseller', false, 0, '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000', true, false)
+ON CONFLICT (email) DO NOTHING;

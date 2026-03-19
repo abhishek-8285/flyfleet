@@ -173,15 +173,15 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 
 	config.AfterRelease = func(conn *pgx.Conn) bool {
 		// Strictly clear all custom session variables before returning to the pool
-		_, errOrg := conn.Exec(context.Background(), "RESET flyfleet.current_org_id")
-		_, errUser := conn.Exec(context.Background(), "RESET flyfleet.current_user_id")
-		_, errRole := conn.Exec(context.Background(), "RESET flyfleet.current_role")
+		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_org_id', '', false)")
+		_, errUser := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_user_id', '', false)")
+		_, errRole := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_role', '', false)")
 		
 		connState.Delete(conn)
 		
 		// If the reset fails, the connection is poisoned. Return false to destroy it.
 		if errOrg != nil || errUser != nil || errRole != nil {
-			log.Printf("[SECURITY] Connection poisoned during reset, destroying connection.")
+			log.Printf("level=FATAL event=connection_poisoned msg=\"[SECURITY] Connection poisoned during reset. Destroying physical socket to prevent cross-tenant data leak.\" errOrg=\"%v\" errUser=\"%v\" errRole=\"%v\"", errOrg, errUser, errRole)
 			return false
 		}
 		return true

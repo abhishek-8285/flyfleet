@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { api } from "../../services/api";
+import { getWsUrl } from "../../services/telemetryService";
 import { Location, Trip, Vehicle } from "../../types";
 import LiveMap from "../LiveMap";
 
@@ -14,7 +15,7 @@ export const LiveOperationsMap: React.FC<LiveOperationsMapProps> = ({
 }) => {
   const { uiStrings } = useUIStrings("dashboard_telemetry");
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const { lastMessage } = useWebSocket("ws://localhost:3001");
+  const { lastMessage } = useWebSocket(getWsUrl());
 
   useEffect(() => {
     const fetchVehicles = async () => {

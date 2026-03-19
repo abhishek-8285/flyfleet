@@ -13,7 +13,6 @@ import (
 	finService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations"
 )
 
 type fakeFuelRepo struct {
@@ -145,14 +144,6 @@ func (f *fakeSettingsRepo) GetOrDefault(_ context.Context, orgID uuid.UUID) (*mo
 	}, nil
 }
 
-type fakeEventBus struct{}
-
-func (f *fakeEventBus) Publish(_ context.Context, _ string, _ integrations.EventEnvelope) error {
-	return nil
-}
-func (f *fakeEventBus) Subscribe(_ string, _ integrations.EventHandler) {}
-func (f *fakeEventBus) Close() error                                    { return nil }
-
 func newTestFuelService(repo *fakeFuelRepo) FuelService {
 	logger := zap.NewNop()
 	return NewFuelService(
@@ -160,7 +151,6 @@ func newTestFuelService(repo *fakeFuelRepo) FuelService {
 		&fakeSettingsRepo{},
 		NewAnomalyDetectionService(nil, logger),
 		finService.NewTaxCalculationService(),
-		&fakeEventBus{},
 		logger,
 	)
 }

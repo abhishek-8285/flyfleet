@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import apiClient from "../../services/api";
+import { useAuth } from "../../context/AuthProvider";
 
 interface AddDocumentModalProps {
   vehicleId: string;
@@ -16,6 +17,8 @@ const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   onSuccess,
 }) => {
   const { uiStrings } = useUIStrings("documents");
+  const { user } = useAuth(); // Needed to check role
+
 
   const [formData, setFormData] = useState({
     type: "insurance",
@@ -73,6 +76,20 @@ const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Standard Users (Driver/Field Staff) cannot upload documents
+  if (user?.role === "DRIVER" || user?.role === "STAFF") {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-[#1c222b] rounded-xl border border-white/10 w-full max-w-lg shadow-2xl p-6 text-center">
+          <span className="material-symbols-outlined text-4xl text-rose-500 mb-4 block">lock</span>
+          <h2 className="text-xl font-bold text-white mb-2">Access Denied</h2>
+          <p className="text-slate-400 mb-6">Standard Users do not have permission to upload compliance documents.</p>
+          <button onClick={onClose} className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors">Close</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">

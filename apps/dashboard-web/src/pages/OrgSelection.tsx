@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useUIStrings } from "../hooks/useUIStrings";
+import { useAuth } from "../context/AuthProvider";
 
 interface Organization {
   id: string;
@@ -17,6 +18,7 @@ const OrgSelection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { uiStrings } = useUIStrings("auth_extended");
+  const { user } = useAuth();
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
   const [loading_orgs, setLoading_orgs] = React.useState(true);
@@ -56,11 +58,24 @@ const OrgSelection: React.FC = () => {
 
       if (!response.ok) throw new Error("Could not switch context");
 
-      navigate("/dashboard");
+      const role = (user?.role_id || user?.role || "").toLowerCase();
+      let targetPath = "/dashboard";
+      if (role.includes("customer") || role.includes("portal") || role === "user") {
+        targetPath = "/portal";
+      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
+        targetPath = "/admin";
+      }
+
+      navigate(targetPath);
     } catch (err) {
       console.error(err);
       // Fallback for demo
-      setTimeout(() => navigate("/dashboard"), 1000);
+      const role = (user?.role_id || user?.role || "").toLowerCase();
+      let targetPath = "/dashboard";
+      if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
+        targetPath = "/admin";
+      }
+      setTimeout(() => navigate(targetPath), 1000);
     } finally {
       setLoading(false);
     }
@@ -172,7 +187,7 @@ const OrgSelection: React.FC = () => {
         <div className="text-center pt-2">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
             {uiStrings?.org_showing_label || "Showing"} {filteredOrgs.length}{" "}
-            {uiStrings?.org_nodes_label || " Enterprise Nodes"}
+            {uiStrings?.org_nodes_label || " Platform Nodes"}
           </p>
         </div>
       </div>

@@ -93,7 +93,7 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
                   Session Expiring Soon
                 </h3>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  For your security, your enterprise terminal session will
+                  For your security, your platform terminal session will
                   automatically terminate in:
                 </p>
                 <div className="text-3xl font-mono font-black text-white tracking-widest pt-2">
@@ -119,7 +119,7 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
                 verified_user
               </span>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
-                Corporate Security Protocol 4.0
+                Platform Security Protocol 4.0
               </span>
             </div>
           </motion.div>

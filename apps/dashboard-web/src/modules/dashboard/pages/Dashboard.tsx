@@ -39,9 +39,38 @@ const Dashboard: React.FC = () => {
       dispatch(setTimelineEvents(data.timeline || []));
       dispatch(setAlerts(data.alerts || []));
     } catch (err: any) {
-      dispatch(
-        fetchStatsFailure(err.message || "Failed to load dashboard overview"),
-      );
+      const isForbidden = err?.response?.status === 403 || err?.status === 403 || err?.message?.includes("403");
+      
+      if (isForbidden) {
+        // Only gracefully degrade for specific roles like Driver who have limited views
+        // Other unauthorized users should see an error or be kicked out completely
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        const role = (user?.role_id || user?.role || "").toLowerCase();
+        
+        if (role.includes("driver") || role === "c57c4ec8-5190-4776-9267-06c3da35bc3e") {
+          dispatch(
+            fetchStatsSuccess({
+              total_vehicles: 0,
+              active_trips: 0,
+              active_drivers: 0,
+              alerts_count: 0,
+              fleet_health_score: 100,
+              vehicles_offline: 0,
+              sla_violations: 0,
+            })
+          );
+          dispatch(setTimelineEvents([]));
+          dispatch(setAlerts([]));
+          dispatch(fetchStatsFailure(null as any));
+        } else {
+          // If not a driver, they shouldn't even be on this page, throw a hard 403 error
+          dispatch(fetchStatsFailure("Access Denied: You do not have permission to view the Fleet Command dashboard."));
+        }
+      } else {
+        dispatch(
+          fetchStatsFailure(err.message || "Failed to load dashboard overview")
+        );
+      }
     } finally {
       setIsRetrying(false);
     }

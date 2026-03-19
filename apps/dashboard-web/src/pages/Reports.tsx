@@ -62,7 +62,7 @@ const Reports: React.FC = () => {
       </div>
       <footer className="mt-12 text-center text-xs text-[#64748b] pb-6 flex flex-col items-center gap-1">
         <span>
-          © {new Date().getFullYear()} {branding.companyName} Enterprise. All
+          © {new Date().getFullYear()} {branding.companyName} Command. All
           rights reserved.
         </span>
         <span className="text-[10px]">

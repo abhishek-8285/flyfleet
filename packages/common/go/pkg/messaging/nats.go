@@ -1,11 +1,14 @@
 package messaging
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 )
 
@@ -16,6 +19,7 @@ type MessageBroker interface {
 	
 	// JetStream capabilities
 	PublishJS(subject string, data interface{}) error
+	PublishJSWithContext(ctx context.Context, subject string, data interface{}) error
 	SubscribeJS(subject, durable, queue string, handler func([]byte)) error
 	JetStream() (nats.JetStreamContext, error)
 	
@@ -61,19 +65,29 @@ func NewNATSClient(url string, logger *zap.Logger) (MessageBroker, error) {
 }
 
 func (nc *NATSClient) PublishJS(subject string, data interface{}) error {
+	return nc.PublishJSWithContext(context.Background(), subject, data)
+}
+
+func (nc *NATSClient) PublishJSWithContext(ctx context.Context, subject string, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	if _, err := nc.js.Publish(subject, payload); err != nil {
+	msg := nats.NewMsg(subject)
+	msg.Data = payload
+
+	// Inject OTel headers
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(msg.Header))
+
+	if _, err := nc.js.PublishMsg(msg); err != nil {
 		nc.logger.Error("Failed to publish JetStream message",
 			zap.String("subject", subject),
 			zap.Error(err))
 		return err
 	}
 
-	nc.logger.Debug("JetStream message published",
+	nc.logger.Debug("JetStream message published with context",
 		zap.String("subject", subject),
 		zap.Int("payload_size", len(payload)))
 

@@ -1,0 +1,14 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS org_id uuid;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar(50) DEFAULT 'user';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name varchar(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name varchar(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled boolean DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret varchar(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts integer DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until timestamp with time zone;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO fleet_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO fleet_user;
+DELETE FROM users WHERE email='admin@flyfleet.com';
+INSERT INTO users (id, email, password_hash, role) VALUES (gen_random_uuid(), 'admin@flyfleet.com', '$argon2id$v=19$m=65536,t=3,p=4$yLdGBVfwF8NQ+5Z70RPokQ$cBQHQPAo3Qz1RnqNQZ+woumaJU5JElTnTqrlCwr4nAc', 'admin');

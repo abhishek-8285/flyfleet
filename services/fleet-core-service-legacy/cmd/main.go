@@ -25,17 +25,17 @@ import (
 	"github.com/fleet-platform/shared/pkg/cache"
 	monitorSvc "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
 	monitoringrepo "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
-	adminsupportsupportrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/repository"
-	adminsupportsupportservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/service"
-	adminsupportsupporthandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/support/handlers"
-	adminsupportdrrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/repository"
-	adminsupportdrservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/service"
-	adminsupportdrhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/dr/handlers"
-	adminsupportorgrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/repository"
-	adminsupportorgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/service"
-	adminsupportorghandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/handlers"
-	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/emergency/service"
-	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/emergency/handlers"
+	adminsupportsupportrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/repository"
+	adminsupportsupportservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/service"
+	adminsupportsupporthandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/handlers"
+	adminsupportdrrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/repository"
+	adminsupportdrservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/service"
+	adminsupportdrhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/handlers"
+	adminsupportorgrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/repository"
+	adminsupportorgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
+	adminsupportorghandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/handlers"
+	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
+	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/handlers"
 	"github.com/flyfleet/fleet-core-service/internal/repository"
 
 	// Domains
@@ -45,31 +45,30 @@ import (
 	govMiddleware      "github.com/flyfleet/fleet-core-service/internal/domains/governance/middleware"
 	govUtils           "github.com/flyfleet/fleet-core-service/internal/domains/governance/utils"
 	govWorkers         "github.com/flyfleet/fleet-core-service/internal/domains/governance/workers"
-	indiav2handlers    "github.com/flyfleet/fleet-core-service/internal/domains/india_v2/handlers"
-	indiav2repo        "github.com/flyfleet/fleet-core-service/internal/domains/india_v2/repository"
-	indiav2service     "github.com/flyfleet/fleet-core-service/internal/domains/india_v2/service"
-	indiav2workers     "github.com/flyfleet/fleet-core-service/internal/domains/india_v2/workers"
-	integrationsv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/handlers"
-	integrationsv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/repository"
-	integrationsv2service  "github.com/flyfleet/fleet-core-service/internal/domains/integrations_v2/service"
-	integrations           "github.com/flyfleet/fleet-core-service/internal/domains/integrations"
-	reportsv2handlers  "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/handlers"
-	reportsv2queue     "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/queue"
-	reportsv2repo      "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/repository"
-	reportsv2service   "github.com/flyfleet/fleet-core-service/internal/domains/reports_v2/service"
+	indiav2handlers    "github.com/flyfleet/fleet-core-service/internal/domains/india/handlers"
+	indiav2repo        "github.com/flyfleet/fleet-core-service/internal/domains/india/repository"
+	indiav2service     "github.com/flyfleet/fleet-core-service/internal/domains/india/service"
+	indiav2workers     "github.com/flyfleet/fleet-core-service/internal/domains/india/workers"
+	integrationsv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/integrations/handlers"
+	integrationsv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/integrations/repository"
+	integrationsv2service  "github.com/flyfleet/fleet-core-service/internal/domains/integrations/service"
+	reportsv2handlers  "github.com/flyfleet/fleet-core-service/internal/domains/reports/handlers"
+	reportsv2queue     "github.com/flyfleet/fleet-core-service/internal/domains/reports/queue"
+	reportsv2repo      "github.com/flyfleet/fleet-core-service/internal/domains/reports/repository"
+	reportsv2service   "github.com/flyfleet/fleet-core-service/internal/domains/reports/service"
 	settingsHandlers   "github.com/flyfleet/fleet-core-service/internal/domains/settings/handlers"
 	settingsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/settings/middleware"
 	settingsRepo       "github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
 	settingsService    "github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
 
-	alertalertrepo    "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/alerts/repository"
-	alertalertrule    "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/alerts/rule_engine"
-	alertproviders    "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/providers"
-	alertalertservice "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/alerts/service"
-	alertalerthandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/alerts/handlers"
-	alertnotifyrepo   "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/notifications/repository"
-	alertnotifyservice "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/notifications/service"
-	alertnotifyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert_v2/domains/notifications/handlers"
+	alertalertrepo    "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/repository"
+	alertalertrule    "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/rule_engine"
+	alertproviders    "github.com/flyfleet/fleet-core-service/internal/domains/alert/providers"
+	alertalertservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/service"
+	alertalerthandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/handlers"
+	alertnotifyrepo   "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/repository"
+	alertnotifyservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service"
+	alertnotifyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/handlers"
 
 	vehHandlers "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/handlers"
 	vehProcessor "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/processor"
@@ -90,10 +89,10 @@ import (
 	emergencyRepo "github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
 	emergencyService "github.com/flyfleet/fleet-core-service/internal/domains/emergency/service"
 	
-	trackingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/handlers"
-	trackingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/repository"
-	trackingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/service"
-	trackingv2analytics "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/analytics"
+	trackingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/tracking/handlers"
+	trackingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	trackingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/tracking/service"
+	trackingv2analytics "github.com/flyfleet/fleet-core-service/internal/domains/tracking/analytics"
 
 	maintenHandlers "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/handlers"
 	maintenRepo     "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
@@ -123,28 +122,28 @@ import (
 	analyticsRepo     "github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
 	analyticsService  "github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
 
-	billingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/handlers"
-	billingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/repository"
-	billingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/service"
-	billingv2queue    "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/queue"
-	billingv2pdf      "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/pdf"
-	billingv2models   "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/models"
+	billingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/billing/handlers"
+	billingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
+	billingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	billingv2queue    "github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
+	billingv2pdf      "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	billingv2models   "github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
 
-	compliancev2handlers "github.com/flyfleet/fleet-core-service/internal/domains/compliance_v2/handlers"
-	compliancev2repo     "github.com/flyfleet/fleet-core-service/internal/domains/compliance_v2/repository"
-	compliancev2service  "github.com/flyfleet/fleet-core-service/internal/domains/compliance_v2/service"
+	compliancev2handlers "github.com/flyfleet/fleet-core-service/internal/domains/compliance/handlers"
+	compliancev2repo     "github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
+	compliancev2service  "github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
 
-	authv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/handlers"
-	authv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/repository"
-	authv2service  "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
+	authv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/auth/handlers"
+	authv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
+	authv2service  "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
 
 	driverHandlers "github.com/flyfleet/fleet-core-service/internal/domains/driver/handlers"
 	driverRepo     "github.com/flyfleet/fleet-core-service/internal/domains/driver/repository"
 	driverService  "github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
 	driverMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/driver/middleware"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2"
-	trackingRepo "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/repository"
+	"github.com/flyfleet/fleet-core-service/internal/domains/tracking"
+	trackingRepo "github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -183,8 +182,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// 2. Initialize Logger
-	logger, _ := zap.NewDevelopment()
+	// 2. Initialize Logger with sensitive data scrubbing
+	baseLogger, _ := zap.NewDevelopment()
+	logger := zap.New(logadapter.NewScrubberCore(baseLogger.Core()), zap.AddCaller())
 	defer logger.Sync()
 
 	// 3. Load Config
@@ -453,9 +453,12 @@ func main() {
 		platformCompatHandlers.RegisterRoutes(r)
 
 		// Diagnostics Domain
-		diagR := diagRepo.NewRepository(pools.Low, logger)
-		diagS := diagService.NewDeviceDiagnosticsService(diagR, logger)
-		diagH := diagHandlers.NewHandlers(diagS, logger)
+		diagR := diagRepo.NewDiagnosticsRepository(pools.Low)
+		diagHealth := diagService.NewDeviceHealthService(diagR)
+		diagTelemetry := diagService.NewTelemetryService(diagR, diagHealth)
+		diagCommand := diagService.NewDeviceCommandService(diagR)
+		diagRollout := diagService.NewFirmwareRolloutService(diagR)
+		diagH := diagHandlers.NewDiagnosticsHandler(diagTelemetry, diagCommand, diagRollout)
 		r.Route("/diagnostics", func(r chi.Router) {
 			diagH.RegisterRoutes(r)
 		})
@@ -793,8 +796,7 @@ func main() {
 		fuelSettingsRepo := fuelRepo.NewSettingsRepository(pools.High)
 		anomalySvc := fuelService.NewAnomalyDetectionService(nil, logger)
 		taxSvc := financeService.NewTaxCalculationService()
-		eventBus := integrations.NewInMemoryEventBus(logger)
-		fuelSvc := fuelService.NewFuelService(fuelLogRepo, fuelSettingsRepo, anomalySvc, taxSvc, eventBus, logger)
+		fuelSvc := fuelService.NewFuelService(fuelLogRepo, fuelSettingsRepo, anomalySvc, taxSvc, logger)
 		fuelHandler := fuelHandlers.NewFuelHandler(fuelSvc, logger)
 		r.Route("/fuel", func(r chi.Router) {
 			fuelHandler.RegisterRoutes(r)

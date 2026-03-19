@@ -1,10 +1,12 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthProvider";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import { GlobalAdminSidebar } from "./GlobalAdminSidebar";
 
 export const GlobalAdminLayout: React.FC = () => {
   const { uiStrings } = useUIStrings("layout_common");
+  const { logout } = useAuth();
   return (
     <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
       <GlobalAdminSidebar />
@@ -58,7 +60,10 @@ export const GlobalAdminLayout: React.FC = () => {
                   {uiStrings?.system_admin || "System Administrator"}
                 </span>
               </div>
-              <button className="ml-auto text-text-muted hover:text-white">
+              <button
+                onClick={logout}
+                className="ml-auto text-text-muted hover:text-white"
+              >
                 <span className="material-symbols-outlined text-[20px]">
                   logout
                 </span>

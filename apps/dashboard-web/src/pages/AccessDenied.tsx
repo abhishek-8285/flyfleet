@@ -9,7 +9,7 @@ const AccessDenied: React.FC = () => {
   return (
     <EnterpriseAuthLayout
       title="403 - Restricted Access"
-      subtitle="Enterprise IAM: Permission Denied"
+      subtitle="Platform IAM: Permission Denied"
     >
       <div className="text-center space-y-8">
         <div className="w-24 h-24 bg-slate-800/40 rounded-full flex items-center justify-center mx-auto border border-white/5 shadow-inner">

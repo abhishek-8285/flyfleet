@@ -94,7 +94,7 @@ const MFASetup: React.FC = () => {
               </div>
               <p className="text-slate-400 text-sm leading-relaxed">
                 Multi-Factor Authentication adds an extra layer of protection to
-                your corporate identity. We recommend using Google Authenticator
+                your platform identity. We recommend using Google Authenticator
                 or Microsoft Authenticator.
               </p>
               <AuthButton onClick={startSetup} loading={loading}>
@@ -201,7 +201,7 @@ const MFASetup: React.FC = () => {
               </div>
               <h3 className="text-white text-xl font-bold">MFA Activated</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Your account is now protected with enterprise-grade Multi-Factor
+                Your account is now protected with operations-grade Multi-Factor
                 Authentication.
               </p>
               <AuthButton

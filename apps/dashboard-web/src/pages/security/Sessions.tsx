@@ -52,15 +52,25 @@ export default function Sessions() {
   };
 
   const handleRevoke = async (sessionId: string) => {
+    const previousSessions = [...sessions];
+    // Optimistic Update
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+
     try {
-      await fetch(`${API_BASE}/security/sessions/revoke`, {
+      const res = await fetch(`${API_BASE}/security/sessions/revoke`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId }),
       });
-      fetchSessions();
+      if (!res.ok) {
+        throw new Error("Failed to revoke session");
+      }
+      fetchSessions(); // Refresh to ensure strict sync
     } catch (err) {
       console.error("Failed to revoke session:", err);
+      // Restore on failure
+      setSessions(previousSessions);
+      alert(uiStrings?.revoke_failed || "Revocation Failed. Please try again.");
     }
   };
 

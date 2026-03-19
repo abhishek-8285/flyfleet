@@ -12,7 +12,6 @@ import (
 	finService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations"
 )
 
 const (
@@ -37,7 +36,6 @@ type fuelService struct {
 	settingsRepo repository.SettingsRepository
 	anomalySvc   *AnomalyDetectionService
 	taxService   *finService.TaxCalculationService
-	eventBus     integrations.EventBus
 	logger       *zap.Logger
 }
 
@@ -50,7 +48,6 @@ func NewFuelService(
 	settingsRepo repository.SettingsRepository,
 	anomalySvc *AnomalyDetectionService,
 	taxService *finService.TaxCalculationService,
-	eventBus integrations.EventBus,
 	logger *zap.Logger,
 ) FuelService {
 	if anomalySvc == nil {
@@ -61,7 +58,6 @@ func NewFuelService(
 		settingsRepo: settingsRepo,
 		anomalySvc:   anomalySvc,
 		taxService:   taxService,
-		eventBus:     eventBus,
 		logger:       logger,
 	}
 }
@@ -171,16 +167,8 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		NewValues: mustJSONMarshal(map[string]interface{}{
 			"status":       log.Status,
 			"quantity":     log.Quantity,
-			"total_cost":   log.TotalCost,
-			"station_name": log.StationName,
 		}),
 	})
-
-	// Phase 15: Event Bus Integration
-	envelope, err := integrations.NewEnvelope("fuel.log.created", orgID, log.ID.String(), "", log)
-	if err == nil {
-		_ = s.eventBus.Publish(ctx, integrations.TopicFuel, envelope)
-	}
 
 	return log, nil
 }

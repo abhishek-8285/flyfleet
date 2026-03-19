@@ -9,14 +9,14 @@ for port in {8080..8090} {50051..50061}; do
 done
 
 # Shared Env
-export DATABASE_URL="postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+export DATABASE_URL="postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"
 export JWT_SECRET="runtime-integration-secret"
 export NATS_URL="nats://localhost:4222"
-export REDIS_ADDR="localhost:6380"
+export REDIS_ADDR="localhost:6379"
 
 # Billing Service Specifics
 export DB_HOST="localhost"
-export DB_PORT=5433
+export DB_PORT=5432
 export DB_USER="fleet_user"
 export DB_PASS="fleet_password"
 export DB_NAME="fleet_db"
@@ -49,16 +49,16 @@ start_service() {
 }
 
 # Start services
-start_service "auth" "services/microservices/auth-service" 8080 50051
-start_service "tracking" "services/microservices/tracking-service" 8081 50052
-start_service "trip" "services/microservices/trip-service" 8082 50053
-start_service "alert" "services/microservices/alert-service" 8083 50054
-start_service "billing" "services/microservices/billing-service" 8084 50055
-start_service "admin" "services/microservices/admin-support-service" 8085 50056
-start_service "maintenance" "services/microservices/maintenance-service" 8086 50057
-start_service "driver" "services/microservices/driver-service" 8087 50058
-start_service "analytics" "services/microservices/analytics-service" 8088 50059
-start_service "reports" "services/microservices/reports-service" 8089 50060
+start_service "auth" "services/auth-service" 8080 50051
+start_service "tracking" "services/tracking-service" 8081 50052
+start_service "trip" "services/trip-service" 8082 50053
+start_service "alert" "services/alert-service" 8083 50054
+start_service "billing" "services/billing-service" 8084 50055
+start_service "admin" "services/admin-support-service" 8085 50056
+start_service "maintenance" "services/maintenance-service" 8086 50057
+start_service "driver" "services/driver-service" 8087 50058
+start_service "analytics" "services/analytics-service" 8088 50059
+start_service "reports" "services/reports-service" 8089 50060
 start_service "fleet" "services/fleet-core-service-legacy" 8090 50061
 
 echo "⏳ Waiting for services to stabilize (25s)..."

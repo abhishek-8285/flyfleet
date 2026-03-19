@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/fleet-platform/shared/pkg/api"
-	orgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/service"
-	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
+	orgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
+	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/flyfleet/fleet-core-service/internal/repository"
 	"github.com/go-chi/chi/v5"

@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type Config struct {

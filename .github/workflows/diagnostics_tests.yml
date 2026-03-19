@@ -3,10 +3,10 @@ name: Diagnostics V2 Automated Tests
 on:
   push:
     paths:
-      - "services/fleet-core-service-legacy/internal/domains/diagnostics_v2/**"
+      - "services/fleet-core-service-legacy/internal/domains/diagnostics/**"
   pull_request:
     paths:
-      - "services/fleet-core-service-legacy/internal/domains/diagnostics_v2/**"
+      - "services/fleet-core-service-legacy/internal/domains/diagnostics/**"
 
 jobs:
   test:
@@ -28,4 +28,4 @@ jobs:
       - name: Run Diagnostics Tests
         run: |
           cd services/fleet-core-service-legacy
-          go test ./internal/domains/diagnostics_v2/... -v -timeout 10m
+          go test ./internal/domains/diagnostics/... -v -timeout 10m

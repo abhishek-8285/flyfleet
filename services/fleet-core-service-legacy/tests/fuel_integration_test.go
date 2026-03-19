@@ -21,7 +21,7 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	fuelRepo "github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
 	fuelService "github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations"
+	"github.com/flyfleet/fleet-core-service/internal/domains/integrations_v1"
 )
 
 func TestFuelModuleIntegrationFlow(t *testing.T) {
@@ -181,8 +181,8 @@ func strPtr(s string) *string { return &s }
 
 type noopBus struct{}
 
-func (n *noopBus) Publish(_ context.Context, _ string, _ integrations.EventEnvelope) error {
+func (n *noopBus) Publish(_ context.Context, _ string, _ integrations_v1.EventEnvelope) error {
 	return nil
 }
-func (n *noopBus) Subscribe(_ string, _ integrations.EventHandler) {}
+func (n *noopBus) Subscribe(_ string, _ integrations_v1.EventHandler) {}
 func (n *noopBus) Close() error                                    { return nil }

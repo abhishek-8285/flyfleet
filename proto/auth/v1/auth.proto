@@ -70,6 +70,8 @@ message RegisterRequest {
   string name = 3;
   string ip = 4;
   string user_agent = 5;
+  string invite_code = 6;
+  string org_name = 7;
 }
 
 message RegisterResponse {

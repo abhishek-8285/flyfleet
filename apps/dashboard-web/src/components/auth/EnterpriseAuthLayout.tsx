@@ -93,7 +93,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
 
             <div className="mt-6 pt-4 border-t border-slate-800/50 text-center">
               <p className="text-slate-500 text-xs tracking-wide uppercase font-semibold mb-3">
-                {uiStrings?.gateway_label || "Secure Enterprise Gateway"}
+                {uiStrings?.gateway_label || "Secure Identity Gateway"}
               </p>
               <div className="flex justify-center gap-4 text-xs text-slate-500">
                 <button
@@ -231,7 +231,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
               <span className="material-symbols-outlined text-primary">
                 support_agent
               </span>
-              {uiStrings?.support_247 || "24/7 Enterprise Support"}
+              {uiStrings?.support_247 || "24/7 Operations Support"}
             </h4>
             <p className="text-slate-400 text-sm">
               {uiStrings?.support_desc ||

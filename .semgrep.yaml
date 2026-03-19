@@ -1,0 +1,20 @@
+rules:
+  - id: disallow-zap-any-for-http
+    patterns:
+      - pattern: zap.Any(..., $VAR)
+      - metavariable-type:
+          metavariable: $VAR
+          type: net/http.Header # Redact flc_ keys in Headers
+    message: "Security Risk: Do not use zap.Any for HTTP headers. It bypasses the scrubberCore redaction and leaks flc_ API keys into logs. Use explicit string extraction."
+    severity: ERROR
+    languages: [go]
+
+  - id: disallow-zap-any-for-sensitive-context
+    patterns:
+      - pattern: zap.Any(..., $VAR)
+      - metavariable-type:
+          metavariable: $VAR
+          type: context.Context # Or custom Auth/Identity contexts
+    message: "Security Risk: Sensitive contexts may contain flc_ API keys. Use structured logging with explicit fields instead of zap.Any."
+    severity: ERROR
+    languages: [go]

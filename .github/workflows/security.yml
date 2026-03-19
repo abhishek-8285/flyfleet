@@ -11,6 +11,18 @@ env:
   TRIVY_VERSION: "0.50.0"
 
 jobs:
+  # ── Custom Security Scanning (Semgrep) ─────────────
+  semgrep:
+    name: Semgrep Custom Rule Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: .semgrep.yaml
+          generateSarif: "1"
+
   # ── Static Analysis (SAST) ──────────────────────────
   sast:
     name: Static Analysis
@@ -46,9 +58,9 @@ jobs:
           args: "-severity medium -quiet ./..."
           working-directory: ${{ matrix.service }}
 
-  # ── Container Image Scanning ────────────────────────
+  # ── Filesystem Vulnerability Scanning (Trivy) ────────
   trivy:
-    name: Container Vulnerability Scan
+    name: Filesystem Vulnerability Scan
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -60,16 +72,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build -t flyfleet/${{ matrix.service }}:scan \
-            -f services/${{ matrix.service }}/Dockerfile \
-            services/${{ matrix.service }}
-
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner (FS Mode)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: "flyfleet/${{ matrix.service }}:scan"
+          scan-type: "fs"
+          scan-ref: "services/microservices/${{ matrix.service }}"
           format: "sarif"
           output: "trivy-${{ matrix.service }}.sarif"
           severity: "CRITICAL,HIGH"
@@ -98,26 +105,10 @@ jobs:
           cd services/microservices/fleet-core-service-new && go build -o /dev/null ./cmd/...
           cd ../tracking-service && go build -o /dev/null ./cmd/...
           cd ../web-bff && go build -o /dev/null ./cmd/...
-
-      - name: Verify StrictTenantMiddleware usage
+      - name: Run org-id-enforcer
         run: |
-          echo "Checking that critical endpoints use StrictTenantMiddleware..."
-          # Ensure no database query uses raw org_id without middleware
-          if grep -rn 'org_id.*r\.URL\.Query' services/ --include='*.go' | grep -v '_test.go'; then
-            echo "WARNING: Found potential org_id from query parameter (should come from middleware)"
-          fi
-
-      - name: Verify org_id in all SQL queries
-        run: |
-          echo "Checking org_id enforcement in SQL queries..."
-          # Count queries missing org_id filter
-          MISSING=$(grep -rn 'SELECT.*FROM' services/ --include='*.go' | \
-            grep -v 'org_id' | grep -v '_test.go' | grep -v 'migrations' | \
-            grep -v 'schema_migrations' | grep -v 'devices WHERE device_id' | wc -l)
-          echo "Queries without org_id filter: $MISSING"
-          if [ "$MISSING" -gt 10 ]; then
-            echo "WARNING: Many queries missing org_id — review for tenant isolation"
-          fi
+          cd services/fleet-core-service-legacy
+          go run cmd/org-id-enforcer/main.go ./...
 
   # ── Dependency Audit ────────────────────────────────
   dependency-audit:

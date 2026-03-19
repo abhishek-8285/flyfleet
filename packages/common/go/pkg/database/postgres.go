@@ -23,6 +23,7 @@ type Transaction interface {
 	Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner
 	Execute(ctx context.Context, sql string, args ...interface{}) error
+	CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error)
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
@@ -81,6 +82,14 @@ func NewPostgres(connectionString string, logger *zap.Logger) (Database, error) 
 		pool:   pool,
 		logger: logger,
 	}, nil
+}
+
+// WrapPool wraps an existing pgxpool.Pool into the Database interface
+func WrapPool(pool *pgxpool.Pool, logger *zap.Logger) Database {
+	return &Postgres{
+		pool:   pool,
+		logger: logger,
+	}
 }
 
 func (pg *Postgres) Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error) {
@@ -223,6 +232,10 @@ func (ptx *PostgresTransaction) QueryRow(ctx context.Context, sql string, args .
 func (ptx *PostgresTransaction) Execute(ctx context.Context, sql string, args ...interface{}) error {
 	_, err := ptx.tx.Exec(ctx, sql, args...)
 	return err
+}
+
+func (ptx *PostgresTransaction) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	return ptx.tx.CopyFrom(ctx, tableName, columnNames, rowSrc)
 }
 
 func (ptx *PostgresTransaction) Commit(ctx context.Context) error {

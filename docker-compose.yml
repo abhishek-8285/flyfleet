@@ -110,6 +110,7 @@ services:
       - REDIS_URL=fleet-redis:6379
       - REDIS_ADDR=fleet-redis:6379
       - JWT_SECRET=${JWT_SECRET:-runtime-integration-secret}
+      - DISABLE_AUTH_RATE_LIMIT=true
       - PORT=8084
       - LOG_LEVEL=info
       - ENFORCE_BFF_AUTH_GATE=false

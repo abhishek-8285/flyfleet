@@ -5,6 +5,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role?: string;
   role_id?: string;
   org_id?: string;
   theme?: string;
@@ -43,7 +44,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           let profileData;
           try {
             profileData = (await apiClient.get("/auth/profile")) as any;
-          } catch (e) {
+          } catch (e: any) {
+            if (e?.response?.status === 401 || e?.response?.status === 403) {
+              throw e;
+            }
             console.warn("Backend unreachable, using mock session.");
             profileData = {
               user: JSON.parse(localStorage.getItem("user") || "{}"),

@@ -219,6 +219,11 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
 		}
 
+		// Permission Mask
+		if permMask, ok := claims["pmsk"].(float64); ok {
+			ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, permMask)
+		}
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

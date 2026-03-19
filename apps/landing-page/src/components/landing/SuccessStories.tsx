@@ -37,7 +37,7 @@ const SuccessStories = () => {
     <section className="py-20 px-4 md:px-10" id="success-stories">
       <div className="max-w-[1280px] mx-auto">
         <motion.div {...fadeInUp} className="mb-16 md:text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 font-display">Enterprise Success Stories</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 font-display">Commercial Success Stories</h2>
           <p className="text-slate-600 dark:text-text-secondary text-lg">Real results from companies scaling their operations with FlyFleet.</p>
         </motion.div>
         <motion.div 

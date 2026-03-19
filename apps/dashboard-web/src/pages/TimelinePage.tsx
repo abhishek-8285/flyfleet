@@ -303,7 +303,7 @@ const TimelinePage = () => {
 
         <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
           <span>
-            © {new Date().getFullYear()} Enterprise Fleet Manager. Platform{" "}
+            © {new Date().getFullYear()} Command Fleet Manager. Platform{" "}
             {systemMeta?.version || "V--"}
           </span>
           <div className="flex items-center gap-4">

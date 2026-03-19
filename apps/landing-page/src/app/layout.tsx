@@ -14,7 +14,7 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: "FlyFleet | Enterprise Fleet Management Platform",
+    default: "FlyFleet | Commercial Fleet Management Platform",
     template: "%s | FlyFleet",
   },
   description:
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     "gps tracking",
     "route optimization",
     "logistics technology",
-    "enterprise fleet",
+    "commercial fleet",
   ],
-  authors: [{ name: "FlyFleet Enterprise" }],
+  authors: [{ name: "FlyFleet Command" }],
   creator: "FlyFleet",
   publisher: "FlyFleet Inc.",
   formatDetection: {
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: "FlyFleet | The Trust Standard for Enterprise Fleets",
+    title: "FlyFleet | The Trust Standard for Commercial Fleets",
     description:
       "Next-generation fleet management with 99.9% uptime SLA and ISO 27001 security.",
     url: "https://flyfleet.io",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         url: "https://flyfleet.io/og-image.png",
         width: 1200,
         height: 630,
-        alt: "FlyFleet Enterprise Dashboard Preview",
+        alt: "FlyFleet Command Dashboard Preview",
       },
     ],
     locale: "en_US",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "FlyFleet Enterprise",
+    title: "FlyFleet Command",
     description: "Transform your logistics with AI-driven fleet optimization.",
     creator: "@flyfleet",
     images: ["https://flyfleet.io/twitter-image.png"],

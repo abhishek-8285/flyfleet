@@ -35,7 +35,7 @@ const TrustedDevices: React.FC = () => {
   return (
     <EnterpriseAuthLayout
       title="Secure Devices"
-      subtitle="Manage your trusted enterprise access"
+      subtitle="Manage your trusted platform access"
     >
       <div className="space-y-6">
         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">

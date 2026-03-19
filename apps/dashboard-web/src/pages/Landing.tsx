@@ -69,7 +69,7 @@ const Landing = () => {
               verified_user
             </span>
             <span>
-              {uiStrings?.landing?.security_text || "Enterprise Grade Security"}
+              {uiStrings?.landing?.security_text || "Operations Grade Security"}
             </span>
           </div>
           <div className="flex items-center gap-6">
@@ -201,11 +201,11 @@ const Landing = () => {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
               {uiStrings?.landing?.security_badge ||
-                "Enterprise Grade Security & Reliability"}
+                "Operations Grade Security & Reliability"}
             </div>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-tight tracking-tight mb-6 max-w-5xl text-slate-900 dark:text-white">
               {uiStrings?.landing?.hero_title ||
-                "The Trust Standard for Enterprise Fleets"}
+                "The Trust Standard for Commercial Fleets"}
             </h1>
             <p className="text-slate-600 dark:text-text-secondary text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
               {uiStrings?.landing?.hero_sub ||
@@ -257,7 +257,7 @@ const Landing = () => {
             <div className="mb-16 md:text-center max-w-3xl mx-auto">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
                 {uiStrings?.landing?.success_title ||
-                  "Enterprise Success Stories"}
+                  "Commercial Success Stories"}
               </h2>
               <p className="text-slate-600 dark:text-text-secondary text-lg">
                 {uiStrings?.landing?.success_sub ||
@@ -616,7 +616,7 @@ const Landing = () => {
             <div className="relative z-10 text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
                 {uiStrings?.landing?.security_title ||
-                  "Enterprise-Grade Security"}
+                  "Operations-Grade Security"}
               </h2>
               <p className="text-text-secondary max-w-2xl mx-auto text-lg">
                 {uiStrings?.landing?.security_sub ||
@@ -848,7 +848,7 @@ const Landing = () => {
             <div className="text-center mb-10">
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
                 {uiStrings?.landing?.pricing_title ||
-                  "Transparent Enterprise Pricing"}
+                  "Transparent Platform Pricing"}
               </h2>
               <div className="flex items-center justify-center gap-4 mb-10">
                 <span className="text-sm font-bold text-slate-600 dark:text-text-secondary">
@@ -909,7 +909,7 @@ const Landing = () => {
                         <button
                           className={`w-full py-2 rounded ${plan.isPopular ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20" : "border border-slate-300 dark:border-border-dark text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-background-dark"} text-sm font-bold`}
                         >
-                          {plan.name === "Enterprise"
+                          {plan.name === "Command"
                             ? landingMetadata?.cta?.sales_text ||
                               "Contact Sales"
                             : landingMetadata?.cta?.start_text || "Get Started"}

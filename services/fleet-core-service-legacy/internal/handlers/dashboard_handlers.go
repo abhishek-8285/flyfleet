@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support_v2/domains/organizations/service"
-	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
+	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
+	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
 	vehicleservice "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
 	monitoringservice "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
 	"github.com/flyfleet/fleet-core-service/internal/repository"

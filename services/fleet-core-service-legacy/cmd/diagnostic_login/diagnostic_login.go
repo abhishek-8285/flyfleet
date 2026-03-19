@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth_v2/repository"
+	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	"github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/fleet-platform/shared/pkg/logger"
 )

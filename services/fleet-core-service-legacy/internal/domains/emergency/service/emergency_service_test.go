@@ -13,7 +13,7 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/service"
-	trackingModels "github.com/flyfleet/fleet-core-service/internal/domains/tracking_v2/models"
+	trackingModels "github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"

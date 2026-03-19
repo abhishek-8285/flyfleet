@@ -83,7 +83,7 @@ const RiskChallenge: React.FC = () => {
                   Enter Security Code
                 </p>
                 <p className="text-slate-400 text-xs">
-                  A verification code has been sent to your primary corporate
+                  A verification code has been sent to your primary operator
                   email.
                 </p>
               </div>

@@ -13,9 +13,38 @@ export interface TelemetryPayload {
   timestamp: string;
 }
 
+export const getWsUrl = (): string => {
+  let wsUrl = process.env.REACT_APP_WS_URL || "";
+  if (!wsUrl) {
+    const apiUrl = process.env.REACT_APP_API_URL || "/api/v1";
+    if (apiUrl.startsWith("http")) {
+      wsUrl = apiUrl.replace(/^http/, "ws") + "/ws";
+    } else {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      wsUrl = `${protocol}//${window.location.host}${apiUrl}/ws`;
+    }
+  }
+
+  const token = localStorage.getItem("token") || localStorage.getItem("access_token") || "";
+  let orgId = "";
+  if (token) {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      const payload = JSON.parse(jsonPayload);
+      orgId = payload.org_id || "";
+    } catch (e) {}
+  }
+
+  return `${wsUrl}?token=${token}&org_id=${orgId}`;
+};
+
 class TelemetryService {
   private socket: WebSocket | null = null;
-  private url: string = process.env.REACT_APP_WS_URL || "ws://localhost:3001";
+  private url: string = getWsUrl();
   private reconnectAttempts: number = 0;
   private buffer: any[] = [];
   private batchInterval: NodeJS.Timeout | null = null;

@@ -46,7 +46,7 @@ const AuditCenter: React.FC = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="px-3 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold tracking-[0.2em] uppercase rounded-full border border-blue-500/20">
-                {uiStrings?.compliance_label_badge || "Enterprise Compliance"}
+                {uiStrings?.compliance_label_badge || "Platform Compliance"}
               </span>
             </div>
             <h1 className="text-5xl md:text-6xl font-extralight tracking-tight text-white leading-none">

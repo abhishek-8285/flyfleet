@@ -44,7 +44,7 @@ const VerifyEmail: React.FC = () => {
     <EnterpriseAuthLayout
       title={uiStrings?.verify_title || "Identity Verification"}
       subtitle={
-        uiStrings?.verify_subtitle || "Finalizing your enterprise registration"
+        uiStrings?.verify_subtitle || "Finalizing your platform registration"
       }
     >
       <div className="flex flex-col items-center justify-center min-h-[200px]">
@@ -104,7 +104,7 @@ const VerifyEmail: React.FC = () => {
               </h3>
               <p className="text-slate-400 text-sm mb-4">
                 {uiStrings?.verify_success_body ||
-                  "Your corporate identity has been confirmed."}
+                  "Your platform identity has been confirmed."}
               </p>
               <p className="text-primary text-[10px] font-bold uppercase tracking-widest animate-pulse">
                 {uiStrings?.verify_redirecting ||

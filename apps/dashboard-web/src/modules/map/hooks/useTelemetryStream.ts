@@ -33,16 +33,18 @@ export const useTelemetryStream = () => {
     activeEntities: 0,
   });
 
+  const SAB_CONSTRUCTOR = typeof SharedArrayBuffer !== "undefined" ? SharedArrayBuffer : ArrayBuffer;
+
   const [renderBufferSabs] = React.useState(() =>
-    Array.from({ length: 10 }, () => new SharedArrayBuffer(100000 * 8 * 4)),
-  ); // 10 shards * 100k * 8 floats * 4 bytes = 1,000,000 vehicles
+    Array.from({ length: 10 }, () => new SAB_CONSTRUCTOR(100000 * 8 * 4)),
+  ); 
 
   useEffect(() => {
     // 1. Core Production Constants
     const RECORD_SIZE = 128;
     const RING_SIZE = RECORD_SIZE * 10000;
-    const telemetrySab = new SharedArrayBuffer(RING_SIZE + 8); // +8 for head/tail pointers
-    const pressureSab = new SharedArrayBuffer(4); // 1 int32 slot for backpressure
+    const telemetrySab = new SAB_CONSTRUCTOR(RING_SIZE + 8); // +8 for head/tail pointers
+    const pressureSab = new SAB_CONSTRUCTOR(4); // 1 int32 slot for backpressure
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const pressureArray = new Int32Array(pressureSab);
 

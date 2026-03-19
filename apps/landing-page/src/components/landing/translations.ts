@@ -1,8 +1,8 @@
 export const translations = {
   'US (EN)': {
     hero: {
-      tag: "Enterprise Grade Security & Reliability",
-      title: "The Trust Standard for Enterprise Fleets",
+      tag: "Operations Grade Security & Reliability",
+      title: "The Trust Standard for Commercial Fleets",
       desc: "Secure, scalable, and compliant fleet management for logistics leaders. Reduce costs and mitigate risk with 99.9% uptime SLA.",
       demo: "Request Demo",
       tour: "Watch Product Tour"

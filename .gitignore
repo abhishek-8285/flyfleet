@@ -121,6 +121,8 @@ stitch_project_data/
 
 *.py
 
+artifacts/
+
 
 
 

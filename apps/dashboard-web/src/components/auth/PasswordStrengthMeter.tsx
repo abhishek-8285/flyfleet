@@ -3,6 +3,7 @@ import React from "react";
 
 interface PasswordStrengthMeterProps {
   strength: number;
+  password?: string;
   label?: string;
   strengthLabels?: {
     weak: string;
@@ -14,6 +15,7 @@ interface PasswordStrengthMeterProps {
 
 const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
   strength,
+  password,
   label = "Security Strength",
   strengthLabels = {
     weak: "Weak",
@@ -22,7 +24,10 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
     strong: "Strong",
   },
 }) => {
+  const isEmpty = password !== undefined ? password.length === 0 : false;
+
   const getStrengthColor = (s: number) => {
+    if (isEmpty) return "bg-transparent";
     if (s <= 25) return "bg-red-500";
     if (s <= 50) return "bg-yellow-500";
     if (s <= 75) return "bg-blue-500";
@@ -30,6 +35,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
   };
 
   const getStrengthText = (s: number) => {
+    if (isEmpty) return "";
     if (s <= 25) return strengthLabels.weak;
     if (s <= 50) return strengthLabels.fair;
     if (s <= 75) return strengthLabels.good;
@@ -37,6 +43,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
   };
 
   const getTextColor = (s: number) => {
+    if (isEmpty) return "text-slate-600";
     if (s <= 25) return "text-red-500";
     if (s <= 50) return "text-yellow-500";
     if (s <= 75) return "text-blue-500";
@@ -52,13 +59,13 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
         <span
           className={`text-[10px] font-bold uppercase tracking-widest ${getTextColor(strength)}`}
         >
-          {getStrengthText(strength)}
+          {getStrengthText(strength) || "NONE"}
         </span>
       </div>
       <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${strength}%` }}
+          animate={{ width: isEmpty ? 0 : `${Math.max(strength, 5)}%` }}
           className={`h-full transition-colors duration-500 ${getStrengthColor(strength)}`}
         />
       </div>

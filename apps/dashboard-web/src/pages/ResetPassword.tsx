@@ -47,7 +47,7 @@ const ResetPassword: React.FC = () => {
     if (passwordStrength < 75) {
       setError(
         uiStrings?.error_security_req ||
-          "Password does not meet enterprise security requirements",
+          "Password does not meet platform security requirements",
       );
       return;
     }
@@ -69,7 +69,7 @@ const ResetPassword: React.FC = () => {
     <EnterpriseAuthLayout
       title={uiStrings?.reset_title || "Reset Password"}
       subtitle={
-        uiStrings?.reset_subtitle || "Update your corporate credentials"
+        uiStrings?.reset_subtitle || "Update your platform credentials"
       }
     >
       <AnimatePresence mode="wait">

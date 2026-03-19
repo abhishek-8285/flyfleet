@@ -6,7 +6,7 @@ import { SOSOverlay } from "./components/common/SOSOverlay";
 import { CustomerPortalLayout } from "./components/layout/CustomerPortalLayout";
 import { GlobalAdminLayout } from "./components/layout/GlobalAdminLayout";
 import SupportLayout from "./components/support/SupportLayout";
-import { AuthProvider } from "./context/AuthProvider";
+import { AuthProvider, useAuth } from "./context/AuthProvider";
 import { RBACProvider } from "./context/RBACProvider";
 import AddFuelLog from "./pages/AddFuelLog";
 import { AddOrganization } from "./pages/admin/AddOrganization";
@@ -131,7 +131,9 @@ import Insights from "./pages/Insights";
 import IntegrationsCenter from "./pages/integrations/IntegrationsCenter";
 import Landing from "./pages/Landing";
 import Login from "./pages/LoginPage";
+import Register from "./pages/RegisterPage";
 import Maintenance from "./pages/Maintenance";
+import SystemMaintenance from "./pages/SystemMaintenance";
 import {
     AddWorkOrder,
     InspectionForm,
@@ -185,6 +187,18 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+const DynamicAdminLayout: React.FC = () => {
+  const { user } = useAuth();
+  const role = (user?.role_id || user?.role || "").toLowerCase();
+  
+  if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "00000000-0000-0000-0000-000000000001" || role === "00000000-0000-0000-0000-000000000002" || role === "38857329-fa25-4536-aa8d-832587f97735") {
+    return <GlobalAdminLayout />;
+  }
+  
+  // Standard Users (driver, staff) MUST NOT access /admin
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <Provider store={store}>
@@ -198,6 +212,7 @@ function App() {
               {/* Public Routes */}
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
@@ -243,6 +258,7 @@ function App() {
               <Route path="/session-expired" element={<SessionExpired />} />
               <Route path="/error" element={<ErrorScreen />} />
               <Route path="/trusted-devices" element={<TrustedDevices />} />
+              <Route path="/system-maintenance" element={<SystemMaintenance />} />
 
               {/* User Dashboard */}
               <Route
@@ -319,7 +335,7 @@ function App() {
                 element={
                   <PrivateRoute>
                     <SOSOverlay />
-                    <GlobalAdminLayout />
+                    <DynamicAdminLayout />
                   </PrivateRoute>
                 }
               >

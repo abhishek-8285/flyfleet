@@ -12,7 +12,10 @@ export const useWebSocket = (url: string) => {
     const ws = useRef<WebSocket | null>(null);
 
     useEffect(() => {
+        let isMounted = true;
+
         const connect = () => {
+            if (!isMounted) return;
             const socket = new WebSocket(url);
 
             socket.onopen = () => {
@@ -32,8 +35,12 @@ export const useWebSocket = (url: string) => {
 
             socket.onclose = () => {
                 setIsConnected(false);
-                console.log('WebSocket Disconnected. Retrying in 5s...');
-                setTimeout(connect, 5000);
+                if (isMounted) {
+                    console.log('WebSocket Disconnected. Retrying in 5s...');
+                    setTimeout(connect, 5000);
+                } else {
+                    console.log('WebSocket Disconnected. Component unmounted.');
+                }
             };
 
             socket.onerror = (error) => {
@@ -47,6 +54,7 @@ export const useWebSocket = (url: string) => {
         connect();
 
         return () => {
+            isMounted = false;
             ws.current?.close();
         };
     }, [url]);
