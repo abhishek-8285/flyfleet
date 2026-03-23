@@ -1,8 +1,0 @@
-HTTP/1.1 400 Bad Request
-Content-Type: application/json
-X-Request-Id: unknown/NdBHv1WUqk-000001
-X-Trace-Id: unknown/NdBHv1WUqk-000001
-Date: Sat, 07 Mar 2026 14:03:30 GMT
-Content-Length: 1244
-
-{"error":"Key: 'CreateDriverRequest.LicenseAuthority' Error:Field validation for 'LicenseAuthority' failed on the 'required' tag\nKey: 'CreateDriverRequest.DateOfBirth' Error:Field validation for 'DateOfBirth' failed on the 'required' tag\nKey: 'CreateDriverRequest.EmploymentType' Error:Field validation for 'EmploymentType' failed on the 'required' tag\nKey: 'CreateDriverRequest.Address.Street' Error:Field validation for 'Street' failed on the 'required' tag\nKey: 'CreateDriverRequest.Address.City' Error:Field validation for 'City' failed on the 'required' tag\nKey: 'CreateDriverRequest.Address.State' Error:Field validation for 'State' failed on the 'required' tag\nKey: 'CreateDriverRequest.Address.Pincode' Error:Field validation for 'Pincode' failed on the 'required' tag\nKey: 'CreateDriverRequest.Address.Country' Error:Field validation for 'Country' failed on the 'required' tag\nKey: 'CreateDriverRequest.EmergencyContact.Name' Error:Field validation for 'Name' failed on the 'required' tag\nKey: 'CreateDriverRequest.EmergencyContact.Phone' Error:Field validation for 'Phone' failed on the 'required' tag\nKey: 'CreateDriverRequest.EmergencyContact.Relation' Error:Field validation for 'Relation' failed on the 'required' tag"}

@@ -1,8 +1,0 @@
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json
-X-Request-Id: unknown/NdBHv1WUqk-000003
-X-Trace-Id: unknown/NdBHv1WUqk-000003
-Date: Sat, 07 Mar 2026 14:04:00 GMT
-Content-Length: 162
-
-{"error":"failed to create driver: failed to create driver: ERROR: duplicate key value violates unique constraint \"uq_drivers_employee_code\" (SQLSTATE 23505)"}

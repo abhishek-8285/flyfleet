@@ -32,7 +32,9 @@ apiClient.interceptors.request.use(
     // Financial Shield: Idempotency keys on all mutations
     if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
         if (!config.headers['X-Request-ID']) {
-            config.headers['X-Request-ID'] = crypto.randomUUID();
+            config.headers['X-Request-ID'] = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+                ? crypto.randomUUID() 
+                : Math.random().toString(36).substring(2) + Date.now().toString(36);
         }
     } else {
         config.headers[REQUEST_ID_HEADER] = traceId;

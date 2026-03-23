@@ -12,7 +12,8 @@ export const translations = {
       platform: "Platform",
       apps: "Apps",
       pricing: "Pricing",
-      security: "Security"
+      security: "Security",
+      login: "Login"
     }
   },
   'DE (DE)': {
@@ -28,7 +29,8 @@ export const translations = {
       platform: "Plattform",
       apps: "Apps",
       pricing: "Preise",
-      security: "Sicherheit"
+      security: "Sicherheit",
+      login: "Anmelden"
     }
   },
   'IN (HI)': {
@@ -44,7 +46,8 @@ export const translations = {
       platform: "प्लेटफ़ॉर्म",
       apps: "ऐप्स",
       pricing: "कीमतें",
-      security: "सुरक्षा"
+      security: "सुरक्षा",
+      login: "लॉगिन करें"
     }
   }
 };

@@ -49,6 +49,7 @@ import { OrganizationVehicles } from "./pages/admin/OrganizationVehicles";
 import { RoleMatrix } from "./pages/admin/rbac/RoleMatrix";
 import { Roles } from "./pages/admin/rbac/Roles";
 import { SecurityLogs } from "./pages/admin/rbac/SecurityLogs";
+import TemplateDesignerPage from "./pages/TemplateDesigner";
 import { UserAssignments } from "./pages/admin/rbac/UserAssignments";
 import CreateReport from "./pages/admin/reports/CreateReport";
 import ExecutionHistory from "./pages/admin/reports/ExecutionHistory";
@@ -214,6 +215,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/public/designer" element={<TemplateDesignerPage />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -383,6 +385,7 @@ function App() {
                   element={<RouteOptimization />}
                 />
                 <Route path="video" element={<VideoTelematics />} />
+                <Route path="billing/designer" element={<TemplateDesignerPage />} />
                 <Route path="trips/add" element={<AddTrip />} />
                 <Route path="trips/settings" element={<TripSettings />} />
                 <Route path="trips/:id" element={<TripDetail />} />

@@ -11,20 +11,20 @@ import { initializeTraceFetch } from "./utils/traceFetch";
 
 initializeTraceFetch();
 
-posthog.init(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || "dummy_key", {
-  api_host:
-    process.env.REACT_APP_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-  person_profiles: "always",
-});
+// posthog.init(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || "dummy_key", {
+//   api_host:
+//     process.env.REACT_APP_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+//   person_profiles: "always",
+// });
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement,
 );
 root.render(
   <React.StrictMode>
-    <PostHogProvider client={posthog}>
+    {/* <PostHogProvider client={posthog}> */}
       <App />
-    </PostHogProvider>
+    {/* </PostHogProvider> */}
   </React.StrictMode>,
 );
 

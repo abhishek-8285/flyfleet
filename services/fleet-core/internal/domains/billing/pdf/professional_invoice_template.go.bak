@@ -1,0 +1,440 @@
+package pdf
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+)
+
+// Data structure exactly matching the provided JSON schema
+
+// PaymentInfo contains banking and UPI details for payment
+type PaymentInfo struct {
+	BankName      string `json:"bank_name"`
+	AccountName   string `json:"account_name"`
+	AccountNumber string `json:"account_number"`
+	IFSC          string `json:"ifsc"`
+	Branch        string `json:"branch"`
+	UPI           string `json:"upi"`
+}
+
+type ProfessionalInvoiceTemplateData struct {
+	CopyType        string
+	Company_name    string
+	CompanyAddress  string
+	CompanyGSTIN    string
+	CompanyPAN      string
+	CompanyEmail    string
+	CompanyPhone    string
+	InvoiceNumber   string
+	InvoiceDate     string
+	DueDate         string
+	PlaceOfSupply   string
+	ReverseCharge   string
+	BillingName     string
+	BillingGSTIN    string
+	BillingMobile   string
+	BillingEmail    string
+	BillingAddress  string
+	ShippingName    string
+	ShippingGSTIN   string
+	ShippingMobile  string
+	ShippingEmail   string
+	ShippingAddress string
+	Transporter     string
+	VehicleNo       string
+	DocNo           string
+	DocDate         string
+	EWayBill        string
+	EWayBillDate    string
+	IRN             string
+	AckNo           string
+	AckDate         string
+	Items           []InvoiceItemData
+	Subtotal        float64
+	TotalDiscount   float64
+	TaxableValue    float64
+	CGST            float64
+	SGST            float64
+	IGST            float64
+	CESS            float64
+	AdditionalCESS  float64
+	TotalTax        float64
+	TotalAmount     float64
+	AmountInWords   string
+	TaxDescription  string
+	BankName        string
+	AccountName     string
+	AccountNumber   string
+	IFSC            string
+	Branch          string
+	UPI             string
+	PaymentQR       string
+	VerificationQR  string
+	AuthorizedSignatory string
+	PrimaryColor    string
+
+	CustomerName      string            `json:"customer_name,omitempty"`
+	Consignee         string            `json:"consignee,omitempty"`
+	Notes             string            `json:"notes,omitempty"`
+	AmountPaid        float64           `json:"amount_paid,omitempty"`
+	BalanceDue        float64           `json:"balance_due,omitempty"`
+	LRNo              string            `json:"lr_no,omitempty"`
+	Industry          string            `json:"industry,omitempty"`
+	CustomHeaders     []string          `json:"custom_headers,omitempty"`
+	ShowHSN           bool              `json:"show_hsn,omitempty"`
+	ShowQRCode        bool              `json:"show_qr_code,omitempty"`
+	ShowPaymentInfo   bool              `json:"show_payment_info,omitempty"`
+	PaymentInfo       PaymentInfo       `json:"payment_info,omitempty"`
+	Terms             string            `json:"terms,omitempty"`
+	CompanyWebsite    string            `json:"company_website,omitempty"`
+	PageNumber        string            `json:"page_number,omitempty"`
+	QRCode            string            `json:"qr_code,omitempty"`
+	CompanyLogo       string            `json:"company_logo,omitempty"`
+}
+
+type InvoiceItemData struct {
+	SlNo            int        `json:"sl_no"`
+	Description     string     `json:"description"`
+	HSNCode         string     `json:"hsn_code"`
+	Unit            string     `json:"unit"`
+	Quantity        float64    `json:"quantity"`
+	UnitPrice       float64    `json:"unit_price"`
+	Discount        float64    `json:"discount"`
+	TaxPercent      float64    `json:"tax_percent"`
+	TaxAmount       float64    `json:"tax_amount"`
+	CESS            float64    `json:"cess"`
+	AdditionalCESS  float64    `json:"additional_cess"`
+	Total           float64    `json:"total"`
+	CustomValues    []string   `json:"custom_values,omitempty"`
+}
+
+func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.InvoiceItem, data ProfessionalInvoiceTemplateData) string {
+	// Build item rows with 12-column layout and conditional tax display
+	var itemsRows strings.Builder
+	for _, it := range data.Items {
+		itemsRows.WriteString(fmt.Sprintf(`
+			<tr class="item-row">
+				<td class="text-center">%d</td>
+				<td>%s</td>
+				<td class="text-center">%s</td>
+				<td class="text-right">%.2f</td>
+				<td class="text-center">%s</td>
+				<td class="text-right">%.2f</td>
+				<td class="text-right">%.2f</td>
+
+				<td class="text-right">%s</td>
+				<td class="text-right">%s</td>
+				<td class="text-right">%s</td>
+				<td class="text-right">%s</td>
+
+				<td class="text-right">%.2f</td>
+			</tr>`,
+			it.SlNo,
+			it.Description,
+			it.HSNCode,
+			it.Quantity,
+			it.Unit,
+			it.UnitPrice,
+			it.Quantity * it.UnitPrice - it.Discount, // This is Amount (qty * rate - discount)
+
+			// CGST column: show amount + rate if > 0, else "-"
+			func() string {
+				if it.TaxAmount > 0 && data.CGST > 0 {
+					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", it.TaxAmount/2, it.TaxPercent/2)
+				}
+				return "-"
+			}(),
+			func() string {
+				if it.TaxAmount > 0 && data.SGST > 0 {
+					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", it.TaxAmount/2, it.TaxPercent/2)
+				}
+				return "-"
+			}(),
+			func() string {
+				if data.IGST > 0 {
+					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", it.TaxAmount, it.TaxPercent)
+				}
+				return "-"
+			}(),
+			func() string {
+				if it.CESS > 0 || it.AdditionalCESS > 0 {
+					totalCESS := it.CESS + it.AdditionalCESS
+					rate := (totalCESS / (it.Quantity * it.UnitPrice)) * 100
+					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", totalCESS, rate)
+				}
+				return "-"
+			}(),
+			it.Total, // This is Final Total (amount + taxes)
+		))
+	}
+
+	// Build tax rows
+	var taxRows strings.Builder
+	if data.TaxDescription != "" {
+		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>%s</span><span>₹%.2f</span></div>`, data.TaxDescription, data.TotalTax))
+	} else {
+		if data.IGST > 0 {
+			taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>IGST</span><span>₹%.2f</span></div>`, data.IGST))
+		} else {
+			taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>CGST</span><span>₹%.2f</span></div>`, data.CGST))
+			taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>SGST</span><span>₹%.2f</span></div>`, data.SGST))
+		}
+	}
+	if data.CESS > 0 {
+		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>CESS</span><span>₹%.2f</span></div>`, data.CESS))
+	}
+	if data.AdditionalCESS > 0 {
+		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>Additional CESS</span><span>₹%.2f</span></div>`, data.AdditionalCESS))
+	}
+
+	// Master HTML template with exactly 42 placeholders
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<style>
+		@page { size: A4; margin: 0.4in; }
+		* { box-sizing: border-box; }
+		body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3436; font-size: 10px; line-height: 1.3; margin: 0; padding: 0; }
+		.container { width: 100%%; margin: 0 auto; padding: 12px; }
+
+		header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+		.header-block { flex: 1; }
+		.header-block.right { text-align: right; }
+		.company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+		.company-addr { font-size: 9px; margin-bottom: 2px; }
+		.invoice-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 4px; }
+		.invoice-meta { font-size: 9px; }
+		.meta-line { margin: 2px 0; }
+
+		.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+		.section-box { border: 1px solid #000; padding: 8px; }
+		.section-title { font-weight: bold; border-bottom: 1px solid #000; margin-bottom: 6px; font-size: 9px; text-transform: uppercase; }
+
+		.transporter-line {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 8px;
+			font-size: 9px;
+			margin-bottom: 12px;
+		}
+		.transporter-item {
+			background: #f0f0f0;
+			padding: 6px 8px;
+			border: 1px solid #ccc;
+			text-align: center;
+		}
+
+		table { width: 100%%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px; }
+		th { border: 1px solid #000; padding: 6px; text-transform: uppercase; background: #eee; text-align: center; font-weight: bold; }
+		td { border: 1px solid #000; padding: 6px; }
+		.text-right { text-align: right; }
+		.text-center { text-align: center; }
+
+		.footer { display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-top: 8px; }
+		.footer-left { font-size: 9px; }
+		.total-section { border: 1px solid #000; padding: 8px; }
+		.total-row { display: flex; justify-content: space-between; padding: 2px 0; }
+		.grand-total { border-top: 1px solid #000; margin-top: 6px; padding-top: 6px; font-weight: bold; font-size: 12px; }
+		.signatory { margin-top: 30px; text-align: right; border-top: 1px solid #000; display: inline-block; padding-top: 4px; width: 140px; font-weight: bold; }
+
+		.qr-box { text-align: center; margin-top: 8px; }
+		.qr-img { width: 60px; height: 60px; }
+		.qr-label { font-size: 8px; text-transform: uppercase; }
+
+		/* Prevent row split across pages */
+		tr.item-row { page-break-inside: avoid; -webkit-column-break-inside: avoid; break-inside: avoid; }
+
+		.copy-mark {
+			position: fixed;
+			top: 50%%; left: 50%%;
+			transform: translate(-50%%,-50%%) rotate(-45deg);
+			opacity: 0.07;
+			pointer-events: none;
+			font-size: 48px;
+			font-weight: bold;
+			z-index: -1;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="copy-mark">%s</div>
+
+		<header>
+			<div class="header-block">
+				<div class="company-name">%s</div>
+				<div class="company-addr">%s</div>
+				<div class="company-addr">GSTIN: %s | PAN: %s</div>
+				<div class="company-addr">%s | %s</div>
+			</div>
+			<div class="header-block right">
+				<div class="invoice-title">TAX INVOICE</div>
+				<div class="invoice-meta">
+					<div class="meta-line"><strong>Invoice No:</strong> %s</div>
+					<div class="meta-line"><strong>Date:</strong> %s</div>
+					<div class="meta-line"><strong>Due Date:</strong> %s</div>
+					<div class="meta-line"><strong>Place of Supply:</strong> %s</div>
+					<div class="meta-line"><strong>Reverse Charge:</strong> %s</div>
+				</div>
+			</div>
+		</header>
+
+		<div class="grid-2">
+			<div class="section-box">
+				<div class="section-title">Billing Address</div>
+				<div><strong>%s</strong><br/>GSTIN: %s<br/>Mobile: %s<br/>Email: %s<br/>%s</div>
+			</div>
+			<div class="section-box">
+				<div class="section-title">Shipping Address</div>
+				<div><strong>%s</strong><br/>GSTIN: %s<br/>Mobile: %s<br/>Email: %s<br/>%s</div>
+			</div>
+		</div>
+
+		<div class="transporter-line">
+			<span class="transporter-item"><strong>Transporter:</strong> %s</span>
+			<span class="transporter-item"><strong>Vehicle No:</strong> %s</span>
+			<span class="transporter-item"><strong>Doc No:</strong> %s</span>
+			<span class="transporter-item"><strong>Doc Date:</strong> %s</span>
+			<span class="transporter-item"><strong>E-Way Bill No:</strong> %s</span>
+			<span class="transporter-item"><strong>E-Way Date:</strong> %s</span>
+		</div>
+
+		<table class="line-items-table" style="width: 100%%; border-collapse: collapse;" border="1" cellpadding="4" cellspacing="0">
+			<thead>
+				<tr>
+					<th>#</th>
+					<th>Description</th>
+					<th>HSN/SAC</th>
+					<th>Qty</th>
+					<th>Unit</th>
+					<th>Rate</th>
+					<th>Amount</th>
+					<th>CGST</th>
+					<th>SGST</th>
+					<th>IGST</th>
+					<th>Cess</th>
+					<th>Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				%s
+			</tbody>
+		</table>
+
+		<div class="footer">
+			<div class="footer-left">
+				<strong>Amount in words:</strong> %s<br/>
+				<strong>Declaration:</strong> We certify that the contents of this invoice are true and correct.<br/>
+				<strong>Terms & Conditions:</strong><br/>1. Payment due within 15 days.<br/>2. Goods once sold will not be taken back.
+			</div>
+			<div class="total-section">
+				<div class="total-row"><span>Subtotal</span><span>₹%.2f</span></div>
+				<div class="total-row"><span>Total Discount</span><span>-₹%.2f</span></div>
+				<div class="total-row"><span>Taxable Value</span><span>₹%.2f</span></div>
+				%s
+				<div class="grand-total"><span>Grand Total</span><span>₹%.2f</span></div>
+				<div class="qr-box">
+					%s<br/>
+					<span class="qr-label">UPI PAY</span>
+				</div>
+				<div class="qr-box">
+					%s<br/>
+					<span class="qr-label">E-Invoice QR</span>
+				</div>
+				<div style="margin-top: 30px; text-align: right;">
+					<div class="signatory">%s</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>`,
+		// 1  Watermark
+		data.CopyType,
+		// 2-8  company block
+		data.Company_name,
+		data.CompanyAddress,
+		data.CompanyGSTIN,
+		data.CompanyPAN,
+		data.CompanyEmail,
+		data.CompanyPhone,
+		// 9-14  invoice meta
+		data.InvoiceNumber,
+		data.InvoiceDate,
+		data.DueDate,
+		data.PlaceOfSupply,
+		data.ReverseCharge,
+		// 15-22  billing address
+		data.BillingName,
+		data.BillingGSTIN,
+		data.BillingMobile,
+		data.BillingEmail,
+		data.BillingAddress,
+		// 23-30  shipping address
+		data.ShippingName,
+		data.ShippingGSTIN,
+		data.ShippingMobile,
+		data.ShippingEmail,
+		data.ShippingAddress,
+		// 31-36  transporter
+		data.Transporter,
+		data.VehicleNo,
+		data.DocNo,
+		data.DocDate,
+		data.EWayBill,
+		data.EWayBillDate,
+		// 37  line items
+		itemsRows.String(),
+		// 38  amount in words
+		data.AmountInWords,
+		// 39-41  financial summary
+		data.Subtotal,
+		data.TotalDiscount,
+		data.TaxableValue,
+		// 42  tax breakdown rows
+		taxRows.String(),
+		// 43  grand total
+		data.TotalAmount,
+		// 44  UPI QR
+		func() string {
+			if data.PaymentQR != "" {
+				return fmt.Sprintf(`<img src="%s" class="qr-img"/>`, data.PaymentQR)
+			}
+			return ""
+		}(),
+		// 45  E-Invoice QR
+		func() string {
+			if data.VerificationQR != "" {
+				return fmt.Sprintf(`<img src="%s" class="qr-img"/>`, data.VerificationQR)
+			}
+			return ""
+		}(),
+		// 46  authorized signatory
+		data.AuthorizedSignatory,
+	)
+}
+
+func buildCustomCells(values []string) string {
+	var sb strings.Builder
+	for _, v := range values {
+		sb.WriteString(fmt.Sprintf(`<td class="text-center">%s</td>`, v))
+	}
+	return sb.String()
+}
+
+func getHSNCode(code string) string {
+	if code == "" {
+		return "996511"
+	}
+	return code
+}
+
+func DefaultProfessionalInvoiceTemplateData() ProfessionalInvoiceTemplateData {
+	return ProfessionalInvoiceTemplateData{
+		CopyType: "Original Copy",
+		PrimaryColor: "#2563eb",
+	}
+}

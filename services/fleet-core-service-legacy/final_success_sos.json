@@ -1,8 +1,0 @@
-HTTP/1.1 201 Created
-Content-Type: application/json
-X-Request-Id: unknown/Oxo0F36hmf-000002
-X-Trace-Id: unknown/Oxo0F36hmf-000002
-Date: Mon, 09 Mar 2026 13:52:06 GMT
-Content-Length: 909
-
-{"id":"4da0c87a-7eb2-4969-9af1-7a096eef0ab5","vehicle_id":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","timestamp":"2026-03-09T19:22:06.609278285+05:30","latitude":12.9716,"longitude":77.5946,"location_address":"","status":"TRIGGERED","severity":"CRITICAL","incident_type":"SOS_PANIC","panic_source":"DRIVER_MOBILE","speed":0,"heading":0,"metadata":{"geo_context_enriched":true,"nearest_fire_station":{"name":"Central Fire Station","type":"FIRE_STATION","distance_km":3.1,"phone":"+91101"},"nearest_hospital":{"name":"General Memorial Hospital","type":"HOSPITAL","distance_km":2.5,"phone":"+91102"},"nearest_police_station":{"name":"City South Police Station","type":"POLICE","distance_km":1.2,"phone":"+91100"}},"org_id":"00000000-0000-0000-0000-000000000000","high_risk_location":false,"simulation_mode":false,"created_at":"2026-03-09T19:22:06.609278365+05:30","updated_at":"2026-03-09T19:22:06.609278425+05:30"}

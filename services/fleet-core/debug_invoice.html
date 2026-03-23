@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<style>
+		@page { size: A4; margin: 0.4in; }
+		* { box-sizing: border-box; }
+		body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3436; font-size: 10px; line-height: 1.3; margin: 0; padding: 0; }
+		.container { width: 100%; margin: 0 auto; padding: 12px; }
+
+		header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+		.header-block { flex: 1; }
+		.header-block.right { text-align: right; }
+		.company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+		.company-addr { font-size: 9px; margin-bottom: 2px; }
+		.invoice-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 4px; }
+		.invoice-meta { font-size: 9px; }
+		.meta-line { margin: 2px 0; }
+
+		.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+		.section-box { border: 1px solid #000; padding: 8px; }
+		.section-title { font-weight: bold; border-bottom: 1px solid #000; margin-bottom: 6px; font-size: 9px; text-transform: uppercase; }
+
+		.transporter-line {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 8px;
+			font-size: 9px;
+			margin-bottom: 12px;
+		}
+		.transporter-item {
+			background: #f0f0f0;
+			padding: 6px 8px;
+			border: 1px solid #ccc;
+			text-align: center;
+		}
+
+		table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px; }
+		thead { display: table-header-group; }
+		th { border: 1px solid #000; padding: 6px; text-transform: uppercase; background: #eee; text-align: center; font-weight: bold; }
+		td { border: 1px solid #000; padding: 6px; }
+		.text-right { text-align: right; }
+		.text-center { text-align: center; }
+
+		.footer { display: grid; grid-template-columns: 1fr 280px; gap: 12px; margin-top: 8px; }
+		.footer-left { font-size: 9px; }
+		.total-section { border: 1px solid #000; padding: 8px; }
+		.total-row { display: flex; justify-content: space-between; padding: 2px 0; }
+		.grand-total { border-top: 1px solid #000; margin-top: 6px; padding-top: 6px; font-weight: bold; font-size: 12px; }
+		.signatory { margin-top: 30px; text-align: right; border-top: 1px solid #000; display: inline-block; padding-top: 4px; width: 140px; font-weight: bold; }
+
+		.qr-box { text-align: center; margin-top: 8px; }
+		.qr-img { width: 60px; height: 60px; }
+		.qr-label { font-size: 8px; text-transform: uppercase; }
+
+		/* Prevent row split across pages */
+		tr.item-row { page-break-inside: avoid; -webkit-column-break-inside: avoid; break-inside: avoid; }
+
+		.copy-mark {
+			position: fixed;
+			top: 50%; left: 50%;
+			transform: translate(-50%,-50%) rotate(-45deg);
+			opacity: 0.07;
+			pointer-events: none;
+			font-size: 48px;
+			font-weight: bold;
+			z-index: -1;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="copy-mark">Original Copy</div>
+
+		<header>
+			<div class="header-block">
+				<div class="company-name">FlyFleet Technologies</div>
+				<div class="company-addr">Mumbai, Maharashtra, India - 400001</div>
+				<div class="company-addr">GSTIN: 27AAAAA0000A1Z5 | PAN: ABCDE1234F</div>
+				<div class="company-addr">support@flyfleet.com | +91 9876543210</div>
+			</div>
+			<div class="header-block right">
+				<div class="invoice-title">TAX INVOICE</div>
+				<div class="invoice-meta">
+					<div class="meta-line"><strong>Invoice No:</strong> INV-E2E-001</div>
+					<div class="meta-line"><strong>Date:</strong> 21 Mar 2026</div>
+					<div class="meta-line"><strong>Due Date:</strong> 05 Apr 2026</div>
+					<div class="meta-line"><strong>Place of Supply:</strong> Haryana (06)</div>
+					<div class="meta-line"><strong>Reverse Charge:</strong> No</div>
+				</div>
+			</div>
+		</header>
+
+		<div class="grid-2">
+			<div class="section-box">
+				<div class="section-title">Billing Address</div>
+				<div><strong>Ishvar International Textiles</strong><br/>GSTIN: 06AABCI1234R1ZX<br/>Mobile: +91 9988776655<br/>Email: accounts@ishvar.com<br/>Sector 18, Gurugram, Haryana 122001</div>
+			</div>
+			<div class="section-box">
+				<div class="section-title">Shipping Address</div>
+				<div><strong>Ishvar International Textiles</strong><br/>GSTIN: 06AABCI1234R1ZX<br/>Mobile: +91 9988776655<br/>Email: accounts@ishvar.com<br/>Sector 18, Gurugram, Haryana 122001</div>
+			</div>
+		</div>
+
+		<div class="transporter-line">
+			<span class="transporter-item"><strong>Transporter:</strong> FlyFleet Logistics</span>
+			<span class="transporter-item"><strong>Vehicle No:</strong> DL-01-LH-8783</span>
+			<span class="transporter-item"><strong>Doc No:</strong> LR-MASTER-999</span>
+			<span class="transporter-item"><strong>Doc Date:</strong> 19 Mar 2026</span>
+			<span class="transporter-item"><strong>E-Way Bill No:</strong> 751590248946</span>
+			<span class="transporter-item"><strong>E-Way Date:</strong> 20 Mar 2026</span>
+		</div>
+
+		<table class="line-items-table" style="width: 100%; border-collapse: collapse;" border="1" cellpadding="4" cellspacing="0">
+			<thead>
+				<tr>
+					<th>#</th>
+					<th>Description</th>
+					<th>HSN/SAC</th>
+					<th>Qty</th>
+					<th>Unit</th>
+					<th>Rate</th>
+					<th>Amount</th>
+					<th>CGST</th>
+					<th>SGST</th>
+					<th>IGST</th>
+					<th>Cess</th>
+					<th>Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				
+			<tr class="item-row">
+				<td class="text-center">1</td>
+				<td>Full Truck Load Freight - Mumbai to Delhi</td>
+				<td class="text-center">996511</td>
+				<td class="text-right">1.00</td>
+				<td class="text-center">Nos</td>
+				<td class="text-right">125000.00</td>
+				<td class="text-right">125000.00</td>
+
+				<td class="text-right">-</td>
+				<td class="text-right">-</td>
+				<td class="text-right">22500.00<br><small>(18.0%)</small></td>
+				<td class="text-right">-</td>
+
+				<td class="text-right">147500.00</td>
+			</tr>
+			</tbody>
+		</table>
+
+		<div class="footer">
+			<div class="footer-left">
+				<strong>Amount in words:</strong> One Lakh Forty Seven Thousand Five Hundred   Rupees Only<br/>
+				<strong>Declaration:</strong> We certify that the contents of this invoice are true and correct.<br/>
+				<strong>Terms & Conditions:</strong><br/>1. Payment due within 15 days.<br/>2. Goods once sold will not be taken back.
+			</div>
+			<div class="total-section">
+				<div class="total-row"><span>Subtotal</span><span>₹125000.00</span></div>
+				<div class="total-row"><span>Total Discount</span><span>₹0.00</span></div>
+				<div class="total-row"><span>Taxable Value</span><span>₹125000.00</span></div>
+				<div class="total-row"><span>IGST @ 18.00%</span><span>₹22500.00</span></div>
+				<div class="grand-total"><span>Grand Total </span><span>₹147500.00</span></div>
+				<div class="qr-box">
+					<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABKLAcXAAAABlBMVEX///8AAABVwtN+AAABjElEQVR42sTUMWvjMBTA8ScMziKq1VnSr2CTNaCvki2rwEuGgrRlKdyqzV9FJquxvoK7WKuKFxeE3oFpoTm55+3ubb/p6f0HwX8eiY13WF4Y+g0J0px2E9EdiET1uzoW2dOVxjXp7EORuVuVmvavBNckyM2SAOevfT9Lou7GutL289XfBVAAvvaF+bz3u2rrpl0oL3TvE1HzzEBEuOewoYwMSCZ/DpCKGmlywZ0/pAKuu70qJVuufVTmLxChaqzzqZg7AWu1eVYbqkuAQcA17FNJ25zeQgRzEImyvuhyWWm7lPhD7eAPYIqj2xLzgC4QTWdIRLm777BtpjeVqH66+pH152mp9Chq3X03xaIbUwFIQxDgmIsNvRB3jKxSFlUi1kO3x1azWaSyeB9ezNUsBR8lephGaRu2bPubgN/CkPVnHFcEBS8y4swsEknU5Swq1TmfSBBNc2q1WQo+qn5XPpftjIPYlM6i4IqjWlNwv0rgH6kEuWHMQIYIiSQ2NIKX/OtH+VH/dn4HAAD//0qLv8Weo/s6AAAAAElFTkSuQmCC" class="qr-img"/><br/>
+					<span class="qr-label">UPI PAY</span>
+				</div>
+				<div class="qr-box">
+					<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8AQMAAAAAMksxAAAABlBMVEX///8AAABVwtN+AAABEklEQVR42pzRv3OCMBQH8G9eVlTUVcWjK4LgqvVfr2UV1LhWRGYvIF0h9sJd7+LYZvoMuffj+/C/x1WWe7ECiCSCEQFUT1eM6heUzbjo4IS81qD54NR9/gVXQoiz0iWTuVgCoHJF68g34bHiMpwArFg4DXKA2vNoN7JNcPvpHDKA3eIFCyRA/T077Y8mhoNbXqYAj9e9oNXN7ueD95wZoFVgVdsZwJuHypgHcD/eRMmnier9cp94AAauuPYsgO3br9hvTATbiks9T/JApCTA/AvcnWWAwu+3OnQBpPZps+1CSKOrnRngqnXnQujERNBffnTxHpdO8YJjNU07SJnO9KYU5gkzwVVljfPsb0f+CQAA///c9ZKcWtExJQAAAABJRU5ErkJggg==" class="qr-img"/><br/>
+					<span class="qr-label">E-Invoice QR</span>
+				</div>
+				<div style="margin-top: 30px; text-align: right;">
+					<div class="signatory">Authorized Signatory</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

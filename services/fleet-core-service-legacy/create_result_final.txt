@@ -1,8 +1,0 @@
-HTTP/1.1 201 Created
-Content-Type: application/json
-X-Request-Id: unknown/NdBHv1WUqk-000004
-X-Trace-Id: unknown/NdBHv1WUqk-000004
-Date: Sat, 07 Mar 2026 14:04:36 GMT
-Content-Length: 1180
-
-{"data":{"id":"e1a510a4-d48c-4b54-bb9e-191de2067d3d","org_id":"00000000-0000-0000-0000-000000000001","first_name":"Test","last_name":"EventFull","name":"","email":"event_full1772892276@flyfleet.io","phone":"9998193436","employee_code":"EMP1772892276","aadhaar_number":"","pan_number":"","license_number":"LIC_FULL1772892276","license_type":"HMV","license_expiry":"2030-01-01T00:00:00Z","license_issue_date":null,"license_authority":"Delhi RTO","date_of_birth":"1990-01-01T00:00:00Z","address":{"street":"123 Main St","city":"Delhi","state":"Delhi","pincode":"110001","country":"India","latitude":null,"longitude":null},"emergency_contact":{"name":"Jane Doe","phone":"9998887776","relation":"Spouse"},"status":"active","current_vehicle_id":null,"current_trip_id":null,"joining_date":"2026-03-07T19:34:36.089142505+05:30","resignation_date":null,"experience_years":0,"employment_type":"FULL_TIME","rating":0,"total_trips":0,"total_distance_km":0,"total_hours_driven":0,"behavior_score":100,"documents":null,"attendance_records":null,"schedules":null,"metadata":null,"created_at":"2026-03-07T19:34:36.089143+05:30","updated_at":"2026-03-07T19:34:36.089143+05:30","deleted_at":null}}

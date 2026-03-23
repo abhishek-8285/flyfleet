@@ -2,7 +2,9 @@ go 1.26
 
 use (
 	./packages/common/go
-	./proto
-	./services/fleet-core-service-legacy
-	./services/microservices/fleet-ml-service
+	./services/fleet-core
+	./services/monolith
+	./test-tool
 )
+
+replace github.com/flyfleet/proto => ./proto

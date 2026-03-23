@@ -1,8 +1,0 @@
-HTTP/1.1 201 Created
-X-Request-Id: unknown/pjTww8g4KA-000003
-X-Trace-Id: unknown/pjTww8g4KA-000003
-Date: Sat, 07 Mar 2026 14:00:55 GMT
-Content-Length: 410
-Content-Type: text/plain; charset=utf-8
-
-{"id":"7268c3c3-6d06-4db8-81bc-b407b8d075c3","driver_id":"41b5650b-c777-4ac0-ba21-136cb5a45fd7","trip_id":null,"type":"FUEL","amount":1500.5,"currency":"INR","receipt_url":"https://storage.flyfleet.io/receipts/r123.jpg","notes":"Refuel at Shell NH-44","status":"PENDING","transaction_date":"2026-03-07T10:00:00Z","created_at":"2026-03-07T19:30:55.069983+05:30","updated_at":"2026-03-07T19:30:55.069983+05:30"}

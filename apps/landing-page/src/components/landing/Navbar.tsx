@@ -33,6 +33,9 @@ const Navbar: React.FC<NavbarProps> = ({ companyName, isDark, toggleTheme, langu
           <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/security">{t.security}</Link>
         </nav>
         <div className="flex gap-4 items-center">
+          <Link href="http://localhost:3005" className="hidden sm:flex text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors">
+            {t.login}
+          </Link>
           <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
             <span className="material-symbols-outlined">{isDark ? 'light_mode' : 'dark_mode'}</span>
           </button>
