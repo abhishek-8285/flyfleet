@@ -22,94 +22,94 @@ type PaymentInfo struct {
 }
 
 type ProfessionalInvoiceTemplateData struct {
-	CopyType        string
-	Company_name    string
-	CompanyAddress  string
-	CompanyGSTIN    string
-	CompanyPAN      string
-	CompanyEmail    string
-	CompanyPhone    string
-	InvoiceNumber   string
-	InvoiceDate     string
-	DueDate         string
-	PlaceOfSupply   string
-	ReverseCharge   string
-	BillingName     string
-	BillingGSTIN    string
-	BillingMobile   string
-	BillingEmail    string
-	BillingAddress  string
-	ShippingName    string
-	ShippingGSTIN   string
-	ShippingMobile  string
-	ShippingEmail   string
-	ShippingAddress string
-	Transporter     string
-	VehicleNo       string
-	DocNo           string
-	DocDate         string
-	EWayBill        string
-	EWayBillDate    string
-	IRN             string
-	AckNo           string
-	AckDate         string
-	Items           []InvoiceItemData
-	Subtotal        float64
-	TotalDiscount   float64
-	TaxableValue    float64
-	CGST            float64
-	SGST            float64
-	IGST            float64
-	CESS            float64
-	AdditionalCESS  float64
-	TotalTax        float64
-	TotalAmount     float64
-	AmountInWords   string
-	TaxDescription  string
-	BankName        string
-	AccountName     string
-	AccountNumber   string
-	IFSC            string
-	Branch          string
-	UPI             string
-	PaymentQR       string
-	VerificationQR  string
+	CopyType            string
+	Company_name        string
+	CompanyAddress      string
+	CompanyGSTIN        string
+	CompanyPAN          string
+	CompanyEmail        string
+	CompanyPhone        string
+	InvoiceNumber       string
+	InvoiceDate         string
+	DueDate             string
+	PlaceOfSupply       string
+	ReverseCharge       string
+	BillingName         string
+	BillingGSTIN        string
+	BillingMobile       string
+	BillingEmail        string
+	BillingAddress      string
+	ShippingName        string
+	ShippingGSTIN       string
+	ShippingMobile      string
+	ShippingEmail       string
+	ShippingAddress     string
+	Transporter         string
+	VehicleNo           string
+	DocNo               string
+	DocDate             string
+	EWayBill            string
+	EWayBillDate        string
+	IRN                 string
+	AckNo               string
+	AckDate             string
+	Items               []InvoiceItemData
+	Subtotal            float64
+	TotalDiscount       float64
+	TaxableValue        float64
+	CGST                float64
+	SGST                float64
+	IGST                float64
+	CESS                float64
+	AdditionalCESS      float64
+	TotalTax            float64
+	TotalAmount         float64
+	AmountInWords       string
+	TaxDescription      string
+	BankName            string
+	AccountName         string
+	AccountNumber       string
+	IFSC                string
+	Branch              string
+	UPI                 string
+	PaymentQR           string
+	VerificationQR      string
 	AuthorizedSignatory string
-	PrimaryColor    string
+	PrimaryColor        string
 
-	CustomerName      string            `json:"customer_name,omitempty"`
-	Consignee         string            `json:"consignee,omitempty"`
-	Notes             string            `json:"notes,omitempty"`
-	AmountPaid        float64           `json:"amount_paid,omitempty"`
-	BalanceDue        float64           `json:"balance_due,omitempty"`
-	LRNo              string            `json:"lr_no,omitempty"`
-	Industry          string            `json:"industry,omitempty"`
-	CustomHeaders     []string          `json:"custom_headers,omitempty"`
-	ShowHSN           bool              `json:"show_hsn,omitempty"`
-	ShowQRCode        bool              `json:"show_qr_code,omitempty"`
-	ShowPaymentInfo   bool              `json:"show_payment_info,omitempty"`
-	PaymentInfo       PaymentInfo       `json:"payment_info,omitempty"`
-	Terms             string            `json:"terms,omitempty"`
-	CompanyWebsite    string            `json:"company_website,omitempty"`
-	PageNumber        string            `json:"page_number,omitempty"`
-	QRCode            string            `json:"qr_code,omitempty"`
-	CompanyLogo       string            `json:"company_logo,omitempty"`
+	CustomerName    string      `json:"customer_name,omitempty"`
+	Consignee       string      `json:"consignee,omitempty"`
+	Notes           string      `json:"notes,omitempty"`
+	AmountPaid      float64     `json:"amount_paid,omitempty"`
+	BalanceDue      float64     `json:"balance_due,omitempty"`
+	LRNo            string      `json:"lr_no,omitempty"`
+	Industry        string      `json:"industry,omitempty"`
+	CustomHeaders   []string    `json:"custom_headers,omitempty"`
+	ShowHSN         bool        `json:"show_hsn,omitempty"`
+	ShowQRCode      bool        `json:"show_qr_code,omitempty"`
+	ShowPaymentInfo bool        `json:"show_payment_info,omitempty"`
+	PaymentInfo     PaymentInfo `json:"payment_info,omitempty"`
+	Terms           string      `json:"terms,omitempty"`
+	CompanyWebsite  string      `json:"company_website,omitempty"`
+	PageNumber      string      `json:"page_number,omitempty"`
+	QRCode          string      `json:"qr_code,omitempty"`
+	CompanyLogo     string      `json:"company_logo,omitempty"`
 }
 
 type InvoiceItemData struct {
-	SlNo            int        `json:"sl_no"`
-	Description     string     `json:"description"`
-	HSNCode         string     `json:"hsn_code"`
-	Unit            string     `json:"unit"`
-	Quantity        float64    `json:"quantity"`
-	UnitPrice       float64    `json:"unit_price"`
-	Discount        float64    `json:"discount"`
-	TaxPercent      float64    `json:"tax_percent"`
-	TaxAmount       float64    `json:"tax_amount"`
-	CESS            float64    `json:"cess"`
-	AdditionalCESS  float64    `json:"additional_cess"`
-	Total           float64    `json:"total"`
-	CustomValues    []string   `json:"custom_values,omitempty"`
+	SlNo           int      `json:"sl_no"`
+	Description    string   `json:"description"`
+	HSNCode        string   `json:"hsn_code"`
+	Unit           string   `json:"unit"`
+	Quantity       float64  `json:"quantity"`
+	UnitPrice      float64  `json:"unit_price"`
+	Discount       float64  `json:"discount"`
+	TaxPercent     float64  `json:"tax_percent"`
+	TaxAmount      float64  `json:"tax_amount"`
+	CESS           float64  `json:"cess"`
+	AdditionalCESS float64  `json:"additional_cess"`
+	Total          float64  `json:"total"`
+	CustomValues   []string `json:"custom_values,omitempty"`
 }
 
 func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.InvoiceItem, data ProfessionalInvoiceTemplateData) string {
@@ -138,8 +138,8 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 			html.EscapeString(it.HSNCode),
 			it.Quantity,
 			html.EscapeString(it.Unit),
-			html.EscapeString(it.Unit)Price,
-			it.Quantity * html.EscapeString(it.Unit)Price - it.Discount, // This is Amount (qty * rate - discount)
+			it.UnitPrice,
+			it.Quantity*it.UnitPrice-it.Discount, // This is Amount (qty * rate - discount)
 
 			// CGST column: show amount + rate if > 0, else "-"
 			func() string {
@@ -163,7 +163,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 			func() string {
 				if it.CESS > 0 || it.AdditionalCESS > 0 {
 					totalCESS := it.CESS + it.AdditionalCESS
-					rate := (totalCESS / (it.Quantity * html.EscapeString(it.Unit)Price)) * 100
+					rate := (totalCESS / (it.Quantity * it.UnitPrice)) * 100
 					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", totalCESS, rate)
 				}
 				return "-"
@@ -174,8 +174,8 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 
 	// Build tax rows
 	var taxRows strings.Builder
-	if html.EscapeString(data\.TaxDescription) != "" {
-		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>%s</span><span>₹%.2f</span></div>`, html.EscapeString(data\.TaxDescription), data.TotalTax))
+	if html.EscapeString(data.TaxDescription) != "" {
+		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>%s</span><span>₹%.2f</span></div>`, html.EscapeString(data.TaxDescription), data.TotalTax))
 	} else {
 		if data.IGST > 0 {
 			taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>IGST</span><span>₹%.2f</span></div>`, data.IGST))
@@ -362,43 +362,43 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 </body>
 </html>`,
 		// 1  Watermark
-		html.EscapeString(data\.CopyType),
+		html.EscapeString(data.CopyType),
 		// 2-8  company block
-		html.EscapeString(data\.Company_name),
-		html.EscapeString(data\.CompanyAddress),
-		html.EscapeString(data\.CompanyGSTIN),
-		html.EscapeString(data\.CompanyPAN),
-		html.EscapeString(data\.CompanyEmail),
-		html.EscapeString(data\.CompanyPhone),
+		html.EscapeString(data.Company_name),
+		html.EscapeString(data.CompanyAddress),
+		html.EscapeString(data.CompanyGSTIN),
+		html.EscapeString(data.CompanyPAN),
+		html.EscapeString(data.CompanyEmail),
+		html.EscapeString(data.CompanyPhone),
 		// 9-14  invoice meta
-		html.EscapeString(data\.InvoiceNumber),
-		html.EscapeString(data\.InvoiceDate),
-		html.EscapeString(data\.DueDate),
-		html.EscapeString(data\.PlaceOfSupply),
-		html.EscapeString(data\.ReverseCharge),
+		html.EscapeString(data.InvoiceNumber),
+		html.EscapeString(data.InvoiceDate),
+		html.EscapeString(data.DueDate),
+		html.EscapeString(data.PlaceOfSupply),
+		html.EscapeString(data.ReverseCharge),
 		// 15-22  billing address
-		html.EscapeString(data\.BillingName),
-		html.EscapeString(data\.BillingGSTIN),
-		html.EscapeString(data\.BillingMobile),
-		html.EscapeString(data\.BillingEmail),
-		html.EscapeString(data\.BillingAddress),
+		html.EscapeString(data.BillingName),
+		html.EscapeString(data.BillingGSTIN),
+		html.EscapeString(data.BillingMobile),
+		html.EscapeString(data.BillingEmail),
+		html.EscapeString(data.BillingAddress),
 		// 23-30  shipping address
-		html.EscapeString(data\.ShippingName),
-		html.EscapeString(data\.ShippingGSTIN),
-		html.EscapeString(data\.ShippingMobile),
-		html.EscapeString(data\.ShippingEmail),
-		html.EscapeString(data\.ShippingAddress),
+		html.EscapeString(data.ShippingName),
+		html.EscapeString(data.ShippingGSTIN),
+		html.EscapeString(data.ShippingMobile),
+		html.EscapeString(data.ShippingEmail),
+		html.EscapeString(data.ShippingAddress),
 		// 31-36  transporter
-		html.EscapeString(data\.Transporter),
-		html.EscapeString(data\.VehicleNo),
-		html.EscapeString(data\.DocNo),
-		html.EscapeString(data\.DocDate),
-		html.EscapeString(data\.EWayBill),
-		html.EscapeString(data\.EWayBillDate),
+		html.EscapeString(data.Transporter),
+		html.EscapeString(data.VehicleNo),
+		html.EscapeString(data.DocNo),
+		html.EscapeString(data.DocDate),
+		html.EscapeString(data.EWayBill),
+		html.EscapeString(data.EWayBillDate),
 		// 37  line items
 		itemsRows.String(),
 		// 38  amount in words
-		html.EscapeString(data\.AmountInWords),
+		html.EscapeString(data.AmountInWords),
 		// 39-41  financial summary
 		data.Subtotal,
 		discountDisplay,
@@ -422,7 +422,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 			return ""
 		}(),
 		// 46  authorized signatory
-		html.EscapeString(data\.AuthorizedSignatory),
+		html.EscapeString(data.AuthorizedSignatory),
 	)
 }
 
@@ -443,7 +443,7 @@ func getHSNCode(code string) string {
 
 func DefaultProfessionalInvoiceTemplateData() ProfessionalInvoiceTemplateData {
 	return ProfessionalInvoiceTemplateData{
-		CopyType: "Original Copy",
+		CopyType:     "Original Copy",
 		PrimaryColor: "#2563eb",
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/repository"
 	"github.com/google/uuid"
@@ -445,7 +447,7 @@ func (s *VideoServiceImpl) generateSignedURL(filepath string, expires time.Time)
 	key := os.Getenv("VIDEO_SIGNING_KEY")
 	if key == "" {
 		// Log error and return empty to prevent insecure signatures
-		s.logger.Error("VIDEO_SIGNING_KEY is not set")
+		zap.S().Error("VIDEO_SIGNING_KEY is not set")
 		return ""
 	}
 
