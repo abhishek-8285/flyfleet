@@ -2,14 +2,25 @@ package metrics
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/middleware" // for GetTraceID
 )
+
+// statusWriter captures response status code (local copy, as middleware.StatusWriter is unexported)
+type statusWriter struct {
+	http.ResponseWriter
+	Status int
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.Status = status
+	w.ResponseWriter.WriteHeader(status)
+}
 
 // HTTPMetricsMiddleware records request rate, error rate, and latency (RED method)
 func HTTPMetricsMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
@@ -25,7 +36,7 @@ func HTTPMetricsMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			}
 
 			start := time.Now()
-			sw := &middleware.StatusWriter{ResponseWriter: w, Status: http.StatusOK}
+			sw := &statusWriter{ResponseWriter: w, Status: http.StatusOK}
 
 			// Get route pattern for better cardinality (e.g., /api/v1/vehicles/:id instead of /api/v1/vehicles/123)
 			routePattern := getRoutePattern(r)

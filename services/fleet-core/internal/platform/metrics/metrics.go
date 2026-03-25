@@ -86,7 +86,7 @@ var (
 		Help: "Number of bytes allocated and still in use",
 	})
 
-	GoTotalGC = promauto.NewCounter(prometheus.CounterOpts{
+	GoTotalGC = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "go_gc_total",
 		Help: "Total number of GC cycles completed",
 	})

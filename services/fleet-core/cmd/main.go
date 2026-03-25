@@ -260,7 +260,7 @@ func main() {
 			select {
 			case <-ctx.Done():
 				return
-			case <-ticker.Tick:
+			case <-ticker.C:
 				metrics.UpdateRuntimeMetrics()
 			}
 		}
@@ -427,7 +427,7 @@ func main() {
 
 		// Check database
 		if pools.Critical != nil {
-			if err := pools.Critical.Ping(); err != nil {
+			if err := pools.Critical.Ping(ctx); err != nil {
 				checks["checks"].(map[string]string)["database"] = "fail: " + err.Error()
 				checks["status"] = "fail"
 			} else {
