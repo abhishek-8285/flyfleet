@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/flyfleet/fleet-core-service/internal/pkg/secrets"
@@ -41,6 +42,45 @@ type Config struct {
 	S3UseSSL                bool
 }
 
+// Validate checks configuration completeness and returns error if any required field is missing.
+func (c *Config) Validate() error {
+	var missing []string
+
+	if c.Port == "" {
+		missing = append(missing, "server.port")
+	}
+	if c.DatabaseURL == "" {
+		missing = append(missing, "database.url")
+	}
+	if c.NatsURL == "" {
+		missing = append(missing, "nats.url")
+	}
+	if c.RedisURL == "" {
+		missing = append(missing, "redis.url")
+	}
+	if c.JWTSecret == "" {
+		missing = append(missing, "security.jwt_secret")
+	} else if len(c.JWTSecret) < 32 {
+		return fmt.Errorf("security.jwt_secret must be at least 32 characters for security (got %d)", len(c.JWTSecret))
+	}
+
+	// Optional but recommended service URLs - warn if missing
+	if c.AuthServiceURL == "" {
+		zap.S().Warn("Auth service URL not configured (services.auth_url)")
+	}
+	if c.BillingServiceURL == "" && c.BillingStorageType == "local" {
+		// OK if using local storage
+	} else if c.BillingServiceURL == "" {
+		zap.S().Warn("Billing service URL not configured (services.billing_url)")
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
 func Load() *Config {
 	v := viper.New()
 
@@ -77,8 +117,8 @@ func Load() *Config {
 	// Config file setup
 	v.SetConfigName("config")
 	v.SetConfigType("toml")
-	v.AddConfigPath("../../") 
-	v.AddConfigPath(".")      
+	v.AddConfigPath("../../")
+	v.AddConfigPath(".")
 
 	// Env vars
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -122,7 +162,7 @@ func Load() *Config {
 
 	ctx := context.Background()
 
-	return &Config{
+	cfg := &Config{
 		Port:                   v.GetString("server.port"),
 		DatabaseURL:            v.GetString("database.url"),
 		NatsURL:                v.GetString("nats.url"),
@@ -153,4 +193,11 @@ func Load() *Config {
 		S3SecretKey:            secrets.ResolveSecret(ctx, v.GetString("billing.s3_secret_key")),
 		S3UseSSL:               v.GetBool("billing.s3_use_ssl"),
 	}
+
+	// Validate configuration (fail fast on startup)
+	if err := cfg.Validate(); err != nil {
+		zap.S().Fatal("Configuration validation failed", zap.Error(err))
+	}
+
+	return cfg
 }
