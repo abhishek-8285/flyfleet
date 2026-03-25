@@ -352,7 +352,13 @@ func (h *RouteOptimizationHandler) writeErrorResponse(w http.ResponseWriter, sta
 		"error": message,
 	}
 	if err != nil {
-		resp["details"] = err.Error()
+		var errDetail string
+		if statusCode >= 500 {
+			errDetail = "Internal server error"
+		} else {
+			errDetail = err.Error()
+		}
+		resp["details"] = errDetail
 	}
 	h.writeJSONResponse(w, statusCode, resp)
 }

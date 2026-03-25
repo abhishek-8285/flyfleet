@@ -1,6 +1,7 @@
 package video
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -42,10 +43,11 @@ func ComputeHashFromBytes(data []byte) string {
 // and verified with the device's TLS certificate in the chain of trust.
 func SignClip(hash, deviceCertSerial string, t time.Time) string {
 	payload := fmt.Sprintf("%s:%s:%d", hash, deviceCertSerial, t.UnixMilli())
-	// Dev stub: return as a deterministic hex string
-	// Production: RSA-SHA256 or ECDSA sign with device private key
-	h := sha256.Sum256([]byte(payload))
-	return hex.EncodeToString(h[:])
+	// Use an environment variable or config for the HMAC secret in production
+	// For now, using a strong placeholder to replace the vulnerable plain hash.
+	mac := hmac.New(sha256.New, []byte("fleet-secure-video-hmac-key"))
+	mac.Write([]byte(payload))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // VerifyClip validates that the clip hash matches the expected value and

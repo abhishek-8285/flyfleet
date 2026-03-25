@@ -444,7 +444,9 @@ func (s *VideoServiceImpl) validateVideoThumbnail(thumbnail *models.VideoThumbna
 func (s *VideoServiceImpl) generateSignedURL(filepath string, expires time.Time) string {
 	key := os.Getenv("VIDEO_SIGNING_KEY")
 	if key == "" {
-		key = "flyfleet-default-sec-key" // Default for development
+		// Log error and return empty to prevent insecure signatures
+		s.logger.Error("VIDEO_SIGNING_KEY is not set")
+		return ""
 	}
 
 	validUntil := expires.Unix()

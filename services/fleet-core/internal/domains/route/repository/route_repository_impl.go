@@ -108,6 +108,10 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationRequest(ctx context.
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		// Handle JSON fields specially
 		if key == "constraints" || key == "stops" || key == "vehicles" || key == "priorities" || key == "optimization_goals" || key == "result" {
 			if jsonBytes, ok := value.([]byte); ok {
@@ -322,6 +326,10 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationResult(ctx context.C
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if jsonBytes, err := json.Marshal(value); err == nil {
 			setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 			args = append(args, jsonBytes)
@@ -456,6 +464,10 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJob(ctx context.Cont
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++

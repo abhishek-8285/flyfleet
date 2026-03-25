@@ -97,6 +97,9 @@ func jsonOK(w http.ResponseWriter, v interface{}) {
 
 // UploadVideo — POST /videos/upload (multipart or JSON-preflight)
 func (h *Handler) UploadVideo(w http.ResponseWriter, r *http.Request) {
+	// Limit request body to 100MB to prevent DoS
+	r.Body = http.MaxBytesReader(w, r.Body, 100<<20)
+
 	tenantID := h.tenantID(r)
 	if tenantID == uuid.Nil {
 		jsonError(w, "unauthorized: missing tenant", http.StatusUnauthorized)

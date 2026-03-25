@@ -1,6 +1,8 @@
 package pdf
 
 import (
+	"html"
+
 	"fmt"
 	"strings"
 
@@ -132,12 +134,12 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 				<td class="text-right">%.2f</td>
 			</tr>`,
 			it.SlNo,
-			it.Description,
-			it.HSNCode,
+			html.EscapeString(it.Description),
+			html.EscapeString(it.HSNCode),
 			it.Quantity,
-			it.Unit,
-			it.UnitPrice,
-			it.Quantity * it.UnitPrice - it.Discount, // This is Amount (qty * rate - discount)
+			html.EscapeString(it.Unit),
+			html.EscapeString(it.Unit)Price,
+			it.Quantity * html.EscapeString(it.Unit)Price - it.Discount, // This is Amount (qty * rate - discount)
 
 			// CGST column: show amount + rate if > 0, else "-"
 			func() string {
@@ -161,7 +163,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 			func() string {
 				if it.CESS > 0 || it.AdditionalCESS > 0 {
 					totalCESS := it.CESS + it.AdditionalCESS
-					rate := (totalCESS / (it.Quantity * it.UnitPrice)) * 100
+					rate := (totalCESS / (it.Quantity * html.EscapeString(it.Unit)Price)) * 100
 					return fmt.Sprintf("%.2f<br><small>(%.1f%%)</small>", totalCESS, rate)
 				}
 				return "-"
@@ -172,8 +174,8 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 
 	// Build tax rows
 	var taxRows strings.Builder
-	if data.TaxDescription != "" {
-		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>%s</span><span>₹%.2f</span></div>`, data.TaxDescription, data.TotalTax))
+	if html.EscapeString(data\.TaxDescription) != "" {
+		taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>%s</span><span>₹%.2f</span></div>`, html.EscapeString(data\.TaxDescription), data.TotalTax))
 	} else {
 		if data.IGST > 0 {
 			taxRows.WriteString(fmt.Sprintf(`<div class="total-row"><span>IGST</span><span>₹%.2f</span></div>`, data.IGST))
@@ -360,43 +362,43 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 </body>
 </html>`,
 		// 1  Watermark
-		data.CopyType,
+		html.EscapeString(data\.CopyType),
 		// 2-8  company block
-		data.Company_name,
-		data.CompanyAddress,
-		data.CompanyGSTIN,
-		data.CompanyPAN,
-		data.CompanyEmail,
-		data.CompanyPhone,
+		html.EscapeString(data\.Company_name),
+		html.EscapeString(data\.CompanyAddress),
+		html.EscapeString(data\.CompanyGSTIN),
+		html.EscapeString(data\.CompanyPAN),
+		html.EscapeString(data\.CompanyEmail),
+		html.EscapeString(data\.CompanyPhone),
 		// 9-14  invoice meta
-		data.InvoiceNumber,
-		data.InvoiceDate,
-		data.DueDate,
-		data.PlaceOfSupply,
-		data.ReverseCharge,
+		html.EscapeString(data\.InvoiceNumber),
+		html.EscapeString(data\.InvoiceDate),
+		html.EscapeString(data\.DueDate),
+		html.EscapeString(data\.PlaceOfSupply),
+		html.EscapeString(data\.ReverseCharge),
 		// 15-22  billing address
-		data.BillingName,
-		data.BillingGSTIN,
-		data.BillingMobile,
-		data.BillingEmail,
-		data.BillingAddress,
+		html.EscapeString(data\.BillingName),
+		html.EscapeString(data\.BillingGSTIN),
+		html.EscapeString(data\.BillingMobile),
+		html.EscapeString(data\.BillingEmail),
+		html.EscapeString(data\.BillingAddress),
 		// 23-30  shipping address
-		data.ShippingName,
-		data.ShippingGSTIN,
-		data.ShippingMobile,
-		data.ShippingEmail,
-		data.ShippingAddress,
+		html.EscapeString(data\.ShippingName),
+		html.EscapeString(data\.ShippingGSTIN),
+		html.EscapeString(data\.ShippingMobile),
+		html.EscapeString(data\.ShippingEmail),
+		html.EscapeString(data\.ShippingAddress),
 		// 31-36  transporter
-		data.Transporter,
-		data.VehicleNo,
-		data.DocNo,
-		data.DocDate,
-		data.EWayBill,
-		data.EWayBillDate,
+		html.EscapeString(data\.Transporter),
+		html.EscapeString(data\.VehicleNo),
+		html.EscapeString(data\.DocNo),
+		html.EscapeString(data\.DocDate),
+		html.EscapeString(data\.EWayBill),
+		html.EscapeString(data\.EWayBillDate),
 		// 37  line items
 		itemsRows.String(),
 		// 38  amount in words
-		data.AmountInWords,
+		html.EscapeString(data\.AmountInWords),
 		// 39-41  financial summary
 		data.Subtotal,
 		discountDisplay,
@@ -420,7 +422,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 			return ""
 		}(),
 		// 46  authorized signatory
-		data.AuthorizedSignatory,
+		html.EscapeString(data\.AuthorizedSignatory),
 	)
 }
 

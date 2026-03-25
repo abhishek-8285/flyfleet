@@ -202,6 +202,10 @@ func (r *MaintenanceRepositoryImpl) UpdateSchedule(ctx context.Context, id strin
 	args := make([]interface{}, 0, len(updates)+1)
 	argIndex := 1
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		switch key {
 		case "parts_required", "service_items", "reminders", "recurring":
@@ -286,6 +290,10 @@ func (r *MaintenanceRepositoryImpl) UpdateLog(ctx context.Context, id string, up
 	args := make([]interface{}, 0, len(updates)+1)
 	argIndex := 1
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		switch key {
 		case "parts_used", "service_items", "documents":

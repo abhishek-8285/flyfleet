@@ -188,7 +188,13 @@ func (h *BulkHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int,
 	}
 
 	if err != nil {
-		response["details"] = err.Error()
+		var errDetail string
+		if statusCode >= 500 {
+			errDetail = "Internal server error"
+		} else {
+			errDetail = err.Error()
+		}
+		response["details"] = errDetail
 	}
 
 	w.Header().Set("Content-Type", "application/json")

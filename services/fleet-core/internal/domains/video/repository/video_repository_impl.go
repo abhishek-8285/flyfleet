@@ -120,6 +120,10 @@ func (r *VideoRepositoryImpl) UpdateVideoStream(ctx context.Context, id string, 
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -377,6 +381,10 @@ func (r *VideoRepositoryImpl) UpdateVideoRecording(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -715,6 +723,10 @@ func (r *VideoRepositoryImpl) UpdateVideoAnalytics(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -914,6 +926,10 @@ func (r *VideoRepositoryImpl) UpdateRetentionPolicy(ctx context.Context, id stri
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -1091,6 +1107,10 @@ func (r *VideoRepositoryImpl) UpdateVideoThumbnail(ctx context.Context, id strin
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}

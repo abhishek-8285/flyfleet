@@ -125,6 +125,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateFASTagTransaction(ctx context.Con
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -460,6 +464,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateEWayBill(ctx context.Context, id 
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -790,6 +798,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateVehicleVerification(ctx context.C
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -1092,6 +1104,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateDriverVerification(ctx context.Co
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -1378,6 +1394,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateLocalPermit(ctx context.Context, 
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -1639,6 +1659,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateGSTCompliance(ctx context.Context
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}
@@ -1898,6 +1922,10 @@ func (r *IndiaIntegrationRepositoryImpl) UpdateIntegrationConfig(ctx context.Con
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		if key == "updated_at" {
 			continue
 		}

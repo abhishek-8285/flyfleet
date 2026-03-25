@@ -41,7 +41,11 @@ func main() {
 	
 	identitySvc := service.NewIdentityService(repo, nil) // passing nil logger to see if it works
 
-	authSvc := service.NewAuthService(l, repo, identitySvc, "your-jwt-secret-key-here", nil, nil)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "fallback-secret-for-dev-only"
+	}
+	authSvc := service.NewAuthService(l, repo, identitySvc, jwtSecret, nil, nil)
 
 	email := "super_admin@flyfleet.com"
 	password := "fleet_password"
