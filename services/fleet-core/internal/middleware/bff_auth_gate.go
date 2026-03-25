@@ -61,6 +61,9 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 
 		claims := jwt.MapClaims{}
 		parsed, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !parsed.Valid {
@@ -102,6 +105,12 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 				http.Error(w, "invalid bearer token", http.StatusUnauthorized)
 				return
 			}
+
+			// Strip incoming spoofable headers
+			r.Header.Del("X-User-ID")
+			r.Header.Del("X-Org-ID")
+			r.Header.Del("X-Organization-ID")
+			r.Header.Del("X-Role-ID")
 
 			// Inject claims into context
 			ctx := r.Context()

@@ -1,6 +1,155 @@
 SHELL := /bin/bash
 
-.PHONY: bff-build bff-contract-check bff-smoke frontend-api-check docs-governance operations-governance performance-web-budget api-latency-smoke api-clients-generate api-clients-check trace-propagation-check all-services-foundation-check identity-auth-foundation-check design-system-foundation-check observability-foundation-check mobile-sync-foundation-check mobile-sync-simulate firmware-ota-foundation-check firmware-ota-validate ota-rollout-simulate device-reliability-foundation-check device-command-simulate vehicle-device-foundation-check vehicle-device-tests runtime-service-matrix-check enterprise-foundation-check runtime-integration-gate workflow-coverage-check monolith-build monolith-api-counts monolith-api-registry monolith-api-report monolith-upstream-health monolith-overview monolith-governance-check monolith-migrations backend-api-deep-scan monolith-api-inventory web-bff-rewrite-parity bff-public-route-parity monolith-compat-matrix monolith-compat-gate monolith-status-bundle
+# Colors for output
+BLUE := \033[0;34m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RESET := \033[0m
+
+.PHONY: help dev test lint build ci bootstrap clean docker-build docker-push
+
+#=====================================================================
+# Development Workflow Targets
+#=====================================================================
+
+help:  ## Show this help message
+	@echo '$(GREEN)FlyFleet Development Commands$(RESET)'
+	@echo ''
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(BLUE)%-30s$(RESET) %s\n", $$1, $$2}'
+	@echo ''
+
+dev: bootstrap ## Start development environment (same as bootstrap)
+.PHONY: dev
+
+bootstrap: ## Bootstrap development environment (deps, DB, services)
+	@echo "$(YELLOW)Bootstrapping FlyFleet development environment...$(RESET)"
+	@echo "1. Checking prerequisites..."
+	@command -v go >/dev/null 2>&1 || { echo "Go not found. Install Go 1.23+"; exit 1; }
+	@command -v node >/dev/null 2>&1 || { echo "Node.js not found. Install Node 20+"; exit 1; }
+	@command -v docker >/dev/null 2>&1 || { echo "Docker not found. Install Docker"; exit 1; }
+	@echo "$(GREEN)✓ Prerequisites check passed$(RESET)"
+	@echo "2. Starting services (Postgres, Redis, NATS)..."
+	@docker-compose up -d postgres redis nats
+	@echo "3. Waiting for PostgreSQL to be ready..."
+	@until docker exec fleet-postgres pg_isready -U fleet_user -d fleet_db >/dev/null 2>&1; do \
+		printf '.'; \
+		sleep 2; \
+	done
+	@echo ""
+	@echo "$(GREEN)✓ PostgreSQL ready$(RESET)"
+	@echo "4. Syncing Go workspace..."
+	@go work sync
+	@go mod download
+	@echo "5. Installing frontend dependencies..."
+	@npm install --workspaces
+	@echo ""
+	@echo "$(GREEN)✓ Bootstrap complete!$(RESET)"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  - Run: make build"
+	@echo "  - Start services individually in separate terminals:"
+	@echo "      cd services/fleet-core && go run cmd/main.go"
+	@echo "      cd apps/dashboard-web && npm run dev"
+	@echo "  - Or use docker-compose for full stack: docker-compose up"
+	@echo ""
+	@echo "URLs:"
+	@echo "  - Dashboard: http://localhost:3000"
+	@echo "  - API: http://localhost:8080"
+	@echo "  - Swagger: http://localhost:8080/swagger"
+	@echo "  - NATS: localhost:4222"
+.PHONY: bootstrap
+
+test: ## Run all tests (Go unit + integration, frontend tests)
+	@echo "$(YELLOW)Running Go unit tests...$(RESET)"
+	@go test ./... -short -count=1
+	@echo "$(YELLOW)Running frontend tests...$(RESET)"
+	@npm run test --workspaces --if-present
+.PHONY: test
+
+test:unit: ## Run Go unit tests only
+	go test ./... -short -count=1
+.PHONY: test:unit
+
+test:integration: ## Run integration tests (requires docker-compose up)
+	go test ./... -tags=integration -count=1 -timeout=10m
+.PHONY: test:integration
+
+test:coverage: ## Generate test coverage report
+	go test ./... -coverprofile=coverage.out -covermode=atomic
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+.PHONY: test:coverage
+
+lint: ## Run all linters (Go staticcheck, golint, frontend eslint)
+	@echo "$(YELLOW)Running Go linters...$(RESET)"
+	@command -v golangci-lint >/dev/null 2>&1 || { echo "Installing golangci-lint..."; go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; }
+	@golangci-lint run ./...
+	@echo "$(YELLOW)Running frontend linters...$(RESET)"
+	@npm run lint --workspaces --if-present
+.PHONY: lint
+
+lint:go: ## Run Go linters only
+	golangci-lint run ./...
+.PHONY: lint:go
+
+lint:js: ## Run JavaScript/TypeScript linters
+	npm run lint --workspaces --if-present
+.PHONY: lint:js
+
+build: ## Build all services and applications
+	@echo "$(YELLOW)Building Go services...$(RESET)"
+	@go build ./...
+	@echo "$(YELLOW)Building frontend apps...$(RESET)"
+	@npm run build --workspaces --if-present
+	@echo "$(GREEN)✓ Build complete$(RESET)"
+.PHONY: build
+
+ci: lint test build ## Run full CI pipeline locally (lint -> test -> build)
+.PHONY: ci
+
+clean: ## Clean build artifacts and temporary files
+	@echo "Cleaning..."
+	@rm -rf bin/
+	@rm -rf services/*/bin
+	@rm -rf apps/*/.next
+	@rm -rf apps/*/dist
+	@rm -f coverage.out coverage.html
+	@go clean -cache
+	@echo "$(GREEN)✓ Clean complete$(RESET)"
+.PHONY: clean
+
+docker-build: ## Build all Docker images
+	@echo "Building Docker images..."
+	@docker-compose build
+.PHONY: docker-build
+
+docker-push: ## Push Docker images to registry (requires DOCKER_REGISTRY)
+	@echo "Pushing Docker images..."
+	@docker-compose push
+.PHONY: docker-push
+
+docker-clean: ## Clean Docker resources (images, containers, volumes)
+	@echo "Cleaning Docker resources..."
+	@docker-compose down -v
+	@docker system prune -f
+.PHONY: docker-clean
+
+tidy: ## Update Go dependencies and remove unused ones
+	@echo "Tidying Go modules..."
+	@go mod tidy
+	@go mod verify
+	@echo "$(GREEN)✓ Go modules tidy$(RESET)"
+.PHONY: tidy
+
+#=====================================================================
+# Governance & Quality Gates (existing targets)
+#=====================================================================
+
+bff-build:
+	cd services/microservices/web-bff && GOCACHE=/tmp/go-build-cache go build ./...
 
 bff-build:
 	cd services/microservices/web-bff && GOCACHE=/tmp/go-build-cache go build ./...

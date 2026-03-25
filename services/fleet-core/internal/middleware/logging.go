@@ -22,13 +22,33 @@ func LoggingMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(sw, r)
 
 			duration := time.Since(start)
-			logger.Info("HTTP request",
+
+			// Build log fields with trace ID and user context
+			fields := []zap.Field{
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),
 				zap.Int("status", sw.status),
 				zap.Duration("duration", duration),
 				zap.String("remote_addr", r.RemoteAddr),
-			)
+				zap.String("user_agent", r.UserAgent()),
+			}
+
+			// Extract trace ID from context (set by TraceIDMiddleware)
+			if traceID := GetTraceID(r.Context()); traceID != "" {
+				fields = append(fields, zap.String("trace_id", traceID))
+			}
+
+			// Extract user ID from context (if available from auth middleware)
+			if userID, ok := r.Context().Value("user_id").(string); ok && userID != "" {
+				fields = append(fields, zap.String("user_id", userID))
+			}
+
+			// Extract org ID from context (if available from tenant middleware)
+			if orgID, ok := r.Context().Value("org_id").(string); ok && orgID != "" {
+				fields = append(fields, zap.String("org_id", orgID))
+			}
+
+			logger.Info("HTTP request", fields...)
 		})
 	}
 }

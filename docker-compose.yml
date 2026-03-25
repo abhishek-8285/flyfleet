@@ -113,7 +113,7 @@ services:
       - DISABLE_AUTH_RATE_LIMIT=true
       - PORT=8084
       - LOG_LEVEL=info
-      - ENFORCE_BFF_AUTH_GATE=false
+      - ENFORCE_BFF_AUTH_GATE=true
       # Unified internal service URLs (Internal loopback via Monolith's internal gateway)
       - AUTH_SERVICE_URL=http://localhost:8084
       - ALERT_SERVICE_URL=http://localhost:8084
@@ -138,6 +138,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8084/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   fleet-ml-service:
     build:
@@ -157,6 +163,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Disaster Recovery & Maintenance
   db-backup:

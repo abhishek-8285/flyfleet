@@ -347,6 +347,10 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		columnName := key
 		if mapped, ok := fieldMap[key]; ok {
 			columnName = mapped
@@ -775,6 +779,10 @@ func (r *txRepository) Update(ctx context.Context, id string, updates map[string
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		if key == "planned_route" || key == "waypoints" || key == "cargo_details" || key == "events" || key == "pod_documents" || key == "start_location" || key == "end_location" {
 			jsonData, _ := json.Marshal(value)

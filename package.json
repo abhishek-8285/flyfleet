@@ -7,7 +7,11 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test --workspaces --if-present",
+    "test:unit": "go test ./... -short -count=1",
+    "test:integration": "go test ./... -tags=integration -count=1",
+    "test:coverage": "go test ./... -coverprofile=coverage.out -covermode=atomic && go tool cover -html=coverage.out -o coverage.html",
+    "test:e2e": "npm run test --workspace=apps/dashboard-web --if-present",
     "bff:build": "make bff-build",
     "bff:contract-check": "make bff-contract-check",
     "bff:smoke": "make bff-smoke",

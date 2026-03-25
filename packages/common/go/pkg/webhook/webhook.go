@@ -7,7 +7,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -33,10 +35,52 @@ type WebhookDelivery struct {
 	Timeout   time.Duration `json:"timeout"`
 }
 
+func isPrivateIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsPrivate() {
+		return true
+	}
+	return false
+}
+
 func NewWebhookClient(logger *zap.Logger) *WebhookClient {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			
+			ips, err := net.LookupIP(host)
+			if err != nil {
+				return nil, err
+			}
+			
+			for _, ip := range ips {
+				if isPrivateIP(ip) {
+					return nil, errors.New("SSRF Protection: Dialing private/loopback IPs is not allowed")
+				}
+			}
+			
+			// Dial normally if not private (although a race condition exists here for DNS rebinding, 
+			// this provides basic protection. Ideal is dialing the specific safe IP resolved.)
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
 	return &WebhookClient{
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Transport: transport,
+			Timeout:   30 * time.Second,
 		},
 		logger: logger,
 	}

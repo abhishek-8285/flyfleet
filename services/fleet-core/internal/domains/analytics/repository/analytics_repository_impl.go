@@ -170,6 +170,10 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id 
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
@@ -597,6 +601,10 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
@@ -851,6 +859,10 @@ func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id str
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
@@ -1121,6 +1133,10 @@ func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id s
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
@@ -1474,6 +1490,10 @@ func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Cont
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++
@@ -1829,6 +1849,10 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx conte
 	argIndex := 1
 	
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		args = append(args, value)
 		argIndex++

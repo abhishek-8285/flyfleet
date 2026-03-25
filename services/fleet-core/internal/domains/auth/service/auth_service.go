@@ -404,6 +404,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, ipAddre
 func (s *AuthService) VerifyLoginMFA(ctx context.Context, tempTokenStr, code, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// 1. Validate the temp token
 	token, err := jwt.Parse(tempTokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(s.jwtSecret), nil
 	})
 	if err != nil || !token.Valid {
@@ -469,6 +472,9 @@ func (s *AuthService) VerifyLoginMFA(ctx context.Context, tempTokenStr, code, ip
 func (s *AuthService) SetupAdminMFA(ctx context.Context, tempTokenStr, secret, code, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// 1. Validate the temp token
 	token, err := jwt.Parse(tempTokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return []byte(s.jwtSecret), nil
 	})
 	if err != nil || !token.Valid {
@@ -1425,10 +1431,8 @@ func (s *AuthService) LoginWithOIDC(ctx context.Context, providerName, code, sta
 }
 
 func (s *AuthService) verifyOidcToken(ctx context.Context, provider *models.OidcProvider, code string) (sub, email string, err error) {
-	if code == "mock-google-code" {
-		return "google-sub-123", "user@example.com", nil
-	}
-	return "", "", errors.New("invalid oidc code")
+	// TODO: Implement actual OIDC verification using provider details
+	return "", "", errors.New("OIDC verification not implemented")
 }
 
 

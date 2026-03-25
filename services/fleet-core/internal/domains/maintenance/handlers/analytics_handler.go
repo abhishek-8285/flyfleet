@@ -129,7 +129,13 @@ func (h *AnalyticsHandler) writeJSONResponse(w http.ResponseWriter, statusCode i
 func (h *AnalyticsHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
 	resp := map[string]interface{}{"error": message}
 	if err != nil {
-		resp["details"] = err.Error()
+		var errDetail string
+		if statusCode >= 500 {
+			errDetail = "Internal server error"
+		} else {
+			errDetail = err.Error()
+		}
+		resp["details"] = errDetail
 	}
 	h.writeJSONResponse(w, statusCode, resp)
 }

@@ -629,7 +629,13 @@ func (h *VideoHandler) writeJSONResponse(w http.ResponseWriter, status int, data
 func (h *VideoHandler) writeErrorResponse(w http.ResponseWriter, status int, message string, err error) {
 	resp := map[string]interface{}{"error": message}
 	if err != nil {
-		resp["details"] = err.Error()
+		var errDetail string
+		if status >= 500 {
+			errDetail = "Internal server error"
+		} else {
+			errDetail = err.Error()
+		}
+		resp["details"] = errDetail
 	}
 	h.writeJSONResponse(w, status, resp)
 }

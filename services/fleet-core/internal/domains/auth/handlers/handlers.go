@@ -82,9 +82,11 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			r.Get("/users/{id}", h.GetUser)
 			r.Get("/organizations/{id}", h.GetOrganization)
 			r.Get("/organizations", h.ListOrganizations)
-			r.Get("/stats", h.GetStats)
-			r.Get("/security-telemetry", h.GetSecurityTelemetry)
-			r.Get("/audit-logs", h.GetAuditLogs)
+
+			// Admin endpoints
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/stats", h.GetStats)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/security-telemetry", h.GetSecurityTelemetry)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/audit-logs", h.GetAuditLogs)
 			
 			// Admin Console endpoints
 			r.Post("/api-keys", h.CreateAPIKey)
@@ -94,7 +96,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			r.Post("/service-accounts", h.CreateServiceAccount)
 			r.Get("/service-accounts", h.ListServiceAccounts)
 			
-			r.Post("/emergency-revoke", h.EmergencyRevoke)
+			r.With(internalmw.RequireRole(h.logger, "super_admin")).Post("/emergency-revoke", h.EmergencyRevoke)
 		})
 
 		r.Get("/.well-known/jwks.json", h.GetJWKS)

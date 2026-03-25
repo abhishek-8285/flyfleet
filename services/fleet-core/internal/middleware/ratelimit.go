@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -54,10 +55,10 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 func (r *RedisRateLimiter) Handler(keyPrefix string, limit int, window time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// Extract IP for keying
-			ip := req.Header.Get("X-Forwarded-For")
-			if ip == "" {
-				ip = req.RemoteAddr
+			// Extract IP securely. In a real setup, validate X-Forwarded-For against a trusted proxy list.
+			ip := req.RemoteAddr
+			if host, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
+				ip = host
 			}
 
 			key := fmt.Sprintf("%s:%s", keyPrefix, ip)

@@ -196,6 +196,10 @@ func (r *AlertRepository) UpdateRule(ctx context.Context, id string, updates map
 	argIndex := 1
 
 	for key, value := range updates {
+		// Security check against SQL injection
+		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
+			continue
+		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
 		
 		// Handle special JSON fields
