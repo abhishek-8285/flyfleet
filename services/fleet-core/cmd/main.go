@@ -37,6 +37,7 @@ import (
 	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
 	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/handlers"
 	"github.com/flyfleet/fleet-core-service/internal/repository"
+	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
 
 	// Domains
 	governanceHandlers "github.com/flyfleet/fleet-core-service/internal/domains/governance/handlers"
@@ -155,6 +156,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	videoHandlers "github.com/flyfleet/fleet-core-service/internal/domains/video/handlers"
 	videoRepo     "github.com/flyfleet/fleet-core-service/internal/domains/video/repository"
 	videoService  "github.com/flyfleet/fleet-core-service/internal/domains/video/service"
@@ -250,6 +252,20 @@ func main() {
 		}
 	}()
 
+	// 3.2 Start Runtime Metrics Collection
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.Tick:
+				metrics.UpdateRuntimeMetrics()
+			}
+		}
+	}()
+
 	// Shims for legacy repositories that still require *sql.DB
 	criticalSQL := stdlib.OpenDBFromPool(pools.Critical)
 	highSQL := stdlib.OpenDBFromPool(pools.High)
@@ -317,6 +333,7 @@ func main() {
 	r.Use(systemGuard.Middleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(coremiddleware.TraceIDMiddleware)
+	r.Use(metrics.HTTPMetricsMiddleware(logger))
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)
 	r.Use(chiMiddleware.Recoverer)
@@ -386,13 +403,85 @@ func main() {
 		dSecurityMid, logger,
 	)
 
-	// Health check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+	// Health Check Endpoints (Kubernetes-ready)
+	// Simple liveness probe
+	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"status":  "healthy",
+			"status":  "pass",
 			"service": "fleet-core-service",
 		})
+	})
+
+	// Prometheus metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
+
+	// Comprehensive readiness probe with dependencies
+	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+		checks := map[string]interface{}{
+			"status":   "pass",
+			"service":  "fleet-core-service",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+			"checks":   map[string]string{},
+		}
+
+		// Check database
+		if pools.Critical != nil {
+			if err := pools.Critical.Ping(); err != nil {
+				checks["checks"].(map[string]string)["database"] = "fail: " + err.Error()
+				checks["status"] = "fail"
+			} else {
+				checks["checks"].(map[string]string)["database"] = "pass"
+			}
+		} else {
+			checks["checks"].(map[string]string)["database"] = "skip (pool nil)"
+		}
+
+		// Check Redis
+		if sharedRedisClient != nil {
+			if _, err := sharedRedisClient.Ping(ctx).Result(); err != nil {
+				checks["checks"].(map[string]string)["redis"] = "fail: " + err.Error()
+				checks["status"] = "fail"
+			} else {
+				checks["checks"].(map[string]string)["redis"] = "pass"
+			}
+		} else {
+			checks["checks"].(map[string]string)["redis"] = "skip (not connected)"
+		}
+
+		// Check NATS
+		if nc != nil && nc.IsConnected() {
+			checks["checks"].(map[string]string)["nats"] = "pass"
+		} else {
+			checks["checks"].(map[string]string)["nats"] = "skip (not connected)"
+		}
+
+		// Overall status
+		statusCode := http.StatusOK
+		if checks["status"] == "fail" {
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(checks)
+	})
+
+	// Domain-specific readiness (optional query param ?domain=analytics)
+	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		// Same as /ready but more compact for k8s
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Has("domain") {
+			// Could add domain-specific checks here
+			json.NewEncoder(w).Encode(map[string]string{
+				"status": "pass",
+				"domain": r.URL.Query().Get("domain"),
+			})
+		} else {
+			json.NewEncoder(w).Encode(map[string]string{
+				"status": "pass",
+			})
+		}
 	})
 
 	// 6. Initialize Domains & Register Routes
