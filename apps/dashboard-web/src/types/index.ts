@@ -1,10 +1,15 @@
 export interface User {
   id: string;
+  user_id?: string;       // Alternate user identifier (backwards compatibility)
   email: string;
   name: string;
-  role: string;
-  org_id: string;
-  permissions: Record<string, boolean>;
+  role?: string;           // Optional for backwards compatibility
+  role_id?: string;       // Primary role identifier used in RBAC
+  org_id?: string;        // Organization ID
+  permissions: string[];  // Array of permission strings like "vehicle:read"
+  theme?: string;
+  language?: string;
+  sidebar_collapsed?: boolean;
 }
 
 export interface AuthState {

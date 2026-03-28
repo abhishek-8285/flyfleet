@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+const defaultPassword = process.env.TEST_PASSWORD || process.env.DEFAULT_PASSWORD || "change-me-in-test-env";
 const roles = [
-  { role: "super_admin", email: "admin@flyfleet.com", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "org_admin", email: "org_admin@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "fleet_manager", email: "fleet_manager@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "dispatcher", email: "dispatcher@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "fleet_operator", email: "operator@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "maintenance_manager", email: "maintenance@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "analyst", email: "analyst@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "support_agent", email: "support_agent@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "billing_admin", email: "billing@delta.io", password: "fleet_password", dashboard: "/admin/dashboard" },
-  { role: "driver", email: "driver@delta.io", password: "fleet_password", dashboard: "/dashboard" },
+  { role: "super_admin", email: "admin@flyfleet.com", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "org_admin", email: "org_admin@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "fleet_manager", email: "fleet_manager@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "dispatcher", email: "dispatcher@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "fleet_operator", email: "operator@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "maintenance_manager", email: "maintenance@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "analyst", email: "analyst@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "support_agent", email: "support_agent@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "billing_admin", email: "billing@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },
+  { role: "driver", email: "driver@delta.io", password: defaultPassword, dashboard: "/dashboard" },
 ];
 
 test.describe("All Roles Dashboard Checks", () => {

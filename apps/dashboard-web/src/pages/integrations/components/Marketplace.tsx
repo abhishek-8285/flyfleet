@@ -37,7 +37,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onConfigure }) => {
     const fetchMarketplaceintegrations = async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL || "/api/v1"}/integrations/marketplace`,
+          `${import.meta.env.VITE_API_URL || "/api/v1"}/integrations/marketplace`,
         );
         if (res.ok) {
           const payload = await res.json();

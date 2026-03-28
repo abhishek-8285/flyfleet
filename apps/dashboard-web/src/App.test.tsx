@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-node-access, testing-library/no-unnecessary-act, testing-library/no-wait-for-multiple-assertions */
 import { render } from "@testing-library/react";
 import React from "react";
 import App from "./App";

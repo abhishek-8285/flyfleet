@@ -3,9 +3,9 @@ import { test, expect } from "@playwright/test";
 const BASE_URL = "http://localhost:3000";
 
 const roles = [
-  { role: "fleet_manager", email: "fleet_manager@delta.io", password: "fleet_password" },
-  { role: "dispatcher", email: "dispatcher@delta.io", password: "fleet_password" },
-  { role: "driver", email: "driver@delta.io", password: "fleet_password" },
+  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
 ];
 
 test.describe("Role-Specific UI Actions Authentication & Execution", () => {

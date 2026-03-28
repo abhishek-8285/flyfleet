@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../store";
+import { setToken, setUser } from "../store/authSlice";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import api from "../services/api";
 
@@ -8,6 +11,7 @@ const SSOCallback: React.FC = () => {
   const [error, setError] = useState("");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -22,7 +26,11 @@ const SSOCallback: React.FC = () => {
       try {
         const response = await api.ssoCallback({ code, state });
         if (response.token) {
-          localStorage.setItem("token", response.token);
+          // Store token in Redux (memory only) - SECURE
+          dispatch(setToken(response.token));
+          if (response.user) {
+            dispatch(setUser(response.user));
+          }
           // Redirect to dashboard
           window.location.href = "/dashboard";
         } else {
