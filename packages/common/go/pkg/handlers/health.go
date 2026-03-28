@@ -44,8 +44,31 @@ func NewHealthHandler(logger *zap.Logger, service, version string) *HealthHandle
 
 // HealthCheck handles GET /health requests
 func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	// Public health check - do not expose detailed system statistics or version
+	// to unauthenticated callers to prevent reconnaissance.
+	response := HealthCheckResponse{
+		Status:    "healthy",
+		Service:   h.service,
+		Timestamp: time.Now().Format(time.RFC3339),
+		// SystemStats and Version are intentionally omitted for security.
+	}
+
+	h.logger.Info("Health check",
+		zap.String("service", h.service),
+		zap.String("status", response.Status),
+	)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
+
+// DetailedHealthCheck returns comprehensive health information including
+// system stats and version. This endpoint should be protected by authentication
+// and accessible only to operators/admin users.
+func (h *HealthHandler) DetailedHealthCheck(w http.ResponseWriter, r *http.Request) {
 	stats := h.getSystemStats()
-	
+
 	response := HealthCheckResponse{
 		Status:  "healthy",
 		Version: h.version,
@@ -57,13 +80,14 @@ func (h *HealthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 		},
 		Timestamp: time.Now().Format(time.RFC3339),
 	}
-	
-	h.logger.Info("Health check",
+
+	h.logger.Info("Detailed health check",
 		zap.String("service", h.service),
-		zap.String("status", response.Status),
 		zap.Int("goroutines", stats.Goroutines),
+		zap.Int("cpu_threads", stats.CPUThreads),
+		zap.Uint64("memory_mb", stats.MemoryMB),
 	)
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)

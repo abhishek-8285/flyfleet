@@ -3,8 +3,8 @@ package images
 import (
 	"bytes"
 	"image"
-	_ "image/jpeg"
 	"image/jpeg"
+	_ "image/jpeg"
 	_ "image/png"
 	"os"
 

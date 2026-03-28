@@ -26,7 +26,7 @@ type PredictiveModel struct {
 	Status            string    `json:"status" validate:"required,oneof=active inactive training error"`
 	TrainedAt         time.Time `json:"trained_at" validate:"required"`
 	ExpiresAt         time.Time `json:"expires_at" validate:"omitempty,gtfield=TrainedAt"`
-	
+
 	// Enhanced Registry Metadata (Phase 7)
 	ModelArtifactURL   string    `json:"model_artifact_url"`
 	ArtifactChecksum   string    `json:"artifact_checksum"`
@@ -34,8 +34,8 @@ type PredictiveModel struct {
 	TrainingJobID      uuid.UUID `json:"training_job_id"`
 	FeatureSchema      string    `json:"feature_schema"` // JSON string of expected features
 
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // MLFeatureStore represents a reusable feature vector for ML (Phase 8: Versioned)
@@ -85,21 +85,21 @@ type AnalyticsQuota struct {
 
 // PredictionResult stores the result of a model prediction
 type PredictionResult struct {
-	ID                  string                 `json:"id"`
-	ModelID             string                 `json:"model_id" validate:"required,uuid4"`
-	PredictionInput     map[string]interface{} `json:"prediction_input" validate:"required"`
-	PredictedValue      interface{}            `json:"predicted_value" validate:"required"`
-	ConfidenceScore     float64                `json:"confidence_score" validate:"required,gte=0,lte=1"`
-	ProbabilityScores   map[string]float64     `json:"probability_scores,omitempty"`
-	FeatureImportance   map[string]float64     `json:"feature_importance,omitempty"`
-	AnomalyDetected     bool                   `json:"anomaly_detected"`
-	AnomalyScore        *float64               `json:"anomaly_score,omitempty" validate:"omitempty,gte=0,lte=1"`
-	Explanation         string                 `json:"explanation,omitempty" validate:"max=1000"`
-	OrganizationID      uuid.UUID              `json:"organization_id" validate:"required"`
-	RequestID           string                 `json:"request_id" validate:"omitempty,uuid4"`
-	PredictedAt         time.Time              `json:"predicted_at" validate:"required"`
-	CreatedAt           time.Time              `json:"created_at"`
-	UpdatedAt           time.Time              `json:"updated_at"`
+	ID                string                 `json:"id"`
+	ModelID           string                 `json:"model_id" validate:"required,uuid4"`
+	PredictionInput   map[string]interface{} `json:"prediction_input" validate:"required"`
+	PredictedValue    interface{}            `json:"predicted_value" validate:"required"`
+	ConfidenceScore   float64                `json:"confidence_score" validate:"required,gte=0,lte=1"`
+	ProbabilityScores map[string]float64     `json:"probability_scores,omitempty"`
+	FeatureImportance map[string]float64     `json:"feature_importance,omitempty"`
+	AnomalyDetected   bool                   `json:"anomaly_detected"`
+	AnomalyScore      *float64               `json:"anomaly_score,omitempty" validate:"omitempty,gte=0,lte=1"`
+	Explanation       string                 `json:"explanation,omitempty" validate:"max=1000"`
+	OrganizationID    uuid.UUID              `json:"organization_id" validate:"required"`
+	RequestID         string                 `json:"request_id" validate:"omitempty,uuid4"`
+	PredictedAt       time.Time              `json:"predicted_at" validate:"required"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 // AnalyticsQueryPlan represents a slow query plan for optimization (Phase 10)
@@ -151,13 +151,13 @@ type FleetAnalytics struct {
 	TotalTrips            int       `json:"total_trips" validate:"gte=0"`
 	CompletedTrips        int       `json:"completed_trips" validate:"gte=0,ltefield=TotalTrips"`
 	CancelledTrips        int       `json:"cancelled_trips" validate:"gte=0,ltefield=TotalTrips"`
-	AverageTripDuration   float64   `json:"average_trip_duration" validate:"gte=0"`   // in hours
+	AverageTripDuration   float64   `json:"average_trip_duration" validate:"gte=0"` // in hours
 	IdleTimePercentage    float64   `json:"idle_time_percentage" validate:"gte=0,lte=100"`
-	RoutingEfficiency     float64   `json:"routing_efficiency"`      // percentage improvement over baseline
-	FuelCost              float64   `json:"fuel_cost" validate:"gte=0"`               // in currency
-	MaintenanceCost       float64   `json:"maintenance_cost" validate:"gte=0"`        // in currency
-	Revenue               float64   `json:"revenue" validate:"gte=0"`                 // in currency
-	ProfitMargin          float64   `json:"profit_margin"`           // percentage
+	RoutingEfficiency     float64   `json:"routing_efficiency"`                // percentage improvement over baseline
+	FuelCost              float64   `json:"fuel_cost" validate:"gte=0"`        // in currency
+	MaintenanceCost       float64   `json:"maintenance_cost" validate:"gte=0"` // in currency
+	Revenue               float64   `json:"revenue" validate:"gte=0"`          // in currency
+	ProfitMargin          float64   `json:"profit_margin"`                     // percentage
 	SafetyScore           float64   `json:"safety_score" validate:"gte=0,lte=100"`
 	AccidentsCount        int       `json:"accidents_count" validate:"gte=0"`
 	IncidentsCount        int       `json:"incidents_count" validate:"gte=0"`
@@ -165,7 +165,7 @@ type FleetAnalytics struct {
 	GeofenceViolations    int       `json:"geofence_violations" validate:"gte=0"`
 	AlertsTriggered       int       `json:"alerts_triggered" validate:"gte=0"`
 	DataPointsCollected   int64     `json:"data_points_collected" validate:"gte=0"`
-	ProcessingTime        float64   `json:"processing_time" validate:"gte=0"`         // in seconds
+	ProcessingTime        float64   `json:"processing_time" validate:"gte=0"` // in seconds
 	GeneratedAt           time.Time `json:"generated_at" validate:"required"`
 	CreatedAt             time.Time `json:"created_at"`
 	UpdatedAt             time.Time `json:"updated_at"`
@@ -173,53 +173,53 @@ type FleetAnalytics struct {
 
 // DriverBehaviorAnalytics represents driver behavior analysis
 type DriverBehaviorAnalytics struct {
-	ID                  string    `json:"id"`
-	DriverID            uuid.UUID `json:"driver_id" validate:"required"`
-	OrganizationID      uuid.UUID `json:"organization_id" validate:"required"`
-	AnalysisPeriodStart time.Time `json:"analysis_period_start" validate:"required"`
-	AnalysisPeriodEnd   time.Time `json:"analysis_period_end" validate:"required"`
-	TotalDrivingHours   float64   `json:"total_driving_hours" validate:"gte=0"`
-	AggressiveAccelerationCount int `json:"aggressive_acceleration_count"`
-	HardBrakingCount          int `json:"hard_braking_count"`
-	SharpTurnCount            int `json:"sharp_turn_count"`
-	OverSpeedingCount         int `json:"over_speeding_count"`
-	IdlingTime                float64 `json:"idling_time" validate:"gte=0"`        // in hours
-	AverageSpeed              float64 `json:"average_speed" validate:"gte=0"`      // in km/h
-	MaxSpeed                  float64 `json:"max_speed" validate:"gte=0"`          // in km/h
-	FuelEfficiency            float64 `json:"fuel_efficiency" validate:"gte=0"`    // km/liter
-	SafetyScore               float64 `json:"safety_score" validate:"gte=0,lte=100"`
-	EfficiencyScore           float64 `json:"efficiency_score" validate:"gte=0,lte=100"`
-	ComfortScore              float64 `json:"comfort_score" validate:"gte=0,lte=100"`
-	Ranking                   int     `json:"ranking" validate:"gte=1"`
-	FatigueEventCount   int       `json:"fatigue_event_count"`
-	ViolationCount      int       `json:"violation_count"`
-	RiskLevel           string    `json:"risk_level"` // Safe, Moderate, Risky, Dangerous
-	ImprovementSuggestions    []string `json:"improvement_suggestions"`
-	BehaviorTrend             string  `json:"behavior_trend" validate:"omitempty,oneof=improving declining stable"`
-	GeneratedAt               time.Time `json:"generated_at"`
-	CreatedAt                 time.Time `json:"created_at"`
-	UpdatedAt                 time.Time `json:"updated_at"`
+	ID                          string    `json:"id"`
+	DriverID                    uuid.UUID `json:"driver_id" validate:"required"`
+	OrganizationID              uuid.UUID `json:"organization_id" validate:"required"`
+	AnalysisPeriodStart         time.Time `json:"analysis_period_start" validate:"required"`
+	AnalysisPeriodEnd           time.Time `json:"analysis_period_end" validate:"required"`
+	TotalDrivingHours           float64   `json:"total_driving_hours" validate:"gte=0"`
+	AggressiveAccelerationCount int       `json:"aggressive_acceleration_count"`
+	HardBrakingCount            int       `json:"hard_braking_count"`
+	SharpTurnCount              int       `json:"sharp_turn_count"`
+	OverSpeedingCount           int       `json:"over_speeding_count"`
+	IdlingTime                  float64   `json:"idling_time" validate:"gte=0"`     // in hours
+	AverageSpeed                float64   `json:"average_speed" validate:"gte=0"`   // in km/h
+	MaxSpeed                    float64   `json:"max_speed" validate:"gte=0"`       // in km/h
+	FuelEfficiency              float64   `json:"fuel_efficiency" validate:"gte=0"` // km/liter
+	SafetyScore                 float64   `json:"safety_score" validate:"gte=0,lte=100"`
+	EfficiencyScore             float64   `json:"efficiency_score" validate:"gte=0,lte=100"`
+	ComfortScore                float64   `json:"comfort_score" validate:"gte=0,lte=100"`
+	Ranking                     int       `json:"ranking" validate:"gte=1"`
+	FatigueEventCount           int       `json:"fatigue_event_count"`
+	ViolationCount              int       `json:"violation_count"`
+	RiskLevel                   string    `json:"risk_level"` // Safe, Moderate, Risky, Dangerous
+	ImprovementSuggestions      []string  `json:"improvement_suggestions"`
+	BehaviorTrend               string    `json:"behavior_trend" validate:"omitempty,oneof=improving declining stable"`
+	GeneratedAt                 time.Time `json:"generated_at"`
+	CreatedAt                   time.Time `json:"created_at"`
+	UpdatedAt                   time.Time `json:"updated_at"`
 }
 
 // PredictiveMaintenanceAnalytics represents predictive maintenance insights
 type PredictiveMaintenanceAnalytics struct {
-	ID                    string                 `json:"id"`
-	VehicleID             uuid.UUID              `json:"vehicle_id" validate:"required"`
-	OrganizationID        uuid.UUID              `json:"organization_id" validate:"required"`
-	AnalysisDate          time.Time              `json:"analysis_date" validate:"required"`
-	NextServiceDue        time.Time              `json:"next_service_due"`
-	ServicePriority       string                 `json:"service_priority" validate:"omitempty,oneof=high medium low"`
-	ComponentRisks        map[string]float64     `json:"component_risks"`
-	FailurePrediction     *FailurePrediction     `json:"failure_prediction,omitempty"`
-	MaintenanceSchedule   []MaintenanceScheduleEntry `json:"maintenance_schedule"`
-	PartsNeeded           []PartRequirement      `json:"parts_needed"`
-	CostEstimation        float64                `json:"cost_estimation" validate:"gte=0"`
-	UptimePrediction      float64                `json:"uptime_prediction" validate:"gte=0,lte=100"`
-	ReliabilityScore      float64                `json:"reliability_score" validate:"gte=0,lte=100"`
-	Recommendations       []string               `json:"recommendations"`
-	GeneratedAt           time.Time              `json:"generated_at"`
-	CreatedAt             time.Time              `json:"created_at"`
-	UpdatedAt             time.Time              `json:"updated_at"`
+	ID                  string                     `json:"id"`
+	VehicleID           uuid.UUID                  `json:"vehicle_id" validate:"required"`
+	OrganizationID      uuid.UUID                  `json:"organization_id" validate:"required"`
+	AnalysisDate        time.Time                  `json:"analysis_date" validate:"required"`
+	NextServiceDue      time.Time                  `json:"next_service_due"`
+	ServicePriority     string                     `json:"service_priority" validate:"omitempty,oneof=high medium low"`
+	ComponentRisks      map[string]float64         `json:"component_risks"`
+	FailurePrediction   *FailurePrediction         `json:"failure_prediction,omitempty"`
+	MaintenanceSchedule []MaintenanceScheduleEntry `json:"maintenance_schedule"`
+	PartsNeeded         []PartRequirement          `json:"parts_needed"`
+	CostEstimation      float64                    `json:"cost_estimation" validate:"gte=0"`
+	UptimePrediction    float64                    `json:"uptime_prediction" validate:"gte=0,lte=100"`
+	ReliabilityScore    float64                    `json:"reliability_score" validate:"gte=0,lte=100"`
+	Recommendations     []string                   `json:"recommendations"`
+	GeneratedAt         time.Time                  `json:"generated_at"`
+	CreatedAt           time.Time                  `json:"created_at"`
+	UpdatedAt           time.Time                  `json:"updated_at"`
 }
 
 // FailurePrediction represents a predicted component failure
@@ -276,12 +276,12 @@ type UpdatePredictionResultRequest struct {
 
 // UpdateAnalyticsJobRequest represents partial updates for an analytics job
 type UpdateAnalyticsJobRequest struct {
-	Name         *string                 `json:"name,omitempty"`
-	Description  *string                 `json:"description,omitempty"`
-	Status       *string                 `json:"status,omitempty" validate:"omitempty,oneof=pending running completed failed cancelled"`
+	Name         *string                `json:"name,omitempty"`
+	Description  *string                `json:"description,omitempty"`
+	Status       *string                `json:"status,omitempty" validate:"omitempty,oneof=pending running completed failed cancelled"`
 	Parameters   map[string]interface{} `json:"parameters,omitempty"`
-	Progress     *float64                `json:"progress,omitempty" validate:"omitempty,gte=0,lte=100"`
-	ErrorDetails *string                 `json:"error_details,omitempty"`
+	Progress     *float64               `json:"progress,omitempty" validate:"omitempty,gte=0,lte=100"`
+	ErrorDetails *string                `json:"error_details,omitempty"`
 }
 
 // UpdateFleetAnalyticsRequest represents partial updates for fleet analytics
@@ -306,11 +306,11 @@ type UpdateDriverBehaviorAnalyticsRequest struct {
 
 // UpdatePredictiveMaintenanceAnalyticsRequest represents partial updates for predictive maintenance
 type UpdatePredictiveMaintenanceAnalyticsRequest struct {
-	NextServiceDue  *time.Time `json:"next_service_due,omitempty"`
-	ServicePriority *string    `json:"service_priority,omitempty" validate:"omitempty,oneof=high medium low"`
-	CostEstimation  *float64   `json:"cost_estimation,omitempty" validate:"omitempty,gte=0"`
+	NextServiceDue   *time.Time `json:"next_service_due,omitempty"`
+	ServicePriority  *string    `json:"service_priority,omitempty" validate:"omitempty,oneof=high medium low"`
+	CostEstimation   *float64   `json:"cost_estimation,omitempty" validate:"omitempty,gte=0"`
 	ReliabilityScore *float64   `json:"reliability_score,omitempty" validate:"omitempty,gte=0,lte=100"`
-	Recommendations []string   `json:"recommendations,omitempty"`
+	Recommendations  []string   `json:"recommendations,omitempty"`
 }
 
 // VehicleDailyStats represents pre-aggregated daily metrics for a vehicle
@@ -334,18 +334,18 @@ type VehicleDailyStats struct {
 
 // DriverDailyStats represents pre-aggregated daily metrics for a driver
 type DriverDailyStats struct {
-	DriverID            uuid.UUID `json:"driver_id"`
-	OrganizationID      uuid.UUID `json:"organization_id"`
-	Date                time.Time `json:"date"`
-	TotalDrivingHours   float64   `json:"total_driving_hours"`
-	TotalDistance       float64   `json:"total_distance"`
-	TotalIdleHours      float64   `json:"total_idle_hours"`
-	SafetyScore         float64   `json:"safety_score"`
-	EcoScore            float64   `json:"eco_score"`
-	ViolationCount      int       `json:"violation_count"`
-	FatigueEventCount   int       `json:"fatigue_event_count"`
-	UpdatedAt           time.Time `json:"updated_at"`
-	LastRefreshedAt     time.Time `json:"last_refreshed_at"`
+	DriverID          uuid.UUID `json:"driver_id"`
+	OrganizationID    uuid.UUID `json:"organization_id"`
+	Date              time.Time `json:"date"`
+	TotalDrivingHours float64   `json:"total_driving_hours"`
+	TotalDistance     float64   `json:"total_distance"`
+	TotalIdleHours    float64   `json:"total_idle_hours"`
+	SafetyScore       float64   `json:"safety_score"`
+	EcoScore          float64   `json:"eco_score"`
+	ViolationCount    int       `json:"violation_count"`
+	FatigueEventCount int       `json:"fatigue_event_count"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	LastRefreshedAt   time.Time `json:"last_refreshed_at"`
 }
 
 // FleetHourlyStats represents pre-aggregated hourly metrics for the fleet

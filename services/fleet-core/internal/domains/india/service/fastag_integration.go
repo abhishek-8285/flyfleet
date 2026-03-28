@@ -83,7 +83,7 @@ func (s *FastagIntegrationServiceImpl) SyncTransactions(ctx context.Context) err
 	// 1. Fetch active integration configs for FASTag
 	// For simplicity, we'll assume a global sync or iterate through organizations
 	// In a real scenario, we'd list all organizations with active FASTag integration
-	
+
 	// Example: Fetch last 24h for all configured tags
 	// This is a simplified version
 	now := time.Now()
@@ -101,7 +101,7 @@ func (s *FastagIntegrationServiceImpl) getMockNPCITransactions(orgID uuid.UUID, 
 			ID:              uuid.New().String(),
 			TagNumber:       tagNumber,
 			VehicleID:       uuid.New(), // In real case, link to actual vehicle
-			DriverID:        uuid.New(),  // In real case, link to actual driver
+			DriverID:        uuid.New(), // In real case, link to actual driver
 			OrganizationID:  orgID,
 			TransactionID:   fmt.Sprintf("TXN-%d", time.Now().UnixNano()),
 			TransactionType: "debit",

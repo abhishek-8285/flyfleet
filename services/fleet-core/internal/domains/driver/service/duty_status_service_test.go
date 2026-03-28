@@ -81,7 +81,7 @@ func TestDutyStatusService_CheckIndiaDrivingEligibility(t *testing.T) {
 		assert.Contains(t, err.Error(), "30-minute break required after 5h driving")
 		mockRepo.AssertExpectations(t)
 	})
-	
+
 	t.Run("Compliant - With break after 5h", func(t *testing.T) {
 		now := time.Now()
 		drivingStart := now.Add(-6 * time.Hour)

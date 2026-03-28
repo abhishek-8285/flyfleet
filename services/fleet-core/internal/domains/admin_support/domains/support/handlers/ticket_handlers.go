@@ -15,6 +15,28 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 )
 
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createTicketRequestDTO struct {
+	Title       string   `json:"title" validate:"required"`
+	Description string   `json:"description"`
+	Priority    string   `json:"priority" validate:"omitempty,oneof=LOW MEDIUM HIGH CRITICAL"`
+	Category    string   `json:"category"`
+	Tags        []string `json:"tags"`
+}
+
+type updateTicketStatusRequestDTO struct {
+	Status string `json:"status" validate:"required,oneof=OPEN IN_PROGRESS RESOLVED CLOSED ESCALATED"`
+}
+
+type assignTicketRequestDTO struct {
+	AssignedTo uuid.UUID `json:"assigned_to" validate:"required"`
+}
+
+type addCommentRequestDTO struct {
+	Content   string `json:"content" validate:"required"`
+	IsPrivate bool   `json:"is_private"`
+}
+
 type TicketHandlers struct {
 	service service.TicketService
 	logger  *zap.Logger
@@ -42,7 +64,7 @@ func (h *TicketHandlers) RegisterRoutes(r chi.Router) {
 // Dashboard APIs
 func (h *TicketHandlers) GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
-	
+
 	summary, err := h.service.GetDashboardSummary(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("Failed to get dashboard summary", zap.Error(err))
@@ -55,7 +77,7 @@ func (h *TicketHandlers) GetDashboardSummary(w http.ResponseWriter, r *http.Requ
 
 func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
-	
+
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10
 	if limitStr != "" {
@@ -88,7 +110,7 @@ func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Reques
 		if ticket.AssignedTo != nil {
 			assignedTo = ticket.AssignedTo.String()[:8] // Short ID for display
 		}
-		
+
 		activity = append(activity, ActivityItem{
 			ID:          ticket.TicketID,
 			Subject:     ticket.Title,
@@ -105,13 +127,22 @@ func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Reques
 
 // Incident Management APIs
 func (h *TicketHandlers) CreateTicket(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateTicketRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto createTicketRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := ValidateRequest(&req); err != nil {
+	// Map DTO to model
+	req := &models.CreateTicketRequest{
+		Title:       dto.Title,
+		Description: dto.Description,
+		Priority:    dto.Priority,
+		Category:    dto.Category,
+		Tags:        dto.Tags,
+	}
+
+	if err := ValidateRequest(req); err != nil {
 		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -119,7 +150,7 @@ func (h *TicketHandlers) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	userID := h.getUserID(r)
 
-	ticket, err := h.service.CreateTicket(r.Context(), &req, orgID, userID)
+	ticket, err := h.service.CreateTicket(r.Context(), req, orgID, userID)
 	if err != nil {
 		h.logger.Error("Failed to create ticket", zap.Error(err))
 		h.errorJSON(w, "Failed to create ticket", http.StatusInternalServerError)
@@ -148,7 +179,7 @@ func (h *TicketHandlers) GetTicket(w http.ResponseWriter, r *http.Request) {
 
 func (h *TicketHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	var filter models.TicketFilter
-	
+
 	// Parse query parameters
 	query := r.URL.Query()
 	if status := query.Get("status"); status != "" {
@@ -163,13 +194,13 @@ func (h *TicketHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	if q := query.Get("q"); q != "" {
 		filter.Query = q
 	}
-	
+
 	if pageStr := query.Get("page"); pageStr != "" {
 		if page, err := strconv.Atoi(pageStr); err == nil {
 			filter.Page = page
 		}
 	}
-	
+
 	if pageSizeStr := query.Get("page_size"); pageSizeStr != "" {
 		if pageSize, err := strconv.Atoi(pageSizeStr); err == nil {
 			filter.PageSize = pageSize
@@ -199,13 +230,18 @@ func (h *TicketHandlers) UpdateTicketStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var req models.UpdateTicketStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto updateTicketStatusRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := ValidateRequest(&req); err != nil {
+	// Map DTO to model
+	req := &models.UpdateTicketStatusRequest{
+		Status: dto.Status,
+	}
+
+	if err := ValidateRequest(req); err != nil {
 		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -229,13 +265,18 @@ func (h *TicketHandlers) AssignTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.AssignTicketRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto assignTicketRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := ValidateRequest(&req); err != nil {
+	// Map DTO to model
+	req := &models.AssignTicketRequest{
+		AssignedTo: dto.AssignedTo,
+	}
+
+	if err := ValidateRequest(req); err != nil {
 		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -259,13 +300,19 @@ func (h *TicketHandlers) AddComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.AddCommentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto addCommentRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if err := ValidateRequest(&req); err != nil {
+	// Map DTO to model
+	req := &models.AddCommentRequest{
+		Content:   dto.Content,
+		IsPrivate: dto.IsPrivate,
+	}
+
+	if err := ValidateRequest(req); err != nil {
 		h.errorJSON(w, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -273,7 +320,7 @@ func (h *TicketHandlers) AddComment(w http.ResponseWriter, r *http.Request) {
 	userID := h.getUserID(r)
 	authorName := "Support Agent" // Would come from user context
 
-	err = h.service.AddComment(r.Context(), id, userID, &req, authorName)
+	err = h.service.AddComment(r.Context(), id, userID, req, authorName)
 	if err != nil {
 		h.logger.Error("Failed to add comment", zap.Error(err))
 		h.errorJSON(w, "Failed to add comment", http.StatusInternalServerError)

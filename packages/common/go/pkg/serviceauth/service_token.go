@@ -8,7 +8,7 @@
 //	token, _ := issuer.IssueToken()
 //	// attach token to outgoing gRPC metadata / HTTP header
 //
-//	verifier := serviceauth.NewTokenVerifier("shared-secret")
+//	verifier := serviceauth.NewTokenVerifier("shared-secret", "web-bff", "api-gateway") // specify allowed services
 //	claims, err := verifier.Verify(token)
 package serviceauth
 
@@ -61,12 +61,22 @@ func (ti *TokenIssuer) IssueToken() (string, error) {
 
 // TokenVerifier validates incoming service tokens.
 type TokenVerifier struct {
-	secret []byte
+	secret         []byte
+	allowedServiceIDs map[string]bool // Set of service IDs that are accepted; nil or empty means no restriction (INSECURE)
 }
 
 // NewTokenVerifier creates a verifier using the shared S2S secret.
-func NewTokenVerifier(secret string) *TokenVerifier {
-	return &TokenVerifier{secret: []byte(secret)}
+// allowedServiceIDs is a list of service IDs that this verifier will accept.
+// At least one service ID must be provided for secure operation.
+func NewTokenVerifier(secret string, allowedServiceIDs ...string) *TokenVerifier {
+	allowed := make(map[string]bool)
+	for _, id := range allowedServiceIDs {
+		allowed[id] = true
+	}
+	return &TokenVerifier{
+		secret:         []byte(secret),
+		allowedServiceIDs: allowed,
+	}
 }
 
 // Verify parses and validates a service JWT, returning the claims on success.
@@ -88,6 +98,17 @@ func (tv *TokenVerifier) Verify(tokenString string) (*ServiceClaims, error) {
 
 	if claims.Issuer != "flyfleet-s2s" {
 		return nil, fmt.Errorf("token issuer mismatch: got %q", claims.Issuer)
+	}
+
+	// Validate ServiceID is in allowed set
+	if len(tv.allowedServiceIDs) > 0 {
+		if !tv.allowedServiceIDs[claims.ServiceID] {
+			return nil, fmt.Errorf("service not authorized: %s", claims.ServiceID)
+		}
+	} else {
+		// SECURITY: No allowed services configured - this is insecure but allowed for backward compatibility.
+		// In production, always specify allowedServiceIDs.
+		// Consider using a build tag or environment check to panic in secure builds.
 	}
 
 	return claims, nil

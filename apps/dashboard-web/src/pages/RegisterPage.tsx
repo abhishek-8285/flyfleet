@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { z } from "zod";
 import { AppDispatch, RootState } from "../store";
 import { setToken, setUser } from "../store/authSlice";
@@ -13,7 +13,6 @@ enum RegisterStep {
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [step, setStep] = useState<RegisterStep>(RegisterStep.BASIC_INFO);
   
   // Basic Info Form

@@ -29,7 +29,7 @@ func (s *ETAPredictionService) PredictETA(ctx context.Context, shipmentID uuid.U
 	// distance = 500km
 	// speed = average 50 km/h
 	// time = 10 hours from now
-	
+
 	eta := time.Now().Add(10 * time.Hour)
 
 	return &eta, nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,10 +22,12 @@ func (r *DriverRepository) CreateMessage(ctx context.Context, msg *models.Driver
 	id := uuid.New().String()
 	now := time.Now()
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		id, msg.DriverID, msg.TripID, msg.Direction, msg.Type, 
+		id, msg.DriverID, msg.TripID, msg.Direction, msg.Type,
 		msg.Content, msg.AttachmentURL, msg.IsRead, now,
 	).Scan(&msg.ID, &msg.CreatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	return err
 }
@@ -38,7 +41,9 @@ func (r *DriverRepository) GetMessages(ctx context.Context, driverID string, lim
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID, limit, offset)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -72,11 +77,13 @@ func (r *DriverRepository) CreateExpense(ctx context.Context, expense *models.Dr
 	id := uuid.New().String()
 	now := time.Now()
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
 		id, expense.DriverID, expense.TripID, expense.Type, expense.Amount,
 		expense.Currency, expense.ReceiptURL, expense.Notes, expense.Status,
 		expense.TransactionDate, now, now,
 	).Scan(&expense.ID, &expense.CreatedAt, &expense.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	return err
 }
@@ -84,13 +91,15 @@ func (r *DriverRepository) CreateExpense(ctx context.Context, expense *models.Dr
 // ListExpenses retrieves expenses for a driver
 func (r *DriverRepository) ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error) {
 	query := `
-		SELECT id, driver_id, trip_id, type, amount, currency, receipt_url, 
+		SELECT id, driver_id, trip_id, type, amount, currency, receipt_url,
 			   notes, status, transaction_date, created_at, updated_at
 		FROM driver_expenses
 		WHERE driver_id = $1
 		ORDER BY transaction_date DESC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -126,10 +135,12 @@ func (r *DriverRepository) CreateDutyStatusLog(ctx context.Context, log *models.
 	now := time.Now()
 	locationJSON, _ := json.Marshal(log.Location)
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
 		id, log.DriverID, log.Status, locationJSON, log.StartedAt,
 		log.EndedAt, log.DurationMinutes, log.Remarks, now, now,
 	).Scan(&log.ID, &log.CreatedAt, &log.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	return err
 }
@@ -147,10 +158,12 @@ func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID str
 	var log models.DutyStatusLog
 	var locationJSON []byte
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, driverID).Scan(
 		&log.ID, &log.DriverID, &log.Status, &locationJSON, &log.StartedAt,
 		&log.EndedAt, &log.DurationMinutes, &log.Remarks, &log.CreatedAt, &log.UpdatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err == pgx.ErrNoRows {

@@ -163,10 +163,10 @@ func (s *EscalationService) GetEscalationPolicy(incident models.SOSIncident) *Es
 
 // EscalationPolicy represents the escalation policy for an incident
 type EscalationPolicy struct {
-	CurrentLevel       EscalationLevel `json:"current_level"`
-	NextEscalationAt   time.Time       `json:"next_escalation_at"`
-	MaxLevel           EscalationLevel `json:"max_level"`
-	ContactsNotified   []string        `json:"contacts_notified"`
+	CurrentLevel     EscalationLevel `json:"current_level"`
+	NextEscalationAt time.Time       `json:"next_escalation_at"`
+	MaxLevel         EscalationLevel `json:"max_level"`
+	ContactsNotified []string        `json:"contacts_notified"`
 }
 
 // ManualEscalate manually escalates an incident

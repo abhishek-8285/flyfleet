@@ -19,7 +19,7 @@ func TestBitmaskMath(t *testing.T) {
 	// Assign roles
 	userMask = permissions.AssignPermission(userMask, permissions.PermReadVehicles) // 1
 	userMask = permissions.AssignPermission(userMask, permissions.PermWriteCosts)   // 8
-	
+
 	if userMask != 9 {
 		t.Fatalf("Expected Mask to be 9, got %d", userMask)
 	}
@@ -41,7 +41,7 @@ func TestBitmaskMath(t *testing.T) {
 	// 4. Test overflow safety bounds (64-bit shifting)
 	var maxPerm permissions.Permission = 1 << 63
 	userMask = permissions.AssignPermission(userMask, maxPerm)
-	
+
 	if !permissions.HasPermission(userMask, maxPerm) {
 		t.Fatalf("Failed to register 64th bit (left-shift 63) correctly in uint64 mask")
 	}
@@ -81,17 +81,17 @@ func TestRequirePermissionsMiddleware(t *testing.T) {
 		},
 		{
 			name:       "Granted Native uint64",
-			presetMask: uint64(2), 
+			presetMask: uint64(2),
 			wantStatus: http.StatusOK,
 		},
 		{
 			name:       "Denied due to lacking specific bit (has Read 1, needs Write 2)",
-			presetMask: float64(1), 
+			presetMask: float64(1),
 			wantStatus: http.StatusForbidden,
 		},
 		{
 			name:       "Denied due to completely empty context",
-			presetMask: nil, 
+			presetMask: nil,
 			wantStatus: http.StatusForbidden,
 		},
 	}

@@ -50,7 +50,7 @@ const SSOCallback: React.FC = () => {
     };
 
     handleCallback();
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, dispatch]);
 
   return (
     <EnterpriseAuthLayout

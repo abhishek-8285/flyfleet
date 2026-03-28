@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"log"
+	"os"
 	"time"
-	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -39,7 +40,10 @@ func main() {
 
 	// Seed into database
 	ctx := context.Background()
-	dbURL := "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatal(err)

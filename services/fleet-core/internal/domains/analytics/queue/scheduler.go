@@ -11,7 +11,7 @@ const (
 	TypeRefreshFleetHourlyStats  = "analytics:refresh:fleet_hourly"
 	TypeRefreshVehicleDailyStats = "analytics:refresh:vehicle_daily"
 	TypeRefreshDriverDailyStats  = "analytics:refresh:driver_daily"
-	TypeAnalyticsRetentionCycle = "analytics:retention:cycle"
+	TypeAnalyticsRetentionCycle  = "analytics:retention:cycle"
 	TypeAnalyticsReconciliation  = "analytics:ops:reconciliation"
 )
 

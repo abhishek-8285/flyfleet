@@ -6,8 +6,6 @@ import {
 } from "../../../store/telemetrySlice";
 import { WorkerManager } from "../../../workers/utils/WorkerManager";
 
-const SAB_SIZE = 1024 * 1024; // 1MB for telemetry ring buffer
-
 interface TelemetryMetrics {
   fps: number;
   dropCount: number;

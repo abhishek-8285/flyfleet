@@ -46,9 +46,9 @@ jobs:
 
       - name: Verify Coverage Targets
         run: |
-          # 90% handlers, 95% service, 90% repository, 100% security logic
-          echo "Verifying coverage boundaries..."
-          # bash scripts/check_auth_coverage.sh
+          echo "🔍 Verifying coverage thresholds..."
+          # Run coverage check with minimum 70% threshold
+          bash scripts/check_coverage.sh 70
 
   load-test:
     name: Load Tests

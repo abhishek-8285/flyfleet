@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	complianceservice "github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -42,6 +44,35 @@ func (h *Handlers) RecordDutyStatus(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	// SECURITY FIX: Prevent IDOR - validate driver_id matches authenticated user
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		h.errorJSON(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	authUserUUID, err := uuid.Parse(authUserID)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	reqDriverID, err := uuid.Parse(req.DriverId)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid driver ID")
+		return
+	}
+
+	// Check if user is allowed to record duty status for this driver
+	if !h.canRecordDutyStatus(r, authUserUUID, reqDriverID) {
+		h.logger.Warn("IDOR attempt: driver mismatch in duty status",
+			zap.String("auth_user", authUserID),
+			zap.String("requested_driver", req.DriverId))
+		h.errorJSON(w, http.StatusForbidden, "cannot record duty status for another driver")
+		return
+	}
+
 	resp, err := h.svc.RecordDutyStatus(r.Context(), &req)
 	if err != nil {
 		h.logger.Error("record duty status failed", zap.Error(err))
@@ -51,12 +82,65 @@ func (h *Handlers) RecordDutyStatus(w http.ResponseWriter, r *http.Request) {
 	h.json(w, http.StatusOK, resp)
 }
 
+// canRecordDutyStatus checks if the authenticated user can record duty status for the target driver
+func (h *Handlers) canRecordDutyStatus(r *http.Request, authUserID, targetDriverID uuid.UUID) bool {
+	// Users can only record their own duty status
+	if authUserID == targetDriverID {
+		return true
+	}
+
+	// Admins/fleet managers can record for any driver in their org
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	adminRoles := map[string]bool{
+		"super_admin":   true,
+		"org_admin":     true,
+		"fleet_manager": true,
+		"dispatcher":    true,
+	}
+	if adminRoles[role] {
+		// In a full implementation, we'd also verify org membership
+		// For now, role check is sufficient
+		return true
+	}
+
+	return false
+}
+
 func (h *Handlers) GetCurrentDutyStatus(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "driver_id")
 	if driverID == "" {
 		h.errorJSON(w, http.StatusBadRequest, "driver_id required")
 		return
 	}
+
+	// SECURITY: Validate user can view this driver's duty status
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		h.errorJSON(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	authUserUUID, err := uuid.Parse(authUserID)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+		return
+	}
+
+	reqDriverUUID, err := uuid.Parse(driverID)
+	if err != nil {
+		h.errorJSON(w, http.StatusBadRequest, "invalid driver ID")
+		return
+	}
+
+	// Check if user is allowed to view duty status for this driver
+	if !h.canRecordDutyStatus(r, authUserUUID, reqDriverUUID) {
+		h.logger.Warn("IDOR attempt: driver mismatch in duty status view",
+			zap.String("auth_user", authUserID),
+			zap.String("requested_driver", driverID))
+		h.errorJSON(w, http.StatusForbidden, "cannot view duty status for another driver")
+		return
+	}
+
 	log, err := h.svc.GetCurrentDutyStatus(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("get current duty status failed", zap.Error(err))

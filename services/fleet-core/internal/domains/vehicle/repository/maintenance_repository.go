@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,14 +34,21 @@ func (r *MaintenanceScheduleRepository) Upsert(ctx context.Context, s *models.Ma
 			updated_at            = NOW()
 		RETURNING created_at, updated_at`
 
-	return r.db.QueryRow(ctx, query,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
 		s.VehicleID, s.NextServiceDate, s.NextServiceOdometer,
 		s.EngineHours, s.PredictiveScore, s.LastServiceDate,
 	).Scan(&s.CreatedAt, &s.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return fmt.Errorf("failed to upsert maintenance schedule: %w", err)
+	}
+	return nil
 }
 
 func (r *MaintenanceScheduleRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*models.MaintenanceSchedule, error) {
 	s := &models.MaintenanceSchedule{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx, `
 		SELECT vehicle_id, next_service_date, next_service_odometer, engine_hours,
 		       predictive_score, last_service_date, created_at, updated_at
@@ -49,6 +58,9 @@ func (r *MaintenanceScheduleRepository) Get(ctx context.Context, vehicleID uuid.
 		&s.EngineHours, &s.PredictiveScore, &s.LastServiceDate,
 		&s.CreatedAt, &s.UpdatedAt,
 	)
+	metrics.RecordDBQuery(`SELECT vehicle_id, next_service_date, next_service_odometer, engine_hours,
+		       predictive_score, last_service_date, created_at, updated_at
+		FROM maintenance_schedule WHERE vehicle_id = $1`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil

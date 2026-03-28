@@ -43,7 +43,7 @@ func NewDeviceAlertService(repo *repository.DiagnosticsRepository) *DeviceAlertS
 func (s *DeviceAlertService) CreateAlert(ctx context.Context, deviceID uuid.UUID, alertType AlertType, severity AlertSeverity, msg string) error {
 	// Normally this would persist to the DB:
 	// INSERT INTO device_alerts (device_id, alert_type, severity, alert_message) ...
-	
+
 	// Emit event
 	fmt.Printf("[ALERT CREATED] Device %s: %s (%s) - %s\n", deviceID.String(), alertType, severity, msg)
 	return nil

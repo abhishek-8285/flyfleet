@@ -43,15 +43,15 @@ type ReportExecution struct {
 }
 
 type GlobalSettings struct {
-	ID               int       `json:"id" db:"id"`
+	ID                int       `json:"id" db:"id"`
 	MaxConcurrentJobs int       `json:"max_concurrent_jobs" db:"max_concurrent_jobs"`
-	MaxRetryAttempts int       `json:"max_retry_attempts" db:"max_retry_attempts"`
-	RetentionDays    int       `json:"retention_days" db:"retention_days"`
-	SMTPHost         *string   `json:"smtp_host" db:"smtp_host"`
-	SMTPPort         *int      `json:"smtp_port" db:"smtp_port"`
-	SMTPUser         *string   `json:"smtp_user" db:"smtp_user"`
-	CreatedAt        time.Time `json:"created_at" db:"created_at"`
-	CreatedBy        uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedAt        time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy        uuid.UUID `json:"updated_by" db:"updated_by"`
+	MaxRetryAttempts  int       `json:"max_retry_attempts" db:"max_retry_attempts"`
+	RetentionDays     int       `json:"retention_days" db:"retention_days"`
+	SMTPHost          *string   `json:"smtp_host" db:"smtp_host"`
+	SMTPPort          *int      `json:"smtp_port" db:"smtp_port"`
+	SMTPUser          *string   `json:"smtp_user" db:"smtp_user"`
+	CreatedAt         time.Time `json:"created_at" db:"created_at"`
+	CreatedBy         uuid.UUID `json:"created_by" db:"created_by"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	UpdatedBy         uuid.UUID `json:"updated_by" db:"updated_by"`
 }

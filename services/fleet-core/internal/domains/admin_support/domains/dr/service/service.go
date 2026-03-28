@@ -286,7 +286,7 @@ func (s *drService) CreateDRTest(ctx context.Context, test *models.DRTest) (*mod
 	test.CreatedAt = now
 	test.UpdatedAt = now
 	test.ProgressPercent = 0
-	
+
 	userID := s.getUserID(ctx)
 	test.CreatedBy = userID
 	test.UpdatedBy = userID

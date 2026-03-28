@@ -23,7 +23,7 @@ func setupTest() (http.Handler, *mocks.MockNotificationRepository) {
 	logger := zap.NewNop()
 	svc := service.NewNotificationService(mockRepo, logger)
 	h := NewNotificationHandlers(svc, logger)
-	
+
 	r := chi.NewRouter()
 	r.Route("/api/v1/admin/notifications", func(r chi.Router) {
 		r.Post("/{id}/resend", h.Resend)
@@ -38,7 +38,7 @@ func TestHandlers_Validation(t *testing.T) {
 	t.Run("Resend_InvalidReason", func(t *testing.T) {
 		body := map[string]any{"reason": "no"} // too short (min=3)
 		jsonBody, _ := json.Marshal(body)
-		
+
 		req, _ := http.NewRequest("POST", "/api/v1/admin/notifications/00000000-0000-0000-0000-000000000000/resend", bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
@@ -58,7 +58,7 @@ func TestHandlers_Validation(t *testing.T) {
 			},
 		}
 		jsonBody, _ := json.Marshal(settings)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/settings", bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
@@ -78,7 +78,7 @@ func TestHandlers_Validation(t *testing.T) {
 			},
 		}
 		jsonBody, _ := json.Marshal(settings)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/settings", bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)

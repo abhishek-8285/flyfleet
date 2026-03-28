@@ -8,7 +8,7 @@ import (
 
 type VehicleDowntime struct {
 	ID              uuid.UUID  `json:"id" db:"id"`
-	OrganizationID  uuid.UUID  `json:"organization_id" db:"organization_id"`
+	OrgID           uuid.UUID  `json:"org_id" db:"org_id"`
 	VehicleID       uuid.UUID  `json:"vehicle_id" db:"vehicle_id"`
 	WorkOrderID     *uuid.UUID `json:"work_order_id,omitempty" db:"work_order_id"`
 	DowntimeStart   time.Time  `json:"downtime_start" db:"downtime_start"`
@@ -19,9 +19,9 @@ type VehicleDowntime struct {
 }
 
 type DowntimeMetrics struct {
-	VehicleID       uuid.UUID `json:"vehicle_id"`
-	MTTR            float64   `json:"mtr_minutes"`             // Mean Time To Repair
-	MTBF            float64   `json:"mtbf_days"`               // Mean Time Between Failures
-	TotalDowntime   int       `json:"total_downtime_minutes"`
-	MaintenanceCount int      `json:"maintenance_count"`
+	VehicleID        uuid.UUID `json:"vehicle_id"`
+	MTTR             float64   `json:"mtr_minutes"` // Mean Time To Repair
+	MTBF             float64   `json:"mtbf_days"`   // Mean Time Between Failures
+	TotalDowntime    int       `json:"total_downtime_minutes"`
+	MaintenanceCount int       `json:"maintenance_count"`
 }

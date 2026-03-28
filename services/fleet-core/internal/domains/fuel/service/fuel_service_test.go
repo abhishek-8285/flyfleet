@@ -108,8 +108,8 @@ func TestOdometerValidation(t *testing.T) {
 	}{
 		{10000.0, 10500.0, true},
 		{10000.0, 10000.0, true}, // Same is fine (maybe same day)
-		{10000.0, 9500.0, false},  // Backwards is wrong
-		{0.0, 10.0, true},         // First entry
+		{10000.0, 9500.0, false}, // Backwards is wrong
+		{0.0, 10.0, true},        // First entry
 	}
 
 	for _, tt := range tests {

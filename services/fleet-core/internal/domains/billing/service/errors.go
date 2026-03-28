@@ -4,20 +4,20 @@ import "errors"
 
 // Invoice service errors
 var (
-	ErrInvoiceNotFound          = errors.New("invoice not found")
-	ErrInvoiceImmutable         = errors.New("invoice cannot be modified after being issued")
-	ErrInvoiceAlreadyPaid       = errors.New("invoice is already fully paid")
-	ErrPaymentExceedsOutstanding = errors.New("payment amount exceeds outstanding balance")
-	ErrDueDateBeforeInvoiceDate = errors.New("due date cannot be before invoice date")
-	ErrInvalidInvoiceStatus     = errors.New("invalid invoice status")
-	ErrInvalidStatusTransition  = errors.New("invalid status transition")
+	ErrInvoiceNotFound                = errors.New("invoice not found")
+	ErrInvoiceImmutable               = errors.New("invoice cannot be modified after being issued")
+	ErrInvoiceAlreadyPaid             = errors.New("invoice is already fully paid")
+	ErrPaymentExceedsOutstanding      = errors.New("payment amount exceeds outstanding balance")
+	ErrDueDateBeforeInvoiceDate       = errors.New("due date cannot be before invoice date")
+	ErrInvalidInvoiceStatus           = errors.New("invalid invoice status")
+	ErrInvalidStatusTransition        = errors.New("invalid status transition")
 	ErrCreditNoteMustReferenceInvoice = errors.New("credit note must reference an original invoice")
-	ErrInvalidOriginalInvoice   = errors.New("original invoice not found or not in issued status")
-	ErrInvoiceNumberNotUnique   = errors.New("invoice number must be unique per organization and financial year")
-	ErrInvalidGSTINFormat       = errors.New("invalid GSTIN format (must be 15 characters)")
-	ErrInvalidPANFormat         = errors.New("invalid PAN format (must be 10 characters)")
-	ErrNegativeAmount           = errors.New("amount cannot be negative")
-	ErrInvalidCurrencyPrecision = errors.New("currency amount must have exactly 2 decimal places")
+	ErrInvalidOriginalInvoice         = errors.New("original invoice not found or not in issued status")
+	ErrInvoiceNumberNotUnique         = errors.New("invoice number must be unique per organization and financial year")
+	ErrInvalidGSTINFormat             = errors.New("invalid GSTIN format (must be 15 characters)")
+	ErrInvalidPANFormat               = errors.New("invalid PAN format (must be 10 characters)")
+	ErrNegativeAmount                 = errors.New("amount cannot be negative")
+	ErrInvalidCurrencyPrecision       = errors.New("currency amount must have exactly 2 decimal places")
 )
 
 // InvoiceStatusTransition defines valid status transitions

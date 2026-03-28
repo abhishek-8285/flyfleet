@@ -28,7 +28,7 @@ func NewAccessReviewService(repo repository.GovernanceRepository, db *pgxpool.Po
 func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUID) (interface{}, error) {
 	// 1. Get users from organization
 	// 2. Get roles and permissions (Assume we query from RBAC tables)
-	
+
 	usersQuery := `
 		SELECT u.id, u.role, ARRAY_AGG(p.slug) as permissions
 		FROM users u
@@ -51,16 +51,16 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUI
 			continue
 		}
 		users = append(users, map[string]interface{}{
-			"user_id": id,
-			"role": role,
+			"user_id":     id,
+			"role":        role,
 			"permissions": perms,
 		})
 	}
 
 	report := map[string]interface{}{
-		"generated_at": time.Now(),
+		"generated_at":    time.Now(),
 		"organization_id": orgID,
-		"users": users,
+		"users":           users,
 	}
 
 	// Log audit log

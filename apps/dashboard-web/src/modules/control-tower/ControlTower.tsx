@@ -67,7 +67,7 @@ const ControlTower: React.FC = () => {
   } = useTelemetryStream();
 
   // Multi-Monitor Synchronization
-  const [isSyncEnabled, setIsSyncEnabled] = React.useState(false);
+  const [isSyncEnabled] = React.useState(false);
   const { broadcastViewport, broadcastSimControl } = useMultiMonitor({
     onViewportSync: (bounds: {
       minLng: number;

@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
-	internalmw "github.com/flyfleet/fleet-core-service/internal/middleware"
-	pb "github.com/flyfleet/proto/auth/v1"
 	"github.com/fleet-platform/shared/pkg/middleware"
+	authmetrics "github.com/flyfleet/fleet-core-service/internal/domains/auth"
+	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	internalmw "github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	pb "github.com/flyfleet/proto/auth/v1"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
@@ -46,9 +47,10 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.With(loginLimit).Post("/login", h.Login)
 		r.Post("/refresh", h.RefreshToken)
 		r.Post("/revoke", h.RevokeToken)
+		r.Post("/logout", h.Logout) // Clear cookies and revoke refresh token
 		r.With(registerLimit).Post("/register", h.Register)
 		r.Post("/validate-token", h.ValidateToken)
-		r.Post("/login/mfa/verify", h.VerifyLoginMFA)
+		r.With(loginLimit).Post("/login/mfa/verify", h.VerifyLoginMFA)
 		r.Post("/login/mfa/setup", h.SetupAdminMFA)
 		r.Post("/login/oidc/{provider}", h.LoginOIDC)
 		r.Post("/password/reset/request", h.RequestPasswordReset)
@@ -87,15 +89,15 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/stats", h.GetStats)
 			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/security-telemetry", h.GetSecurityTelemetry)
 			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/audit-logs", h.GetAuditLogs)
-			
+
 			// Admin Console endpoints
 			r.Post("/api-keys", h.CreateAPIKey)
 			r.Get("/api-keys", h.ListAPIKeys)
 			r.Post("/api-keys/{id}/revoke", h.RevokeAPIKey)
-			
+
 			r.Post("/service-accounts", h.CreateServiceAccount)
 			r.Get("/service-accounts", h.ListServiceAccounts)
-			
+
 			r.With(internalmw.RequireRole(h.logger, "super_admin")).Post("/emergency-revoke", h.EmergencyRevoke)
 		})
 
@@ -115,8 +117,6 @@ func (h *Handlers) errorJSON(w http.ResponseWriter, status int, msg string) {
 
 // Rate limiting refactored to middleware
 
-
-
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email    string `json:"email"`
@@ -127,11 +127,27 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	// Record auth metrics
+	start := time.Now()
+	method := "password"
+	orgIDLabel := req.OrgID
+	if orgIDLabel == "" {
+		orgIDLabel = "unknown"
+	}
+	// Count attempt (we'll increment either success or failure after service call)
+	defer func() {
+		duration := time.Since(start).Seconds()
+		authmetrics.LoginDuration.WithLabelValues(orgIDLabel, method).Observe(duration)
+	}()
+
 	// We pass empty string for IP and UA as they are captured by middleware now
 	// Or we can extract them if needed by the service, but let's keep it simple.
 	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.OrgID, "", "")
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
+		// Increment failed login attempts metric
+		authmetrics.LoginAttemptsTotal.WithLabelValues(orgIDLabel, method, "failure").Inc()
 		if strings.Contains(err.Error(), "locked") {
 			h.errorJSON(w, http.StatusForbidden, "account_locked")
 			return
@@ -139,24 +155,82 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+
+	// Success: increment both attempts (with success) and success metric
+	authmetrics.LoginAttemptsTotal.WithLabelValues(orgIDLabel, method, "success").Inc()
+	authmetrics.LoginSuccessTotal.WithLabelValues(orgIDLabel, method, "user").Inc()
+
+	// SECURITY FIX: Set refresh token as HttpOnly cookie to prevent XSS theft
+	// Access token is returned in body and should be stored in memory only (not localStorage)
+	secure := os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    resp.RefreshToken,
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   secure, // Set Secure only in production/HTTPS
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().Add(7 * 24 * time.Hour), // 7 days
+	})
+
+	// Remove refresh token from JSON response to discourage localStorage storage
+	resp.RefreshToken = ""
+
 	h.json(w, http.StatusOK, resp)
 }
 
 func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
-		return
+	// SECURITY FIX: Read refresh token from HttpOnly cookie (not request body)
+	var refreshToken string
+	if cookie, err := r.Cookie("refresh_token"); err == nil {
+		refreshToken = cookie.Value
+	} else {
+		// Fallback: try request body for backward compatibility during migration
+		var req struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil && req.RefreshToken != "" {
+			refreshToken = req.RefreshToken
+		} else {
+			h.errorJSON(w, http.StatusBadRequest, "refresh token required")
+			return
+		}
 	}
 
-	resp, err := h.svc.RefreshToken(r.Context(), req.RefreshToken, "", "")
+	// Determine if we should set Secure flag (production vs localhost)
+	secure := os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true"
+
+	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, "", "")
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
+		// Clear invalid refresh cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    "",
+			Path:     "/api/v1/auth",
+			HttpOnly: true,
+			Secure:   secure,
+			SameSite: http.SameSiteStrictMode,
+			Expires:  time.Now().Add(-1 * time.Hour),
+		})
 		h.errorJSON(w, http.StatusUnauthorized, "invalid or expired refresh token")
 		return
 	}
+
+	// SECURITY FIX: Set new refresh token as HttpOnly cookie, rotate cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    resp.RefreshToken,
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+	})
+
+	// Remove refresh token from response body to discourage localStorage
+	resp.RefreshToken = ""
+
 	h.json(w, http.StatusOK, resp)
 }
 
@@ -175,6 +249,30 @@ func (h *Handlers) RevokeToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.json(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
+// Logout clears the refresh token cookie and revokes the token in the database
+func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
+	// Get refresh token from cookie
+	cookie, err := r.Cookie("refresh_token")
+	if err == nil && cookie.Value != "" {
+		// Revoke the token in the database
+		_ = h.svc.RevokeToken(r.Context(), cookie.Value)
+	}
+
+	// Clear the cookie by setting expired value
+	secure := os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/api/v1/auth",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+		Expires:  time.Now().Add(-1 * time.Hour),
+	})
+
+	h.json(w, http.StatusOK, map[string]string{"status": "logged_out"})
 }
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +311,46 @@ func (h *Handlers) ValidateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.json(w, http.StatusOK, map[string]any{"valid": true, "user": user})
+}
+
+// CheckPermission verifies whether the authenticated user has a specific permission.
+// Query parameters: action (e.g., "view"), resource (e.g., "vehicle")
+// Response: {"allowed": true/false}
+func (h *Handlers) CheckPermission(w http.ResponseWriter, r *http.Request) {
+	// Get user and org from context (set by JWKSAuthGate)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	if !ok {
+		h.errorJSON(w, http.StatusUnauthorized, "user not authenticated")
+		return
+	}
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		h.errorJSON(w, http.StatusBadRequest, "organization context required")
+		return
+	}
+
+	action := r.URL.Query().Get("action")
+	resource := r.URL.Query().Get("resource")
+	if action == "" || resource == "" {
+		h.errorJSON(w, http.StatusBadRequest, "missing action or resource")
+		return
+	}
+
+	permission := resource + ":" + action
+
+	allowed, err := h.svc.CheckPermission(r.Context(), userID, orgID, permission)
+	if err != nil {
+		h.logger.Error("CheckPermission failed",
+			zap.Error(err),
+			zap.String("permission", permission),
+			zap.String("user_id", userID.String()),
+			zap.String("org_id", orgID.String()),
+		)
+		h.errorJSON(w, http.StatusInternalServerError, "permission check failed")
+		return
+	}
+
+	h.json(w, http.StatusOK, map[string]bool{"allowed": allowed})
 }
 
 func (h *Handlers) ValidateInvite(w http.ResponseWriter, r *http.Request) {
@@ -265,14 +403,32 @@ func (h *Handlers) GetOrganization(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) ListOrganizations(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if page < 1 {
-		page = 1
+	// SECURITY FIX: Validate pagination parameters to prevent integer overflow
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	page := 1
+	limit := 20
+
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 && p <= 10000 {
+			page = p
+		} else {
+			h.errorJSON(w, http.StatusBadRequest, "invalid page parameter")
+			return
+		}
 	}
-	if limit < 1 {
-		limit = 20
+
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 500 {
+			limit = l
+		} else {
+			h.errorJSON(w, http.StatusBadRequest, "invalid limit parameter")
+			return
+		}
 	}
+
+	// Now calculation is safe because we validated bounds
 	offset := int32((page - 1) * limit)
 	orgs, total, err := h.svc.ListOrganizations(r.Context(), int32(limit), offset)
 	if err != nil {
@@ -301,14 +457,31 @@ func (h *Handlers) GetSecurityTelemetry(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if page < 1 {
-		page = 1
+	// SECURITY FIX: Validate pagination parameters to prevent integer overflow
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
+
+	page := 1
+	limit := 20
+
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 && p <= 10000 {
+			page = p
+		} else {
+			h.errorJSON(w, http.StatusBadRequest, "invalid page parameter")
+			return
+		}
 	}
-	if limit < 1 {
-		limit = 20
+
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 500 {
+			limit = l
+		} else {
+			h.errorJSON(w, http.StatusBadRequest, "invalid limit parameter")
+			return
+		}
 	}
+
 	offset := int32((page - 1) * limit)
 	logs, total, err := h.svc.GetAuditLogs(r.Context(), int32(limit), offset)
 	if err != nil {
@@ -333,14 +506,6 @@ func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fallback to header (legacy/manual)
-	if userID == uuid.Nil {
-		userIDStr := r.Header.Get("X-User-ID")
-		if userIDStr != "" {
-			userID, err = uuid.Parse(userIDStr)
-		}
-	}
-
 	if userID == uuid.Nil {
 		h.errorJSON(w, http.StatusBadRequest, "user ID required")
 		return
@@ -354,12 +519,12 @@ func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.json(w, http.StatusOK, map[string]any{
-		"secret":     secret,
-		"qr_uri":     uri,
-		"issuer":     "FlyFleet",
-		"algorithm":  "SHA1",
-		"digits":     6,
-		"period":     30,
+		"secret":    secret,
+		"qr_uri":    uri,
+		"issuer":    "FlyFleet",
+		"algorithm": "SHA1",
+		"digits":    6,
+		"period":    30,
 	})
 }
 
@@ -380,13 +545,6 @@ func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
 			userID = id
 		} else if idStr, ok := val.(string); ok {
 			userID, _ = uuid.Parse(idStr)
-		}
-	}
-
-	if userID == uuid.Nil {
-		userIDStr := r.Header.Get("X-User-ID")
-		if userIDStr != "" {
-			userID, _ = uuid.Parse(userIDStr)
 		}
 	}
 
@@ -419,15 +577,18 @@ func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) DisableMFA(w http.ResponseWriter, r *http.Request) {
-	userIDStr := r.Header.Get("X-User-ID")
-	if userIDStr == "" {
-		h.errorJSON(w, http.StatusBadRequest, "user ID required")
-		return
+	var userID uuid.UUID
+	// Extract from context (set by JWKS auth)
+	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
+		if id, ok := val.(uuid.UUID); ok {
+			userID = id
+		} else if idStr, ok := val.(string); ok {
+			userID, _ = uuid.Parse(idStr)
+		}
 	}
 
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
+	if userID == uuid.Nil {
+		h.errorJSON(w, http.StatusBadRequest, "user ID required")
 		return
 	}
 
@@ -726,7 +887,7 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
 	if !ok {
 		userIDStr, okStr := r.Context().Value(ctxkeys.UserIDKey).(string)

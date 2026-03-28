@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
 	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
+	"go.uber.org/zap"
 )
 
 type SyntheticCheckWorker struct {
@@ -66,7 +66,7 @@ func (w *SyntheticCheckWorker) runChecks(ctx context.Context) {
 		}
 
 		duration := time.Since(start).Milliseconds()
-		
+
 		checkResult := &models.SyntheticCheck{
 			CheckName:      c.name,
 			Status:         status,

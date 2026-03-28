@@ -5,13 +5,13 @@ type Permission uint64
 const (
 	// Shift positions map to the permission integer scale:
 	// 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, etc...
-	PermReadVehicles Permission = 1 << iota // 1: Can view fleet vehicles
-	PermWriteVehicles                       // 2: Can create/update fleet vehicles
-	PermReadCosts                           // 4: Can read sensitive financial/fuel data
-	PermWriteCosts                          // 8: Can update sensitive financial/fuel data
-	PermReadTrips                           // 16: Can view trip assignments and progress
-	PermWriteTrips                          // 32: Can dispatch or cancel trips
-	PermDeleteTrips                         // 64: Can completely delete a trip record
+	PermReadVehicles  Permission = 1 << iota // 1: Can view fleet vehicles
+	PermWriteVehicles                        // 2: Can create/update fleet vehicles
+	PermReadCosts                            // 4: Can read sensitive financial/fuel data
+	PermWriteCosts                           // 8: Can update sensitive financial/fuel data
+	PermReadTrips                            // 16: Can view trip assignments and progress
+	PermWriteTrips                           // 32: Can dispatch or cancel trips
+	PermDeleteTrips                          // 64: Can completely delete a trip record
 
 	// Add more permissions up to 64 limit...
 )

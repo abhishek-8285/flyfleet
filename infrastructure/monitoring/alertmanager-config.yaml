@@ -1,0 +1,142 @@
+global:
+  resolve_timeout: 5m
+
+  # SMTP configuration (if using email)
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alertmanager@flyfleet.com'
+  smtp_auth_username: 'alertmanager@flyfleet.com'
+  smtp_auth_password: 'replace-with-app-password'
+
+route:
+  group_by: ['alertname', 'service', 'severity', 'cluster']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical'
+      continue: false
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts - batched
+    - match:
+        severity: warning
+      receiver: 'warning'
+      continue: false
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Info/notification alerts
+    - match:
+        severity: info
+      receiver: 'info'
+      continue: false
+
+receivers:
+  # Default receiver (email digest)
+  - name: 'default'
+    email_configs:
+      - to: 'devops@flyfleet.com'
+        from: 'alertmanager@flyfleet.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'alertmanager@flyfleet.com'
+        auth_password: 'YOUR_APP_PASSWORD'
+        headers:
+          subject: '[FlyFleet] {{ .GroupLabels.alertname }}'
+        html: |
+          <html>
+          <body>
+            <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+            <p><strong>Status:</strong> {{ .Status }}</p>
+            <p><strong>StartsAt:</strong> {{ .StartsAt }}</p>
+            <h3>Labels:</h3>
+            <ul>
+            {{ range .CommonLabels }}
+              <li><strong>{{ .Name }}:</strong> {{ .Value }}</li>
+            {{ end }}
+            </ul>
+            <h3>Annotations:</h3>
+            <ul>
+            {{ range .CommonAnnotations }}
+              <li><strong>{{ .Name }}:</strong> {{ .Value }}</li>
+            {{ end }}
+            </ul>
+            <h3>Firing Alerts:</h3>
+            <ul>
+            {{ range .Alerts }}
+              <li>{{ .Labels.alertname }} ({{ .Labels.severity }}) - {{ .Annotations.description }}</li>
+            {{ end }}
+            </ul>
+          </body>
+          </html>
+
+  # Critical alerts (Slack + PagerDuty + SMS)
+  - name: 'critical'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#alerts-critical'
+        send_resolved: true
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}\n\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: 'danger'
+        fields:
+          - title: 'Service'
+            value: '{{ .GroupLabels.service }}'
+            short: true
+          - title: 'Severity'
+            value: 'critical'
+            short: true
+          - title: 'Cluster'
+            value: '{{ .GroupLabels.cluster }}'
+            short: true
+
+    pagerduty_configs:
+      - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+        severity: 'critical'
+
+    webhook_configs:
+      - url: 'https://api.pagerduty.com/incidents'
+        send_resolved: true
+        http_config:
+          bearer_token: 'YOUR_PAGERDUTY_API_TOKEN'
+        headers:
+          Content-Type: application/json
+        relabel_configs:
+          - source_labels: [__meta_alertname]
+            target_label: incident_key
+
+  # Warning alerts (Slack only)
+  - name: 'warning'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+        channel: '#alerts-warnings'
+        send_resolved: true
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        color: 'warning'
+
+  # Info alerts (log only)
+  - name: 'info'
+    # No notification channels - just log
+
+# Inhibition rules (suppress duplicate alerts)
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service', 'cluster']
+    # Don't inhibit if they have different services
+
+  - source_match:
+      alertname: 'KubePodCrashLooping'
+    target_match:
+      alertname: 'KubePodNotReady'
+    equal: ['namespace', 'pod']
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

@@ -3,11 +3,11 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
-	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
 )
 
 // Observability returns a middleware that instruments requests with OpenTelemetry tracing.

@@ -52,7 +52,7 @@ const (
 // WorkOrder represents a maintenance work order
 type WorkOrder struct {
 	ID              uuid.UUID           `json:"id" db:"id"`
-	OrganizationID  uuid.UUID           `json:"organization_id" db:"organization_id"`
+	OrgID           uuid.UUID           `json:"org_id" db:"org_id"`
 	VehicleID       uuid.UUID           `json:"vehicle_id" db:"vehicle_id"`
 	Title           string              `json:"title" db:"title"`
 	Description     *string             `json:"description,omitempty" db:"description"`
@@ -73,11 +73,11 @@ type WorkOrder struct {
 	UpdatedAt       time.Time           `json:"updated_at" db:"updated_at"`
 
 	// Joined data
-	Parts         []WorkOrderPart `json:"parts,omitempty"`
-	VehicleInfo   *VehicleInfo    `json:"vehicle,omitempty"`
-	AssigneeInfo  *UserInfo       `json:"assignee,omitempty"`
-	TotalPartsCost float64        `json:"total_parts_cost,omitempty"`
-	VendorInfo    *MaintenanceVendor `json:"vendor,omitempty"`
+	Parts          []WorkOrderPart    `json:"parts,omitempty"`
+	VehicleInfo    *VehicleInfo       `json:"vehicle,omitempty"`
+	AssigneeInfo   *UserInfo          `json:"assignee,omitempty"`
+	TotalPartsCost float64            `json:"total_parts_cost,omitempty"`
+	VendorInfo     *MaintenanceVendor `json:"vendor,omitempty"`
 }
 
 // CostBreakdown represents detailed maintenance costs
@@ -120,25 +120,25 @@ type WorkOrderPart struct {
 
 // InventoryPart represents a part in inventory
 type InventoryPart struct {
-	ID                uuid.UUID `json:"id" db:"id"`
-	OrganizationID    uuid.UUID `json:"organization_id" db:"organization_id"`
-	PartNumber        string    `json:"part_number" db:"part_number"`
-	Name              string    `json:"name" db:"name"`
-	Description       *string   `json:"description,omitempty" db:"description"`
-	StockLocation     *string   `json:"location,omitempty" db:"stock_location"`
-	QuantityAvailable int      `json:"quantity" db:"quantity_available"`
-	ReorderLevel      int       `json:"reorder_level" db:"reorder_level"`
-	UnitCost          float64   `json:"unit_price" db:"unit_cost"`
-	Category          string    `json:"category,omitempty" db:"category"`
-	CompatibleVehicles []string `json:"compatible_vehicles,omitempty" db:"compatible_vehicles"`
-	CreatedAt         time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	ID                 uuid.UUID `json:"id" db:"id"`
+	OrgID              uuid.UUID `json:"org_id" db:"org_id"`
+	PartNumber         string    `json:"part_number" db:"part_number"`
+	Name               string    `json:"name" db:"name"`
+	Description        *string   `json:"description,omitempty" db:"description"`
+	StockLocation      *string   `json:"location,omitempty" db:"stock_location"`
+	QuantityAvailable  int       `json:"quantity" db:"quantity_available"`
+	ReorderLevel       int       `json:"reorder_level" db:"reorder_level"`
+	UnitCost           float64   `json:"unit_price" db:"unit_cost"`
+	Category           string    `json:"category,omitempty" db:"category"`
+	CompatibleVehicles []string  `json:"compatible_vehicles,omitempty" db:"compatible_vehicles"`
+	CreatedAt          time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // MaintenanceVendor represents a service provider or part supplier
 type MaintenanceVendor struct {
 	ID             uuid.UUID      `json:"id" db:"id"`
-	OrganizationID uuid.UUID      `json:"organization_id" db:"organization_id"`
+	OrgID          uuid.UUID      `json:"org_id" db:"org_id"`
 	Name           string         `json:"name" db:"name"`
 	Specialization string         `json:"specialization,omitempty" db:"specialization"`
 	Rating         float64        `json:"rating" db:"rating"`
@@ -151,15 +151,15 @@ type MaintenanceVendor struct {
 
 // InspectionTemplate defines the structure of a digital checklist
 type InspectionTemplate struct {
-	ID                     uuid.UUID      `json:"id" db:"id"`
-	OrganizationID         uuid.UUID      `json:"organization_id" db:"organization_id"`
-	Name                   string         `json:"name" db:"name"`
-	Description            string         `json:"description,omitempty" db:"description"`
-	ApplicableVehicleTypes []string       `json:"applicable_vehicle_types" db:"applicable_vehicle_types"`
+	ID                     uuid.UUID       `json:"id" db:"id"`
+	OrgID                  uuid.UUID       `json:"org_id" db:"org_id"`
+	Name                   string          `json:"name" db:"name"`
+	Description            string          `json:"description,omitempty" db:"description"`
+	ApplicableVehicleTypes []string        `json:"applicable_vehicle_types" db:"applicable_vehicle_types"`
 	ChecklistItems         []ChecklistItem `json:"checklist_items" db:"checklist_items"`
-	IsActive               bool           `json:"is_active" db:"is_active"`
-	CreatedAt              time.Time      `json:"created_at" db:"created_at"`
-	UpdatedAt              time.Time      `json:"updated_at" db:"updated_at"`
+	IsActive               bool            `json:"is_active" db:"is_active"`
+	CreatedAt              time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type ChecklistItem struct {
@@ -171,17 +171,17 @@ type ChecklistItem struct {
 
 // VehicleInspection represents a completed inspection report
 type VehicleInspection struct {
-	ID                    uuid.UUID          `json:"id" db:"id"`
-	OrganizationID        uuid.UUID          `json:"organization_id" db:"organization_id"`
-	VehicleID             uuid.UUID          `json:"vehicle_id" db:"vehicle_id"`
-	TemplateID            *uuid.UUID         `json:"template_id,omitempty" db:"template_id"`
-	InspectorID           uuid.UUID          `json:"inspector_id" db:"inspector_id"`
-	Status                string             `json:"status" db:"status"`
-	Results               []InspectionResult `json:"results" db:"results"`
-	Notes                 string             `json:"notes,omitempty" db:"notes"`
-	OdometerAtInspection  int64              `json:"odometer_at_inspection,omitempty" db:"odometer_at_inspection"`
-	CreatedAt             time.Time          `json:"created_at" db:"created_at"`
-	UpdatedAt             time.Time          `json:"updated_at" db:"updated_at"`
+	ID                   uuid.UUID          `json:"id" db:"id"`
+	OrgID                uuid.UUID          `json:"org_id" db:"org_id"`
+	VehicleID            uuid.UUID          `json:"vehicle_id" db:"vehicle_id"`
+	TemplateID           *uuid.UUID         `json:"template_id,omitempty" db:"template_id"`
+	InspectorID          uuid.UUID          `json:"inspector_id" db:"inspector_id"`
+	Status               string             `json:"status" db:"status"`
+	Results              []InspectionResult `json:"results" db:"results"`
+	Notes                string             `json:"notes,omitempty" db:"notes"`
+	OdometerAtInspection int64              `json:"odometer_at_inspection,omitempty" db:"odometer_at_inspection"`
+	CreatedAt            time.Time          `json:"created_at" db:"created_at"`
+	UpdatedAt            time.Time          `json:"updated_at" db:"updated_at"`
 }
 
 type InspectionResult struct {
@@ -194,16 +194,16 @@ type InspectionResult struct {
 
 // MaintenanceSettings represents org maintenance configuration
 type MaintenanceSettings struct {
-	OrganizationID    uuid.UUID `json:"organization_id" db:"organization_id"`
-	SLAP1Hours        int       `json:"sla_p1_hours" db:"sla_p1_hours"`
-	SLAP2Hours        int       `json:"sla_p2_hours" db:"sla_p2_hours"`
-	SLAP3Hours        int       `json:"sla_p3_hours" db:"sla_p3_hours"`
-	LowStockThreshold int       `json:"low_stock_threshold" db:"low_stock_threshold"`
-	ApprovalThreshold float64   `json:"approval_threshold" db:"approval_threshold"`
-	AutoAssignEnabled bool      `json:"auto_assign_enabled" db:"auto_assign_enabled"`
-	NotificationEnabled bool    `json:"notification_enabled" db:"notification_enabled"`
-	CreatedAt         time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
+	OrgID               uuid.UUID `json:"org_id" db:"org_id"`
+	SLAP1Hours          int       `json:"sla_p1_hours" db:"sla_p1_hours"`
+	SLAP2Hours          int       `json:"sla_p2_hours" db:"sla_p2_hours"`
+	SLAP3Hours          int       `json:"sla_p3_hours" db:"sla_p3_hours"`
+	LowStockThreshold   int       `json:"low_stock_threshold" db:"low_stock_threshold"`
+	ApprovalThreshold   float64   `json:"approval_threshold" db:"approval_threshold"`
+	AutoAssignEnabled   bool      `json:"auto_assign_enabled" db:"auto_assign_enabled"`
+	NotificationEnabled bool      `json:"notification_enabled" db:"notification_enabled"`
+	CreatedAt           time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // --- Request DTOs ---
@@ -295,48 +295,48 @@ type WorkOrderListResponse struct {
 
 // InventoryListResponse represents paginated inventory list
 type InventoryListResponse struct {
-	Total int             `json:"total"`
-	Page  int             `json:"page"`
-	PageSize int          `json:"page_size"`
-	Parts []InventoryPart `json:"parts"`
+	Total    int             `json:"total"`
+	Page     int             `json:"page"`
+	PageSize int             `json:"page_size"`
+	Parts    []InventoryPart `json:"parts"`
 }
 
 // WorkOrderStats represents dashboard statistics
 type WorkOrderStats struct {
-	ActiveWorkOrders   int     `json:"active_work_orders"`
-	AvgResolutionTime  float64 `json:"avg_resolution_time_hours"`
-	SLABreachesMTD     int     `json:"sla_breaches_mtd"`
-	LowStockAlerts     int     `json:"low_stock_alerts"`
-	ByStatus           map[string]int `json:"by_status"`
-	ByPriority         map[string]int `json:"by_priority"`
+	ActiveWorkOrders  int            `json:"active_work_orders"`
+	AvgResolutionTime float64        `json:"avg_resolution_time_hours"`
+	SLABreachesMTD    int            `json:"sla_breaches_mtd"`
+	LowStockAlerts    int            `json:"low_stock_alerts"`
+	ByStatus          map[string]int `json:"by_status"`
+	ByPriority        map[string]int `json:"by_priority"`
 }
 
 // --- Filter DTOs ---
 
 // WorkOrderFilter represents work order list filters
 type WorkOrderFilter struct {
-	OrganizationID uuid.UUID           `form:"-"`
-	VehicleID      *uuid.UUID          `form:"vehicle_id"`
-	Status         []WorkOrderStatus   `form:"status"`
-	Priority       []WorkOrderPriority `form:"priority"`
+	OrgID           uuid.UUID             `form:"-"`
+	VehicleID       *uuid.UUID            `form:"vehicle_id"`
+	Status          []WorkOrderStatus     `form:"status"`
+	Priority        []WorkOrderPriority   `form:"priority"`
 	MaintenanceType []MaintenanceTypeEnum `form:"maintenance_type"`
-	AssignedTo     *uuid.UUID          `form:"assigned_to"`
-	Search         string              `form:"search"`
-	FromDate       *time.Time          `form:"from_date"`
-	ToDate         *time.Time          `form:"to_date"`
-	Page           int                 `form:"page"`
-	PageSize       int                 `form:"page_size"`
-	SortBy         string              `form:"sort_by"`
-	SortDir        string              `form:"sort_dir"`
+	AssignedTo      *uuid.UUID            `form:"assigned_to"`
+	Search          string                `form:"search"`
+	FromDate        *time.Time            `form:"from_date"`
+	ToDate          *time.Time            `form:"to_date"`
+	Page            int                   `form:"page"`
+	PageSize        int                   `form:"page_size"`
+	SortBy          string                `form:"sort_by"`
+	SortDir         string                `form:"sort_dir"`
 }
 
 // InventoryFilter represents inventory list filters
 type InventoryFilter struct {
-	OrganizationID  uuid.UUID `form:"-"`
-	Search          string    `form:"search"`
-	StockLocation   string    `form:"stock_location"`
-	LowStockOnly    bool      `form:"low_stock_only"`
-	AvailableOnly   bool      `form:"available_only"`
-	Page            int       `form:"page"`
-	PageSize        int       `form:"page_size"`
+	OrgID         uuid.UUID `form:"-"`
+	Search        string    `form:"search"`
+	StockLocation string    `form:"stock_location"`
+	LowStockOnly  bool      `form:"low_stock_only"`
+	AvailableOnly bool      `form:"available_only"`
+	Page          int       `form:"page"`
+	PageSize      int       `form:"page_size"`
 }

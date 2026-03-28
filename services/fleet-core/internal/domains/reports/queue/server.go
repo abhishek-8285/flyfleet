@@ -57,7 +57,7 @@ func (ws *WorkerServer) HandleReportGenerationTask(ctx context.Context, t *asynq
 	}
 
 	execID := payload.ExecutionID
-	reportID := payload.ReportID 
+	reportID := payload.ReportID
 
 	ws.logger.Info("Processing report generation task", zap.String("exec_id", execID.String()), zap.String("report_id", reportID.String()))
 
@@ -65,7 +65,7 @@ func (ws *WorkerServer) HandleReportGenerationTask(ctx context.Context, t *asynq
 	if err := ws.repo.UpdateExecutionStatus(ctx, execID, "RUNNING", nil, nil, payload.UserID); err != nil {
 		ws.logger.Error("Failed to update execution status to RUNNING", zap.Error(err))
 	}
-	
+
 	// 2. Fetch Report Details (Mock Fetch)
 	// In real app: report, err := ws.repo.GetReport(ctx, reportID)
 	// For now we assume we have what we need.

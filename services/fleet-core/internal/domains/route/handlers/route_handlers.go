@@ -4,15 +4,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/route/service"
+	"github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createOptimizationRequestDTO struct {
+	Name              string                   `json:"name" validate:"required"`
+	Description       string                   `json:"description"`
+	StartTime         time.Time                `json:"start_time" validate:"required"`
+	EndTime           time.Time                `json:"end_time" validate:"required"`
+	StartTimeWindow   *time.Time               `json:"start_time_window,omitempty"`
+	EndTimeWindow     *time.Time               `json:"end_time_window,omitempty"`
+	Constraints       models.RouteConstraints  `json:"constraints" validate:"required"`
+	Stops             []models.Stop            `json:"stops" validate:"required,dive"`
+	Vehicles          []models.VehicleProfile  `json:"vehicles" validate:"required,dive"`
+	Depots            []models.Depot           `json:"depots,omitempty" validate:"dive"`
+	Priorities        models.RoutePriorities   `json:"priorities" validate:"required"`
+	OptimizationGoals models.OptimizationGoals `json:"optimization_goals" validate:"required"`
+}
 
 // RouteOptimizationHandler handles HTTP requests for route optimization
 type RouteOptimizationHandler struct {
@@ -28,6 +45,34 @@ func NewRouteOptimizationHandler(svc service.RouteOptimizationService, logger *z
 		logger:   logger,
 		validate: validator.New(),
 	}
+}
+
+// getOrgID extracts organization ID from context and returns error if missing
+func (h *RouteOptimizationHandler) getOrgID(r *http.Request) uuid.UUID {
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware",
+			zap.String("path", r.URL.Path))
+	}
+	return orgID
+}
+
+// requireResourceOwnership checks that a resource belongs to the user's organization
+func (h *RouteOptimizationHandler) requireResourceOwnership(w http.ResponseWriter, r *http.Request, resourceOrgID uuid.UUID) bool {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return false
+	}
+	if resourceOrgID != orgID {
+		h.logger.Warn("unauthorized cross-org access attempt",
+			zap.String("requested_org", orgID.String()),
+			zap.String("resource_org", resourceOrgID.String()),
+			zap.String("path", r.URL.Path))
+		h.writeErrorResponse(w, http.StatusNotFound, "Resource not found", nil)
+		return false
+	}
+	return true
 }
 
 // RegisterRoutes registers all route optimization API routes
@@ -71,36 +116,68 @@ func (h *RouteOptimizationHandler) RecalculateRoute(w http.ResponseWriter, r *ht
 		return
 	}
 
-	result, err := h.service.RecalculateRoute(r.Context(), req.ResultID, req.VehicleID, req.CurrentLat, req.CurrentLon)
+	// SECURITY: First verify the result belongs to the authenticated org
+	result, err := h.service.GetOptimizationResult(r.Context(), req.ResultID)
+	if err != nil {
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to verify result ownership", err)
+		}
+		return
+	}
+
+	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
+		return
+	}
+
+	// Now perform the recalculation
+	recalculated, err := h.service.RecalculateRoute(r.Context(), req.ResultID, req.VehicleID, req.CurrentLat, req.CurrentLon)
 	if err != nil {
 		h.logger.Error("Failed to recalculate route", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to recalculate route", err)
 		return
 	}
 
-	h.writeJSONResponse(w, http.StatusOK, result)
+	h.writeJSONResponse(w, http.StatusOK, recalculated)
 }
 
 // CreateOptimizationRequest handles POST /api/v1/routes/requests
 func (h *RouteOptimizationHandler) CreateOptimizationRequest(w http.ResponseWriter, r *http.Request) {
-	var request models.RouteOptimizationRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	var dto createOptimizationRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	if err := h.validate.Struct(&request); err != nil {
+	if err := h.validate.Struct(dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed", err)
 		return
 	}
 
-	if err := h.service.CreateOptimizationRequest(r.Context(), &request); err != nil {
+	// Map DTO to model
+	req := &models.RouteOptimizationRequest{
+		Name:              dto.Name,
+		Description:       dto.Description,
+		StartTime:         dto.StartTime,
+		EndTime:           dto.EndTime,
+		StartTimeWindow:   dto.StartTimeWindow,
+		EndTimeWindow:     dto.EndTimeWindow,
+		Constraints:       dto.Constraints,
+		Stops:             dto.Stops,
+		Vehicles:          dto.Vehicles,
+		Depots:            dto.Depots,
+		Priorities:        dto.Priorities,
+		OptimizationGoals: dto.OptimizationGoals,
+	}
+
+	if err := h.service.CreateOptimizationRequest(r.Context(), req); err != nil {
 		h.logger.Error("Failed to create optimization request", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create optimization request", err)
 		return
 	}
 
-	h.writeJSONResponse(w, http.StatusCreated, request)
+	h.writeJSONResponse(w, http.StatusCreated, req)
 }
 
 // GetOptimizationRequest handles GET /api/v1/routes/requests/{id}
@@ -109,7 +186,16 @@ func (h *RouteOptimizationHandler) GetOptimizationRequest(w http.ResponseWriter,
 
 	request, err := h.service.GetOptimizationRequest(r.Context(), id)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusNotFound, "Optimization request not found", err)
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization request not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch optimization request", err)
+		}
+		return
+	}
+
+	// SECURITY: Verify request belongs to authenticated organization
+	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
 		return
 	}
 
@@ -120,9 +206,31 @@ func (h *RouteOptimizationHandler) GetOptimizationRequest(w http.ResponseWriter,
 func (h *RouteOptimizationHandler) UpdateOptimizationRequest(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// First, fetch the request to verify ownership
+	request, err := h.service.GetOptimizationRequest(r.Context(), id)
+	if err != nil {
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization request not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch optimization request", err)
+		}
+		return
+	}
+
+	// SECURITY: Verify ownership before update
+	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
+		return
+	}
+
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	// Prevent organization_id tampering
+	if _, ok := updates["organization_id"]; ok {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Cannot change organization_id", nil)
 		return
 	}
 
@@ -138,6 +246,21 @@ func (h *RouteOptimizationHandler) UpdateOptimizationRequest(w http.ResponseWrit
 func (h *RouteOptimizationHandler) DeleteOptimizationRequest(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Verify ownership before delete
+	request, err := h.service.GetOptimizationRequest(r.Context(), id)
+	if err != nil {
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization request not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch optimization request", err)
+		}
+		return
+	}
+
+	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
+		return
+	}
+
 	if err := h.service.DeleteOptimizationRequest(r.Context(), id); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete optimization request", err)
 		return
@@ -149,22 +272,11 @@ func (h *RouteOptimizationHandler) DeleteOptimizationRequest(w http.ResponseWrit
 // ListOptimizationRequests handles GET /api/v1/routes/requests
 func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("org_id")
-	var orgID uuid.UUID
-	var err error
 
-	if orgIDStr == "" {
-		orgID = h.getOrgID(r)
-	} else {
-		orgID, err = uuid.Parse(orgIDStr)
-		if err != nil {
-			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid org_id", err)
-			return
-		}
-	}
-
+	// SECURITY: Always use org from authenticated context, ignore any org_id query parameter
+	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "org_id query parameter or context is required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
@@ -203,7 +315,16 @@ func (h *RouteOptimizationHandler) GetOptimizationResult(w http.ResponseWriter, 
 
 	result, err := h.service.GetOptimizationResult(r.Context(), id)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", err)
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch optimization result", err)
+		}
+		return
+	}
+
+	// SECURITY: Verify result belongs to authenticated organization
+	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
 		return
 	}
 
@@ -216,7 +337,16 @@ func (h *RouteOptimizationHandler) GetOptimizationResultByRequestID(w http.Respo
 
 	result, err := h.service.GetOptimizationResultByRequestID(r.Context(), requestID)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", err)
+		if err == service.ErrNotFound {
+			h.writeErrorResponse(w, http.StatusNotFound, "Optimization result not found", nil)
+		} else {
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch optimization result", err)
+		}
+		return
+	}
+
+	// SECURITY: Verify result belongs to authenticated organization
+	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
 		return
 	}
 
@@ -361,18 +491,4 @@ func (h *RouteOptimizationHandler) writeErrorResponse(w http.ResponseWriter, sta
 		resp["details"] = errDetail
 	}
 	h.writeJSONResponse(w, statusCode, resp)
-}
-
-func (h *RouteOptimizationHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
-			}
-		}
-		if id, ok := val.(uuid.UUID); ok {
-			return id
-		}
-	}
-	return uuid.Nil
 }

@@ -25,7 +25,12 @@ jobs:
       - name: Start Docker (required for testcontainers)
         run: sudo systemctl start docker
 
-      - name: Run Diagnostics Tests
+      - name: Run Diagnostics Tests with Coverage
         run: |
           cd services/fleet-core-service-legacy
-          go test ./internal/domains/diagnostics/... -v -timeout 10m
+          go test ./internal/domains/diagnostics/... -v -timeout 10m -coverprofile=coverage.out -covermode=atomic
+
+      - name: Verify Coverage Threshold
+        run: |
+          cd services/fleet-core-service-legacy
+          bash ../../scripts/check_coverage.sh 70

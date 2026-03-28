@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/google/uuid"
 )
@@ -30,8 +31,10 @@ func (r *dvirRepo) CreateDVIR(ctx context.Context, report *models.DVIRReport) er
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8
 		)`
+	start := time.Now()
 	_, err := r.db.ExecContext(ctx, query,
 		report.ID, report.DriverID, report.VehicleID, report.InspectionType, report.Condition, report.Notes, report.Signature, time.Now())
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -42,14 +45,18 @@ func (r *dvirRepo) CreateDVIRDefect(ctx context.Context, defect *models.DVIRDefe
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7
 		)`
+	start := time.Now()
 	_, err := r.db.ExecContext(ctx, query,
 		defect.ID, defect.DVIRID, defect.DefectType, defect.Description, defect.Resolved, defect.ResolvedBy, defect.ResolvedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *dvirRepo) GetDVIRsByVehicle(ctx context.Context, vehicleID uuid.UUID) ([]models.DVIRReport, error) {
 	query := `SELECT id, driver_id, vehicle_id, inspection_type, condition, notes, signature, created_at FROM dvir_reports WHERE vehicle_id = $1 ORDER BY created_at DESC`
+	start := time.Now()
 	rows, err := r.db.QueryContext(ctx, query, vehicleID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}

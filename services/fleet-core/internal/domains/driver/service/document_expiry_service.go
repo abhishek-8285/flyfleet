@@ -26,14 +26,14 @@ func NewDocumentExpiryService(repo Repository, logger *zap.Logger) *DocumentExpi
 
 // ExpiringDocument represents a document that is expiring or expired
 type ExpiringDocument struct {
-	DriverID       string    `json:"driver_id"`
-	DriverName     string    `json:"driver_name"`
-	DocumentID     string    `json:"document_id"`
-	DocumentType   string    `json:"document_type"`
-	DocumentNumber string    `json:"document_number"`
-	ExpiryDate     time.Time `json:"expiry_date"`
-	DaysUntilExpiry int      `json:"days_until_expiry"`
-	Status         string    `json:"status"` // expiring_soon, expired
+	DriverID        string    `json:"driver_id"`
+	DriverName      string    `json:"driver_name"`
+	DocumentID      string    `json:"document_id"`
+	DocumentType    string    `json:"document_type"`
+	DocumentNumber  string    `json:"document_number"`
+	ExpiryDate      time.Time `json:"expiry_date"`
+	DaysUntilExpiry int       `json:"days_until_expiry"`
+	Status          string    `json:"status"` // expiring_soon, expired
 }
 
 // GetExpiringDocuments retrieves documents expiring within the specified days
@@ -51,9 +51,9 @@ func (s *DocumentExpiryService) GetExpiringDocuments(ctx context.Context, orgID 
 	var expiringDocs []ExpiringDocument
 
 	// In production, this would query the database for:
-	// SELECT d.id, d.full_name, doc.* 
+	// SELECT d.id, d.full_name, doc.*
 	// FROM drivers d, jsonb_array_elements(d.documents) as doc
-	// WHERE d.org_id = $1 
+	// WHERE d.org_id = $1
 	//   AND (doc->>'expiry_date')::date <= $2
 	//   AND d.deleted_at IS NULL
 
@@ -111,14 +111,14 @@ func (s *DocumentExpiryService) CheckDocumentExpiry(ctx context.Context, driverI
 	}
 
 	return &ExpiringDocument{
-		DriverID:       driverID,
-		DriverName:     driver.FullName,
-		DocumentID:     documentID,
-		DocumentType:   targetDoc.DocumentType,
-		DocumentNumber: targetDoc.DocumentNumber,
-		ExpiryDate:     targetDoc.ExpiryDate,
+		DriverID:        driverID,
+		DriverName:      driver.FullName,
+		DocumentID:      documentID,
+		DocumentType:    targetDoc.DocumentType,
+		DocumentNumber:  targetDoc.DocumentNumber,
+		ExpiryDate:      targetDoc.ExpiryDate,
 		DaysUntilExpiry: daysUntilExpiry,
-		Status:         status,
+		Status:          status,
 	}, nil
 }
 
@@ -152,7 +152,7 @@ func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID, do
 
 	// Update driver with verified document
 	updates := map[string]interface{}{
-		"documents": driver.Documents,
+		"documents":  driver.Documents,
 		"updated_at": time.Now(),
 	}
 

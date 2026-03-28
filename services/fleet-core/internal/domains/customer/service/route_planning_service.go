@@ -20,8 +20,8 @@ func NewRoutePlanningService(repo repository.CustomerV2Repository, logger *zap.L
 }
 
 type RoutePlan struct {
-	OptimizedRoute      []byte // JSON representation of polyline/waypoints
-	EstimatedDistanceKm float64
+	OptimizedRoute       []byte // JSON representation of polyline/waypoints
+	EstimatedDistanceKm  float64
 	EstimatedTravelHours float64
 }
 
@@ -30,7 +30,7 @@ func (s *RoutePlanningService) PlanRoute(ctx context.Context, origin, destinatio
 	s.logger.Info("Planning optimized route", zap.String("vehicle_type", vehicleType))
 
 	// Stub: In a real system, this would call OSRM, Google Maps API, or an internal routing engine
-	
+
 	plan := &RoutePlan{
 		OptimizedRoute:       []byte(`{"type": "LineString", "coordinates": [[72.8, 19.0], [73.8, 18.5]]}`),
 		EstimatedDistanceKm:  150.5,

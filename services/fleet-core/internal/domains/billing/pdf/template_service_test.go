@@ -24,12 +24,12 @@ func TestTemplateService_SanitizeHTML(t *testing.T) {
 		{
 			name:     "script tag",
 			input:    "<div><script>alert(1)</script></div>",
-			expected: "<div>&lt;script>alert(1)&lt;/script></div>",
+			expected: "<div>alert(1)</div>", // script tags are removed, content remains
 		},
 		{
 			name:     "iframe tag",
 			input:    "<iframe src='malicious.com'></iframe>",
-			expected: "&lt;iframe src='malicious.com'>&lt;/iframe>",
+			expected: "", // iframe tag and content removed entirely (it's a void element)
 		},
 	}
 

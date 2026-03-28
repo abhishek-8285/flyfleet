@@ -1,6 +1,5 @@
 import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 interface SOSAlert {
@@ -14,31 +13,6 @@ interface SOSAlert {
 export const SOSOverlay: React.FC = () => {
   const { uiStrings } = useUIStrings("comp_sos");
   const [activeAlert, setActiveAlert] = useState<SOSAlert | null>(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Mock listener for WebSocket events
-    const simulateIncident = () => {
-      setTimeout(() => {
-        setActiveAlert({
-          id: "new-incident-123",
-          vehicle_reg_number: "KA-01-HH-1234",
-          driver_name: "Rajesh Kumar",
-          timestamp: new Date().toISOString(),
-          severity: "CRITICAL",
-        });
-
-        // Play sound
-        const audio = new Audio("/sounds/emergency-siren.mp3");
-        audio.play().catch((e) => console.log("Audio play failed", e));
-      }, 5000); // Simulate an alert after 5 seconds
-    };
-
-    // simulateIncident(); // Uncomment to test
-
-    // Cleanup
-    return () => {};
-  }, []);
 
   if (!activeAlert) return null;
 

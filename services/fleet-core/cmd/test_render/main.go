@@ -31,11 +31,11 @@ func main() {
 			"Transporter": "Khushi Textiles Logistics",
 		},
 		"GST": map[string]interface{}{
-			"HSN":      "5208",
-			"Taxable":  80499.51,
-			"IGST":     4024.98,
-			"Total":    84525.00,
-			"InWords":  "Rupees Eighty Four Thousand Five Hundred Twenty Five Only",
+			"HSN":     "5208",
+			"Taxable": 80499.51,
+			"IGST":    4024.98,
+			"Total":   84525.00,
+			"InWords": "Rupees Eighty Four Thousand Five Hundred Twenty Five Only",
 		},
 		"Custom": map[string]interface{}{
 			"AnyNewField": "This is accessible to the template!",

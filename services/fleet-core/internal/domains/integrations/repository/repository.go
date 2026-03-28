@@ -236,12 +236,12 @@ func (r *postgresRepository) ListIntegrationLogs(ctx context.Context, orgID uuid
 	query := `SELECT id, org_id, integration_id, method, endpoint, request_body, response_body, status_code, status, duration_ms, timestamp 
 	          FROM integration_logs WHERE org_id = $1`
 	args := []interface{}{orgID}
-	
+
 	if integrationID != nil {
 		query += ` AND integration_id = $2`
 		args = append(args, *integrationID)
 	}
-	
+
 	query += fmt.Sprintf(` ORDER BY timestamp DESC LIMIT $%d OFFSET $%d`, len(args)+1, len(args)+2)
 	args = append(args, limit, offset)
 

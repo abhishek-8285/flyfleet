@@ -11,10 +11,10 @@ import (
 
 func TestBuildOpenAPIJSON_FilterMethods(t *testing.T) {
 	r := chi.NewRouter()
-	
+
 	// Register a route with Handle which registers ALL methods in chi
 	r.Handle("/api/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	
+
 	// Register standard methods explicitly
 	r.Get("/api/get", func(w http.ResponseWriter, r *http.Request) {})
 	r.Post("/api/post", func(w http.ResponseWriter, r *http.Request) {})
@@ -29,10 +29,10 @@ func TestBuildOpenAPIJSON_FilterMethods(t *testing.T) {
 	// Check /api/test
 	ops, ok := doc.Paths["/api/test"]
 	assert.True(t, ok)
-	
+
 	// Should NOT contain connect
 	assert.NotContains(t, ops, "connect")
-	
+
 	// Should contain standard ones
 	assert.Contains(t, ops, "get")
 	assert.Contains(t, ops, "post")

@@ -6,8 +6,10 @@ echo "Deploying remaining services..."
 echo "Building trip-service..."
 cd /home/abhishek/Desktop/flyfleet && docker build -t flyfleet_trip-service ./services/microservices/trip-service
 echo "Starting trip-service..."
+# Require DATABASE_URL to be set in environment
+: "${DATABASE_URL:?ERROR: DATABASE_URL environment variable is required. Set it with your database connection string.}"
 docker run -d --name fleet-trip-service -p 8084:8080 --network fleet-network \
-  -e DATABASE_URL=postgres://fleet_user:fleet_password@172.17.0.1:5433/fleet_db?sslmode=disable \
+  -e DATABASE_URL="${DATABASE_URL}" \
   flyfleet_trip-service
 
 # Build and start tracking service

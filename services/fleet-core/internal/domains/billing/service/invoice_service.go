@@ -182,7 +182,7 @@ func (s *InvoiceService) GetOrGeneratePDF(ctx context.Context, invoice *models.I
 	validator := pdf.NewBusinessValidator("27") // Company is in Maharashtra
 	audit := validator.ValidateInvoice(invoiceWithItems, invoiceWithItems.Items)
 	if !audit.IsValid {
-		s.logger.Error("Invoice failed industrial audit", 
+		s.logger.Error("Invoice failed industrial audit",
 			zap.String("invoice_number", invoice.InvoiceNumber),
 			zap.Strings("errors", audit.Errors),
 		)

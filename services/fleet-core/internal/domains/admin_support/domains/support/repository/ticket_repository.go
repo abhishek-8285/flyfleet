@@ -203,7 +203,7 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 	if filter.PageSize <= 0 {
 		filter.PageSize = 20
 	}
-	
+
 	offset := (filter.Page - 1) * filter.PageSize
 	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 	args = append(args, filter.PageSize, offset)
@@ -281,12 +281,12 @@ func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID,
 	}
 
 	query := "UPDATE support_tickets SET status = $1, updated_at = NOW()"
-	
+
 	// Set resolved_at if status is RESOLVED
 	if status == "RESOLVED" {
 		query += ", resolved_at = NOW()"
 	}
-	
+
 	query += " WHERE id = $2"
 
 	_, err = r.db.Exec(ctx, query, status, id)
@@ -295,7 +295,7 @@ func (r *ticketRepository) UpdateTicketStatus(ctx context.Context, id uuid.UUID,
 	}
 
 	// Log audit trail
-	if err := r.logAudit(ctx, currentTicket, id, uuid.Nil, "STATUS_CHANGE", 
+	if err := r.logAudit(ctx, currentTicket, id, uuid.Nil, "STATUS_CHANGE",
 		map[string]interface{}{"status": currentTicket.Status},
 		map[string]interface{}{"status": status},
 		fmt.Sprintf("Status changed from %s to %s", currentTicket.Status, status)); err != nil {

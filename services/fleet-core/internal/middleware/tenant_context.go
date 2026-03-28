@@ -12,6 +12,8 @@ import (
 
 // TenantContextMiddleware extracts org_id from the context (set by Auth middleware)
 // and ensures it is properly formatted and available for Repository RLS enforcement.
+// SECURITY: This middleware ONLY uses org_id from the authenticated JWT token.
+// Client-supplied headers like X-Organization-ID are IGNORED to prevent spoofing.
 func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,24 +32,17 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 			}
 
 			if !ok {
-				// If this is a protected route (which should have been caught by AuthGate),
-				// and we still don't have an OrgID, we might want to block it here.
-				logger.Warn("tenant context missing for request", zap.String("path", r.URL.Path))
-			} else {
-				headerOrgIDStr := r.Header.Get("X-Org-ID")
-				if headerOrgIDStr != "" && headerOrgIDStr != orgID.String() {
-					logger.Warn("tenant-safe violation: header org_id does not match token", 
-						zap.String("header_org_id", headerOrgIDStr),
-						zap.String("token_org_id", orgID.String()),
-						zap.String("path", r.URL.Path))
-					http.Error(w, "Forbidden: Security Context Mismatch", http.StatusForbidden)
-					return
-				}
-
-				// Ensure it's available in both formats for wide compatibility
-				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID.String())
-				ctx = context.WithValue(ctx, iamCtx.OrgIDKey, orgID)
+				// OrgID is required for all protected routes - fail securely
+				logger.Warn("tenant context missing for authenticated request",
+					zap.String("path", r.URL.Path),
+					zap.String("method", r.Method))
+				http.Error(w, "Organization context required", http.StatusUnauthorized)
+				return
 			}
+
+			// Ensure it's available in both formats for wide compatibility
+			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID.String())
+			ctx = context.WithValue(ctx, iamCtx.OrgIDKey, orgID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

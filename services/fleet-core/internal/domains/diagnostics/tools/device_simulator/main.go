@@ -33,7 +33,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	ctx := time.After(*duration)
-	
+
 	for i := 0; i < *numDevices; i++ {
 		deviceID := uuid.New().String()
 		wg.Add(1)
@@ -59,7 +59,7 @@ func main() {
 
 func sendTelemetry(deviceID, urlPattern string) {
 	url := fmt.Sprintf(urlPattern, deviceID)
-	
+
 	data := TelemetryData{
 		GPSLat:         12.9716 + (rand.Float64() * 0.1),
 		GPSLon:         77.5946 + (rand.Float64() * 0.1),

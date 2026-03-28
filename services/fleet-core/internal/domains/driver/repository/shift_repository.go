@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,10 +31,12 @@ func (r *ShiftRepository) CreateShift(ctx context.Context, shift *models.Shift) 
 		shift.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		shift.ID, shift.DriverID, shift.ShiftStart, shift.ShiftEnd,
 		shift.ShiftType, shift.Status, shift.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -44,13 +47,17 @@ func (r *ShiftRepository) AssignVehicle(ctx context.Context, shiftID string, veh
 		) VALUES ($1, $2, $3, $4)`
 
 	id := uuid.New().String()
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, id, shiftID, vehicleID, time.Now())
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *ShiftRepository) UpdateShiftStatus(ctx context.Context, shiftID string, status string) error {
 	query := `UPDATE driver_shifts SET status = $2 WHERE id = $1`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, shiftID, status)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -61,7 +68,9 @@ func (r *ShiftRepository) GetShiftsByDriverID(ctx context.Context, driverID stri
 		WHERE driver_id = $1 AND shift_start >= $2 AND shift_start <= $3
 		ORDER BY shift_start ASC`
 
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID, start, end)
+	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, err
 	}

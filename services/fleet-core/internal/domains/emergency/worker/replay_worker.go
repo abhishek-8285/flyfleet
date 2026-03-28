@@ -33,7 +33,7 @@ func (w *EmergencyReplayWorker) ReplayIncident(ctx context.Context, incidentID u
 
 	// Reconstruct state
 	incident := &models.SOSIncident{ID: incidentID}
-	
+
 	for _, event := range events {
 		switch event.EventType {
 		case "SOS_TRIGGERED":
@@ -52,7 +52,7 @@ func (w *EmergencyReplayWorker) ReplayIncident(ctx context.Context, incidentID u
 		}
 	}
 
-	w.logger.Info("Incident replay completed", 
+	w.logger.Info("Incident replay completed",
 		zap.String("incident_id", incidentID.String()),
 		zap.String("final_status", string(incident.Status)))
 

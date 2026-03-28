@@ -10,9 +10,68 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// DTOs for request payloads (separate from models to prevent mass assignment)
+
+type platformSettingsDTO struct {
+	SystemName      string     `json:"system_name"`
+	SupportEmail    string     `json:"support_email"`
+	DefaultTimezone string     `json:"default_timezone"`
+	DefaultCurrency string     `json:"default_currency"`
+	DefaultLanguage string     `json:"default_language"`
+	WhiteLabel      bool       `json:"white_label_enabled"`
+	SMTPConfigID    *uuid.UUID `json:"smtp_config_id,omitempty"`
+}
+
+type featureFlagDTO struct {
+	Key         string   `json:"key"`
+	Description string   `json:"description"`
+	Scope       string   `json:"scope"` // GLOBAL, ORG
+	Enabled     bool     `json:"enabled"`
+	Tags        []string `json:"tags"`
+}
+
+type localizationSettingsDTO struct {
+	LanguageCode string `json:"language_code"`
+	IsActive     bool   `json:"is_active"`
+	IsDefault    bool   `json:"is_default"`
+}
+
+type templateDTO struct {
+	Key       string   `json:"key"`
+	Channel   string   `json:"channel"` // EMAIL, SMS
+	Subject   string   `json:"subject"`
+	Body      string   `json:"body"`
+	Variables []string `json:"variables"`
+}
+
+type notificationChannelDTO struct {
+	ChannelType string         `json:"channel_type"`
+	Provider    string         `json:"provider"`
+	Config      map[string]any `json:"config"`
+	Enabled     bool           `json:"enabled"`
+}
+
+type systemLimitDTO struct {
+	APIRateLimit      int    `json:"api_rate_limit"`
+	BurstLimit        int    `json:"burst_limit"`
+	AuditRetention    string `json:"audit_retention"`
+	ActivityRetention string `json:"activity_retention"`
+}
+
+type settingsImportRequestDTO struct {
+	PlatformSettings     *platformSettingsDTO      `json:"platform_settings"`
+	FeatureFlags         []featureFlagDTO          `json:"feature_flags"`
+	LocalizationSettings []localizationSettingsDTO `json:"localization_settings"`
+	Templates            []templateDTO             `json:"templates"`
+	NotificationChannels []notificationChannelDTO  `json:"notification_channels"`
+	SystemLimits         *systemLimitDTO           `json:"system_limits"`
+	ReplaceExisting      bool                      `json:"replace_existing"`
+}
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
@@ -113,6 +172,33 @@ func (h *SettingsHandlers) validateSystemLimits(limits *models.SystemLimit) erro
 	return nil
 }
 
+// requireAdminRole ensures the user has admin or super_admin role
+func (h *SettingsHandlers) requireAdminRole(w http.ResponseWriter, r *http.Request) bool {
+	role, ok := r.Context().Value(ctxkeys.RoleKey).(string)
+	if !ok || role == "" {
+		h.logger.Warn("Access denied: no role found in context",
+			zap.String("path", r.URL.Path))
+		http.Error(w, "Forbidden: No Role Assigned", http.StatusForbidden)
+		return false
+	}
+
+	allowedRoles := map[string]bool{
+		"super_admin": true,
+		"org_admin":   true,
+		"admin":       true,
+	}
+
+	if !allowedRoles[role] {
+		h.logger.Warn("Access denied: insufficient role for settings operation",
+			zap.String("user_role", role),
+			zap.String("path", r.URL.Path))
+		http.Error(w, "Forbidden: Insufficient Permissions - Admin Role Required", http.StatusForbidden)
+		return false
+	}
+
+	return true
+}
+
 // Helper for JSON responses
 func (h *SettingsHandlers) respondJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -161,6 +247,11 @@ func (h *SettingsHandlers) handleServiceError(w http.ResponseWriter, err error, 
 
 // Platform Settings
 func (h *SettingsHandlers) GetSettingsExport(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for settings export
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	exportPayload, err := h.service.GetSettingsExport(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to build settings export", zap.Error(err))
@@ -171,6 +262,11 @@ func (h *SettingsHandlers) GetSettingsExport(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *SettingsHandlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for audit logs
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	limit := 50
 	offset := 0
 
@@ -210,13 +306,29 @@ func (h *SettingsHandlers) GetAuditLogs(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *SettingsHandlers) ImportSettings(w http.ResponseWriter, r *http.Request) {
-	var req models.SettingsImportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// SECURITY: Require admin role for settings import
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto settingsImportRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	result, err := h.service.ImportSettings(r.Context(), &req)
+	// Map DTO to model
+	req := &models.SettingsImportRequest{
+		PlatformSettings:     mapPlatformSettings(dto.PlatformSettings),
+		FeatureFlags:         mapFeatureFlags(dto.FeatureFlags),
+		LocalizationSettings: mapLocalizationSettings(dto.LocalizationSettings),
+		Templates:            mapTemplates(dto.Templates),
+		NotificationChannels: mapNotificationChannels(dto.NotificationChannels),
+		SystemLimits:         mapSystemLimit(dto.SystemLimits),
+		ReplaceExisting:      dto.ReplaceExisting,
+	}
+
+	result, err := h.service.ImportSettings(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to import settings", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
@@ -227,6 +339,11 @@ func (h *SettingsHandlers) ImportSettings(w http.ResponseWriter, r *http.Request
 }
 
 func (h *SettingsHandlers) GetPlatformSettings(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for platform settings (exposes sensitive configuration)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	settings, err := h.service.GetPlatformSettings(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get platform settings", zap.Error(err))
@@ -237,18 +354,34 @@ func (h *SettingsHandlers) GetPlatformSettings(w http.ResponseWriter, r *http.Re
 }
 
 func (h *SettingsHandlers) UpdatePlatformSettings(w http.ResponseWriter, r *http.Request) {
-	var settings models.PlatformSettings
-	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+	// SECURITY: Require admin role for platform settings modification
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto platformSettingsDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.validatePlatformSettings(&settings); err != nil {
+	// Map DTO to model
+	settings := &models.PlatformSettings{
+		SystemName:      dto.SystemName,
+		SupportEmail:    dto.SupportEmail,
+		DefaultTimezone: dto.DefaultTimezone,
+		DefaultCurrency: dto.DefaultCurrency,
+		DefaultLanguage: dto.DefaultLanguage,
+		WhiteLabel:      dto.WhiteLabel,
+		SMTPConfigID:    dto.SMTPConfigID,
+	}
+
+	if err := h.validatePlatformSettings(settings); err != nil {
 		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.service.UpdatePlatformSettings(r.Context(), &settings); err != nil {
+	if err := h.service.UpdatePlatformSettings(r.Context(), settings); err != nil {
 		h.logger.Error("Failed to update platform settings", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
@@ -258,6 +391,11 @@ func (h *SettingsHandlers) UpdatePlatformSettings(w http.ResponseWriter, r *http
 
 // Feature Flags
 func (h *SettingsHandlers) ListFeatureFlags(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for feature flag visibility (could expose internal roadmap)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	flags, err := h.service.ListFeatureFlags(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list feature flags", zap.Error(err))
@@ -268,18 +406,32 @@ func (h *SettingsHandlers) ListFeatureFlags(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *SettingsHandlers) CreateFeatureFlag(w http.ResponseWriter, r *http.Request) {
-	var flag models.FeatureFlag
-	if err := json.NewDecoder(r.Body).Decode(&flag); err != nil {
+	// SECURITY: Require admin role for feature flag management
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto featureFlagDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.validateFeatureFlag(&flag); err != nil {
+	// Map DTO to model
+	flag := &models.FeatureFlag{
+		Key:         dto.Key,
+		Description: dto.Description,
+		Scope:       dto.Scope,
+		Enabled:     dto.Enabled,
+		Tags:        dto.Tags,
+	}
+
+	if err := h.validateFeatureFlag(flag); err != nil {
 		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.service.CreateFeatureFlag(r.Context(), &flag); err != nil {
+	if err := h.service.CreateFeatureFlag(r.Context(), flag); err != nil {
 		h.logger.Error("Failed to create feature flag", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
@@ -288,6 +440,11 @@ func (h *SettingsHandlers) CreateFeatureFlag(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *SettingsHandlers) ToggleFeatureFlag(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for feature flag modification
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	idStr := strings.TrimPrefix(r.URL.Path, "/settings/flags/")
 	idStr = strings.TrimSuffix(idStr, "/toggle")
 	id, err := uuid.Parse(idStr)
@@ -306,6 +463,11 @@ func (h *SettingsHandlers) ToggleFeatureFlag(w http.ResponseWriter, r *http.Requ
 
 // Localization
 func (h *SettingsHandlers) GetLocalizationSettings(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for localization settings (exposes global configuration)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	settings, err := h.service.GetLocalizationSettings(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get localization settings", zap.Error(err))
@@ -316,13 +478,25 @@ func (h *SettingsHandlers) GetLocalizationSettings(w http.ResponseWriter, r *htt
 }
 
 func (h *SettingsHandlers) UpdateLocalizationSettings(w http.ResponseWriter, r *http.Request) {
-	var settings models.LocalizationSettings
-	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+	// SECURITY: Require admin role for localization settings (global configuration)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto localizationSettingsDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.service.UpdateLocalizationSettings(r.Context(), &settings); err != nil {
+	// Map DTO to model
+	settings := &models.LocalizationSettings{
+		LanguageCode: dto.LanguageCode,
+		IsActive:     dto.IsActive,
+		IsDefault:    dto.IsDefault,
+	}
+
+	if err := h.service.UpdateLocalizationSettings(r.Context(), settings); err != nil {
 		h.logger.Error("Failed to update localization settings", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
@@ -332,6 +506,11 @@ func (h *SettingsHandlers) UpdateLocalizationSettings(w http.ResponseWriter, r *
 
 // Templates
 func (h *SettingsHandlers) ListTemplates(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for template listing (exposes notification templates)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	templates, err := h.service.ListTemplates(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list templates", zap.Error(err))
@@ -342,6 +521,11 @@ func (h *SettingsHandlers) ListTemplates(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *SettingsHandlers) UpdateTemplate(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for template modification
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	idStr := strings.TrimPrefix(r.URL.Path, "/settings/templates/")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -349,19 +533,27 @@ func (h *SettingsHandlers) UpdateTemplate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var template models.Template
-	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
+	var dto templateDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	// Map DTO to model
+	template := &models.Template{
+		Key:       dto.Key,
+		Channel:   dto.Channel,
+		Subject:   dto.Subject,
+		Body:      dto.Body,
+		Variables: dto.Variables,
+	}
 	template.ID = id
 
-	if err := h.validateTemplate(&template); err != nil {
+	if err := h.validateTemplate(template); err != nil {
 		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.service.UpdateTemplate(r.Context(), &template); err != nil {
+	if err := h.service.UpdateTemplate(r.Context(), template); err != nil {
 		h.logger.Error("Failed to update template", zap.Error(err))
 		h.respondError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
@@ -371,6 +563,11 @@ func (h *SettingsHandlers) UpdateTemplate(w http.ResponseWriter, r *http.Request
 
 // Channels
 func (h *SettingsHandlers) ListNotificationChannels(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for notification channel listing (exposes channel configurations)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	channels, err := h.service.ListNotificationChannels(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list notification channels", zap.Error(err))
@@ -381,18 +578,30 @@ func (h *SettingsHandlers) ListNotificationChannels(w http.ResponseWriter, r *ht
 }
 
 func (h *SettingsHandlers) UpdateNotificationChannel(w http.ResponseWriter, r *http.Request) {
-	var channel models.NotificationChannel
-	if err := json.NewDecoder(r.Body).Decode(&channel); err != nil {
+	// SECURITY: Require admin role for notification channel configuration
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto notificationChannelDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.validateNotificationChannel(&channel); err != nil {
+	// Map DTO to model
+	channel := &models.NotificationChannel{
+		ChannelType: dto.ChannelType,
+		Provider:    dto.Provider,
+		Config:      dto.Config,
+		Enabled:     dto.Enabled,
+	}
+	if err := h.validateNotificationChannel(channel); err != nil {
 		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.service.UpdateNotificationChannel(r.Context(), &channel); err != nil {
+	if err := h.service.UpdateNotificationChannel(r.Context(), channel); err != nil {
 		h.logger.Error("Failed to update notification channel", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
@@ -402,6 +611,11 @@ func (h *SettingsHandlers) UpdateNotificationChannel(w http.ResponseWriter, r *h
 
 // Limits
 func (h *SettingsHandlers) GetSystemLimits(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for system limits (could expose DoS protection settings)
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	limits, err := h.service.GetSystemLimits(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to get system limits", zap.Error(err))
@@ -412,18 +626,30 @@ func (h *SettingsHandlers) GetSystemLimits(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *SettingsHandlers) UpdateSystemLimits(w http.ResponseWriter, r *http.Request) {
-	var limits models.SystemLimit
-	if err := json.NewDecoder(r.Body).Decode(&limits); err != nil {
+	// SECURITY: Require admin role for system limits modification
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
+	var dto systemLimitDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.validateSystemLimits(&limits); err != nil {
+	// Map DTO to model
+	limits := &models.SystemLimit{
+		APIRateLimit:      dto.APIRateLimit,
+		BurstLimit:        dto.BurstLimit,
+		AuditRetention:    dto.AuditRetention,
+		ActivityRetention: dto.ActivityRetention,
+	}
+	if err := h.validateSystemLimits(limits); err != nil {
 		h.respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := h.service.UpdateSystemLimits(r.Context(), &limits); err != nil {
+	if err := h.service.UpdateSystemLimits(r.Context(), limits); err != nil {
 		h.logger.Error("Failed to update system limits", zap.Error(err))
 		h.handleServiceError(w, err, "Internal Server Error")
 		return
@@ -433,6 +659,11 @@ func (h *SettingsHandlers) UpdateSystemLimits(w http.ResponseWriter, r *http.Req
 
 // CleanupAuditLogs removes old audit logs based on configured retention policy
 func (h *SettingsHandlers) CleanupAuditLogs(w http.ResponseWriter, r *http.Request) {
+	// SECURITY: Require admin role for audit log cleanup
+	if !h.requireAdminRole(w, r) {
+		return
+	}
+
 	if r.Method != http.MethodPost {
 		h.respondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
@@ -449,4 +680,86 @@ func (h *SettingsHandlers) CleanupAuditLogs(w http.ResponseWriter, r *http.Reque
 		"message":       "Audit logs cleaned up successfully",
 		"deleted_count": deleted,
 	})
+}
+
+// Mapping functions for DTO to model conversion
+
+func mapPlatformSettings(dto *platformSettingsDTO) *models.PlatformSettings {
+	if dto == nil {
+		return nil
+	}
+	return &models.PlatformSettings{
+		SystemName:      dto.SystemName,
+		SupportEmail:    dto.SupportEmail,
+		DefaultTimezone: dto.DefaultTimezone,
+		DefaultCurrency: dto.DefaultCurrency,
+		DefaultLanguage: dto.DefaultLanguage,
+		WhiteLabel:      dto.WhiteLabel,
+		SMTPConfigID:    dto.SMTPConfigID,
+	}
+}
+
+func mapFeatureFlags(dtos []featureFlagDTO) []models.FeatureFlag {
+	result := make([]models.FeatureFlag, len(dtos))
+	for i, dto := range dtos {
+		result[i] = models.FeatureFlag{
+			Key:         dto.Key,
+			Description: dto.Description,
+			Scope:       dto.Scope,
+			Enabled:     dto.Enabled,
+			Tags:        dto.Tags,
+		}
+	}
+	return result
+}
+
+func mapLocalizationSettings(dtos []localizationSettingsDTO) []models.LocalizationSettings {
+	result := make([]models.LocalizationSettings, len(dtos))
+	for i, dto := range dtos {
+		result[i] = models.LocalizationSettings{
+			LanguageCode: dto.LanguageCode,
+			IsActive:     dto.IsActive,
+			IsDefault:    dto.IsDefault,
+		}
+	}
+	return result
+}
+
+func mapTemplates(dtos []templateDTO) []models.Template {
+	result := make([]models.Template, len(dtos))
+	for i, dto := range dtos {
+		result[i] = models.Template{
+			Key:       dto.Key,
+			Channel:   dto.Channel,
+			Subject:   dto.Subject,
+			Body:      dto.Body,
+			Variables: dto.Variables,
+		}
+	}
+	return result
+}
+
+func mapNotificationChannels(dtos []notificationChannelDTO) []models.NotificationChannel {
+	result := make([]models.NotificationChannel, len(dtos))
+	for i, dto := range dtos {
+		result[i] = models.NotificationChannel{
+			ChannelType: dto.ChannelType,
+			Provider:    dto.Provider,
+			Config:      dto.Config,
+			Enabled:     dto.Enabled,
+		}
+	}
+	return result
+}
+
+func mapSystemLimit(dto *systemLimitDTO) *models.SystemLimit {
+	if dto == nil {
+		return nil
+	}
+	return &models.SystemLimit{
+		APIRateLimit:      dto.APIRateLimit,
+		BurstLimit:        dto.BurstLimit,
+		AuditRetention:    dto.AuditRetention,
+		ActivityRetention: dto.ActivityRetention,
+	}
 }

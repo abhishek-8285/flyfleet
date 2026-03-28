@@ -1,0 +1,384 @@
+# kube-prometheus-stack Helm values for FlyFleet
+# This file customizes the default Prometheus/Grafana stack for FlyFleet monitoring
+
+# ============================================================================
+# Prometheus Configuration
+# ============================================================================
+prometheus:
+  prometheusSpec:
+    # Storage configuration
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi  # Adjust based on retention needs
+
+    # Retention period (default 15d)
+    retention: "30d"
+
+    # Enable additional scrape configs for FlyFleet
+    additionalScrapeConfigs:
+      - job_name: 'flyfleet-api'
+        kubernetes_sd_configs:
+          - role: service
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_label_app]
+            action: keep
+            regex: fleet-core-service
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: flyfleet
+          - source_labels: [__meta_kubernetes_service_name]
+            target_label: service
+          - target_label: __address__
+            replacement: flyfleet-fleet-core-service.flyfleet.svc.cluster.local:8084
+
+    # Alertmanager configuration
+    alertmanager:
+      enabled: true
+      alertmanagerSpec:
+        replicas: 3
+        storage:
+          volumeClaimTemplate:
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 10Gi
+
+    # Enable remote write if needed (for long-term storage)
+    # remoteWrite:
+    #   - url: "https://prometheus-remote-write.example.com/api/v1/write"
+    #     headers:
+    #       Authorization: ["Bearer TOKEN"]
+
+    # Resource limits
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2000m"
+      limits:
+        memory: "8Gi"
+        cpu: "4000m"
+
+    # Enable pod monitor for application metrics
+    podMonitorSelector: {}
+    podMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+
+# ============================================================================
+# Grafana Configuration
+# ============================================================================
+grafana:
+  enabled: true
+  adminPassword: "flyfleet-grafana-admin-$(openssl rand -base64 12)"  # Change in production!
+
+  # Persistence
+  persistence:
+    enabled: true
+    storageClassName: "standard"  # Adjust to your storage class
+    accessModes: ["ReadWriteOnce"]
+    size: "10Gi"
+
+  # Dashboard imports
+  dashboard:
+    import:
+      - json
+    folder: "FlyFleet"
+    datasource: "Prometheus"
+
+  # Enable reporting
+  reportingEnabled: false
+
+  # Resource limits
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  # Ingress configuration (optional)
+  ingress:
+    enabled: false  # Set to true if you have an ingress controller
+    hosts:
+      - grafana.flyfleet.com
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/auth-type: basic
+      nginx.ingress.kubernetes.io/auth-secret: grafana-basic-auth
+      nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+
+  # Sidecar for dashboards/configmaps
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      folder: /tmp/dashboards
+    datasources:
+      enabled: true
+    notifiers:
+      enabled: true
+
+# ============================================================================
+# Alertmanager Configuration
+# ============================================================================
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    replicas: 3
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+    # Default notification routes
+    route:
+      group_by: ['alertname', 'service', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: 'default'
+
+      routes:
+        - match:
+            severity: critical
+          receiver: 'slack-critical'
+          continue: false
+        - match:
+            severity: warning
+          receiver: 'default'
+          continue: false
+
+    # Receivers (configure your notification channels)
+    receivers:
+      - name: 'default'
+        email_configs:
+          - to: 'devops@flyfleet.com'
+            from: 'alertmanager@flyfleet.com'
+            smarthost: 'smtp.example.com:587'
+            auth_username: 'user'
+            auth_password: 'password'
+
+      - name: 'slack-critical'
+        slack_configs:
+          - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+            channel: '#alerts-critical'
+            send_resolved: true
+            title: '🚨 {{ .GroupLabels.alertname }}'
+            text: '{{ .CommonAnnotations.description }}'
+
+      - name: 'pagerduty'
+        pagerduty_configs:
+          - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+            severity: 'critical'
+
+# ============================================================================
+# Node Exporter (for node metrics)
+# ============================================================================
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # Host network for node metrics
+  hostNetwork: true
+  hostPID: true
+
+# ============================================================================
+# kube-state-metrics
+# ============================================================================
+kubeStateMetrics:
+  enabled: true
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# ============================================================================
+# Default Rules (pre-configured)
+# ============================================================================
+defaultRules:
+  create: true
+
+  # Customize which default rules to enable
+  rules:
+    # Core Kubernetes alerts
+    - alert: KubePodCrashLooping
+      enabled: true
+    - alert: KubeDeploymentReplicasMismatch
+      enabled: true
+    - alert: KubePodNotReady
+      enabled: true
+    - alert: KubeNodePressureMemory
+      enabled: true
+    - alert: KubeNodePressureDisk
+      enabled: true
+
+    # Core system alerts
+    - alert: TargetDown
+      enabled: true
+    - alert: HostHighDiskUsage
+      enabled: true
+    - alert: HostHighMemoryUsage
+      enabled: true
+
+    # Etcd/API server alerts
+    - alert: KubeAPIDown
+      enabled: true
+    - alert: KubeControllerManagerDown
+      enabled: true
+    - alert: KubeSchedulerDown
+      enabled: true
+
+# ============================================================================
+# Additional Rules for FlyFleet
+# ============================================================================
+# These will be created from ConfigMap in next step
+additionalPrometheusRulesMap:
+  flyfleet-rules:
+    groups:
+      - name: flyfleet
+        rules:
+          - alert: FlyFleetAPIHighLatency
+            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+            for: 5m
+            labels:
+              severity: warning
+              service: api
+            annotations:
+              summary: "FlyFleet API high latency (95th percentile > 1s)"
+              description: "API response latency is high: {{ $value }}s"
+
+          - alert: FlyFleetAPIHighErrorRate
+            expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+            for: 2m
+            labels:
+              severity: critical
+              service: api
+            annotations:
+              summary: "FlyFleet API high error rate (>5%)"
+              description: "Error rate is {{ $value | humanizePercentage }}"
+
+          - alert: FlyFleetDatabaseConnectionsHigh
+            expr: pg_stat_database_numbackends{datname="flyfleet"} > 80
+            for: 5m
+            labels:
+              severity: warning
+              service: database
+            annotations:
+              summary: "FlyFleet database connections high"
+              description: "PostgreSQL has {{ $value }} connections"
+
+          - alert: FlyFleetDatabaseReplicationLag
+            expr: pg_stat_replication{state="streaming"}.write_lag > 10000000
+            for: 5m
+            labels:
+              severity: warning
+              service: database
+            annotations:
+              summary: "Database replication lag high"
+              description: "Replication lag is {{ $value }} bytes"
+
+          - alert: FlyFleetNatsClusterSize
+            expr: nats_cluster_size < 3
+            for: 2m
+            labels:
+              severity: critical
+              service: nats
+            annotations:
+              summary: "NATS cluster size below expected"
+              description: "Only {{ $value }} NATS servers detected"
+
+          - alert: FlyFleetRedisMemoryHigh
+            expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+            for: 5m
+            labels:
+              severity: warning
+              service: redis
+            annotations:
+              summary: "Redis memory usage > 80%"
+              description: "Redis using {{ $value | humanizePercentage }} of memory"
+
+          - alert: FlyFleetPodOOMKilled
+            expr: rate(container_oom_events_total[5m]) > 0
+            for: 1m
+            labels:
+              severity: critical
+              service: app
+            annotations:
+              summary: "Pod OOMKilled"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was OOMKilled"
+
+          - alert: FlyFleetPodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total[1h]) > 2
+            for: 2m
+            labels:
+              severity: warning
+              service: app
+            annotations:
+              summary: "Pod crash looping"
+              description: "Pod {{ $labels.pod }} restarting frequently"
+
+# ============================================================================
+# Blackbox Exporter (for HTTP endpoint probing)
+# ============================================================================
+blackboxExporter:
+  enabled: true
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+  # Blackbox modules configuration
+  blackbox:
+    config:
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 10s
+          http:
+            preferred_ip_protocol: "ip4"
+            tls_config:
+              insecure_skip_verify: false
+            method: GET
+            headers:
+              User-Agent: "blackbox-exporter/0.17.0"
+
+# ============================================================================
+# Service Monitor for FlyFleet
+# ============================================================================
+# This creates ServiceMonitor resources to automatically discover services
+# Note: This requires your application to have proper Prometheus annotations
+
+prometheusServiceMonitor:
+  enabled: true
+  # Additional selectors
+  additionalSelector: {}
+
+# Global settings
+global:
+  rbac:
+    create: true
+  securityContext:
+    fsGroup: 2000
+    runAsNonRoot: true
+    runAsUser: 1000

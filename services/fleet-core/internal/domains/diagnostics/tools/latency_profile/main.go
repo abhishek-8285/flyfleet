@@ -17,7 +17,7 @@ func main() {
 
 	fmt.Println("Step 51: Multi-Region Latency Profiling Result")
 	fmt.Println("--------------------------------------------")
-	
+
 	for region, latency := range regions {
 		fmt.Printf("Region: %-15s | Median Latency: %6.1f ms | Status: ", region, latency)
 		if latency < 300 {

@@ -65,6 +65,13 @@ jobs:
           fi
           echo "✅ All contract tests passed - API matches OpenAPI spec"
 
+      - name: Collect and Verify Coverage
+        working-directory: services/microservices/vehicle-service
+        run: |
+          echo "📊 Collecting coverage for vehicle-service..."
+          go test ./... -coverprofile=coverage.out -covermode=atomic
+          bash ../../scripts/check_coverage.sh 70
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

@@ -38,18 +38,18 @@ func (s *NotificationRetryService) SendWithRetry(ctx context.Context, req Notifi
 
 func (s *NotificationRetryService) retryLoop(req NotificationRequest) {
 	retries := []time.Duration{30 * time.Second, 2 * time.Minute, 5 * time.Minute}
-	
+
 	for i := 0; i <= len(retries); i++ {
 		success := s.attemptSend(req)
 		if success {
-			s.logger.Info("Notification sent successfully", 
+			s.logger.Info("Notification sent successfully",
 				zap.String("incident_id", req.IncidentID.String()),
 				zap.Int("attempt", i+1))
 			return
 		}
 
 		if i < len(retries) {
-			s.logger.Warn("Notification failed, retrying...", 
+			s.logger.Warn("Notification failed, retrying...",
 				zap.String("incident_id", req.IncidentID.String()),
 				zap.Duration("wait", retries[i]))
 			time.Sleep(retries[i])
@@ -58,22 +58,22 @@ func (s *NotificationRetryService) retryLoop(req NotificationRequest) {
 
 	// If we reach here, all retries failed
 	s.logger.Error("Notification exhausted all retries", zap.String("incident_id", req.IncidentID.String()))
-	
+
 	// Phase 7: Metric increment
 	emergency.NotificationFailuresTotal.WithLabelValues(req.OrgID.String(), req.Type).Inc()
-	
+
 	s.publishFailure(req)
 }
 
 func (s *NotificationRetryService) attemptSend(req NotificationRequest) bool {
 	// In a real system, this would call an SMS/Email provider API
-	// For this module validation, we simulate success 90% of the time 
+	// For this module validation, we simulate success 90% of the time
 	// unless it's a specific test case.
 	// We'll simulate by logging for now.
-	s.logger.Info("Attempting to send notification", 
+	s.logger.Info("Attempting to send notification",
 		zap.String("type", req.Type),
 		zap.String("target", req.Target))
-	
+
 	return true // Simulating success for standard flow
 }
 

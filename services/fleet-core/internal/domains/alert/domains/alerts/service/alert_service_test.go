@@ -22,11 +22,11 @@ func TestAlertTypesConstants(t *testing.T) {
 
 func TestCreateRuleRequestValidation(t *testing.T) {
 	req := &models.CreateRuleRequest{
-		Name:        "Valid Rule",
-		Type:        models.AlertTypeOverspeed,
-		Severity:    models.SeverityWarning,
-		Conditions:  map[string]interface{}{"speed_limit": 80},
-		Actions:     []models.AlertAction{{Type: models.ActionTypeNotification, Target: "test@example.com"}},
+		Name:       "Valid Rule",
+		Type:       models.AlertTypeOverspeed,
+		Severity:   models.SeverityWarning,
+		Conditions: map[string]interface{}{"speed_limit": 80},
+		Actions:    []models.AlertAction{{Type: models.ActionTypeNotification, Target: "test@example.com"}},
 	}
 
 	assert.Equal(t, "Valid Rule", req.Name)

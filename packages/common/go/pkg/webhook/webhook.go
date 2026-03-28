@@ -54,21 +54,37 @@ func NewWebhookClient(logger *zap.Logger) *WebhookClient {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			ips, err := net.LookupIP(host)
 			if err != nil {
 				return nil, err
 			}
-			
+
+			// Block if any resolved IP is private/loopback
 			for _, ip := range ips {
 				if isPrivateIP(ip) {
-					return nil, errors.New("SSRF Protection: Dialing private/loopback IPs is not allowed")
+					return nil, errors.New("SSRF protection: dialing private/loopback IPs is not allowed")
 				}
 			}
-			
-			// Dial normally if not private (although a race condition exists here for DNS rebinding, 
-			// this provides basic protection. Ideal is dialing the specific safe IP resolved.)
-			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].String(), port))
+
+			// Use the first resolved IP (avoid DNS rebinding by not re-resolving)
+			target := net.JoinHostPort(ips[0].String(), port)
+			conn, err := dialer.DialContext(ctx, network, target)
+			if err != nil {
+				return nil, err
+			}
+
+			// Defense-in-depth: verify the connection's remote address is not private.
+			// This catches cases where the IP we dialed was public but the remote endpoint
+			// somehow redirected us (unlikely but extra safety).
+			if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+				if isPrivateIP(tcpAddr.IP) {
+					conn.Close()
+					return nil, errors.New("SSRF protection: connection to private IP blocked")
+				}
+			}
+
+			return conn, nil
 		},
 		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          100,

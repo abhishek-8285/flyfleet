@@ -75,7 +75,9 @@ func (m *MockDocumentRepository) GetByInvoiceID(ctx context.Context, invoiceID s
 	return args.Get(0).([]models.InvoiceDocument), args.Error(1)
 }
 
-func (m *MockDocumentRepository) Update(ctx context.Context, doc *models.InvoiceDocument) error { return nil }
+func (m *MockDocumentRepository) Update(ctx context.Context, doc *models.InvoiceDocument) error {
+	return nil
+}
 
 func TestInvoiceWorker_VersionLock(t *testing.T) {
 	logger := zaptest.NewLogger(t)
@@ -83,10 +85,10 @@ func TestInvoiceWorker_VersionLock(t *testing.T) {
 
 	// 1. Setup Mock Document Repository
 	mockDocRepo := new(MockDocumentRepository)
-	
+
 	// Create a dummy invoice ID
 	invID := uuid.New()
-	
+
 	// The snapshot document locked to template version 1
 	doc := models.InvoiceDocument{
 		InvoiceID:       invID,
@@ -97,7 +99,7 @@ func TestInvoiceWorker_VersionLock(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// We expect the worker to query for the documents of this invoice
 	mockDocRepo.On("GetByInvoiceID", ctx, invID.String()).Return([]models.InvoiceDocument{doc}, nil)
 
@@ -106,8 +108,8 @@ func TestInvoiceWorker_VersionLock(t *testing.T) {
 	// ACTUALLY: we can just test the signature logic. If it tries to fetch version 1, that's what we want.
 
 	// A better way is to test the integration by just verifying it calls docRepo.GetByInvoiceID.
-	
-	ts := pdf.NewTemplateService(nil) 
+
+	ts := pdf.NewTemplateService(nil)
 	pg := pdf.NewPDFGenerator(5 * time.Second)
 
 	worker := queue.NewInvoiceWorker(
@@ -124,11 +126,11 @@ func TestInvoiceWorker_VersionLock(t *testing.T) {
 
 	// Execute
 	_, err := worker.RegenerateFromSnapshot(ctx, invID)
-	
+
 	// It should fail at GetTemplate because repo is nil, BUT it should have called docRepo
 	// and extracted doc.TemplateVersion = 1
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get locked template version")
-	
+
 	mockDocRepo.AssertExpectations(t)
 }

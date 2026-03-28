@@ -21,8 +21,8 @@ func TestInviteValidationRateLimiter(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 2 * time.Second)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
@@ -33,7 +33,7 @@ func TestInviteValidationRateLimiter(t *testing.T) {
 	rdb.FlushDB(ctx)
 
 	logger := zap.NewNop()
-	
+
 	// Create a dummy service to prevent panics when rate limits allow the request through
 	mockRepo := &mockAuthRepo{}
 	svc := service.NewAuthService(nil, mockRepo, nil, "secret", rdb, nil)
@@ -46,7 +46,7 @@ func TestInviteValidationRateLimiter(t *testing.T) {
 
 	// Simulate 6 attempts from the same IP
 	testIP := "192.168.1.55"
-	
+
 	for i := 1; i <= 6; i++ {
 		reqBody := `{"code":"test-code-123"}`
 		req, _ := http.NewRequest("POST", "/api/v1/auth/invites/validate", bytes.NewBufferString(reqBody))

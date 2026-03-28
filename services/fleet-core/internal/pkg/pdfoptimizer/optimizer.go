@@ -16,10 +16,10 @@ func Optimize(data []byte) ([]byte, error) {
 
 	// Read the original bytes
 	rs := bytes.NewReader(data)
-	
+
 	// Configure for maximum "squeezing"
 	conf := model.NewDefaultConfiguration()
-	
+
 	var buf bytes.Buffer
 	// Use pdfcpu API to optimize the buffer
 	err := api.Optimize(rs, &buf, conf)

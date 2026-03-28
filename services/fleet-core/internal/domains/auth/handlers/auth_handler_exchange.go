@@ -28,7 +28,7 @@ func (h *Handlers) SwitchContext(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Extract the current authenticated actor from the JWT Context
 	var requestorID uuid.UUID
-	
+
 	// Try standard UUID format from Shared Middleware
 	if uid, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID); ok {
 		requestorID = uid

@@ -1,0 +1,239 @@
+{
+  "dashboard": {
+    "title": "FlyFleet Distributed Tracing",
+    "uid": "flyfleet-distributed-tracing",
+    "version": 1,
+    "schemaVersion": 38,
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "tags": ["flyfleet", "tracing", "tempo", "distributed-systems"],
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Trace Ingestion Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(traces_received_total[1m])",
+            "legendFormat": "{{service}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "traces/s", "label": "Rate" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Trace Errors",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(traces_dropped_total[1m])",
+            "legendFormat": "{{reason}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "traces/s", "label": "Dropped Traces" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Average Trace Duration",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(trace_duration_seconds_bucket[1h])) by (le, service))",
+            "legendFormat": "{{service}} p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(trace_duration_seconds_bucket[1h])) by (le, service))",
+            "legendFormat": "{{service}} p95",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Duration" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Top Slowest Services (p95)",
+        "type": "bargauge",
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(trace_duration_seconds_bucket[15m])) by (le, service))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds",
+              "thresholds": {
+                "steps": [
+                  { "color": "green", "value": 0 },
+                  { "color": "orange", "value": 0.5 },
+                  { "color": "red", "value": 2.0 }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Service Dependency Map (Last 5m)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 16, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (client, server) (rate(traces_sent_total[5m]))",
+            "legendFormat": "{{client}} → {{server}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "traces/s", "label": "Call Rate" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Service Map - Error Rate Heatmap",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (client, server) (rate(traces_status_code_count{status_code=~\"5..\"}[5m])) / sum by (client, server) (rate(traces_sent_total[5m]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "spectrum",
+              "spectrumConfig": {
+                "colorScheme": "interpolateWarm",
+                "max": 0.1,
+                "min": 0
+              }
+            },
+            "unit": "percentunit"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Recent Traces Explorer",
+        "type": "logs",
+        "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "trace_id!=\"\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true
+        }
+      },
+      {
+        "id": 8,
+        "title": "Trace Sampling Rate",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 40, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "traces_sampled_total / (traces_sampled_total + traces_skipped_total)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "green", "value": 0.1 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Total Spans Collected (Last 1h)",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 40, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(traces_spans_total[1h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Root Cause Latency Contribution",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 40, "w": 12, "h": 4 },
+        "targets": [
+          {
+            "expr": "topk(5, sum by (span_name) (avg(trace_duration_seconds)))",
+            "legendFormat": "{{span_name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Avg Duration" },
+          { "format": "short" }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(service)",
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "trace_id",
+          "type": "textbox",
+          "datasource": "Prometheus",
+          "query": "",
+          "options": {
+            "name": "Trace ID",
+            "value": ""
+          }
+        }
+      ]
+    }
+  }
+}

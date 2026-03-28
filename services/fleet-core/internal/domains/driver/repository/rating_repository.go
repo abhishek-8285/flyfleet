@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,17 +31,21 @@ func (r *RatingRepository) CreateRating(ctx context.Context, rating *models.Rati
 		rating.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		rating.ID, rating.DriverID, rating.TripID,
 		rating.PunctualityScore, rating.BehaviorScore, rating.DrivingScore,
 		rating.OverallRating, rating.Comments, rating.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *RatingRepository) GetAverageRating(ctx context.Context, driverID string) (float64, error) {
 	query := `SELECT AVG(overall_rating) FROM driver_ratings WHERE driver_id = $1`
+	start := time.Now()
 	var avg float64
 	err := r.db.QueryRow(ctx, query, driverID).Scan(&avg)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return avg, err
 }

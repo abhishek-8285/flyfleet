@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
+	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
+
 	"github.com/flyfleet/fleet-core-service/internal/middleware" // for GetTraceID
 )
 
@@ -49,8 +51,8 @@ func HTTPMetricsMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			// Record request count with labels
 			RequestsTotal.WithLabelValues(r.Method, routePattern, strconv.Itoa(status)).Inc()
 
-			// Record latency histogram
-			RequestLatency.WithLabelValues(r.Method, routePattern).Observe(duration.Seconds())
+			// Record latency histogram (using shared metrics to avoid duplicate registration)
+			sharedmetrics.HTTPRequestDuration.WithLabelValues(r.Method, routePattern, strconv.Itoa(status)).Observe(duration.Seconds())
 
 			// Log slow requests (> 1s) at warning level
 			if duration > time.Second {

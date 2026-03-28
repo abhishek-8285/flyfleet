@@ -9,7 +9,7 @@ import (
 type VehicleLifecycleMetrics struct {
 	VehicleID                 uuid.UUID `json:"vehicle_id" db:"vehicle_id"`
 	TotalMaintenanceCost      float64   `json:"total_maintenance_cost" db:"total_maintenance_cost"`
-	MaintenanceEvents          int       `json:"maintenance_events" db:"maintenance_events"`
+	MaintenanceEvents         int       `json:"maintenance_events" db:"maintenance_events"`
 	DowntimeHours             float64   `json:"downtime_hours" db:"downtime_hours"`
 	CostPerKm                 float64   `json:"cost_per_km" db:"cost_per_km"`
 	ReplacementRecommendation string    `json:"replacement_recommendation" db:"replacement_recommendation"`

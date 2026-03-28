@@ -11,9 +11,9 @@ type TaxEngine struct {
 }
 
 type TaxBreakup struct {
-	CGST float64
-	SGST float64
-	IGST float64
+	CGST     float64
+	SGST     float64
+	IGST     float64
 	TotalTax float64
 }
 
@@ -23,15 +23,15 @@ func (e *TaxEngine) CalculateGST(taxableAmount float64, rate float64) TaxBreakup
 		halfRate := rate / 2
 		tax := taxableAmount * (halfRate / 100)
 		return TaxBreakup{
-			CGST: tax,
-			SGST: tax,
+			CGST:     tax,
+			SGST:     tax,
 			TotalTax: tax * 2,
 		}
 	} else {
 		// INTER-STATE: IGST (18%)
 		tax := taxableAmount * (rate / 100)
 		return TaxBreakup{
-			IGST: tax,
+			IGST:     tax,
 			TotalTax: tax,
 		}
 	}
@@ -53,6 +53,6 @@ func main() {
 	fmt.Printf("SGST (Auto):   ₹%.2f\n", breakup.SGST)
 	fmt.Printf("IGST (Auto):   ₹%.2f\n", breakup.IGST)
 	fmt.Println("-------------------------------------------")
-	fmt.Printf("Grand Total:   ₹%.2f\n", taxableValue + breakup.TotalTax)
+	fmt.Printf("Grand Total:   ₹%.2f\n", taxableValue+breakup.TotalTax)
 	fmt.Println("✅ Match: This logic matches the Khushi Textiles math perfectly.")
 }

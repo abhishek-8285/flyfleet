@@ -50,7 +50,7 @@ func (h *AnalyticsHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch summary", err)
 		return
 	}
-	
+
 	json.NewEncoder(w).Encode(summary)
 }
 
@@ -148,6 +148,7 @@ func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	// Default for development
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure fallback - org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }

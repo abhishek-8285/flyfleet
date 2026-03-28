@@ -58,16 +58,16 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, orgID 
 	// Mock SARATHI API Call
 	parsedDOB, _ := time.Parse("2006-01-02", dob)
 	verification := &models.DriverVerification{
-		ID:              uuid.New().String(),
-		DriverID:        driverID,
-		OrganizationID:  orgID,
-		LicenseNumber:   licenseNumber,
-		Status:          "verified",
+		ID:               uuid.New().String(),
+		DriverID:         driverID,
+		OrganizationID:   orgID,
+		LicenseNumber:    licenseNumber,
+		Status:           "verified",
 		VerificationDate: time.Now(),
-		Name:            "Mock Driver Name",
-		DateOfBirth:     parsedDOB,
-		ValidityTo:      time.Now().Add(5 * 365 * 24 * time.Hour),
-		CreatedAt:       time.Now(),
+		Name:             "Mock Driver Name",
+		DateOfBirth:      parsedDOB,
+		ValidityTo:       time.Now().Add(5 * 365 * 24 * time.Hour),
+		CreatedAt:        time.Now(),
 	}
 
 	log := &models.IntegrationLog{

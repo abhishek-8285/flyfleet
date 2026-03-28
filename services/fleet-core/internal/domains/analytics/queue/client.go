@@ -48,7 +48,7 @@ func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, orgID, userID u
 		return err
 	}
 	task := asynq.NewTask(TypeAnalyticsJobProcess, payload)
-	
+
 	// MaxRetry: 3, Timeout: 1 hour (analytics can be very slow)
 	_, err = c.client.Enqueue(task, asynq.MaxRetry(3), asynq.Timeout(1*time.Hour))
 	return err
@@ -66,7 +66,7 @@ func (c *AnalyticsQueueClient) EnqueueCacheInvalidate(orgID uuid.UUID, pattern, 
 		return err
 	}
 	task := asynq.NewTask(TypeAnalyticsCacheInvalidate, payload)
-	
+
 	// Low priority task, fast execution
 	_, err = c.client.Enqueue(task, asynq.MaxRetry(3), asynq.Timeout(5*time.Minute))
 	return err

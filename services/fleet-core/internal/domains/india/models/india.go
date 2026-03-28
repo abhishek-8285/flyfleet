@@ -8,73 +8,73 @@ import (
 
 // FASTagTransaction represents a FASTag transaction
 type FASTagTransaction struct {
-	ID                 string    `json:"id" db:"id" validate:"required"`
-	TagNumber          string    `json:"tag_number" db:"tag_number" validate:"required"`
-	VehicleID          uuid.UUID `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
-	DriverID           uuid.UUID `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrganizationID     uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
-	TransactionID      string    `json:"transaction_id" db:"transaction_id" validate:"required"`
-	TransactionType    string    `json:"transaction_type" db:"transaction_type" validate:"required,oneof=debit credit"`
-	Amount             float64   `json:"amount" db:"amount" validate:"required,gt=0"`
-	TollPlaza          string    `json:"toll_plaza" db:"toll_plaza" validate:"required"`
-	TollPlazaID        string    `json:"toll_plaza_id" db:"toll_plaza_id" validate:"required"`
-	LaneID             string    `json:"lane_id" db:"lane_id" validate:"required"`
-	TransactionTime    time.Time `json:"transaction_time" db:"transaction_time" validate:"required"`
-	TransactionDate    string    `json:"transaction_date" db:"transaction_date" validate:"required"`
-	SettlementDate     *string   `json:"settlement_date,omitempty" db:"settlement_date"`
-	Status             string    `json:"status" db:"status" validate:"required,oneof=success failed pending"`
-	ErrorCode          *string   `json:"error_code,omitempty" db:"error_code"`
-	ErrorDescription   *string   `json:"error_description,omitempty" db:"error_description"`
-	Reconciled         bool      `json:"reconciled" db:"reconciled"`
+	ID                 string     `json:"id" db:"id" validate:"required"`
+	TagNumber          string     `json:"tag_number" db:"tag_number" validate:"required"`
+	VehicleID          uuid.UUID  `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
+	DriverID           uuid.UUID  `json:"driver_id" db:"driver_id" validate:"required,uuid"`
+	OrganizationID     uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	TransactionID      string     `json:"transaction_id" db:"transaction_id" validate:"required"`
+	TransactionType    string     `json:"transaction_type" db:"transaction_type" validate:"required,oneof=debit credit"`
+	Amount             float64    `json:"amount" db:"amount" validate:"required,gt=0"`
+	TollPlaza          string     `json:"toll_plaza" db:"toll_plaza" validate:"required"`
+	TollPlazaID        string     `json:"toll_plaza_id" db:"toll_plaza_id" validate:"required"`
+	LaneID             string     `json:"lane_id" db:"lane_id" validate:"required"`
+	TransactionTime    time.Time  `json:"transaction_time" db:"transaction_time" validate:"required"`
+	TransactionDate    string     `json:"transaction_date" db:"transaction_date" validate:"required"`
+	SettlementDate     *string    `json:"settlement_date,omitempty" db:"settlement_date"`
+	Status             string     `json:"status" db:"status" validate:"required,oneof=success failed pending"`
+	ErrorCode          *string    `json:"error_code,omitempty" db:"error_code"`
+	ErrorDescription   *string    `json:"error_description,omitempty" db:"error_description"`
+	Reconciled         bool       `json:"reconciled" db:"reconciled"`
 	ReconciliationDate *time.Time `json:"reconciliation_date,omitempty" db:"reconciliation_date"`
-	CreatedAt          time.Time `json:"created_at" db:"created_at"`
-	CreatedBy          uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedAt          time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy          uuid.UUID `json:"updated_by" db:"updated_by"`
+	CreatedAt          time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy          uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedAt          time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy          uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // EWayBill represents an E-Way Bill
 type EWayBill struct {
-	ID                      string    `json:"id" db:"id" validate:"required"`
-	OrganizationID          uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
-	EWayBillNumber          string    `json:"eway_bill_number" db:"eway_bill_number" validate:"required"`
-	EWayBillDate            time.Time `json:"eway_bill_date" db:"eway_bill_date" validate:"required"`
-	EWayBillValidTill       time.Time `json:"eway_bill_valid_till" db:"eway_bill_valid_till" validate:"required"`
-	DocumentNumber          string    `json:"document_number" db:"document_number" validate:"required"`
-	DocumentDate            time.Time `json:"document_date" db:"document_date" validate:"required"`
-	DocumentType            string    `json:"document_type" db:"document_type" validate:"required"`
-	GoodsDescription        string    `json:"goods_description" db:"goods_description" validate:"required"`
-	GoodsValue              float64   `json:"goods_value" db:"goods_value" validate:"required,gt=0"`
-	GoodsTaxRate            float64   `json:"goods_tax_rate" db:"goods_tax_rate" validate:"gte=0"`
-	GoodsUnit               string    `json:"goods_unit" db:"goods_unit" validate:"required"`
-	GoodsQuantity           float64   `json:"goods_quantity" db:"goods_quantity" validate:"required,gt=0"`
-	FromPlace               string    `json:"from_place" db:"from_place" validate:"required"`
-	FromPincode             string    `json:"from_pincode" db:"from_pincode" validate:"required"`
-	FromStateCode           int       `json:"from_state_code" db:"from_state_code" validate:"required,min=1,max=37"`
-	ToPlace                 string    `json:"to_place" db:"to_place" validate:"required"`
-	ToPincode               string    `json:"to_pincode" db:"to_pincode" validate:"required"`
-	ToStateCode             int       `json:"to_state_code" db:"to_state_code" validate:"required,min=1,max=37"`
-	TransporterID           string    `json:"transporter_id" db:"transporter_id"`
-	TransporterName         string    `json:"transporter_name" db:"transporter_name"`
-	TransportMode           string    `json:"transport_mode" db:"transport_mode" validate:"omitempty,oneof=road rail air ship"`
-	TransportDocumentNumber string    `json:"transport_document_number" db:"transport_document_number"`
-	TransportDocumentDate   string    `json:"transport_document_date" db:"transport_document_date"`
-	TransitType             string    `json:"transit_type" db:"transit_type" validate:"omitempty,oneof=own hired railways"`
-	VehicleNumber           string    `json:"vehicle_number" db:"vehicle_number"`
-	VehicleType             string    `json:"vehicle_type" db:"vehicle_type" validate:"omitempty,oneof=reg lr cn"`
-	RemainingDistance       float64   `json:"remaining_distance" db:"remaining_distance"`
-	UserGSTIN               string    `json:"user_gstin" db:"user_gstin" validate:"required"`
-	RecipientGSTIN          string    `json:"recipient_gstin" db:"recipient_gstin"`
-	GeneratedBy             string    `json:"generated_by" db:"generated_by" validate:"required"`
-	GeneratedAt             time.Time `json:"generated_at" db:"generated_at"`
-	Cancelled               bool      `json:"cancelled" db:"cancelled"`
-	CancelledBy             *string   `json:"cancelled_by,omitempty" db:"cancelled_by"`
+	ID                      string     `json:"id" db:"id" validate:"required"`
+	OrganizationID          uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	EWayBillNumber          string     `json:"eway_bill_number" db:"eway_bill_number" validate:"required"`
+	EWayBillDate            time.Time  `json:"eway_bill_date" db:"eway_bill_date" validate:"required"`
+	EWayBillValidTill       time.Time  `json:"eway_bill_valid_till" db:"eway_bill_valid_till" validate:"required"`
+	DocumentNumber          string     `json:"document_number" db:"document_number" validate:"required"`
+	DocumentDate            time.Time  `json:"document_date" db:"document_date" validate:"required"`
+	DocumentType            string     `json:"document_type" db:"document_type" validate:"required"`
+	GoodsDescription        string     `json:"goods_description" db:"goods_description" validate:"required"`
+	GoodsValue              float64    `json:"goods_value" db:"goods_value" validate:"required,gt=0"`
+	GoodsTaxRate            float64    `json:"goods_tax_rate" db:"goods_tax_rate" validate:"gte=0"`
+	GoodsUnit               string     `json:"goods_unit" db:"goods_unit" validate:"required"`
+	GoodsQuantity           float64    `json:"goods_quantity" db:"goods_quantity" validate:"required,gt=0"`
+	FromPlace               string     `json:"from_place" db:"from_place" validate:"required"`
+	FromPincode             string     `json:"from_pincode" db:"from_pincode" validate:"required"`
+	FromStateCode           int        `json:"from_state_code" db:"from_state_code" validate:"required,min=1,max=37"`
+	ToPlace                 string     `json:"to_place" db:"to_place" validate:"required"`
+	ToPincode               string     `json:"to_pincode" db:"to_pincode" validate:"required"`
+	ToStateCode             int        `json:"to_state_code" db:"to_state_code" validate:"required,min=1,max=37"`
+	TransporterID           string     `json:"transporter_id" db:"transporter_id"`
+	TransporterName         string     `json:"transporter_name" db:"transporter_name"`
+	TransportMode           string     `json:"transport_mode" db:"transport_mode" validate:"omitempty,oneof=road rail air ship"`
+	TransportDocumentNumber string     `json:"transport_document_number" db:"transport_document_number"`
+	TransportDocumentDate   string     `json:"transport_document_date" db:"transport_document_date"`
+	TransitType             string     `json:"transit_type" db:"transit_type" validate:"omitempty,oneof=own hired railways"`
+	VehicleNumber           string     `json:"vehicle_number" db:"vehicle_number"`
+	VehicleType             string     `json:"vehicle_type" db:"vehicle_type" validate:"omitempty,oneof=reg lr cn"`
+	RemainingDistance       float64    `json:"remaining_distance" db:"remaining_distance"`
+	UserGSTIN               string     `json:"user_gstin" db:"user_gstin" validate:"required"`
+	RecipientGSTIN          string     `json:"recipient_gstin" db:"recipient_gstin"`
+	GeneratedBy             string     `json:"generated_by" db:"generated_by" validate:"required"`
+	GeneratedAt             time.Time  `json:"generated_at" db:"generated_at"`
+	Cancelled               bool       `json:"cancelled" db:"cancelled"`
+	CancelledBy             *string    `json:"cancelled_by,omitempty" db:"cancelled_by"`
 	CancelledOn             *time.Time `json:"cancelled_on,omitempty" db:"cancelled_on"`
-	CancelledReason         *string   `json:"cancelled_reason,omitempty" db:"cancelled_reason"`
-	CreatedAt               time.Time `json:"created_at" db:"created_at"`
-	CreatedBy               uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedAt               time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy               uuid.UUID `json:"updated_by" db:"updated_by"`
+	CancelledReason         *string    `json:"cancelled_reason,omitempty" db:"cancelled_reason"`
+	CreatedAt               time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy               uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedAt               time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy               uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // VehicleVerification represents Vahan vehicle verification response
@@ -171,47 +171,47 @@ type LocalPermit struct {
 
 // GSTCompliance represents GST compliance status
 type GSTCompliance struct {
-	ID                    string    `json:"id" db:"id" validate:"required"`
-	OrganizationID        uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
-	GSTIN                 string    `json:"gstin" db:"gstin" validate:"required"`
-	Status                string    `json:"status" db:"status" validate:"required,oneof=active cancelled suspended"`
-	LegalName             string    `json:"legal_name" db:"legal_name" validate:"required"`
-	TradeName             string    `json:"trade_name" db:"trade_name"`
-	Address               string    `json:"address" db:"address" validate:"required"`
-	CentreJurisdiction    string    `json:"centre_jurisdiction" db:"centre_jurisdiction"`
-	StateJurisdiction     string    `json:"state_jurisdiction" db:"state_jurisdiction"`
-	DateOfRegistration    time.Time `json:"date_of_registration" db:"date_of_registration" validate:"required"`
+	ID                    string     `json:"id" db:"id" validate:"required"`
+	OrganizationID        uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	GSTIN                 string     `json:"gstin" db:"gstin" validate:"required"`
+	Status                string     `json:"status" db:"status" validate:"required,oneof=active cancelled suspended"`
+	LegalName             string     `json:"legal_name" db:"legal_name" validate:"required"`
+	TradeName             string     `json:"trade_name" db:"trade_name"`
+	Address               string     `json:"address" db:"address" validate:"required"`
+	CentreJurisdiction    string     `json:"centre_jurisdiction" db:"centre_jurisdiction"`
+	StateJurisdiction     string     `json:"state_jurisdiction" db:"state_jurisdiction"`
+	DateOfRegistration    time.Time  `json:"date_of_registration" db:"date_of_registration" validate:"required"`
 	DateOfCancellation    *time.Time `json:"date_of_cancellation,omitempty" db:"date_of_cancellation"`
-	LastUpdated           time.Time `json:"last_updated" db:"last_updated"`
-	ReturnFilingFrequency string    `json:"return_filing_frequency" db:"return_filing_frequency"`
-	ReturnFilingStatus    string    `json:"return_filing_status" db:"return_filing_status"`
-	PaymentStatus         string    `json:"payment_status" db:"payment_status"`
-	CreatedAt             time.Time `json:"created_at" db:"created_at"`
-	CreatedBy             uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedAt             time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy             uuid.UUID `json:"updated_by" db:"updated_by"`
+	LastUpdated           time.Time  `json:"last_updated" db:"last_updated"`
+	ReturnFilingFrequency string     `json:"return_filing_frequency" db:"return_filing_frequency"`
+	ReturnFilingStatus    string     `json:"return_filing_status" db:"return_filing_status"`
+	PaymentStatus         string     `json:"payment_status" db:"payment_status"`
+	CreatedAt             time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy             uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedAt             time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy             uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // IntegrationConfig represents configuration for India integrations
 type IntegrationConfig struct {
-	ID             string    `json:"id" db:"id" validate:"required"`
-	OrganizationID uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
-	ServiceType    string    `json:"service_type" db:"service_type" validate:"required,oneof=fastag ewaybill vahan sarathi gst permit"`
-	APIEndpoint    string    `json:"api_endpoint" db:"api_endpoint" validate:"required,url"`
-	APIKey         string    `json:"api_key" db:"api_key"`
-	Username       string    `json:"username" db:"username"`
-	Password       string    `json:"password" db:"password"`
-	ClientID       string    `json:"client_id" db:"client_id"`
-	ClientSecret   string    `json:"client_secret" db:"client_secret"`
-	Environment    string    `json:"environment" db:"environment" validate:"required,oneof=production staging sandbox"`
-	Active         bool      `json:"active" db:"active"`
+	ID             string     `json:"id" db:"id" validate:"required"`
+	OrganizationID uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	ServiceType    string     `json:"service_type" db:"service_type" validate:"required,oneof=fastag ewaybill vahan sarathi gst permit"`
+	APIEndpoint    string     `json:"api_endpoint" db:"api_endpoint" validate:"required,url"`
+	APIKey         string     `json:"-" db:"api_key"`       // SECURITY FIX: Do not expose in JSON responses
+	Username       string     `json:"-" db:"username"`      // SECURITY FIX: Exclude from JSON
+	Password       string     `json:"-" db:"password"`      // SECURITY FIX: Do not expose in JSON responses
+	ClientID       string     `json:"-" db:"client_id"`     // SECURITY FIX: Exclude from JSON
+	ClientSecret   string     `json:"-" db:"client_secret"` // SECURITY FIX: Do not expose in JSON responses
+	Environment    string     `json:"environment" db:"environment" validate:"required,oneof=production staging sandbox"`
+	Active         bool       `json:"active" db:"active"`
 	LastSyncAt     *time.Time `json:"last_sync_at,omitempty" db:"last_sync_at"`
 	NextSyncAt     *time.Time `json:"next_sync_at,omitempty" db:"next_sync_at"`
-	SyncInterval   int       `json:"sync_interval" db:"sync_interval"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
-	CreatedBy      uuid.UUID `json:"created_by" db:"created_by"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
-	UpdatedBy      uuid.UUID `json:"updated_by" db:"updated_by"`
+	SyncInterval   int        `json:"sync_interval" db:"sync_interval"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	CreatedBy      uuid.UUID  `json:"created_by" db:"created_by"`
+	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
+	UpdatedBy      uuid.UUID  `json:"updated_by" db:"updated_by"`
 }
 
 // IntegrationLog represents an audit log for India integrations
@@ -243,21 +243,21 @@ type CreateFASTagTransactionRequest struct {
 
 // CreateEWayBillRequest represents a request to create an E-Way Bill
 type CreateEWayBillRequest struct {
-	EWayBillNumber          string    `json:"eway_bill_number" validate:"required"`
-	DocumentNumber          string    `json:"document_number" validate:"required"`
-	DocumentDate            time.Time `json:"document_date" validate:"required"`
-	DocumentType            string    `json:"document_type" validate:"required"`
-	GoodsDescription        string    `json:"goods_description" validate:"required"`
-	GoodsValue              float64   `json:"goods_value" validate:"required,gt=0"`
-	GoodsQuantity           float64   `json:"goods_quantity" validate:"required,gt=0"`
-	FromPlace               string    `json:"from_place" validate:"required"`
-	FromPincode             string    `json:"from_pincode" validate:"required"`
-	FromStateCode           int       `json:"from_state_code" validate:"required,min=1,max=37"`
-	ToPlace                 string    `json:"to_place" validate:"required"`
-	ToPincode               string    `json:"to_pincode" validate:"required"`
-	ToStateCode             int       `json:"to_state_code" validate:"required,min=1,max=37"`
-	VehicleNumber           string    `json:"vehicle_number"`
-	UserGSTIN               string    `json:"user_gstin" validate:"required"`
+	EWayBillNumber   string    `json:"eway_bill_number" validate:"required"`
+	DocumentNumber   string    `json:"document_number" validate:"required"`
+	DocumentDate     time.Time `json:"document_date" validate:"required"`
+	DocumentType     string    `json:"document_type" validate:"required"`
+	GoodsDescription string    `json:"goods_description" validate:"required"`
+	GoodsValue       float64   `json:"goods_value" validate:"required,gt=0"`
+	GoodsQuantity    float64   `json:"goods_quantity" validate:"required,gt=0"`
+	FromPlace        string    `json:"from_place" validate:"required"`
+	FromPincode      string    `json:"from_pincode" validate:"required"`
+	FromStateCode    int       `json:"from_state_code" validate:"required,min=1,max=37"`
+	ToPlace          string    `json:"to_place" validate:"required"`
+	ToPincode        string    `json:"to_pincode" validate:"required"`
+	ToStateCode      int       `json:"to_state_code" validate:"required,min=1,max=37"`
+	VehicleNumber    string    `json:"vehicle_number"`
+	UserGSTIN        string    `json:"user_gstin" validate:"required"`
 }
 
 // VerifyVehicleRequest represents a request to verify a vehicle
@@ -270,7 +270,7 @@ type VerifyVehicleRequest struct {
 // VerifyDriverRequest represents a request to verify a driver
 type VerifyDriverRequest struct {
 	OrganizationID uuid.UUID `json:"organization_id" validate:"required,uuid"`
-	DriverID      uuid.UUID `json:"driver_id" validate:"required,uuid"`
-	LicenseNumber string    `json:"license_number" validate:"required"`
-	DateOfBirth   string    `json:"date_of_birth" validate:"required"` // Format: YYYY-MM-DD
+	DriverID       uuid.UUID `json:"driver_id" validate:"required,uuid"`
+	LicenseNumber  string    `json:"license_number" validate:"required"`
+	DateOfBirth    string    `json:"date_of_birth" validate:"required"` // Format: YYYY-MM-DD
 }

@@ -43,13 +43,13 @@ func (m *MockVehicleRepository) Update(ctx context.Context, vehicle *models.Vehi
 	return args.Error(0)
 }
 
-func (m *MockVehicleRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	args := m.Called(ctx, id)
+func (m *MockVehicleRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
+	args := m.Called(ctx, id, orgID)
 	return args.Error(0)
 }
 
-func (m *MockVehicleRepository) AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) error {
-	args := m.Called(ctx, vehicleID, driverID)
+func (m *MockVehicleRepository) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error {
+	args := m.Called(ctx, vehicleID, orgID, driverID)
 	return args.Error(0)
 }
 
@@ -241,16 +241,18 @@ func TestVehicleService_DeleteVehicle_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
+	orgID := uuid.New()
 
 	// DeleteVehicle first calls GetByID to check status
 	existingVehicle := &models.Vehicle{
-		ID:     vehicleID,
-		Status: models.StatusActive,
+		ID:       vehicleID,
+		TenantID: orgID,
+		Status:   models.StatusActive,
 	}
 	mockRepo.On("GetByID", ctx, vehicleID).Return(existingVehicle, nil)
-	mockRepo.On("Delete", ctx, vehicleID).Return(nil)
+	mockRepo.On("Delete", ctx, vehicleID, orgID).Return(nil)
 
-	err := service.DeleteVehicle(ctx, vehicleID)
+	err := service.DeleteVehicle(ctx, vehicleID, orgID)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -260,11 +262,12 @@ func TestVehicleService_DeleteVehicle_NotFound(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
+	orgID := uuid.New()
 
 	// GetByID returns not-found first
 	mockRepo.On("GetByID", ctx, vehicleID).Return(nil, ErrVehicleNotFound)
 
-	err := service.DeleteVehicle(ctx, vehicleID)
+	err := service.DeleteVehicle(ctx, vehicleID, orgID)
 
 	assert.Error(t, err)
 	mockRepo.AssertExpectations(t)
@@ -274,17 +277,19 @@ func TestVehicleService_AssignDriver_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
+	orgID := uuid.New()
 	driverID := uuid.New()
 
 	updatedVehicle := &models.Vehicle{
-		ID:     vehicleID,
-		Status: models.StatusActive,
+		ID:       vehicleID,
+		TenantID: orgID,
+		Status:   models.StatusActive,
 	}
 
-	mockRepo.On("AssignDriver", ctx, vehicleID, driverID).Return(nil)
+	mockRepo.On("AssignDriver", ctx, vehicleID, orgID, driverID).Return(nil)
 	mockRepo.On("GetByID", ctx, vehicleID).Return(updatedVehicle, nil)
 
-	vehicle, err := service.AssignDriver(ctx, vehicleID, driverID)
+	vehicle, err := service.AssignDriver(ctx, vehicleID, orgID, driverID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, vehicle)

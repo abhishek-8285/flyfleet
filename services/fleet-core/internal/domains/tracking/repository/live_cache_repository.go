@@ -42,11 +42,11 @@ func liveKey(vehicleID uuid.UUID) string {
 func (r *RedisLiveCacheRepository) SetLiveLocation(ctx context.Context, loc *models.LiveLocation) error {
 	key := liveKey(loc.VehicleID)
 	fields := map[string]interface{}{
-		"lat":      strconv.FormatFloat(loc.Lat, 'f', 7, 64),
-		"lng":      strconv.FormatFloat(loc.Lng, 'f', 7, 64),
-		"speed":    strconv.FormatFloat(loc.Speed, 'f', 2, 64),
-		"heading":  strconv.Itoa(loc.Heading),
-		"ignition": boolStr(loc.Ignition),
+		"lat":       strconv.FormatFloat(loc.Lat, 'f', 7, 64),
+		"lng":       strconv.FormatFloat(loc.Lng, 'f', 7, 64),
+		"speed":     strconv.FormatFloat(loc.Speed, 'f', 2, 64),
+		"heading":   strconv.Itoa(loc.Heading),
+		"ignition":  boolStr(loc.Ignition),
 		"last_seen": loc.LastSeen.UTC().Format(time.RFC3339),
 	}
 	if err := r.client.HSet(ctx, key, fields).Err(); err != nil {

@@ -25,7 +25,6 @@ const ResponsiveContainerAny = ResponsiveContainer as any;
 const Analytics: React.FC = () => {
   const [efficiencyData, setEfficiencyData] = useState([]);
   const [trendData, setTrendData] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -44,8 +43,6 @@ const Analytics: React.FC = () => {
         ] as any);
       } catch (err) {
         console.error(err);
-      } finally {
-        setLoading(false);
       }
     };
     fetchAnalytics();

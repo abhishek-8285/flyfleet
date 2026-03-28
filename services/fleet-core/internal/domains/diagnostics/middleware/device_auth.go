@@ -34,7 +34,7 @@ func (m *DeviceAuthMiddleware) EnsureAuthenticated(next http.Handler) http.Handl
 		}
 
 		token := parts[1]
-		
+
 		// In a real implementation this would query device_auth_tokens table
 		// device_id := m.repo.GetDeviceIDByToken(ctx, token)
 		if token == "" {

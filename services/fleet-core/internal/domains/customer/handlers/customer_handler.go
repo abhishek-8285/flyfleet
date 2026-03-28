@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/customer/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/customer/repository"
@@ -11,6 +12,40 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// DTOs for request payloads
+
+type createCustomerRequestDTO struct {
+	CompanyName    string  `json:"company_name" binding:"required"`
+	GSTNumber      *string `json:"gst_number,omitempty"`
+	BillingAddress []byte  `json:"billing_address,omitempty"`
+	ContactEmail   *string `json:"contact_email,omitempty"`
+	ContactPhone   *string `json:"contact_phone,omitempty"`
+	Status         string  `json:"status,omitempty"`
+}
+
+type createBookingRequestDTO struct {
+	PickupLocation      []byte     `json:"pickup_location" binding:"required"`
+	DropLocation        []byte     `json:"drop_location" binding:"required"`
+	CargoType           *string    `json:"cargo_type,omitempty"`
+	Weight              *float64   `json:"weight,omitempty"`
+	Volume              *float64   `json:"volume,omitempty"`
+	VehicleType         *string    `json:"vehicle_type,omitempty"`
+	RequestedPickupTime *time.Time `json:"requested_pickup_time,omitempty"`
+	Status              string     `json:"status,omitempty"`
+}
+
+type createShipmentRequestDTO struct {
+	TripID           *uuid.UUID `json:"trip_id,omitempty"`
+	BookingID        *uuid.UUID `json:"booking_id,omitempty"`
+	Status           string     `json:"status,omitempty"`
+	Origin           []byte     `json:"origin" binding:"required"`
+	Destination      []byte     `json:"destination" binding:"required"`
+	DistanceKm       *float64   `json:"distance_km,omitempty"`
+	EwayBillNumber   *string    `json:"eway_bill_number,omitempty"`
+	EwayBillExpiry   *time.Time `json:"eway_bill_expiry,omitempty"`
+	EwayBillDocument *string    `json:"eway_bill_document,omitempty"`
+}
 
 type CustomerV2Handler struct {
 	customerService *service.CustomerService
@@ -62,7 +97,7 @@ func (h CustomerV2Handler) RegisterRoutes(r chi.Router) {
 	// Invoices and Analytics stubs
 	r.Get("/invoices", h.GetInvoices)
 	r.Get("/analytics", h.GetAnalytics)
-	
+
 	// Dashboard & Search
 	r.Get("/dashboard", h.GetDashboard)
 	r.Get("/shipments/search", h.SearchShipments)
@@ -120,13 +155,23 @@ func (h CustomerV2Handler) APIGetInvoices(w http.ResponseWriter, r *http.Request
 }
 
 func (h CustomerV2Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
-	var c models.Customer
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	var dto createCustomerRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.customerService.CreateCustomer(r.Context(), &c); err != nil {
+	// Map DTO to model
+	c := &models.Customer{
+		CompanyName:    dto.CompanyName,
+		GSTNumber:      dto.GSTNumber,
+		BillingAddress: dto.BillingAddress,
+		ContactEmail:   dto.ContactEmail,
+		ContactPhone:   dto.ContactPhone,
+		Status:         dto.Status,
+	}
+
+	if err := h.customerService.CreateCustomer(r.Context(), c); err != nil {
 		h.logger.Error("Failed to create customer", zap.Error(err))
 		h.respondError(w, http.StatusInternalServerError, "Failed to create customer")
 		return
@@ -158,13 +203,25 @@ func (h CustomerV2Handler) GetCustomer(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h CustomerV2Handler) CreateBooking(w http.ResponseWriter, r *http.Request) {
-	var b models.BookingRequest
-	if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
+	var dto createBookingRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.bookingService.CreateBooking(r.Context(), &b); err != nil {
+	// Map DTO to model
+	b := &models.BookingRequest{
+		PickupLocation:      dto.PickupLocation,
+		DropLocation:        dto.DropLocation,
+		CargoType:           dto.CargoType,
+		Weight:              dto.Weight,
+		Volume:              dto.Volume,
+		VehicleType:         dto.VehicleType,
+		RequestedPickupTime: dto.RequestedPickupTime,
+		Status:              dto.Status,
+	}
+
+	if err := h.bookingService.CreateBooking(r.Context(), b); err != nil {
 		h.logger.Error("Failed to create booking", zap.Error(err))
 		h.respondError(w, http.StatusInternalServerError, "Failed to create booking")
 		return
@@ -196,13 +253,26 @@ func (h CustomerV2Handler) GetBooking(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h CustomerV2Handler) CreateShipment(w http.ResponseWriter, r *http.Request) {
-	var s models.Shipment
-	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+	var dto createShipmentRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if err := h.shipmentService.CreateShipment(r.Context(), &s); err != nil {
+	// Map DTO to model
+	s := &models.Shipment{
+		TripID:           dto.TripID,
+		BookingID:        dto.BookingID,
+		Status:           dto.Status,
+		Origin:           dto.Origin,
+		Destination:      dto.Destination,
+		DistanceKm:       dto.DistanceKm,
+		EwayBillNumber:   dto.EwayBillNumber,
+		EwayBillExpiry:   dto.EwayBillExpiry,
+		EwayBillDocument: dto.EwayBillDocument,
+	}
+
+	if err := h.shipmentService.CreateShipment(r.Context(), s); err != nil {
 		h.logger.Error("Failed to create shipment", zap.Error(err))
 		h.respondError(w, http.StatusInternalServerError, "Failed to create shipment")
 		return
@@ -281,7 +351,7 @@ func (h CustomerV2Handler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	customerIDStr := r.Header.Get("X-Customer-ID")
 	customerID, err := uuid.Parse(customerIDStr)
 	if err != nil {
-		customerID = uuid.Nil 
+		customerID = uuid.Nil
 	}
 
 	metrics, err := h.repo.GetDashboardMetrics(r.Context(), customerID)
@@ -297,7 +367,7 @@ func (h CustomerV2Handler) SearchShipments(w http.ResponseWriter, r *http.Reques
 	customerIDStr := r.Header.Get("X-Customer-ID")
 	customerID, err := uuid.Parse(customerIDStr)
 	if err != nil {
-		customerID = uuid.Nil 
+		customerID = uuid.Nil
 	}
 
 	status := r.URL.Query().Get("status")

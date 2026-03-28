@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
 	"github.com/go-chi/chi/v5"
@@ -27,6 +28,11 @@ func (h *FuelVendorHandler) RegisterRoutes(r chi.Router) {
 
 func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	var req models.CreateFuelVendorRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -45,6 +51,11 @@ func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request)
 
 func (h *FuelVendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	vendors, err := h.svc.ListVendors(r.Context(), orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -55,8 +66,15 @@ func (h *FuelVendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *FuelVendorHandler) getOrgID(r *http.Request) uuid.UUID {
-	// Simple helper for now, assuming orgID is in header or context
-	val := r.Header.Get("X-Organization-ID")
-	id, _ := uuid.Parse(val)
-	return id
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(orgIDStr); err == nil {
+				return id
+			}
+		}
+	}
+	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }

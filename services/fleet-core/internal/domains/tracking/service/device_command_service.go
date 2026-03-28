@@ -8,6 +8,7 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
 	"go.uber.org/zap"
 )
 
@@ -62,6 +63,8 @@ func (s *DeviceCommandService) SendCommand(ctx context.Context, deviceID, cmdTyp
 		zap.String("command_id", commandID),
 		zap.String("type", cmdType),
 	)
+	// Record command sent metric
+	metrics.RecordCommandSent(cmdType, "success")
 	return commandID, nil
 }
 

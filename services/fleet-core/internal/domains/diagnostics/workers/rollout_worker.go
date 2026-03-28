@@ -33,5 +33,5 @@ func (w *RolloutWorker) Start(ctx context.Context) {
 
 func (w *RolloutWorker) run(ctx context.Context) {
 	log.Println("Running firmware rollout batch monitor")
-	// Logic to push new batches if previous succeeded 
+	// Logic to push new batches if previous succeeded
 }

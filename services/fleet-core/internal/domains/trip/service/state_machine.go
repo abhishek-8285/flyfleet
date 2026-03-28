@@ -54,7 +54,7 @@ func (sm *TripStateMachine) Transition(ctx context.Context, req *TransitionReque
 	// Validate transition
 	if !sm.CanTransition(req.CurrentStatus, req.TargetStatus) {
 		return &TransitionResult{
-			Success: false,
+			Success:         false,
 			ValidationError: fmt.Errorf("invalid transition from %s to %s", req.CurrentStatus, req.TargetStatus),
 		}, nil
 	}
@@ -62,7 +62,7 @@ func (sm *TripStateMachine) Transition(ctx context.Context, req *TransitionReque
 	// Validate actor permissions
 	if err := sm.validateActor(req); err != nil {
 		return &TransitionResult{
-			Success: false,
+			Success:         false,
 			ValidationError: err,
 		}, nil
 	}
@@ -70,7 +70,7 @@ func (sm *TripStateMachine) Transition(ctx context.Context, req *TransitionReque
 	// Validate business rules for specific transitions
 	if err := sm.validateBusinessRules(req); err != nil {
 		return &TransitionResult{
-			Success: false,
+			Success:         false,
 			ValidationError: err,
 		}, nil
 	}
@@ -172,12 +172,12 @@ func (sm *TripStateMachine) createEvent(req *TransitionRequest, prevEvent *model
 	}
 
 	payload := models.TripEventPayload{
-		EventType:  "state_transition",
-		Timestamp:  time.Now().UTC(),
-		ActorID:    req.ActorID,
-		ActorType:  req.ActorType,
-		Reason:     req.Reason,
-		Metadata:   req.Metadata,
+		EventType: "state_transition",
+		Timestamp: time.Now().UTC(),
+		ActorID:   req.ActorID,
+		ActorType: req.ActorType,
+		Reason:    req.Reason,
+		Metadata:  req.Metadata,
 	}
 
 	event := &models.TripEventImmutable{

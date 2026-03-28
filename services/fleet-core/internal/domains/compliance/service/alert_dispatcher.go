@@ -52,7 +52,7 @@ func (d *alertDispatcherImpl) Dispatch(ctx context.Context, alert *models.Compli
 	// 3. Integration with alerts_v2 (Placeholder - would call internal service or event bus)
 	// In a real implementation:
 	// d.alertsV2.CreateAlert(ctx, &alertsV2.AlertRequest{...})
-	
+
 	// 4. Publish to NATS (Placeholder for Compliance Event Bus)
 	// d.eventBus.Publish("compliance.alert.created", alert)
 

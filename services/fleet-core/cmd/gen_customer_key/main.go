@@ -52,11 +52,11 @@ func main() {
 	hashedKey := hex.EncodeToString(hash[:])
 
 	customerID := uuid.New()
-	
+
 	// 3. Insert Customer into Legacy Schema for Portal Access
 	query := `INSERT INTO customers (id, org_id, name, email, api_key, api_secret_hash, status, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, 'active', NOW(), NOW())`
-	
+
 	_, err = pool.Exec(ctx, query, customerID, orgID, name, email, fullKey, hashedKey)
 	if err != nil {
 		log.Fatalf("Failed to insert customer: %v", err)

@@ -34,15 +34,15 @@ func (w *TelemetryArchiveWorker) Start(ctx context.Context) {
 
 func (w *TelemetryArchiveWorker) run(ctx context.Context) {
 	log.Println("Running telemetry archival job")
-	
+
 	// Rule 1: Move raw telemetry over 30 days to archive table
 	// e.g. INSERT INTO telemetry_archive SELECT * FROM device_telemetry WHERE timestamp < NOW() - INTERVAL '30 days'
-	
+
 	// Rule 2: Delete raw telemetry over 30 days
 	// e.g. DELETE FROM device_telemetry WHERE timestamp < NOW() - INTERVAL '30 days'
 
 	// Rule 3: Purge aggregated telemetry over 1 year
 	// e.g. DELETE FROM telemetry_archive WHERE timestamp < NOW() - INTERVAL '1 year'
-	
+
 	log.Println("Archival job completed")
 }

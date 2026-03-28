@@ -26,13 +26,13 @@ func NewInventoryRepository(db *pgxpool.Pool) *InventoryRepository {
 func (r *InventoryRepository) Create(ctx context.Context, part *models.InventoryPart) error {
 	query := `
 		INSERT INTO inventory_parts (
-			organization_id, part_number, name, description,
+			org_id, part_number, name, description,
 			stock_location, quantity_available, reorder_level, unit_cost
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		part.OrganizationID, part.PartNumber, part.Name, part.Description,
+		part.OrgID, part.PartNumber, part.Name, part.Description,
 		part.StockLocation, part.QuantityAvailable, part.ReorderLevel, part.UnitCost,
 	).Scan(&part.ID, &part.CreatedAt, &part.UpdatedAt)
 }
@@ -40,14 +40,14 @@ func (r *InventoryRepository) Create(ctx context.Context, part *models.Inventory
 // GetByID retrieves an inventory part by ID
 func (r *InventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.InventoryPart, error) {
 	query := `
-		SELECT id, organization_id, part_number, name, COALESCE(description, ''),
+		SELECT id, org_id, part_number, name, COALESCE(description, ''),
 			   COALESCE(stock_location, ''), quantity_available, reorder_level, unit_cost,
 			   created_at, updated_at
 		FROM inventory_parts WHERE id = $1
 	`
 	part := &models.InventoryPart{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&part.ID, &part.OrganizationID, &part.PartNumber, &part.Name, &part.Description,
+		&part.ID, &part.OrgID, &part.PartNumber, &part.Name, &part.Description,
 		&part.StockLocation, &part.QuantityAvailable, &part.ReorderLevel, &part.UnitCost,
 		&part.CreatedAt, &part.UpdatedAt,
 	)
@@ -85,8 +85,8 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	var args []interface{}
 	argIdx := 1
 
-	conditions = append(conditions, fmt.Sprintf("organization_id = $%d", argIdx))
-	args = append(args, filter.OrganizationID)
+	conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIdx))
+	args = append(args, filter.OrgID)
 	argIdx++
 
 	if filter.Search != "" {
@@ -125,7 +125,7 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, organization_id, part_number, name, COALESCE(description, ''),
+		SELECT id, org_id, part_number, name, COALESCE(description, ''),
 			   COALESCE(stock_location, ''), quantity_available, reorder_level, unit_cost,
 			   created_at, updated_at
 		FROM inventory_parts WHERE %s
@@ -144,7 +144,7 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	for rows.Next() {
 		var part models.InventoryPart
 		if err := rows.Scan(
-			&part.ID, &part.OrganizationID, &part.PartNumber, &part.Name, &part.Description,
+			&part.ID, &part.OrgID, &part.PartNumber, &part.Name, &part.Description,
 			&part.StockLocation, &part.QuantityAvailable, &part.ReorderLevel, &part.UnitCost,
 			&part.CreatedAt, &part.UpdatedAt,
 		); err != nil {
@@ -188,7 +188,7 @@ func (r *InventoryRepository) RestoreStock(ctx context.Context, id uuid.UUID, qu
 func (r *InventoryRepository) GetLowStockCount(ctx context.Context, orgID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx,
-		"SELECT COUNT(*) FROM inventory_parts WHERE organization_id = $1 AND quantity_available <= reorder_level",
+		"SELECT COUNT(*) FROM inventory_parts WHERE org_id = $1 AND quantity_available <= reorder_level",
 		orgID,
 	).Scan(&count)
 	return count, err

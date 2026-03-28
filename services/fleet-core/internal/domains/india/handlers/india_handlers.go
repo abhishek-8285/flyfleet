@@ -1,8 +1,15 @@
 package handlers
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -16,15 +23,15 @@ import (
 
 // IndiaIntegrationHandlers handles HTTP requests for India integration services
 type IndiaIntegrationHandlers struct {
-	service           service.IndiaIntegrationService
-	fastagService     service.FastagIntegrationService
-	ewayBillService   service.EWayBillIntegrationService
-	vahanService      service.VahanIntegrationService
-	sarathiService    service.SarathiIntegrationService
-	gstService        service.GSTIntegrationService
-	bulkService       service.BulkVerificationService
-	encryptService    service.EncryptionService
-	idempotency       *billing.IdempotencyHelper
+	service         service.IndiaIntegrationService
+	fastagService   service.FastagIntegrationService
+	ewayBillService service.EWayBillIntegrationService
+	vahanService    service.VahanIntegrationService
+	sarathiService  service.SarathiIntegrationService
+	gstService      service.GSTIntegrationService
+	bulkService     service.BulkVerificationService
+	encryptService  service.EncryptionService
+	idempotency     *billing.IdempotencyHelper
 }
 
 // NewIndiaIntegrationHandlers creates a new instance of IndiaIntegrationHandlers
@@ -71,8 +78,8 @@ func (h *IndiaIntegrationHandlers) writeErrorResponse(w http.ResponseWriter, sta
 func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	reqID := r.Header.Get("X-Request-ID")
 	orgID := r.Context().Value("org_id") // standard flyfleet context extraction
-	
-	// Fallback/String casting
+
+	// SECURITY FIX: Do not trust X-Org-ID header (CWE-284/290) - only use authenticated context
 	var orgIDStr string
 	if orgID != nil {
 		if oid, ok := orgID.(string); ok {
@@ -81,7 +88,8 @@ func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter
 			orgIDStr = uuidVal.String()
 		}
 	} else {
-		orgIDStr = r.Header.Get("X-Org-ID")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
 	}
 
 	if h.idempotency != nil && reqID != "" && orgIDStr != "" {
@@ -119,12 +127,36 @@ func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter
 func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get orgID from context for authorization
+	orgID := r.Context().Value("org_id")
+	var orgIDStr string
+	if orgID != nil {
+		if oid, ok := orgID.(string); ok {
+			orgIDStr = oid
+		} else if uuidVal, ok := orgID.(uuid.UUID); ok {
+			orgIDStr = uuidVal.String()
+		}
+	} else {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	transaction, err := h.service.GetFASTagTransaction(r.Context(), id)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "FASTag transaction not found", err)
 		return
 	}
 
+	// Verify transaction belongs to the authenticated organization
+	reqOrgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Internal error", nil)
+		return
+	}
+	if transaction.OrganizationID != reqOrgID {
+		h.writeErrorResponse(w, http.StatusNotFound, "FASTag transaction not found or access denied", nil)
+		return
+	}
 	h.writeJSONResponse(w, http.StatusOK, transaction)
 }
 
@@ -788,11 +820,11 @@ func (h *IndiaIntegrationHandlers) CreateIntegrationConfig(w http.ResponseWriter
 	}
 
 	if config.ClientSecret != "" {
-		enc, _ := h.encryptService.Encrypt(config.ClientSecret, "REPLACE-WITH-ACTUAL-SECRET-KEY")
+		enc, _ := h.encryptService.Encrypt(config.ClientSecret, os.Getenv("ENCRYPTION_KEY"))
 		config.ClientSecret = enc
 	}
 	if config.APIKey != "" {
-		enc, _ := h.encryptService.Encrypt(config.APIKey, "REPLACE-WITH-ACTUAL-SECRET-KEY")
+		enc, _ := h.encryptService.Encrypt(config.APIKey, os.Getenv("ENCRYPTION_KEY"))
 		config.APIKey = enc
 	}
 
@@ -848,7 +880,7 @@ func (h *IndiaIntegrationHandlers) UpdateIntegrationConfig(w http.ResponseWriter
 	}
 
 	if secret, ok := updates["client_secret"].(string); ok && secret != "" {
-		enc, _ := h.encryptService.Encrypt(secret, "REPLACE-WITH-ACTUAL-SECRET-KEY")
+		enc, _ := h.encryptService.Encrypt(secret, os.Getenv("ENCRYPTION_KEY"))
 		updates["client_secret"] = enc
 	}
 
@@ -993,9 +1025,28 @@ func (h *IndiaIntegrationHandlers) validateSignature(r *http.Request) bool {
 	if signature == "" {
 		return false
 	}
-	// Implementation of actual signature validation logic
-	// For now, return true for simulation
-	return true
+
+	// Read the request body
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return false
+	}
+	// Restore the body for subsequent processing
+	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+
+	// Get the secret from environment variable
+	secret := os.Getenv("GOV_WEBHOOK_SECRET")
+	if secret == "" {
+		return false // In production, fail closed
+	}
+
+	// Compute HMAC-SHA256
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(bodyBytes)
+	expectedSignature := hex.EncodeToString(mac.Sum(nil))
+
+	// Use constant-time comparison to prevent timing attacks (CWE-208)
+	return subtle.ConstantTimeCompare([]byte(signature), []byte(expectedSignature)) == 1
 }
 
 // SyncFASTag triggers a manual sync for FASTag transactions

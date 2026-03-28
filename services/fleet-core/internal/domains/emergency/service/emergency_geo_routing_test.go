@@ -16,7 +16,7 @@ func TestAuthorityRouting_DeterminesCorrectUnits(t *testing.T) {
 	}
 
 	authorities := svc.determineAuthorities(incident)
-	
+
 	expected := map[AuthorityType]bool{
 		AuthorityPolice:    true,
 		AuthorityAmbulance: true,
@@ -43,7 +43,7 @@ func TestAuthorityRouting_HighSeverity(t *testing.T) {
 	}
 
 	authorities := svc.determineAuthorities(incident)
-	
+
 	if len(authorities) != 2 {
 		t.Errorf("Expected 2 authorities for high severity incident, got %d", len(authorities))
 	}
@@ -58,11 +58,11 @@ func TestAuthorityRouting_LowSeverity(t *testing.T) {
 	}
 
 	authorities := svc.determineAuthorities(incident)
-	
+
 	if len(authorities) != 1 {
 		t.Errorf("Expected 1 authority for low severity incident, got %d", len(authorities))
 	}
-	
+
 	if authorities[0] != AuthorityPolice {
 		t.Errorf("Expected Police for low severity, got %s", authorities[0])
 	}

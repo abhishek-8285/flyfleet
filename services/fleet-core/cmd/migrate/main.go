@@ -20,9 +20,6 @@ func main() {
 	command := flag.Arg(0)
 
 	cfg := config.Load()
-	if cfg.DatabaseURL == "" {
-		cfg.DatabaseURL = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
-	}
 
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,15 +42,22 @@ func (r *ComplianceRepository) Upsert(ctx context.Context, c *models.VehicleComp
 			updated_at            = NOW()
 		RETURNING created_at, updated_at`
 
-	return r.db.QueryRow(ctx, query,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
 		c.VehicleID, c.RCExpiryDate, c.InsuranceExpiryDate, c.PUCExpiryDate,
 		c.FitnessExpiryDate, c.PermitExpiryDate, c.PermitType, c.InsurancePolicyNo,
 		c.IsBlacklisted, c.LegalHold, c.LastVerifiedAt, c.VerifiedBy,
 	).Scan(&c.CreatedAt, &c.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return fmt.Errorf("failed to upsert vehicle compliance: %w", err)
+	}
+	return nil
 }
 
 func (r *ComplianceRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleCompliance, error) {
 	c := &models.VehicleCompliance{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx, `
 		SELECT vehicle_id, rc_expiry_date, insurance_expiry_date, puc_expiry_date,
 		       fitness_expiry_date, permit_expiry_date, permit_type, insurance_policy_no,
@@ -61,6 +69,10 @@ func (r *ComplianceRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*m
 		&c.IsBlacklisted, &c.LegalHold, &c.LastVerifiedAt, &c.VerifiedBy,
 		&c.CreatedAt, &c.UpdatedAt,
 	)
+	metrics.RecordDBQuery(`SELECT vehicle_id, rc_expiry_date, insurance_expiry_date, puc_expiry_date,
+		       fitness_expiry_date, permit_expiry_date, permit_type, insurance_policy_no,
+		       is_blacklisted, legal_hold, last_verified_at, verified_by, created_at, updated_at
+		FROM vehicle_compliance WHERE vehicle_id = $1`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil
@@ -79,7 +91,9 @@ func (r *ComplianceRepository) GetExpiringVehicles(ctx context.Context, tenantID
 		WHERE tenant_id = $1 AND days_to_expiry <= $2
 		ORDER BY days_to_expiry ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, tenantID, withinDays)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("database error: %w", err)
 	}

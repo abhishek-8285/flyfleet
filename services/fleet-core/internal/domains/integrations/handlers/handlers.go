@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/integrations/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -18,10 +20,27 @@ func NewHandlers(s service.IntegrationsService) *Handlers {
 	return &Handlers{service: s}
 }
 
+// getOrgID extracts and parses the organization ID from context
+func (h *Handlers) getOrgID(r *http.Request) (uuid.UUID, error) {
+	orgIDStr := middleware.GetOrgID(r.Context())
+	if orgIDStr == "" {
+		return uuid.Nil, fmt.Errorf("unauthorized: organization context required")
+	}
+	orgID, err := uuid.Parse(orgIDStr)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid organization ID")
+	}
+	return orgID, nil
+}
+
 // Integrations Handlers
 
 func (h *Handlers) ListIntegrations(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	integrations, err := h.service.ListIntegrations(r.Context(), orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -31,7 +50,11 @@ func (h *Handlers) ListIntegrations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateIntegration(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	var req struct {
 		Name     string `json:"name"`
 		Type     string `json:"type"`
@@ -52,7 +75,11 @@ func (h *Handlers) CreateIntegration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -81,7 +108,11 @@ func (h *Handlers) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) TestConnection(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	// Extract ID from path... (simplified for now)
 	idStr := r.URL.Query().Get("id")
 	id, _ := uuid.Parse(idStr)
@@ -97,7 +128,11 @@ func (h *Handlers) TestConnection(w http.ResponseWriter, r *http.Request) {
 // API Client Handlers
 
 func (h *Handlers) ListAPIClients(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	clients, err := h.service.ListAPIClients(r.Context(), orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -107,7 +142,11 @@ func (h *Handlers) ListAPIClients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateAPIClient(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	var req struct {
 		Name       string   `json:"name"`
 		Scopes     []string `json:"scopes"`
@@ -129,7 +168,11 @@ func (h *Handlers) CreateAPIClient(w http.ResponseWriter, r *http.Request) {
 // Webhook Handlers
 
 func (h *Handlers) ListWebhooks(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	webhooks, err := h.service.ListWebhooks(r.Context(), orgID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -139,7 +182,11 @@ func (h *Handlers) ListWebhooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateWebhook(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	var req struct {
 		URL    string   `json:"url"`
 		Events []string `json:"events"`
@@ -158,7 +205,11 @@ func (h *Handlers) CreateWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -177,9 +228,15 @@ func (h *Handlers) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 // Log Handlers
 
 func (h *Handlers) ListLogs(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
+	orgID, err := h.getOrgID(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit == 0 { limit = 50 }
+	if limit == 0 {
+		limit = 50
+	}
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
 	var integrationID *uuid.UUID
@@ -197,16 +254,6 @@ func (h *Handlers) ListLogs(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helpers
-
-func getOrgID(r *http.Request) uuid.UUID {
-	if orgID, ok := r.Context().Value(orgIDKey).(uuid.UUID); ok {
-		return orgID
-	}
-	// Fallback for direct testing if middleware not present
-	idStr := r.Header.Get("X-Organization-ID")
-	id, _ := uuid.Parse(idStr)
-	return id
-}
 
 func jsonResponse(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")

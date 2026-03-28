@@ -11,11 +11,11 @@ type GSTBreakdown struct {
 }
 
 type GSTTripInvoice struct {
-	TripID        string       `json:"trip_id"`
-	SupplierGSTIN string       `json:"supplier_gstin"`
-	RecipientGSTIN string      `json:"recipient_gstin"`
-	PlaceOfSupply string       `json:"place_of_supply"`
-	BaseAmount    float64      `json:"base_amount"`
-	TaxBreakdown  GSTBreakdown `json:"tax_breakdown"`
-	TotalAmount   float64      `json:"total_amount"`
+	TripID         string       `json:"trip_id"`
+	SupplierGSTIN  string       `json:"supplier_gstin"`
+	RecipientGSTIN string       `json:"recipient_gstin"`
+	PlaceOfSupply  string       `json:"place_of_supply"`
+	BaseAmount     float64      `json:"base_amount"`
+	TaxBreakdown   GSTBreakdown `json:"tax_breakdown"`
+	TotalAmount    float64      `json:"total_amount"`
 }

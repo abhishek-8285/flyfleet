@@ -73,9 +73,15 @@ func (m *MockRepo) CreateExport(ctx context.Context, export *models.GovernanceEx
 	args := m.Called(ctx, export)
 	return args.Error(0)
 }
-func (m *MockRepo) GetExportByRequestID(ctx context.Context, requestID uuid.UUID) (*models.GovernanceExport, error) { return nil, nil }
-func (m *MockRepo) CreateDownloadToken(ctx context.Context, token *models.DownloadToken) error { return nil }
-func (m *MockRepo) GetExportByToken(ctx context.Context, token uuid.UUID) (*models.GovernanceExport, error) { return nil, nil }
+func (m *MockRepo) GetExportByRequestID(ctx context.Context, requestID uuid.UUID) (*models.GovernanceExport, error) {
+	return nil, nil
+}
+func (m *MockRepo) CreateDownloadToken(ctx context.Context, token *models.DownloadToken) error {
+	return nil
+}
+func (m *MockRepo) GetExportByToken(ctx context.Context, token uuid.UUID) (*models.GovernanceExport, error) {
+	return nil, nil
+}
 
 func (m *MockRepo) CheckLegalHold(ctx context.Context, entityID uuid.UUID) (bool, error) {
 	args := m.Called(ctx, entityID)
@@ -105,15 +111,15 @@ func (m *MockRepo) EnforceRetentionPolicy(ctx context.Context, orgID uuid.UUID, 
 func TestExpireRequests(t *testing.T) {
 	mockRepo := new(MockRepo)
 	svc := NewGovernanceService(mockRepo, nil, zap.NewNop())
-	
+
 	expiredInfo := []models.ExpiredRequestInfo{
 		{ID: uuid.New(), OrganizationID: uuid.New()},
 	}
-	
+
 	mockRepo.On("ExpireRequests", mock.Anything).Return(expiredInfo, nil)
-	
+
 	count, err := svc.ExpireRequests(context.Background())
-	
+
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
 	mockRepo.AssertExpectations(t)

@@ -19,7 +19,7 @@ func TestAsynq_Backpressure(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 
 	// Since we cannot easily spawn an isolated redis-backed worker pool in a fast unit test
-	// and verify internal worker loop without massive boilerplate, we verify the backpressure 
+	// and verify internal worker loop without massive boilerplate, we verify the backpressure
 	// safeguard configurations (Timeouts, MaxRetries, StrictConcurrency)
 
 	server := queue.NewServer(nil, "redis://localhost:6379", nil, logger) // We only need it to check exposed configs if exported, or we verify the server struct
@@ -32,12 +32,12 @@ func TestAsynq_Backpressure(t *testing.T) {
 	// In the real system, Asynq is deployed with:
 	// Concurrency: 10
 	// StrictPriority: true
-	// 
+	//
 	// Wait, we can verify that the enqueued tasks have the right timeout and retry policies.
 	ctx := context.Background()
 	// Let's ensure enqueue doesn't panic on a disconnected client
 	err := producer.EnqueueInvoiceRender(ctx, "test-id")
-	
+
 	// We expect an error since redis isn't connected here, but we check the error reflects connection rather than malformed policy
 	assert.Error(t, err)
 }

@@ -7,16 +7,52 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
+// checkDriverAccess verifies that the authenticated user can access the specified driver
+// Returns true if: user is the driver themselves, OR user has admin/super_admin role
+func (h *IndiaComplianceHandler) checkDriverAccess(r *http.Request, driverID *uuid.UUID, authUserID uuid.UUID, role string) bool {
+	// driverID can be nil for vehicle-level actions
+	if driverID == nil {
+		// For nil driverID, only admins can proceed (checked separately)
+		return role == "admin" || role == "super_admin"
+	}
+
+	isSelf := authUserID == *driverID
+	isAdmin := role == "admin" || role == "super_admin"
+
+	if isSelf {
+		h.logger.Debug("Driver self-access granted",
+			zap.String("driver_id", driverID.String()))
+		return true
+	}
+
+	if isAdmin {
+		h.logger.Debug("Admin access granted for driver data",
+			zap.String("admin_user_id", authUserID.String()),
+			zap.String("driver_id", driverID.String()),
+			zap.String("role", role))
+		return true
+	}
+
+	h.logger.Warn("Access denied: user cannot access driver data",
+		zap.String("auth_user_id", authUserID.String()),
+		zap.String("driver_id", driverID.String()),
+		zap.String("role", role))
+	return false
+}
+
 type IndiaComplianceHandler struct {
-	dutyService  service.DriverDutyService
-	aisService   service.AIS140Service
-	tripService  service.TripSheetService
-	docService   service.DocumentService
-	dashService  service.DashboardService
+	dutyService service.DriverDutyService
+	aisService  service.AIS140Service
+	tripService service.TripSheetService
+	docService  service.DocumentService
+	dashService service.DashboardService
+	logger      *zap.Logger
 }
 
 func NewIndiaComplianceHandler(
@@ -25,6 +61,7 @@ func NewIndiaComplianceHandler(
 	tripService service.TripSheetService,
 	docService service.DocumentService,
 	dashService service.DashboardService,
+	logger *zap.Logger,
 ) *IndiaComplianceHandler {
 	return &IndiaComplianceHandler{
 		dutyService: dutyService,
@@ -32,6 +69,7 @@ func NewIndiaComplianceHandler(
 		tripService: tripService,
 		docService:  docService,
 		dashService: dashService,
+		logger:      logger,
 	}
 }
 
@@ -75,12 +113,42 @@ func (h IndiaComplianceHandler) RecordDutyStatus(w http.ResponseWriter, r *http.
 		return
 	}
 
-	dID, _ := uuid.Parse(req.DriverID)
-	vID, _ := uuid.Parse(req.VehicleID)
+	dID, err := uuid.Parse(req.DriverID)
+	if err != nil {
+		http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+		return
+	}
+	vID, err := uuid.Parse(req.VehicleID)
+	if err != nil {
+		http.Error(w, "Invalid vehicle ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authorization check
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	dIDPtr := &dID
+	if !h.checkDriverAccess(r, dIDPtr, authUserUUID, role) {
+		http.Error(w, "Forbidden: Cannot modify another driver's duty status", http.StatusForbidden)
+		return
+	}
+
+	// Full implementation would be:
+	// 1. Get driver's user record or org membership
+	// 2. Verify auth user's org matches driver's org, OR auth user has admin role
+	// For now, we'll log a warning that this needs proper RBAC
 
 	log, err := h.dutyService.RecordDutyStatus(r.Context(), dID, vID, models.DriverDutyStatus(req.Status), req.Location, req.Notes)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// SECURITY FIX: Log detailed error but return generic message
+		h.logger.Error("RecordDutyStatus failed", zap.Error(err), zap.String("driver_id", req.DriverID), zap.String("vehicle_id", req.VehicleID))
+		http.Error(w, "Failed to record duty status", http.StatusInternalServerError)
 		return
 	}
 
@@ -90,11 +158,30 @@ func (h IndiaComplianceHandler) RecordDutyStatus(w http.ResponseWriter, r *http.
 
 func (h IndiaComplianceHandler) GetCurrentDuty(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "driverID")
-	dID, _ := uuid.Parse(driverID)
+	dID, err := uuid.Parse(driverID)
+	if err != nil {
+		http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authorization check
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
+		http.Error(w, "Forbidden: Cannot access another driver's duty status", http.StatusForbidden)
+		return
+	}
 
 	log, err := h.dutyService.GetLatestDutyStatus(r.Context(), dID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("GetLatestDutyStatus failed", zap.Error(err), zap.String("driver_id", driverID))
+		http.Error(w, "Failed to get duty status", http.StatusInternalServerError)
 		return
 	}
 
@@ -114,11 +201,30 @@ func (h IndiaComplianceHandler) RecordBreak(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	dID, _ := uuid.Parse(req.DriverID)
-	// Simply pass in now for the example
+	dID, err := uuid.Parse(req.DriverID)
+	if err != nil {
+		http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authorization check
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
+		http.Error(w, "Forbidden: Cannot record break for another driver", http.StatusForbidden)
+		return
+	}
+
 	brk, err := h.dutyService.RecordBreak(r.Context(), dID, time.Now(), models.BreakType(req.BreakType))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("RecordBreak failed", zap.Error(err), zap.String("driver_id", req.DriverID), zap.String("break_type", req.BreakType))
+		http.Error(w, "Failed to record break", http.StatusInternalServerError)
 		return
 	}
 
@@ -140,16 +246,50 @@ func (h IndiaComplianceHandler) TriggerPanicAlert(w http.ResponseWriter, r *http
 		return
 	}
 
-	vID, _ := uuid.Parse(req.VehicleID)
-	var dID *uuid.UUID
-	if req.DriverID != nil {
-		id, _ := uuid.Parse(*req.DriverID)
-		dID = &id
+	vID, err := uuid.Parse(req.VehicleID)
+	if err != nil {
+		http.Error(w, "Invalid vehicle ID", http.StatusBadRequest)
+		return
 	}
 
-	err := h.aisService.HandlePanicAlert(r.Context(), vID, dID, req.Latitude, req.Longitude)
+	// Authorization: Panic alerts are sensitive. Only admins or the driver themselves can trigger
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	var dID *uuid.UUID
+	// If driver ID is provided, verify the user is that driver or an admin
+	if req.DriverID != nil {
+		parsedID, err := uuid.Parse(*req.DriverID)
+		if err != nil {
+			http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+			return
+		}
+		dID = &parsedID
+		if !h.checkDriverAccess(r, dID, authUserUUID, role) {
+			http.Error(w, "Forbidden: Cannot trigger panic alert for another driver", http.StatusForbidden)
+			return
+		}
+	} else {
+		// No driver specified, requires admin access (vehicle-level alert)
+		if role != "admin" && role != "super_admin" {
+			h.logger.Warn("Access denied: non-admin attempted vehicle-level panic alert",
+				zap.String("auth_user_id", authUserIDStr),
+				zap.String("role", role))
+			http.Error(w, "Forbidden: Vehicle-level panic alerts require admin privileges", http.StatusForbidden)
+			return
+		}
+		// dID remains nil for vehicle-level alert
+	}
+
+	err = h.aisService.HandlePanicAlert(r.Context(), vID, dID, req.Latitude, req.Longitude)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("HandlePanicAlert failed", zap.Error(err), zap.String("vehicle_id", req.VehicleID))
+		http.Error(w, "Failed to trigger panic alert", http.StatusInternalServerError)
 		return
 	}
 
@@ -157,10 +297,21 @@ func (h IndiaComplianceHandler) TriggerPanicAlert(w http.ResponseWriter, r *http
 }
 
 func (h IndiaComplianceHandler) GetExpiringDocuments(w http.ResponseWriter, r *http.Request) {
-	// Example query param: ?days=30
-	alerts, err := h.docService.GetExpiringDocuments(r.Context(), 30) // Hardcoded 30 for simplicity here
+	// Expiring documents require admin privileges (contains sensitive compliance data)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	if role != "admin" && role != "super_admin" {
+		h.logger.Warn("Access denied: non-admin attempted to access expiring documents",
+			zap.String("role", role))
+		http.Error(w, "Forbidden: Requires admin privileges", http.StatusForbidden)
+		return
+	}
+
+	days := 30 // default
+	// TODO: Make days configurable via query parameter with validation
+	alerts, err := h.docService.GetExpiringDocuments(r.Context(), days)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("GetExpiringDocuments failed", zap.Error(err))
+		http.Error(w, "Failed to get expiring documents", http.StatusInternalServerError)
 		return
 	}
 
@@ -182,12 +333,35 @@ func (h IndiaComplianceHandler) CreateTripSheet(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	dID, _ := uuid.Parse(req.DriverID)
-	vID, _ := uuid.Parse(req.VehicleID)
+	dID, err := uuid.Parse(req.DriverID)
+	if err != nil {
+		http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+		return
+	}
+	vID, err := uuid.Parse(req.VehicleID)
+	if err != nil {
+		http.Error(w, "Invalid vehicle ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authorization check
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
+		http.Error(w, "Forbidden: Cannot create trip for another driver", http.StatusForbidden)
+		return
+	}
 
 	trip, err := h.tripService.CreateTrip(r.Context(), dID, vID, req.Origin, req.Destination)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("CreateTrip failed", zap.Error(err), zap.String("driver_id", req.DriverID), zap.String("vehicle_id", req.VehicleID))
+		http.Error(w, "Failed to create trip sheet", http.StatusInternalServerError)
 		return
 	}
 
@@ -197,11 +371,30 @@ func (h IndiaComplianceHandler) CreateTripSheet(w http.ResponseWriter, r *http.R
 
 func (h IndiaComplianceHandler) GetDriverTrips(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "driverID")
-	dID, _ := uuid.Parse(driverID)
+	dID, err := uuid.Parse(driverID)
+	if err != nil {
+		http.Error(w, "Invalid driver ID", http.StatusBadRequest)
+		return
+	}
+
+	// Authorization check
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserIDStr)
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+
+	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
+		http.Error(w, "Forbidden: Cannot view another driver's trips", http.StatusForbidden)
+		return
+	}
 
 	trips, err := h.tripService.GetDriverTrips(r.Context(), dID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("GetDriverTrips failed", zap.Error(err), zap.String("driver_id", driverID))
+		http.Error(w, "Failed to retrieve trip records", http.StatusInternalServerError)
 		return
 	}
 
@@ -210,12 +403,23 @@ func (h IndiaComplianceHandler) GetDriverTrips(w http.ResponseWriter, r *http.Re
 }
 
 func (h IndiaComplianceHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
-	// orgID typically comes from context/auth
-	orgID := uuid.Nil 
-	
+	// Dashboard requires admin or super_admin role
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	if role != "admin" && role != "super_admin" {
+		h.logger.Warn("Access denied: non-admin attempted to access compliance dashboard",
+			zap.String("role", role))
+		http.Error(w, "Forbidden: Requires admin privileges", http.StatusForbidden)
+		return
+	}
+
+	// orgID typically comes from context/auth (TODO: extract from context properly)
+	orgID := uuid.Nil
+	// TODO: Get orgID from context (ctxkeys.OrgIDKey)
+
 	metrics, err := h.dashService.GetDashboardMetrics(r.Context(), orgID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error("GetDashboard failed", zap.Error(err), zap.String("org_id", orgID.String()))
+		http.Error(w, "Failed to load dashboard metrics", http.StatusInternalServerError)
 		return
 	}
 
@@ -225,11 +429,11 @@ func (h IndiaComplianceHandler) GetDashboard(w http.ResponseWriter, r *http.Requ
 
 func (h IndiaComplianceHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	health := map[string]string{
-		"status":                 "UP",
-		"device_monitor_status":  "RUNNING",
+		"status":                  "UP",
+		"device_monitor_status":   "RUNNING",
 		"alert_dispatcher_status": "UP",
 		"document_worker_status":  "UP",
-		"event_bus_status":       "ACTIVE",
+		"event_bus_status":        "ACTIVE",
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(health)

@@ -17,7 +17,6 @@ const MFAVerify: React.FC = () => {
   const { login } = useAuth();
   const { uiStrings } = useUIStrings("auth_extended");
   const tempToken = location.state?.tempToken;
-  const partialUser = location.state?.user;
 
   useEffect(() => {
     if (!tempToken) {

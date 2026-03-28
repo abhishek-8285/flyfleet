@@ -1,0 +1,615 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2026-03-28",
+    "author": "FlyFleet Observability Team",
+    "description": "Comprehensive SLI/SLO framework for all FlyFleet domains"
+  },
+  "slo_framework": {
+    "global_targets": {
+      "api_availability": {
+        "target": 0.9995,
+        "window": "30d",
+        "description": "API availability across all services (excluding planned maintenance)"
+      },
+      "api_latency_p95": {
+        "target_seconds": 0.300,
+        "window": "7d",
+        "description": "95th percentile API response time for all endpoints"
+      },
+      "api_latency_p99": {
+        "target_seconds": 0.500,
+        "window": "7d",
+        "description": "99th percentile API response time for critical endpoints"
+      },
+      "api_error_rate": {
+        "target_percentage": 0.1,
+        "window": "30d",
+        "description": "5xx error rate across all API endpoints"
+      }
+    },
+    "domains": {
+      "auth": {
+        "description": "Authentication and authorization service",
+        "sli_indicators": [
+          {
+            "name": "login_success_rate",
+            "type": "ratio",
+            "metric": "auth_login_success_total / auth_login_attempts_total",
+            "target": 0.999,
+            "window": "30d",
+            "description": "Successful login attempts vs total attempts"
+          },
+          {
+            "name": "token_validation_latency",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(auth_token_validation_duration_seconds_bucket[1h]))",
+            "target_seconds": 0.050,
+            "window": "7d",
+            "description": "JWT token validation latency p95"
+          },
+          {
+            "name": "mfa_verification_success_rate",
+            "type": "ratio",
+            "metric": "auth_mfa_success_total / auth_mfa_attempts_total",
+            "target": 0.995,
+            "window": "30d",
+            "description": "MFA verification success rate"
+          }
+        ],
+        "error_budget_policy": {
+          "burn_rate_warning": 2.0,
+          "burn_rate_critical": 5.0,
+          "consumption_warning_threshold": 0.5,
+          "consumption_critical_threshold": 0.8
+        },
+        "alerting": {
+          "warning_windows": ["1h", "6h"],
+          "critical_windows": ["30m"],
+          "notification_channels": ["slack", "pagerduty"]
+        }
+      },
+      "driver": {
+        "description": "Driver management and lifecycle",
+        "sli_indicators": [
+          {
+            "name": "driver_onboarding_completion_rate",
+            "type": "ratio",
+            "metric": "driver_onboarding_completed_total / driver_onboarding_started_total",
+            "target": 0.98,
+            "window": "7d",
+            "description": "Percentage of started onboarding flows that complete"
+          },
+          {
+            "name": "driver_profile_api_latency",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(driver_profile_request_duration_seconds_bucket[1h]))",
+            "target_seconds": 0.200,
+            "window": "7d"
+          },
+          {
+            "name": "driver_document_verification_success_rate",
+            "type": "ratio",
+            "metric": "driver_documents_verified_total / driver_documents_submitted_total",
+            "target": 0.99,
+            "window": "30d",
+            "description": "Document verification success rate (auto + manual)"
+          }
+        ],
+        "error_budget_policy": {
+          "burn_rate_warning": 2.0,
+          "burn_rate_critical": 5.0
+        }
+      },
+      "vehicle": {
+        "description": "Vehicle fleet management",
+        "sli_indicators": [
+          {
+            "name": "vehicle_registration_success_rate",
+            "type": "ratio",
+            "metric": "vehicle_registration_success_total / vehicle_registration_attempts_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "vehicle_telemetry_ingestion_rate",
+            "type": "throughput",
+            "metric": "rate(vehicle_telemetry_received_total[1m])",
+            "target_eps": 10000,
+            "window": "1h",
+            "description": "Minimum telemetry ingestion rate from all vehicles"
+          },
+          {
+            "name": "vehicle_rc_renewal_timeliness",
+            "type": "business",
+            "metric": "vehicle_rc_renewed_before_expiry_total / vehicle_rc_expiring_total",
+            "target": 0.99,
+            "window": "30d",
+            "description": "Percentage of RC renewals completed before expiry"
+          }
+        ]
+      },
+      "tracking": {
+        "description": "GPS/telemetry tracking and geofencing",
+        "sli_indicators": [
+          {
+            "name": "gps_ingestion_success_rate",
+            "type": "ratio",
+            "metric": "tracking_gps_ingestion_total{status=\"success\"} / tracking_gps_ingestion_total",
+            "target": 0.9999,
+            "window": "7d"
+          },
+          {
+            "name": "telemetry_ingestion_latency_p99",
+            "type": "latency",
+            "metric": "histogram_quantile(0.99, sum(rate(tracking_ingestion_duration_seconds_bucket[1h])) by (le))",
+            "target_seconds": 3.0,
+            "window": "7d"
+          },
+          {
+            "name": "telemetry_data_loss_rate",
+            "type": "ratio",
+            "metric": "rate(telemetry_gaps_total[1h]) / rate(telemetry_expected_total[1h])",
+            "target": 0.0001,
+            "window": "24h"
+          }
+        ]
+      },
+      "emergency": {
+        "description": "SOS and emergency incident response",
+        "sli_indicators": [
+          {
+            "name": "sos_alert_delivery_success_rate",
+            "type": "ratio",
+            "metric": "emergency_notifications_sent_total{status=\"success\"} / emergency_notifications_attempted_total",
+            "target": 0.9999,
+            "window": "30d"
+          },
+          {
+            "name": "emergency_response_time_p95",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(emergency_response_time_seconds_bucket[30m]))",
+            "target_seconds": 60,
+            "window": "7d",
+            "description": "Time from SOS trigger to first acknowledgment (95th percentile)"
+          },
+          {
+            "name": "emergency_response_time_p99",
+            "type": "latency",
+            "metric": "histogram_quantile(0.99, rate(emergency_response_time_seconds_bucket[30m]))",
+            "target_seconds": 180,
+            "window": "7d"
+          }
+        ],
+        "error_budget_policy": {
+          "burn_rate_warning": 1.5,
+          "burn_rate_critical": 3.0,
+          "consumption_critical_threshold": 0.9
+        },
+        "critical_priority": true
+      },
+      "billing": {
+        "description": "Invoicing and payment processing",
+        "sli_indicators": [
+          {
+            "name": "invoice_generation_success_rate",
+            "type": "ratio",
+            "metric": "billing_invoices_generated_total / billing_invoice_runs_total",
+            "target": 0.998,
+            "window": "30d"
+          },
+          {
+            "name": "payment_processing_success_rate",
+            "type": "ratio",
+            "metric": "billing_payments_succeeded_total / billing_payments_attempted_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "invoice_data_accuracy_rate",
+            "type": "business",
+            "metric": "billing_invoices_verified_accurate_total / billing_invoices_generated_total",
+            "target": 0.9999,
+            "window": "30d",
+            "description": "Percentage of invoices with correct calculations (verified via audit)"
+          }
+        ]
+      },
+      "finance": {
+        "description": "Financial operations and compliance",
+        "sli_indicators": [
+          {
+            "name": "reconciliation_match_rate",
+            "type": "business",
+            "metric": "finance_reconciliation_matched_total / finance_reconciliation_items_total",
+            "target": 0.9995,
+            "window": "30d"
+          },
+          {
+            "name": "gst_return_filing_timeliness",
+            "type": "business",
+            "metric": "gst_returns_filed_on_time_total / gst_returns_due_total",
+            "target": 1.0,
+            "window": "30d",
+            "description": "100% compliance requirement for GST filings"
+          },
+          {
+            "name": "tds_dedduction_accuracy_rate",
+            "type": "business",
+            "metric": "tds_deductions_correct_total / tds_deductions_total",
+            "target": 1.0,
+            "window": "30d"
+          }
+        ],
+        "compliance_required": true
+      },
+      "india": {
+        "description": "India-specific compliance (FASTag, E-Way Bills, GST)",
+        "sli_indicators": [
+          {
+            "name": "fastag_recharge_success_rate",
+            "type": "ratio",
+            "metric": "india_fastag_recharge_success_total / india_fastag_recharge_attempts_total",
+            "target": 0.998,
+            "window": "30d"
+          },
+          {
+            "name": "eway_bill_generation_success_rate",
+            "type": "ratio",
+            "metric": "india_ewaybill_generated_total / india_ewaybill_attempts_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "gst_invoice_irn_success_rate",
+            "type": "ratio",
+            "metric": "india_einvoices_with_irn_total / india_einvoices_generated_total",
+            "target": 0.995,
+            "window": "30d"
+          }
+        ],
+        "compliance_required": true,
+        "regulatory_deadline_sensitive": true
+      },
+      "compliance": {
+        "description": "Regulatory compliance monitoring",
+        "sli_indicators": [
+          {
+            "name": "compliance_check_coverage_rate",
+            "type": "business",
+            "metric": "compliance_checks_passed_total / compliance_checks_total",
+            "target": 1.0,
+            "window": "7d"
+          },
+          {
+            "name": "violation_detection_accuracy",
+            "type": "business",
+            "metric": "compliance_violations_correctly_identified_total / compliance_violations_total",
+            "target": 0.95,
+            "window": "30d"
+          }
+        ]
+      },
+      "maintenance": {
+        "description": "Vehicle maintenance scheduling and tracking",
+        "sli_indicators": [
+          {
+            "name": "maintenance_task_completion_rate",
+            "type": "business",
+            "metric": "maintenance_tasks_completed_total / maintenance_tasks_scheduled_total",
+            "target": 0.95,
+            "window": "30d"
+          },
+          {
+            "name": "overdue_maintenance_alerts_accuracy",
+            "type": "business",
+            "metric": "overdue_maintenance_alerts_valid_total / overdue_maintenance_alerts_generated_total",
+            "target": 0.98,
+            "window": "7d"
+          }
+        ]
+      },
+      "fuel": {
+        "description": "Fuel card management and expense tracking",
+        "sli_indicators": [
+          {
+            "name": "fuel_transaction_reconciliation_rate",
+            "type": "ratio",
+            "metric": "fuel_transactions_reconciled_total / fuel_transactions_received_total",
+            "target": 0.999,
+            "window": "24h"
+          },
+          {
+            "name": "fuel_otp_verification_success_rate",
+            "type": "ratio",
+            "metric": "fuel_otp_verified_total / fuel_otp_sent_total",
+            "target": 0.995,
+            "window": "7d"
+          }
+        ]
+      },
+      "route": {
+        "description": "Route optimization and planning",
+        "sli_indicators": [
+          {
+            "name": "route_planning_success_rate",
+            "type": "ratio",
+            "metric": "route_plans_generated_total / route_planning_requests_total",
+            "target": 0.995,
+            "window": "7d"
+          },
+          {
+            "name": "route_planning_latency_p95",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(route_planning_duration_seconds_bucket[1h]))",
+            "target_seconds": 2.0,
+            "window": "7d"
+          },
+          {
+            "name": "route_etd_accuracy",
+            "type": "business",
+            "metric": "routes_eta_accurate_within_10min_total / routes_with_eta_comparison_total",
+            "target": 0.85,
+            "window": "30d"
+          }
+        ]
+      },
+      "trip": {
+        "description": "Trip management and lifecycle",
+        "sli_indicators": [
+          {
+            "name": "trip_creation_success_rate",
+            "type": "ratio",
+            "metric": "trips_created_total / trip_creation_requests_total",
+            "target": 0.999,
+            "window": "30d"
+          },
+          {
+            "name": "trip_completion_rate",
+            "type": "business",
+            "metric": "trips_completed_total / trips_started_total",
+            "target": 0.95,
+            "window": "7d"
+          },
+          {
+            "name": "trip_navigation_availability",
+            "type": "availability",
+            "metric": "trips_with_navigation_success_total / trips_with_navigation_attempted_total",
+            "target": 0.998,
+            "window": "7d"
+          }
+        ]
+      },
+      "geofencing": {
+        "description": "Geofence creation and validation",
+        "sli_indicators": [
+          {
+            "name": "geofence_creation_success_rate",
+            "type": "ratio",
+            "metric": "geofences_created_total / geofence_creation_requests_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "geofence_validation_latency_p95",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(geofence_validation_duration_seconds_bucket[1h]))",
+            "target_seconds": 0.100,
+            "window": "7d"
+          }
+        ]
+      },
+      "analytics": {
+        "description": "Analytics and predictive models",
+        "sli_indicators": [
+          {
+            "name": "model_prediction_success_rate",
+            "type": "ratio",
+            "metric": "analytics_predictions_successful_total / analytics_predictions_requested_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "analytics_query_latency_p95",
+            "type": "latency",
+            "metric": "histogram_quantile(0.95, rate(analytics_query_duration_seconds_bucket[5m]))",
+            "target_seconds": 5.0,
+            "window": "7d"
+          },
+          {
+            "name": "feature_store_data_freshness",
+            "type": "business",
+            "metric": "feature_store_records_updated_last_hour_total / feature_store_total_records",
+            "target": 0.90,
+            "window": "1h"
+          }
+        ]
+      },
+      "alerts": {
+        "description": "Alert generation and management",
+        "sli_indicators": [
+          {
+            "name": "alert_generation_success_rate",
+            "type": "ratio",
+            "metric": "alerts_generated_total / alert_triggers_evaluated_total",
+            "target": 0.999,
+            "window": "30d"
+          },
+          {
+            "name": "alert_delivery_success_rate",
+            "type": "ratio",
+            "metric": "alerts_delivered_total / alerts_attempted_total",
+            "target": 0.998,
+            "window": "30d"
+          }
+        ]
+      },
+      "customer": {
+        "description": "Customer management and support",
+        "sli_indicators": [
+          {
+            "name": "customer_api_availability",
+            "type": "availability",
+            "metric": "sum(rate(customer_requests_total{status!~\"5..\"}[1d])) / sum(rate(customer_requests_total[1d]))",
+            "target": 0.999,
+            "window": "30d"
+          },
+          {
+            "name": "customer_support_ticket_creation_success_rate",
+            "type": "ratio",
+            "metric": "support_tickets_created_total / support_ticket_requests_total",
+            "target": 0.995,
+            "window": "30d"
+          }
+        ]
+      },
+      "reports": {
+        "description": "Report generation and distribution",
+        "sli_indicators": [
+          {
+            "name": "report_generation_success_rate",
+            "type": "ratio",
+            "metric": "reports_generated_total / report_requests_total",
+            "target": 0.995,
+            "window": "30d"
+          },
+          {
+            "name": "scheduled_report_delivery_success_rate",
+            "type": "ratio",
+            "metric": "scheduled_reports_delivered_total / scheduled_reports_scheduled_total",
+            "target": 0.998,
+            "window": "30d"
+          }
+        ]
+      },
+      "settings": {
+        "description": "Organization and user settings",
+        "sli_indicators": [
+          {
+            "name": "settings_update_success_rate",
+            "type": "ratio",
+            "metric": "settings_updates_successful_total / settings_update_attempts_total",
+            "target": 0.999,
+            "window": "30d"
+          }
+        ]
+      },
+      "integrations": {
+        "description": "Third-party integrations and webhooks",
+        "sli_indicators": [
+          {
+            "name": "integration_webhook_delivery_success_rate",
+            "type": "ratio",
+            "metric": "integrations_webhooks_delivered_total / integrations_webhooks_attempted_total",
+            "target": 0.995,
+            "window": "7d"
+          },
+          {
+            "name": "integration_api_sync_success_rate",
+            "type": "ratio",
+            "metric": "integrations_syncs_completed_total / integrations_syncs_attempted_total",
+            "target": 0.99,
+            "window": "30d"
+          }
+        ]
+      },
+      "admin_support": {
+        "description": "Admin tools and support features",
+        "sli_indicators": [
+          {
+            "name": "admin_action_audit_success_rate",
+            "type": "ratio",
+            "metric": "admin_actions_completed_total / admin_actions_attempted_total",
+            "target": 0.999,
+            "window": "30d"
+          }
+        ]
+      },
+      "alert": {
+        "description": "Alert management system",
+        "sli_indicators": [
+          {
+            "name": "alert_rule_evaluation_success_rate",
+            "type": "ratio",
+            "metric": "alert_rules_evaluated_success_total / alert_rules_evaluated_total",
+            "target": 0.999,
+            "window": "30d"
+          }
+        ]
+      },
+      "monitoring": {
+        "description": "Internal monitoring and health checks",
+        "sli_indicators": [
+          {
+            "name": "health_check_success_rate",
+            "type": "availability",
+            "metric": "health_checks_passed_total / health_checks_total",
+            "target": 0.9999,
+            "window": "7d"
+          },
+          {
+            "name": "metrics_collection_success_rate",
+            "type": "ratio",
+            "metric": "metrics_collected_success_total / metrics_collection_attempts_total",
+            "target": 0.999,
+            "window": "7d"
+          }
+        ]
+      },
+      "platform_compat": {
+        "description": "Platform compatibility features",
+        "sli_indicators": [
+          {
+            "name": "device_compatibility_check_success_rate",
+            "type": "ratio",
+            "metric": "compatibility_checks_passed_total / compatibility_checks_total",
+            "target": 0.995,
+            "window": "30d"
+          }
+        ]
+      },
+      "video": {
+        "description": "Video streaming and storage",
+        "sli_indicators": [
+          {
+            "name": "video_upload_success_rate",
+            "type": "ratio",
+            "metric": "video_uploads_completed_total / video_upload_attempts_total",
+            "target": 0.998,
+            "window": "30d"
+          },
+          {
+            "name": "video_streaming_availability",
+            "type": "availability",
+            "metric": "video_streams_successful_total / video_stream_attempts_total",
+            "target": 0.995,
+            "window": "30d"
+          }
+        ]
+      }
+    },
+    "error_budget_policies": {
+      "default": {
+        "burn_rate_warning": 2.0,
+        "burn_rate_critical": 5.0,
+        "consumption_warning_threshold": 0.5,
+        "consumption_critical_threshold": 0.8,
+        "notification_channels": ["slack", "email"],
+        "page_on_critical": true
+      },
+      "emergency_critical": {
+        "burn_rate_warning": 1.5,
+        "burn_rate_critical": 3.0,
+        "consumption_critical_threshold": 0.9,
+        "notification_channels": ["pagerduty", "slack", "sms"],
+        "page_on_warning": true,
+        "page_on_critical": true
+      },
+      "compliance_mandatory": {
+        "consumption_critical_threshold": 0.5,
+        "violation_immediate_action": true,
+        "audit_log_required": true
+      }
+    }
+  }
+}

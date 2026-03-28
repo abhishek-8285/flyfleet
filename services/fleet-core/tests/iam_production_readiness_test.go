@@ -72,9 +72,9 @@ var (
 
 // Test credentials
 const (
-	testEmail    = "testuser@flyfleet.io"
-	testPassword = "TestP@ssw0rd123!"
-	adminEmail   = "admin@flyfleet.io"
+	testEmail     = "testuser@flyfleet.io"
+	testPassword  = "TestP@ssw0rd123!"
+	adminEmail    = "admin@flyfleet.io"
 	adminPassword = "AdminP@ssw0rd123!"
 )
 
@@ -169,7 +169,7 @@ func setupTestServer() {
 		ts.Listener = l
 		testBaseURL = "http://" + l.Addr().String()
 	}
-	
+
 	// Set JWKS_URL to the test server address
 	os.Setenv("JWKS_URL", testBaseURL+"/api/v1/auth/.well-known/jwks.json")
 

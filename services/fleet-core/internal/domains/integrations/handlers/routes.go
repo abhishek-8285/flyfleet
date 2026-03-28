@@ -35,7 +35,7 @@ func orgScopeMiddleware(next http.Handler) http.Handler {
 // RegisterRoutes mounts integrations v2 API routes.
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Route("/integrations", func(r chi.Router) {
-		r.Use(orgScopeMiddleware)
+		// JWT middleware should be applied globally; orgID will come from validated context
 		r.Get("/", h.ListIntegrations)
 		r.Post("/", h.CreateIntegration)
 		r.Get("/logs", h.ListLogs)
@@ -46,13 +46,11 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 	})
 
 	r.Route("/api-clients", func(r chi.Router) {
-		r.Use(orgScopeMiddleware)
 		r.Get("/", h.ListAPIClients)
 		r.Post("/", h.CreateAPIClient)
 	})
 
 	r.Route("/webhooks", func(r chi.Router) {
-		r.Use(orgScopeMiddleware)
 		r.Get("/", h.ListWebhooks)
 		r.Post("/", h.CreateWebhook)
 		r.Delete("/{id}", h.DeleteWebhook)

@@ -77,7 +77,7 @@ func (s *EmergencyAuthorityService) NotifyAuthorities(ctx context.Context, incid
 				break // Primary chosen (sorted by priority)
 			}
 		}
-		
+
 		if !found {
 			s.logger.Warn("Specific geo-authority type not found in zone", zap.String("type", string(neededType)))
 			go s.notifyWithRetry(ctx, incident, neededType) // Static fallback
@@ -114,7 +114,7 @@ func (s *EmergencyAuthorityService) notifyWithRetry(ctx context.Context, inciden
 
 	for i := 0; i < 3; i++ {
 		success := s.attemptNotification(ctx, incident, auth)
-		
+
 		status := "FAILED"
 		if success {
 			status = "CONFIRMED"
@@ -134,8 +134,8 @@ func (s *EmergencyAuthorityService) notifyWithRetry(ctx context.Context, inciden
 	}
 
 	emergency.AuthorityDeliverySuccessTotal.WithLabelValues(string(auth), "failed").Inc()
-	s.logger.Error("Failed to notify authority after 3 retries", 
-		zap.String("authority", string(auth)), 
+	s.logger.Error("Failed to notify authority after 3 retries",
+		zap.String("authority", string(auth)),
 		zap.String("incident_id", incident.ID.String()))
 }
 

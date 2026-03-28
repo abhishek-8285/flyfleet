@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import apiClient from "../../services/apiClient";
 
@@ -57,7 +57,7 @@ export function DataGrid<T extends { id: string | number }>({
   const [filterValues, setFilterValues] = useState<Record<string, any>>({});
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -84,11 +84,11 @@ export function DataGrid<T extends { id: string | number }>({
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, endpoint, refreshTrigger, filterValues]);
 
   useEffect(() => {
     fetchData();
-  }, [page, pageSize, endpoint, refreshTrigger, filterValues]);
+  }, [fetchData]);
 
   const handleFilterChange = (field: string, value: any) => {
     setFilterValues((prev) => ({
@@ -169,7 +169,7 @@ export function DataGrid<T extends { id: string | number }>({
             className="p-2 text-text-muted hover:text-primary transition-colors"
             title={uiStrings?.btn_refresh || "Refresh"}
           >
-            <span className="material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}">
+            <span className={\`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}\`}>
               {uiStrings?.btn_refresh || "refresh"}
             </span>
           </button>

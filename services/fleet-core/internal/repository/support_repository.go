@@ -151,7 +151,7 @@ func (r *supportRepository) GetTicketDetail(ctx context.Context, ticketID uuid.U
 func (r *supportRepository) GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (map[string]interface{}, error) {
 	var total, open, resolvedToday int
 	var err error
-	
+
 	if orgID == uuid.Nil {
 		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets").
 			Scan(&total, &open, &resolvedToday)
@@ -159,7 +159,7 @@ func (r *supportRepository) GetDashboardMetrics(ctx context.Context, orgID uuid.
 		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets WHERE organization_id = $1", orgID).
 			Scan(&total, &open, &resolvedToday)
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}

@@ -72,4 +72,3 @@ func GetOrgID(ctx context.Context) (uuid.UUID, bool) {
 	id, ok := ctx.Value(OrgIDKey).(uuid.UUID)
 	return id, ok
 }
-

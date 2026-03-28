@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -22,8 +23,11 @@ import (
 // ────────────────────────────────────────────────────
 
 var (
-	emailRe = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-	phoneRe = regexp.MustCompile(`\+?[0-9]{10,15}`)
+	// Improved email regex with Unicode support for internationalized domain names (IDN)
+	// Matches standard email formats including Unicode characters in localpart and domain
+	emailRe = regexp.MustCompile(`[\p{L}0-9._%+\-]+@[\p{L}0-9.\-]+\.[\p{L}]{2,}`)
+	// Improved phone regex: E.164 format (max 15 digits, country code starting 1-9)
+	phoneRe = regexp.MustCompile(`\+?[1-9]\d{1,14}`)
 )
 
 // MaskPII replaces PII patterns (emails, phone numbers) in a string with masked versions.
@@ -55,13 +59,36 @@ func PIIField(key, value string) zap.Field {
 // gRPC Tenant Isolation Interceptor
 // ────────────────────────────────────────────────────
 
-// TenantUnaryInterceptor enforces org_id presence in gRPC metadata.
+// OrgValidator validates that the caller is authorized to access the given organization.
+// Implementations should extract the caller's identity from the context and verify
+// membership in the organization (or super-admin privileges).
+type OrgValidator interface {
+	// ValidateOrgAccess checks if the caller (identified by context) can access orgID.
+	// Returns nil if access is granted, or an error if denied.
+	ValidateOrgAccess(ctx context.Context, orgID string) error
+}
+
+// tenantValidator wraps an OrgValidator to be used in the interceptor.
+type tenantValidator struct {
+	validator OrgValidator
+}
+
+// TenantUnaryInterceptor enforces org_id presence AND validates membership.
+// It requires a validator to check that the caller is authorized for the org.
 // Extracts org_id from "x-org-id" or "x-organization-id" metadata keys.
-func TenantUnaryInterceptor() grpc.UnaryServerInterceptor {
+func TenantUnaryInterceptor(validator OrgValidator) grpc.UnaryServerInterceptor {
+	if validator == nil {
+		panic("TenantUnaryInterceptor: validator is required (nil provided)")
+	}
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		orgID := extractOrgIDFromMetadata(ctx)
 		if orgID == "" {
 			return nil, status.Error(codes.PermissionDenied, "organization context is required")
+		}
+
+		// Validate that the caller is authorized for this organization
+		if err := validator.ValidateOrgAccess(ctx, orgID); err != nil {
+			return nil, status.Error(codes.PermissionDenied, fmt.Sprintf("not authorized for organization: %v", err))
 		}
 
 		// Inject org_id into context for downstream use

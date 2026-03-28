@@ -26,9 +26,9 @@ type Service interface {
 }
 
 type service struct {
-	repo     Repository
-	storage  VideoStorage
-	logger   *zap.Logger
+	repo    Repository
+	storage VideoStorage
+	logger  *zap.Logger
 }
 
 func NewService(repo Repository, storage VideoStorage, logger *zap.Logger) Service {
@@ -36,11 +36,11 @@ func NewService(repo Repository, storage VideoStorage, logger *zap.Logger) Servi
 }
 
 // UploadVideo handles the full upload flow:
-// 1. Stream body through a SHA256 hash pipe while uploading to object storage
-//    (no full-file buffering — critical for large dashcam clips over LTE)
-// 2. Post-upload integrity verification via re-download
-// 3. Save metadata to database
-// 4. Enqueue processing job with appropriate priority
+//  1. Stream body through a SHA256 hash pipe while uploading to object storage
+//     (no full-file buffering — critical for large dashcam clips over LTE)
+//  2. Post-upload integrity verification via re-download
+//  3. Save metadata to database
+//  4. Enqueue processing job with appropriate priority
 func (s *service) UploadVideo(ctx context.Context, tenantID, userID uuid.UUID, req UploadVideoRequest, body io.Reader) (*Video, error) {
 	if req.VehicleID == uuid.Nil {
 		return nil, errors.New("vehicle_id is required")

@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,16 +35,16 @@ type TripRepository interface {
 	GetActiveTripsForDriver(ctx context.Context, driverID string) ([]*models.Trip, error)
 	GetLastCompletedTripForVehicle(ctx context.Context, vehicleID string) (*models.Trip, error)
 	CheckOverlappingTrips(ctx context.Context, vehicleID, driverID string, start, end time.Time) (bool, error)
-	
+
 	// Telemetry
 	AddTelemetryPoint(ctx context.Context, point models.TelemetryPoint) error
 	GetTelemetry(ctx context.Context, tripID string) ([]models.TelemetryPoint, error)
 
 	// Analytics
-	GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error)
+	GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error)
 	GetStats(ctx context.Context) (*models.TripStats, error)
-	GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error)
-	GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error)
+	GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error)
+	GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error)
 
 	// Trip Offers
 	CreateOffer(ctx context.Context, offer *models.TripOffer) error
@@ -73,14 +74,14 @@ func NewTripRepository(db *pgxpool.Pool) *PostgresTripRepository {
 func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	query := `
 		INSERT INTO trips (
-			id, tenant_id, vehicle_id, driver_id, status, title, description,
+			id, org_id, vehicle_id, driver_id, status, title, description,
 			pickup_geo, drop_geo,
 			planned_route, waypoints, planned_distance, estimated_duration_min,
-			cargo_details, scheduled_start, start_odometer, fuel_level_snapshot, 
+			cargo_details, scheduled_start, start_odometer, fuel_level_snapshot,
 			eway_bill_no, gst_classification, customer_name, customer_phone,
 			customer_email, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, 
+			$1, $2, $3, $4, $5, $6, $7,
 			CASE WHEN $8::text IS NOT NULL THEN ST_GeomFromText($8) ELSE NULL END,
 			CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9) ELSE NULL END,
 			$10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
@@ -105,14 +106,16 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 		dropWKT = &s
 	}
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		id, trip.TenantID, trip.VehicleID, trip.DriverID, trip.Status, trip.Title, trip.Description,
+		id, trip.OrgID, trip.VehicleID, trip.DriverID, trip.Status, trip.Title, trip.Description,
 		pickupWKT, dropWKT,
 		plannedRouteJSON, waypointsJSON, trip.PlannedDistance, trip.EstimatedDurationMin,
 		cargoDetailsJSON, trip.ScheduledStart, trip.StartOdometer, trip.FuelLevelSnapshot,
 		trip.EWayBillNo, trip.GSTClassification, trip.CustomerName, trip.CustomerPhone,
 		trip.CustomerEmail, now, now,
 	).Scan(&trip.ID, &trip.CreatedAt, &trip.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	return err
 }
@@ -120,17 +123,17 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 // GetByID retrieves a trip by its ID
 func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*models.Trip, error) {
 	query := `
-		SELECT 
-			id, tenant_id, vehicle_id, driver_id, status, title, description,
+		SELECT
+			id, org_id, vehicle_id, driver_id, status, title, description,
 			ST_AsText(pickup_geo), ST_AsText(drop_geo),
-			planned_route, actual_route, waypoints, 
+			planned_route, actual_route, waypoints,
 			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
 			cargo_details, scheduled_start, start_time, end_time,
 			start_odometer, end_odometer, fuel_level_snapshot, fuel_used, idling_time_minutes,
 			eway_bill_no, gst_classification, permit_verified, ais140_compliant,
 			customer_name, customer_phone, customer_email, cancellation_reason,
 			version, created_at, updated_at
-		FROM trips 
+		FROM trips
 		WHERE id = $1 AND is_deleted = FALSE`
 
 	var trip models.Trip
@@ -142,8 +145,9 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	var fuelUsed sql.NullFloat64
 	var idlingTimeMinutes sql.NullInt32
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.Description,
+		&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.Description,
 		&pickupWKT, &dropWKT,
 		&plannedRouteJSON, &actualRouteJSON, &waypointsJSON,
 		&trip.PlannedDistance, &totalDistance, &trip.EstimatedDurationMin, &actualDurationMin,
@@ -153,6 +157,7 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 		&trip.CustomerName, &trip.CustomerPhone, &trip.CustomerEmail, &cancellationReason,
 		&trip.Version, &trip.CreatedAt, &trip.UpdatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return nil, err
@@ -186,18 +191,18 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 // List retrieves trips with filtering and pagination
 func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripListFilter) ([]*models.Trip, int, error) {
 	baseQuery := `
-		SELECT 
-			id, tenant_id, vehicle_id, driver_id, status, title, description,
+		SELECT
+			id, org_id, vehicle_id, driver_id, status, title, description,
 			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
 			scheduled_start, start_time, end_time,
 			customer_name, created_at, updated_at
 		FROM trips
-		WHERE tenant_id = $1 AND is_deleted = FALSE`
+		WHERE org_id = $1 AND is_deleted = FALSE`
 
-	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND is_deleted = FALSE`
+	countQuery := `SELECT COUNT(*) FROM trips WHERE org_id = $1 AND is_deleted = FALSE`
 
 	var conditions []string
-	args := []interface{}{filter.TenantID}
+	args := []interface{}{filter.OrgID}
 	argIndex := 2
 
 	if filter.Status != "" {
@@ -239,7 +244,9 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	// Count query
 	var totalCount int
 	countSQL := countQuery + whereClause
+	start := time.Now()
 	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
+	metrics.RecordDBQuery(countSQL, time.Since(start))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -278,7 +285,9 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 
 	listSQL := baseQuery + whereClause + " ORDER BY " + orderBy + limitClause
 
+	start = time.Now()
 	rows, err := r.db.Query(ctx, listSQL, args...)
+	metrics.RecordDBQuery(listSQL, time.Since(start))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -288,7 +297,7 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	for rows.Next() {
 		var trip models.Trip
 		err := rows.Scan(
-			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status,
+			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
 			&trip.Title, &trip.Description, &trip.PlannedDistance, &trip.TotalDistance,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
 			&trip.StartTime, &trip.EndTime, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
@@ -310,37 +319,37 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 
 	// Mapping Go field names to DB column names if they differ
 	fieldMap := map[string]string{
-		"TenantID":           "tenant_id",
-		"PlannedDistance":    "planned_distance",
-		"TotalDistance":      "total_distance",
-		"StartTime":          "start_time",
-		"EndTime":            "end_time",
-		"FuelUsed":           "fuel_used",
-		"GSTClassification":  "gst_classification",
-		"PlannedRoute":       "planned_route",
-		"ActualRoute":        "actual_route",
-		"Waypoints":          "waypoints",
-		"CargoDetails":       "cargo_details",
-		"StartLocation":      "start_location",
-		"EndLocation":        "end_location",
-		"PickupGeo":          "pickup_geo",
-		"DropGeo":            "drop_geo",
-		"ScheduledStart":     "scheduled_start",
-		"StartOdometer":      "start_odometer",
-		"EndOdometer":        "end_odometer",
-		"FuelLevelSnapshot":  "fuel_level_snapshot",
-		"EWayBillNo":         "eway_bill_no",
-		"PermitVerified":     "permit_verified",
-		"AIS140Compliant":    "ais140_compliant",
-		"CustomerName":       "customer_name",
-		"CustomerPhone":      "customer_phone",
-		"CustomerEmail":      "customer_email",
-		"CancellationReason": "cancellation_reason",
+		"OrgID":                "org_id",
+		"PlannedDistance":      "planned_distance",
+		"TotalDistance":        "total_distance",
+		"StartTime":            "start_time",
+		"EndTime":              "end_time",
+		"FuelUsed":             "fuel_used",
+		"GSTClassification":    "gst_classification",
+		"PlannedRoute":         "planned_route",
+		"ActualRoute":          "actual_route",
+		"Waypoints":            "waypoints",
+		"CargoDetails":         "cargo_details",
+		"StartLocation":        "start_location",
+		"EndLocation":          "end_location",
+		"PickupGeo":            "pickup_geo",
+		"DropGeo":              "drop_geo",
+		"ScheduledStart":       "scheduled_start",
+		"StartOdometer":        "start_odometer",
+		"EndOdometer":          "end_odometer",
+		"FuelLevelSnapshot":    "fuel_level_snapshot",
+		"EWayBillNo":           "eway_bill_no",
+		"PermitVerified":       "permit_verified",
+		"AIS140Compliant":      "ais140_compliant",
+		"CustomerName":         "customer_name",
+		"CustomerPhone":        "customer_phone",
+		"CustomerEmail":        "customer_email",
+		"CancellationReason":   "cancellation_reason",
 		"EstimatedDurationMin": "estimated_duration_min",
-		"ActualDurationMin":  "actual_duration_min",
-		"IdlingTimeMinutes":  "idling_time_minutes",
-		"VehicleID":          "vehicle_id",
-		"DriverID":           "driver_id",
+		"ActualDurationMin":    "actual_duration_min",
+		"IdlingTimeMinutes":    "idling_time_minutes",
+		"VehicleID":            "vehicle_id",
+		"DriverID":             "driver_id",
 	}
 
 	setParts := make([]string, 0, len(updates))
@@ -358,7 +367,7 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 		}
 
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", columnName, argIndex))
-		
+
 		// Handle special JSON/Geo fields
 		switch columnName {
 		case "planned_route", "actual_route", "waypoints", "cargo_details", "start_location", "end_location":
@@ -378,7 +387,7 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 	}
 
 	args = append(args, id)
-	
+
 	// Check for version to implement optimistic locking
 	versionWhere := ""
 	if v, ok := updates["version"]; ok {
@@ -390,7 +399,9 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 	query := fmt.Sprintf("UPDATE trips SET %s, updated_at = $%d, version = version + 1 WHERE id = $%d%s",
 		strings.Join(setParts, ", "), argIndex, argIndex+1, versionWhere)
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return err
 	}
@@ -405,7 +416,9 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 // Delete removes a trip (soft delete by setting status to deleted)
 func (r *PostgresTripRepository) Delete(ctx context.Context, id string) error {
 	query := "UPDATE trips SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1"
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return err
 	}
@@ -420,7 +433,9 @@ func (r *PostgresTripRepository) Delete(ctx context.Context, id string) error {
 // Approve moves a trip from CREATED to SCHEDULED
 func (r *PostgresTripRepository) Approve(ctx context.Context, id string) error {
 	query := `UPDATE trips SET status = 'SCHEDULED', updated_at = NOW() WHERE id = $1 AND status = 'CREATED'`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -436,9 +451,11 @@ func (r *PostgresTripRepository) AddEvent(ctx context.Context, tripID string, ev
 	locationWKT := fmt.Sprintf("POINT(%f %f)", event.Location.Longitude, event.Location.Latitude)
 	payloadJSON, _ := json.Marshal(event.Payload) // Assuming Payload field exists or use JSONB
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		id, tripID, event.Type, locationWKT, payloadJSON, event.Hash, event.PrevHash, now,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -446,7 +463,9 @@ func (r *PostgresTripRepository) AddEvent(ctx context.Context, tripID string, ev
 func (r *PostgresTripRepository) GetLastEvent(ctx context.Context, tripID string) (*models.TripEvent, error) {
 	query := `SELECT id, event_type, hash FROM trip_events WHERE trip_id = $1 ORDER BY created_at DESC LIMIT 1`
 	var event models.TripEvent
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, tripID).Scan(&event.ID, &event.Type, &event.Hash)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -465,20 +484,24 @@ func (r *PostgresTripRepository) AddPODDocument(ctx context.Context, tripID stri
 		WHERE id = $2`
 
 	podJSON, _ := json.Marshal([]models.PODDocument{pod})
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, podJSON, tripID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 // GetActiveTripsForDriver retrieves trips for a driver that are not in terminal states
 func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, driverID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, tenant_id, vehicle_id, driver_id, status, title, created_at, updated_at
-		FROM trips 
-		WHERE driver_id = $1 
+		SELECT id, org_id, vehicle_id, driver_id, status, title, created_at, updated_at
+		FROM trips
+		WHERE driver_id = $1
 		  AND status NOT IN ('COMPLETED', 'CANCELLED', 'FAILED')
 		  AND is_deleted = FALSE`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +510,7 @@ func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, dr
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
-		if err := rows.Scan(&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.CreatedAt, &trip.UpdatedAt); err != nil {
+		if err := rows.Scan(&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.CreatedAt, &trip.UpdatedAt); err != nil {
 			return nil, err
 		}
 		trips = append(trips, &trip)
@@ -502,10 +525,12 @@ func (r *PostgresTripRepository) AddTelemetryPoint(ctx context.Context, point mo
 			trip_id, lat, lng, speed, heading, fuel_level, ignition_status, recorded_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		point.TripID, point.Latitude, point.Longitude, point.Speed, point.Heading,
 		point.FuelLevel, point.IgnitionStatus, point.RecordedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -517,7 +542,9 @@ func (r *PostgresTripRepository) GetTelemetry(ctx context.Context, tripID string
 		WHERE trip_id = $1
 		ORDER BY recorded_at ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, tripID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +571,9 @@ func (r *PostgresTripRepository) GetLastCompletedTripForVehicle(ctx context.Cont
 		LIMIT 1`
 
 	var trip models.Trip
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, vehicleID).Scan(&trip.ID, &trip.EndOdometer, &trip.EndTime)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -570,21 +599,25 @@ func (r *PostgresTripRepository) CheckOverlappingTrips(ctx context.Context, vehi
 		)`
 
 	var exists bool
+	queryStart := time.Now()
 	err := r.db.QueryRow(ctx, query, vehicleID, driverID, start, end).Scan(&exists)
+	metrics.RecordDBQuery(query, time.Since(queryStart))
 	return exists, err
 }
 
 func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, tenant_id, vehicle_id, driver_id, status, title, description,
+		SELECT id, org_id, vehicle_id, driver_id, status, title, description,
 		       planned_distance, total_distance, estimated_duration_min,
 		       actual_duration_min, scheduled_start, start_time, end_time,
 		       customer_name, created_at, updated_at
-		FROM trips 
+		FROM trips
 		WHERE vehicle_id = $1 AND status IN ('CREATED', 'STARTED', 'PAUSED', 'RESUMED') AND is_deleted = FALSE
 		ORDER BY scheduled_start ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, vehicleID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -594,7 +627,7 @@ func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, v
 	for rows.Next() {
 		var trip models.Trip
 		err := rows.Scan(
-			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status,
+			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
 			&trip.Title, &trip.Description, &trip.PlannedDistance, &trip.TotalDistance,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
 			&trip.StartTime, &trip.EndTime, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
@@ -620,9 +653,9 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 			COALESCE(AVG(total_distance / NULLIF(fuel_used, 0)), 0) as avg_fuel_efficiency,
 			COALESCE(SUM(fuel_used), 0) as total_fuel_consumed,
 			COALESCE(SUM(idling_time_minutes), 0) as total_idle_time_minutes
-		FROM trips 
-		WHERE tenant_id = $1 
-		  AND created_at >= $2 
+		FROM trips
+		WHERE org_id = $1
+		  AND created_at >= $2
 		  AND created_at <= $3
 		  AND status IN ('COMPLETED', 'CANCELLED')
 		  AND is_deleted = FALSE`
@@ -630,11 +663,13 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 	var summary models.TripSummary
 	var totalDurationMinutes float64
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, orgID, startDate, endDate).Scan(
 		&summary.TotalTrips, &summary.CompletedTrips, &summary.CancelledTrips,
 		&summary.TotalDistance, &totalDurationMinutes, &summary.AverageFuelEfficiency,
 		&summary.FuelUsed, &summary.TotalIdleTimeMinutes,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return nil, err
@@ -642,7 +677,7 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 
 	summary.TotalDurationHours = totalDurationMinutes / 60.0
 	// TotalIdleTimeMinutes is already in minutes, no conversion needed
-	
+
 	if summary.TotalTrips > 0 {
 		summary.OnTimeRate = float64(summary.CompletedTrips) / float64(summary.TotalTrips) * 100
 		summary.AverageTripDuration = totalDurationMinutes / float64(summary.CompletedTrips) / 60.0
@@ -653,7 +688,9 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStats, error) {
 	query := `SELECT COUNT(*) FROM trips WHERE status IN ('in_progress', 'paused') AND is_deleted = FALSE`
 	var count int
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query).Scan(&count)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -661,19 +698,21 @@ func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStat
 }
 
 // GetDriverStats aggregates metrics for all drivers in a tenant
-func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
+func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
 	query := `
-		SELECT 
+		SELECT
 			driver_id,
 			COALESCE(SUM(total_distance), 0) as total_distance,
 			COUNT(CASE WHEN status = 'completed' THEN 1 END) as trips_completed,
 			COUNT(*) as total_trips,
 			AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END) as on_time_rate -- Simplified for demo
-		FROM trips 
-		WHERE tenant_id = $1 AND driver_id IS NOT NULL AND is_deleted = FALSE
+		FROM trips
+		WHERE org_id = $1 AND driver_id IS NOT NULL AND is_deleted = FALSE
 		GROUP BY driver_id`
 
-	rows, err := r.db.Query(ctx, query, tenantID)
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -687,7 +726,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, tenantID st
 			return nil, err
 		}
 		p.Name = "Driver " + p.DriverID[:8]
-		p.SafetyScore = 95 
+		p.SafetyScore = 95
 		performance = append(performance, p)
 	}
 
@@ -695,7 +734,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, tenantID st
 }
 
 // GetTripStats aggregates trip counts and distance per day for a tenant
-func (r *PostgresTripRepository) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
+func (r *PostgresTripRepository) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
 	query := `
 		SELECT 
 			TO_CHAR(created_at, 'YYYY-MM-DD') as date,
@@ -703,13 +742,15 @@ func (r *PostgresTripRepository) GetTripStats(ctx context.Context, tenantID stri
 			COALESCE(SUM(total_distance), 0) as total_distance,
 			COALESCE(SUM(actual_duration_min), 0) / 60.0 as active_time_hours
 		FROM trips
-		WHERE tenant_id = $1
+		WHERE org_id = $1
 		  AND created_at >= NOW() - INTERVAL '7 days'
 		  AND is_deleted = FALSE
 		GROUP BY date
 		ORDER BY date ASC`
 
-	rows, err := r.db.Query(ctx, query, tenantID)
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +771,9 @@ func (r *PostgresTripRepository) GetTripStats(ctx context.Context, tenantID stri
 
 // WithTx executes a function within a database transaction
 func (r *PostgresTripRepository) WithTx(ctx context.Context, fn func(TripRepository) error) error {
+	start := time.Now()
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
+	metrics.RecordDBQuery("BEGIN TRANSACTION", time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -745,17 +788,20 @@ func (r *PostgresTripRepository) WithTx(ctx context.Context, fn func(TripReposit
 		return err
 	}
 
+	start = time.Now()
 	if err := tx.Commit(ctx); err != nil {
+		metrics.RecordDBQuery("COMMIT TRANSACTION", time.Since(start))
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
+	metrics.RecordDBQuery("COMMIT TRANSACTION", time.Since(start))
 
 	return nil
 }
 
 // txRepository is a transaction-aware repository wrapper
 type txRepository struct {
-	tx    pgx.Tx
-	base  *PostgresTripRepository
+	tx   pgx.Tx
+	base *PostgresTripRepository
 }
 
 func (r *txRepository) Create(ctx context.Context, trip *models.Trip) error {
@@ -798,13 +844,17 @@ func (r *txRepository) Update(ctx context.Context, id string, updates map[string
 	query := fmt.Sprintf("UPDATE trips SET %s, updated_at = $%d WHERE id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
+	start := time.Now()
 	_, err := r.tx.Exec(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *txRepository) Delete(ctx context.Context, id string) error {
 	query := "UPDATE trips SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1"
+	start := time.Now()
 	_, err := r.tx.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -823,7 +873,9 @@ func (r *txRepository) GetLastEvent(ctx context.Context, tripID string) (*models
 func (r *txRepository) AddPODDocument(ctx context.Context, tripID string, pod models.PODDocument) error {
 	podJSON, _ := json.Marshal([]models.PODDocument{pod})
 	query := `UPDATE trips SET pod_documents = CASE WHEN pod_documents IS NULL THEN $1::jsonb ELSE (pod_documents::jsonb || $1::jsonb) END, updated_at = NOW() WHERE id = $2`
+	start := time.Now()
 	_, err := r.tx.Exec(ctx, query, podJSON, tripID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -843,20 +895,20 @@ func (r *txRepository) CheckOverlappingTrips(ctx context.Context, vehicleID, dri
 	return r.base.CheckOverlappingTrips(ctx, vehicleID, driverID, start, end)
 }
 
-func (r *txRepository) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
-	return r.base.GetTripSummary(ctx, tenantID, startDate, endDate)
+func (r *txRepository) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+	return r.base.GetTripSummary(ctx, orgID, startDate, endDate)
 }
 
 func (r *txRepository) GetStats(ctx context.Context) (*models.TripStats, error) {
 	return r.base.GetStats(ctx)
 }
 
-func (r *txRepository) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
-	return r.base.GetDriverStats(ctx, tenantID)
+func (r *txRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
+	return r.base.GetDriverStats(ctx, orgID)
 }
 
-func (r *txRepository) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
-	return r.base.GetTripStats(ctx, tenantID)
+func (r *txRepository) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
+	return r.base.GetTripStats(ctx, orgID)
 }
 
 func (r *txRepository) CreateOffer(ctx context.Context, offer *models.TripOffer) error {
@@ -869,7 +921,9 @@ func (r *txRepository) GetOffer(ctx context.Context, offerID string) (*models.Tr
 
 func (r *txRepository) RespondToOffer(ctx context.Context, offerID string, status, reason string) error {
 	query := `UPDATE trip_offers SET status = $1, rejection_reason = $2, responded_at = NOW(), updated_at = NOW() WHERE id = $3`
+	start := time.Now()
 	_, err := r.tx.Exec(ctx, query, status, reason, offerID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 

@@ -35,7 +35,8 @@ func (r *LedgerRepository) GetOrCreateBalance(ctx context.Context, orgID uuid.UU
 	)
 
 	if err == pgx.ErrNoRows {
-		// Auto-provision wallet
+		// SECURITY FIX: Race condition - use UPSERT (INSERT ... ON CONFLICT) instead of check-then-insert
+		// This prevents duplicate key errors when multiple concurrent requests try to create the same balance
 		b.ID = uuid.New()
 		b.OrgID = orgID
 		b.Currency = currency
@@ -43,10 +44,25 @@ func (r *LedgerRepository) GetOrCreateBalance(ctx context.Context, orgID uuid.UU
 		b.CreditLimit = 0
 		b.Status = "ACTIVE"
 
+		// Try to insert, but if a concurrent request already inserted, just read the existing one
 		_, err = r.db.Exec(ctx, `
 			INSERT INTO billing_customer_balances (id, org_id, currency, balance, credit_limit, status)
 			VALUES ($1, $2, $3, $4, $5, $6)
+			ON CONFLICT (org_id, currency) DO NOTHING
 		`, b.ID, b.OrgID, b.Currency, b.Balance, b.CreditLimit, b.Status)
+		if err != nil {
+			return nil, err
+		}
+
+		// Regardless of whether we inserted or someone else did, read the current balance
+		// This could still error, but we've at least attempted creation
+		err = r.db.QueryRow(ctx, `
+			SELECT id, org_id, currency, balance, credit_limit, status, created_at, updated_at
+			FROM billing_customer_balances
+			WHERE org_id = $1 AND currency = $2
+		`, orgID, currency).Scan(
+			&b.ID, &b.OrgID, &b.Currency, &b.Balance, &b.CreditLimit, &b.Status, &b.CreatedAt, &b.UpdatedAt,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +89,7 @@ func (r *LedgerRepository) ApplyCreditTransaction(ctx context.Context, tx *model
 		SELECT balance, credit_limit FROM billing_customer_balances 
 		WHERE id = $1 FOR UPDATE
 	`, tx.BalanceID).Scan(&currentBalance, &creditLimit)
-	
+
 	if err != nil {
 		return err
 	}
@@ -119,7 +135,7 @@ func (r *LedgerRepository) RecordLedgerEntry(ctx context.Context, entry *models.
 		INSERT INTO billing_ledger_entries (id, org_id, entry_type, amount, currency, invoice_id, payment_id, credit_note_id, ledger_account, description)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`, entry.ID, entry.OrgID, entry.EntryType, entry.Amount, entry.Currency, entry.InvoiceID, entry.PaymentID, entry.CreditNoteID, entry.LedgerAccount, entry.Description)
-	
+
 	return err
 }
 

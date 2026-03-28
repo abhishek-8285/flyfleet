@@ -90,7 +90,7 @@ func (w *PredictiveMaintenanceWorker) evaluateVehicle(ctx context.Context, orgID
 	err = w.repo.GetDB().QueryRow(ctx,
 		"SELECT COALESCE(MAX(engine_hours), 0) FROM maintenance_logs WHERE vehicle_id = $1",
 		vehicleID).Scan(&lastServiceHours)
-	
+
 	// Simulated telemetry check
 	currentHours = lastServiceHours + 550 // Mocking that threshold is exceeded
 
@@ -115,7 +115,7 @@ func (w *PredictiveMaintenanceWorker) triggerPreventiveWO(ctx context.Context, o
 	}
 
 	w.logger.Info("Created predictive preventive work order", zap.String("wo_id", wo.ID.String()))
-	
+
 	// Auto-assign technician if enabled
 	_ = w.woService.AutoAssignTechnician(ctx, wo)
 }

@@ -1,10 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 export const VehicleMapCard: React.FC = () => {
-  const navigate = useNavigate();
   const { uiStrings } = useUIStrings("fleet");
 
   return (

@@ -17,10 +17,10 @@ type User struct {
 }
 
 type Role struct {
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
 	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
-	Description    string    `json:"description"`
+	Description    string     `json:"description"`
 }
 
 type Permission struct {

@@ -39,7 +39,7 @@ func (c *AnalyticsCache) PublishInvalidation(ctx context.Context, pattern string
 // SubscribeToInvalidations listens for invalidation events and applies them locally
 func (c *AnalyticsCache) SubscribeToInvalidations(ctx context.Context) {
 	pubsub := c.client.Subscribe(ctx, "analytics:cache:invalidation")
-	
+
 	go func() {
 		ch := pubsub.Channel()
 		for msg := range ch {
@@ -67,7 +67,7 @@ func (c *AnalyticsCache) GenerateKey(ctx context.Context, tenantID, resourceType
 	}
 
 	paramsJSON, _ := json.Marshal(normalized)
-	
+
 	var keyPrefix string
 	if resourceType == "fleet" {
 		version := c.GetFleetVersion(ctx, tenantID)
@@ -184,7 +184,7 @@ func (c *AnalyticsCache) InvalidateByPattern(ctx context.Context, pattern string
 	iter := c.client.Scan(ctx, 0, pattern, 0).Iterator()
 	for iter.Next(ctx) {
 		if err := c.client.Del(ctx, iter.Val()).Err(); err != nil {
-			c.logger.Error("Failed to delete key during pattern invalidation", 
+			c.logger.Error("Failed to delete key during pattern invalidation",
 				zap.String("key", iter.Val()), zap.Error(err))
 		}
 	}
@@ -203,6 +203,7 @@ func (c *AnalyticsCache) Debounce(ctx context.Context, key string, ttl time.Dura
 	}
 	return !set // If it wasn't set, it means it already exists, so debounce it.
 }
+
 // Increment increments a key and sets a TTL if it's a new key
 func (c *AnalyticsCache) Increment(ctx context.Context, key string, ttl time.Duration) (int64, error) {
 	pipe := c.client.Pipeline()

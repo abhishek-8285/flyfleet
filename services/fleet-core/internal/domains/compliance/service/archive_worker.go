@@ -45,7 +45,7 @@ func (w *ArchiveWorker) Run(ctx context.Context) error {
 	oneYearLimit := time.Now().AddDate(-1, 0, 0)
 	// Note: Would typically have specific methods for different tables
 	// s.repo.CleanupAlerts(ctx, oneYearLimit)
-	
+
 	w.logger.Info("archive worker run completed", zap.Time("retention_limit", oneYearLimit))
 	return nil
 }

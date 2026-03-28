@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -126,7 +127,9 @@ func (ge *GeofenceEngine) Start(ctx context.Context) error {
 
 func (ge *GeofenceEngine) processGPSEvent(ctx context.Context, vehicleID uuid.UUID, event GPSEvent) error {
 	start := time.Now()
-	defer geofenceEngineProcessingTime.Observe(time.Since(start).Seconds())
+	defer func() {
+		geofenceEngineProcessingTime.Observe(time.Since(start).Seconds())
+	}()
 	ctx, span := otel.Tracer("geofencing.engine").Start(ctx, "process_gps_event")
 	span.SetAttributes(attribute.String("vehicle_id", vehicleID.String()))
 	defer span.End()
@@ -216,23 +219,59 @@ func (ge *GeofenceEngine) processGPSEvent(ctx context.Context, vehicleID uuid.UU
 	}
 
 	// Check for EXIT events
+	// Pre-fetch all geofence names in batch to avoid N+1 queries
+	geofenceIDs := make([]uuid.UUID, 0, len(state.InsideGeofences))
+	for geofenceID := range state.InsideGeofences {
+		geofenceIDs = append(geofenceIDs, geofenceID)
+	}
+	geofenceNames, err := ge.getGeofenceNamesBatch(ctx, geofenceIDs)
+	if err != nil {
+		ge.logger.Error("Failed to batch fetch geofence names", zap.Error(err))
+		// Fall back to individual queries if batch fails
+		geofenceNames = make(map[uuid.UUID]string)
+	}
+
+	// Collect exit events for batch insert
+	type exitEvent struct {
+		geofenceID uuid.UUID
+		duration   int
+	}
+	var exits []exitEvent
+
 	for geofenceID, entryTime := range state.InsideGeofences {
 		if !currentlyInside[geofenceID] {
 			duration := time.Unix(event.Timestamp, 0).Sub(entryTime)
 
-			// Get geofence name for the event
-			geofenceName, _ := ge.getGeofenceName(ctx, geofenceID)
+			// Get geofence name from batch (no fallback to avoid N+1)
+			geofenceName := geofenceNames[geofenceID]
 
 			ge.triggerGeofenceEvent(ctx, vehicleID, geofenceID, geofenceName, "exit", event)
 			delete(state.InsideGeofences, geofenceID)
 
-			// Log to database
-			_, _ = ge.db.Exec(ctx, `
-				INSERT INTO geofence_events (time, vehicle_id, geofence_id, event_type, location, duration_minutes)
-				VALUES ($1, $2, $3, 'exit', ST_SetSRID(ST_MakePoint($4, $5), 4326)::geography, $6)
-				ON CONFLICT DO NOTHING
-			`, time.Unix(event.Timestamp, 0), vehicleID, geofenceID, event.Longitude, event.Latitude, int(duration.Minutes()))
+			// Collect for batch insert instead of immediate insert
+			exits = append(exits, exitEvent{
+				geofenceID: geofenceID,
+				duration:   int(duration.Minutes()),
+			})
 		}
+	}
+
+	// Batch insert exit events to avoid N+1 INSERTs
+	if len(exits) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, ex := range exits {
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, 'exit', ST_SetSRID(ST_MakePoint($%d, $%d), 4326)::geography, $%d)", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6))
+			args = append(args,
+				time.Unix(event.Timestamp, 0), vehicleID, ex.geofenceID,
+				event.Longitude, event.Latitude, ex.duration,
+			)
+		}
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO geofence_events (time, vehicle_id, geofence_id, event_type, location, duration_minutes) VALUES %s ON CONFLICT DO NOTHING",
+			strings.Join(placeholders, ", "),
+		)
+		_, _ = ge.db.Exec(ctx, batchQuery, args...)
 	}
 
 	state.LastChecked = time.Unix(event.Timestamp, 0)
@@ -276,6 +315,34 @@ func (ge *GeofenceEngine) getGeofenceName(ctx context.Context, geofenceID uuid.U
 		return "", err
 	}
 	return name, nil
+}
+
+// getGeofenceNamesBatch retrieves names for multiple geofences in a single query
+func (ge *GeofenceEngine) getGeofenceNamesBatch(ctx context.Context, geofenceIDs []uuid.UUID) (map[uuid.UUID]string, error) {
+	if len(geofenceIDs) == 0 {
+		return make(map[uuid.UUID]string), nil
+	}
+
+	// Build query with UNNEST for array parameter
+	query := `SELECT id, name FROM geofences WHERE id = ANY($1)`
+
+	rows, err := ge.db.Query(ctx, query, geofenceIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	names := make(map[uuid.UUID]string, len(geofenceIDs))
+	for rows.Next() {
+		var id uuid.UUID
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			continue
+		}
+		names[id] = name
+	}
+
+	return names, nil
 }
 
 func (ge *GeofenceEngine) triggerGeofenceEvent(ctx context.Context, vehicleID, geofenceID uuid.UUID, geofenceName, eventType string, event GPSEvent) {

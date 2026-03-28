@@ -320,9 +320,9 @@ func TestDeviceHandler_UploadTelemetry_EmptyTelemetry(t *testing.T) {
 	handler, _ := setupHandlerTest(t)
 
 	reqBody := map[string]interface{}{
-		"device_id":  "DEV-001",
-		"batch_id":   "BATCH-001",
-		"telemetry":  []interface{}{},
+		"device_id": "DEV-001",
+		"batch_id":  "BATCH-001",
+		"telemetry": []interface{}{},
 	}
 
 	body, _ := json.Marshal(reqBody)

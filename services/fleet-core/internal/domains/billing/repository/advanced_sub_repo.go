@@ -94,7 +94,7 @@ func (r *AdvancedSubRepository) RedeemCoupon(ctx context.Context, cr *models.Cou
 	var redeemedCount int
 	var status string
 	var validFrom, validUntil *time.Time
-	
+
 	err = tx.QueryRow(ctx, `
 		SELECT max_redemptions, redeemed_count, status, valid_from, valid_until
 		FROM billing_coupons WHERE id = $1 FOR UPDATE

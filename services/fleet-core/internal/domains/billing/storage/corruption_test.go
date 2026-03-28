@@ -32,7 +32,7 @@ func TestLocalStorage_CorruptionDetection(t *testing.T) {
 	}
 
 	pdfData := []byte("%PDF-1.4\n%...\nHello World PDF Data")
-	
+
 	err = store.Save(ctx, inv, pdfData)
 	require.NoError(t, err)
 

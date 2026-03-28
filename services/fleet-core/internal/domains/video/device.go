@@ -2,6 +2,7 @@ package video
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,10 +20,10 @@ const (
 // generates tamper/offline alerts via structured logging.
 // In production, extend to publish to the alerts module via gRPC.
 type DeviceHealthMonitor struct {
-	repo   Repository
-	logger *zap.Logger
-	// lastAlerts prevents alert storms per camera
+	repo       Repository
+	logger     *zap.Logger
 	lastAlerts map[uuid.UUID]time.Time
+	mu         sync.RWMutex // SECURITY FIX: Protect concurrent map access
 }
 
 func NewDeviceHealthMonitor(repo Repository, logger *zap.Logger) *DeviceHealthMonitor {
@@ -71,12 +72,12 @@ func (m *DeviceHealthMonitor) CheckCamera(ctx context.Context, c *Camera, expect
 			zap.String("position", string(c.Position)))
 		// Persist offline event
 		event := &VideoEvent{
-			ID:          uuid.New(),
-			TenantID:    c.TenantID,
-			VehicleID:   c.VehicleID,
-			EventType:   EventCameraOffline,
-			OccurredAt:  time.Now(),
-			Severity:    4,
+			ID:              uuid.New(),
+			TenantID:        c.TenantID,
+			VehicleID:       c.VehicleID,
+			EventType:       EventCameraOffline,
+			OccurredAt:      time.Now(),
+			Severity:        4,
 			ConfidenceScore: 1.0,
 			Metadata: map[string]interface{}{
 				"camera_position": string(c.Position),
@@ -110,17 +111,23 @@ func (m *DeviceHealthMonitor) ReportTamper(ctx context.Context, cameraID, vehicl
 		OccurredAt:      time.Now(),
 		Severity:        5,
 		ConfidenceScore: 1.0,
-		Metadata: map[string]interface{}{"detail": detail},
+		Metadata:        map[string]interface{}{"detail": detail},
 	}
 	m.repo.CreateVideoEvent(ctx, event)
 }
 
 func (m *DeviceHealthMonitor) emitAlert(cameraID uuid.UUID, et EventType, severity int, msg string, fields ...zap.Field) {
 	// Cooldown: don't alert too frequently for the same camera
-	if last, ok := m.lastAlerts[cameraID]; ok && time.Since(last) < tamperAlertCooldown {
+	// SECURITY FIX: Use RWMutex to protect concurrent map access
+	m.mu.Lock()
+	last, ok := m.lastAlerts[cameraID]
+	if ok && time.Since(last) < tamperAlertCooldown {
+		m.mu.Unlock()
 		return
 	}
 	m.lastAlerts[cameraID] = time.Now()
+	m.mu.Unlock()
+
 	m.logger.Warn(msg, append(fields,
 		zap.String("event_type", string(et)),
 		zap.Int("severity", severity))...)

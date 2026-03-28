@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
 	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
+	"go.uber.org/zap"
 )
 
 type CapacityForecastingService struct {
@@ -25,7 +25,7 @@ func (s *CapacityForecastingService) GetForecasts(ctx context.Context) ([]models
 
 	// In a real SRE system, this would query Prometheus or a metrics time-series DB
 	// For this module, we simulate the forecasting logic using historical trends
-	
+
 	forecasts := []models.CapacityForecast{
 		{
 			MetricName:    "cpu_usage_cluster",

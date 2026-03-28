@@ -5,7 +5,7 @@ sleep 5
 echo "Starting Go Backend natively..."
 cd services/fleet-core-service-legacy
 export PORT=8084
-export DATABASE_URL="postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"
+export DATABASE_URL="${DATABASE_URL:-postgres://fleet_user:YOUR_DB_PASSWORD@localhost:5432/fleet_db?sslmode=disable}"
 export NATS_URL="nats://localhost:4222"
 export REDIS_ADDR="localhost:6379"
 export REDIS_URL="localhost:6379"

@@ -23,7 +23,7 @@ func NewSubscriptionRepository(db *pgxpool.Pool) *SubscriptionRepository {
 func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]models.Plan, error) {
 	query := `SELECT id, name, description, is_active, created_at, updated_at 
 	          FROM billing_plans WHERE is_active = true ORDER BY name ASC`
-	
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query plans: %w", err)
@@ -37,13 +37,13 @@ func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]models.Plan, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan plan: %w", err)
 		}
-		
+
 		// Fetch components for each plan
 		p.Components, err = r.getPlanComponents(ctx, p.ID)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		plans = append(plans, p)
 	}
 
@@ -54,7 +54,7 @@ func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]models.Plan, 
 func (r *SubscriptionRepository) IdentifyOrganizationsForInvoicing(ctx context.Context) ([]uuid.UUID, error) {
 	query := `SELECT org_id FROM billing_subscriptions 
 	          WHERE current_period_end <= NOW() AND status = 'ACTIVE' AND cancel_at_period_end = false`
-	
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query subscriptions for invoicing: %w", err)
@@ -75,7 +75,7 @@ func (r *SubscriptionRepository) IdentifyOrganizationsForInvoicing(ctx context.C
 func (r *SubscriptionRepository) getPlanComponents(ctx context.Context, planID uuid.UUID) ([]models.PricingComponent, error) {
 	query := `SELECT id, plan_id, name, type, unit_price, currency, meter_event_name, frequency, created_at, updated_at 
 	          FROM billing_pricing_components WHERE plan_id = $1`
-	
+
 	rows, err := r.db.Query(ctx, query, planID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query components: %w", err)
@@ -99,10 +99,10 @@ func (r *SubscriptionRepository) GetSubscription(ctx context.Context, orgID uuid
 	var s models.Subscription
 	query := `SELECT id, org_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at 
 	          FROM billing_subscriptions WHERE org_id = $1`
-	
+
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&s.ID, &s.OrgID, &s.PlanID, &s.Status, 
-		&s.CurrentPeriodStart, &s.CurrentPeriodEnd, &s.TrialEnd, 
+		&s.ID, &s.OrgID, &s.PlanID, &s.Status,
+		&s.CurrentPeriodStart, &s.CurrentPeriodEnd, &s.TrialEnd,
 		&s.CancelAtPeriodEnd, &s.Metadata, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -125,10 +125,10 @@ func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, sub *mo
 
 	query := `INSERT INTO billing_subscriptions (id, org_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at) 
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-	
-	_, err := r.db.Exec(ctx, query, 
-		sub.ID, sub.OrgID, sub.PlanID, sub.Status, 
-		sub.CurrentPeriodStart, sub.CurrentPeriodEnd, sub.TrialEnd, 
+
+	_, err := r.db.Exec(ctx, query,
+		sub.ID, sub.OrgID, sub.PlanID, sub.Status,
+		sub.CurrentPeriodStart, sub.CurrentPeriodEnd, sub.TrialEnd,
 		sub.CancelAtPeriodEnd, sub.Metadata, sub.CreatedAt, sub.UpdatedAt,
 	)
 	if err != nil {
@@ -145,9 +145,9 @@ func (r *SubscriptionRepository) UpdateSubscription(ctx context.Context, sub *mo
 	          plan_id = $1, status = $2, current_period_start = $3, current_period_end = $4, 
 	          trial_end = $5, cancel_at_period_end = $6, metadata = $7, updated_at = $8 
 	          WHERE id = $9`
-	
-	_, err := r.db.Exec(ctx, query, 
-		sub.PlanID, sub.Status, sub.CurrentPeriodStart, sub.CurrentPeriodEnd, 
+
+	_, err := r.db.Exec(ctx, query,
+		sub.PlanID, sub.Status, sub.CurrentPeriodStart, sub.CurrentPeriodEnd,
 		sub.TrialEnd, sub.CancelAtPeriodEnd, sub.Metadata, sub.UpdatedAt, sub.ID,
 	)
 	if err != nil {

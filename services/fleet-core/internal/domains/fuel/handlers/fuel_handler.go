@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
@@ -13,6 +14,46 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
 )
+
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createFuelLogRequestDTO struct {
+	VehicleID       uuid.UUID `json:"vehicle_id" validate:"required,uuid"`
+	DriverID        uuid.UUID `json:"driver_id" validate:"required,uuid"`
+	StationName     string    `json:"station_name" validate:"required,max=255"`
+	FuelType        string    `json:"fuel_type" validate:"required,max=50"`
+	Quantity        float64   `json:"quantity" validate:"required,gt=0"`
+	UnitPrice       float64   `json:"unit_price" validate:"required,gt=0"`
+	TotalCost       float64   `json:"total_cost" validate:"required,gt=0"`
+	Odometer        float64   `json:"odometer" validate:"required,gte=0"`
+	TransactionDate time.Time `json:"transaction_date" validate:"required"`
+	GSTNumber       *string   `json:"gst_number,omitempty" validate:"omitempty,len=15"`
+	GSTRate         *float64  `json:"gst_rate,omitempty"`
+	InvoiceNumber   *string   `json:"invoice_number,omitempty"`
+	VendorGSTIN     *string   `json:"vendor_gstin,omitempty" validate:"omitempty,len=15"`
+	ReceiptURL      *string   `json:"receipt_url,omitempty" validate:"omitempty,url"`
+	Notes           *string   `json:"notes,omitempty" validate:"omitempty,max=1000"`
+}
+
+type updateFuelLogRequestDTO struct {
+	StationName     *string    `json:"station_name,omitempty" validate:"omitempty,max=255"`
+	FuelType        *string    `json:"fuel_type,omitempty" validate:"omitempty,max=50"`
+	Quantity        *float64   `json:"quantity,omitempty" validate:"omitempty,gt=0"`
+	UnitPrice       *float64   `json:"unit_price,omitempty" validate:"omitempty,gt=0"`
+	TotalCost       *float64   `json:"total_cost,omitempty" validate:"omitempty,gt=0"`
+	Odometer        *float64   `json:"odometer,omitempty" validate:"omitempty,gte=0"`
+	TransactionDate *time.Time `json:"transaction_date,omitempty"`
+	GSTNumber       *string    `json:"gst_number,omitempty" validate:"omitempty,len=15"`
+	GSTRate         *float64   `json:"gst_rate,omitempty"`
+	InvoiceNumber   *string    `json:"invoice_number,omitempty"`
+	VendorGSTIN     *string    `json:"vendor_gstin,omitempty" validate:"omitempty,len=15"`
+	ReceiptURL      *string    `json:"receipt_url,omitempty" validate:"omitempty,url"`
+	Notes           *string    `json:"notes,omitempty" validate:"omitempty,max=1000"`
+}
+
+type changeFuelLogStatusRequestDTO struct {
+	Status models.FuelLogStatus `json:"status" validate:"required,oneof=APPROVED REJECTED"`
+	Notes  *string              `json:"notes,omitempty" validate:"omitempty,max=1000"`
+}
 
 type FuelHandler struct {
 	svc      service.FuelService
@@ -50,14 +91,33 @@ func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.CreateFuelLogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto createFuelLogRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
-	if err := h.validate.Struct(req); err != nil {
+	if err := h.validate.Struct(dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
+	}
+
+	// Map DTO to model
+	req := models.CreateFuelLogRequest{
+		VehicleID:       dto.VehicleID,
+		DriverID:        dto.DriverID,
+		StationName:     dto.StationName,
+		FuelType:        dto.FuelType,
+		Quantity:        dto.Quantity,
+		UnitPrice:       dto.UnitPrice,
+		TotalCost:       dto.TotalCost,
+		Odometer:        dto.Odometer,
+		TransactionDate: dto.TransactionDate,
+		GSTNumber:       dto.GSTNumber,
+		GSTRate:         dto.GSTRate,
+		InvoiceNumber:   dto.InvoiceNumber,
+		VendorGSTIN:     dto.VendorGSTIN,
+		ReceiptURL:      dto.ReceiptURL,
+		Notes:           dto.Notes,
 	}
 
 	log, err := h.svc.CreateLog(r.Context(), orgID, userID, req)
@@ -144,14 +204,31 @@ func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.UpdateFuelLogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto updateFuelLogRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
-	if err := h.validate.Struct(req); err != nil {
+	if err := h.validate.Struct(dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
+	}
+
+	// Map DTO to model
+	req := models.UpdateFuelLogRequest{
+		StationName:     dto.StationName,
+		FuelType:        dto.FuelType,
+		Quantity:        dto.Quantity,
+		UnitPrice:       dto.UnitPrice,
+		TotalCost:       dto.TotalCost,
+		Odometer:        dto.Odometer,
+		TransactionDate: dto.TransactionDate,
+		GSTNumber:       dto.GSTNumber,
+		GSTRate:         dto.GSTRate,
+		InvoiceNumber:   dto.InvoiceNumber,
+		VendorGSTIN:     dto.VendorGSTIN,
+		ReceiptURL:      dto.ReceiptURL,
+		Notes:           dto.Notes,
 	}
 
 	log, err := h.svc.UpdateLog(r.Context(), id, orgID, req)
@@ -197,14 +274,20 @@ func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.ChangeFuelLogStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto changeFuelLogStatusRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
-	if err := h.validate.Struct(req); err != nil {
+	if err := h.validate.Struct(dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
+	}
+
+	// Map DTO to model
+	req := models.ChangeFuelLogStatusRequest{
+		Status: dto.Status,
+		Notes:  dto.Notes,
 	}
 
 	if err := h.svc.ChangeStatus(r.Context(), id, orgID, req); err != nil {
@@ -250,6 +333,13 @@ func (h *FuelHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	userID := h.getUserID(r)
 	if !h.ensureAuthIDs(w, orgID, userID) {
+		return
+	}
+
+	// SECURITY FIX: Check user role - only platform admins can modify fuel policy
+	role := h.getUserRole(r)
+	if role != "admin" && role != "platform_admin" {
+		h.writeErrorResponse(w, http.StatusForbidden, "insufficient permissions: only platform administrators can modify fuel settings", nil)
 		return
 	}
 
@@ -303,9 +393,9 @@ func (h *FuelHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	if id, err := uuid.Parse(r.Header.Get("X-Organization-ID")); err == nil {
-		return id
-	}
+	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 
@@ -320,10 +410,21 @@ func (h *FuelHandler) getUserID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	if id, err := uuid.Parse(r.Header.Get("X-User-ID")); err == nil {
-		return id
-	}
+	// SECURITY FIX: Removed fallback to X-User-ID header to prevent header spoofing
+	// The user ID must come from validated JWT context only
+	h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
+}
+
+func (h *FuelHandler) getUserRole(r *http.Request) string {
+	if val := r.Context().Value(middleware.RoleKey); val != nil {
+		if role, ok := val.(string); ok {
+			return role
+		}
+	}
+	// Default should be empty to indicate no role, not "admin"
+	h.logger.Warn("Missing role in context - request likely bypassed authentication middleware")
+	return ""
 }
 
 func (h *FuelHandler) ensureAuthIDs(w http.ResponseWriter, orgID uuid.UUID, userID uuid.UUID) bool {

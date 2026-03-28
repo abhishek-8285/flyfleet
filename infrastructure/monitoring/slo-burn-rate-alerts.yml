@@ -1,0 +1,423 @@
+groups:
+  - name: flyfleet-slo-multi-window
+    interval: 30s
+    rules:
+      # ============================================================================
+      # API Availability - Multi-Window Burn Rate Alerts
+      # ============================================================================
+      - alert: FlyFleetApiAvailabilityBurnWarning
+        expr: |
+          # Error budget consumption rate over 1h window compared to 30d budget target
+          (
+            1 - (
+              sum(rate(http_requests_total{status!~"5..",}[1h])) /
+              sum(rate(http_requests_total{service="fleet-core"}[1h]))
+            )
+          ) / ((1 - 0.9995) / (30 * 24)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          service: fleet-core
+          slo: api-availability
+          component: availability
+        annotations:
+          summary: "API availability error budget burning at 2x expected rate"
+          description: |
+            The API availability SLO error budget is being consumed at {{ printf \"%.2f\" $value }}x the expected rate.
+            Expected burn: 0.00058%/hour (for 30d window, 99.95% target)
+            Actual 1h consumption: {{ printf \"%.4f\" (1 - (sum(rate(http_requests_total{status!~\"5..\",service=\"fleet-core\"}[1h])) / sum(rate(http_requests_total{service=\"fleet-core\"}[1h])))) }}%
+            Alarm triggered at 2.0x burn rate threshold.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/slo-burn-alert.md"
+          dashboard: "https://grafana.example.com/d/flyfleet-overview"
+
+      - alert: FlyFleetApiAvailabilityBurnCritical
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{status!~"5..",}[30m])) /
+              sum(rate(http_requests_total{service="fleet-core"}[30m]))
+            )
+          ) / ((1 - 0.9995) / (30 * 24)) > 5.0
+        for: 2m
+        labels:
+          severity: critical
+          service: fleet-core
+          slo: api-availability
+          component: availability
+        annotations:
+          summary: "🚨 CRITICAL: API availability error budget exhausted rapidly"
+          description: |
+            CRITICAL: The API availability error budget is being consumed at {{ printf \"%.2f\" $value }}x the expected rate over the last 30 minutes.
+            This indicates a severe degradation in service quality.
+            Immediate investigation required - page SRE team.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/slo-burn-critical.md"
+          pagerduty_service: "flyfleet-slo-critical"
+
+      # ============================================================================
+      # API Latency - SLO Violation Alerts
+      # ============================================================================
+      - alert: FlyFleetApiLatencyViolationWarning
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{service="fleet-core"}[1h])) by (le)
+          ) > 0.300
+        for: 10m
+        labels:
+          severity: warning
+          service: fleet-core
+          slo: api-latency
+          component: latency
+        annotations:
+          summary: "API p95 latency above 300ms target (SLO violation risk)"
+          description: |
+            API p95 latency is {{ printf \"%.3f\" $value }}s, exceeding the 300ms SLO target.
+            This may start consuming error budget if sustained.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/api-latency-investigation.md"
+
+      - alert: FlyFleetApiLatencyViolationCritical
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{service="fleet-core"}[15m])) by (le)
+          ) > 0.500
+        for: 5m
+        labels:
+          severity: critical
+          service: fleet-core
+          slo: api-latency
+          component: latency
+        annotations:
+          summary: "🚨 CRITICAL: API p99 latency above 500ms - User impact significant"
+          description: |
+            CRITICAL: API p99 latency is {{ printf \"%.3f\" $value }}s, far exceeding the 500ms critical threshold.
+            Users are experiencing severe latency. Immediate investigation required.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/api-latency-critical.md"
+          pagerduty_service: "flyfleet-api-critical"
+
+      # ============================================================================
+      # API Error Rate
+      # ============================================================================
+      - alert: FlyFleetApiErrorRateWarning
+        expr: |
+          100 * (
+            sum(rate(http_requests_total{status=~"5..",}[2h])) /
+            sum(rate(http_requests_total{service="fleet-core"}[2h]))
+          ) > 0.15
+        for: 10m
+        labels:
+          severity: warning
+          service: fleet-core
+          slo: api-errors
+          component: errors
+        annotations:
+          summary: "API error rate above 0.15% (approaching SLO violation)"
+          description: |
+            Current error rate: {{ printf \"%.2f\" $value }}%
+            SLO target: 0.1% over 30d
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/api-errors.md"
+
+      - alert: FlyFleetApiErrorRateCritical
+        expr: |
+          100 * (
+            sum(rate(http_requests_total{status=~"5..",}[30m])) /
+            sum(rate(http_requests_total{service="fleet-core"}[30m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          service: fleet-core
+          slo: api-errors
+          component: errors
+        annotations:
+          summary: "🚨 CRITICAL: API error rate > 0.5% - Immediate user impact"
+          description: |
+            Current error rate: {{ printf \"%.2f\" $value }}%
+            Many users are experiencing failures.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/api-errors-critical.md"
+          pagerduty_service: "flyfleet-api-critical"
+
+      # ============================================================================
+      # Telemetry Ingestion - Throughput SLO
+      # ============================================================================
+      - alert: FlyFleetTelemetryThroughputWarning
+        expr: |
+          rate(telemetry_events_received_total[5m]) < 8000
+        for: 5m
+        labels:
+          severity: warning
+          service: ingestion
+          slo: telemetry-throughput
+        annotations:
+          summary: "Telemetry ingestion rate below 8,000 eps (approaching SLO)"
+          description: |
+            Current ingestion rate: {{ printf \"%0.0f\" $value }} events/sec
+            SLO target: 10,000 events/sec minimum
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/telemetry-throughput.md"
+
+      # ============================================================================
+      # Telemetry Latency
+      # ============================================================================
+      - alert: FlyFleetTelemetryLatencyWarning
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(telemetry_ingestion_latency_seconds_bucket[30m])) by (le)
+          ) > 3.0
+        for: 10m
+        labels:
+          severity: warning
+          service: ingestion
+          slo: telemetry-latency
+        annotations:
+          summary: "Telemetry end-to-end latency p99 > 3s"
+          description: |
+            Current p99 latency: {{ printf \"%.2f\" $value }}s
+            SLO target: 5s p99 (approaching violation)
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/telemetry-latency.md"
+
+      - alert: FlyFleetTelemetryLatencyCritical
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(telemetry_ingestion_latency_seconds_bucket[10m])) by (le)
+          ) > 5.0
+        for: 5m
+        labels:
+          severity: critical
+          service: ingestion
+          slo: telemetry-latency
+        annotations:
+          summary: "🚨 CRITICAL: Telemetry latency p99 > 5s - Data stale"
+          description: |
+            CRITICAL: Telemetry p99 latency is {{ printf \"%.2f\" $value }}s, exceeding 5s SLO.
+            Devices may experience delayed processing.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/telemetry-latency-critical.md"
+          pagerduty_service: "flyfleet-ingestion-critical"
+
+      # ============================================================================
+      # Command Reliability - Multi-window burn rate
+      # ============================================================================
+      - alert: FlyFleetCommandReliabilityBurnWarning
+        expr: |
+          # 6h burn rate vs 30d budget (99.9% target)
+          (
+            1 - (
+              sum(rate(device_command_events_total{result="success",}[6h])) /
+              sum(rate(device_command_events_total{service="gateway"}[6h]))
+            )
+          ) / ((1 - 0.999) / 30) > 2.0
+        for: 10m
+        labels:
+          severity: warning
+          service: gateway
+          slo: command-success-rate
+          component: reliability
+        annotations:
+          summary: "Command success rate error budget burning at 2x rate"
+          description: |
+            Command success rate error budget consumption accelerated.
+            6h success rate: {{ printf \"%.2f%%\" (100 * (sum(rate(device_command_events_total{result=\"success\",service=\"gateway\"}[6h])) / sum(rate(device_command_events_total{service=\"gateway\"}[6h])))) }}
+            Investigate command delivery issues.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/command-reliability.md"
+
+      - alert: FlyFleetCommandLatencyWarning
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(device_command_ack_latency_seconds_bucket{service="gateway"}[30m])) by (le)
+          ) > 3.0
+        for: 10m
+        labels:
+          severity: warning
+          service: gateway
+          slo: command-latency
+        annotations:
+          summary: "Command ACK latency p95 > 3s (target: 2s)"
+          description: |
+            Command acknowledgment latency p95: {{ printf \"%.2f\" $value }}s
+            This impacts real-time control capabilities.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/command-latency.md"
+
+      # ============================================================================
+      # Device Health
+      # ============================================================================
+      - alert: FlyFleetDeviceOfflineSpike
+        expr: |
+          increase(diagnostics_devices_total[5m]) - increase(diagnostics_devices_online[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          service: tracking
+          component: devices
+        annotations:
+          summary: "{{ printf \"%d\" $value }} devices gone offline in last 5 minutes"
+          description: |
+            Sudden increase in offline devices detected.
+            Possible network outage, device firmware issue, or regional problem.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/devices-offline.md"
+          pagerduty_service: "flyfleet-device-outage"
+
+      # ============================================================================
+      # Database Health
+      # ============================================================================
+      - alert: FlyFleetDatabaseConnectionPoolWarning
+        expr: |
+          sum(pgpool_active_connections) / sum(pgpool_max_connections) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+          component: connections
+        annotations:
+          summary: "Database connection pool > 85% utilized"
+          description: |
+            Connection pool utilization: {{ printf \"%.1f%%\" $value }}
+            Risk of connection exhaustion. Consider increasing pool size or optimizing queries.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/db-connection-pool.md"
+
+      - alert: FlyFleetDatabaseSlowQueries
+        expr: |
+          pg_stat_statements_mean_exec_time > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: postgresql
+          component: queries
+        annotations:
+          summary: "Database query latency elevated (mean > 500ms)"
+          description: |
+            Slow queries detected with mean execution time > 500ms.
+            Check slow query log and add indexes if needed.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/slow-queries.md"
+
+      # ============================================================================
+      # NATS JetStream Health
+      # ============================================================================
+      - alert: FlyFleetNATSStorageHigh
+        expr: |
+          sum(nats_jetstream_storage_usage_bytes) / sum(nats_jetstream_storage_limit_bytes) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          service: nats
+          component: storage
+        annotations:
+          summary: "NATS JetStream storage > 90% full"
+          description: |
+            Storage utilization: {{ printf \"%.1f%%\" $value }}
+            At current rate, storage will fill in < 24 hours.
+            Add storage or increase retention limits.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/nats-storage.md"
+
+      - alert: FlyFleetNATSMessageBacklog
+        expr: |
+          sum(nats_jetstream_consumer_pending_bytes) > 1e10  # 10GB
+        for: 10m
+        labels:
+          severity: warning
+          service: nats
+          component: backlog
+        annotations:
+          summary: "NATS consumer backlog > 10GB"
+          description: |
+            Consumers are falling behind. Pending messages: {{ printf \"%.1fGB\" ($value / 1e9) }}
+            Scale consumer workers or optimize processing.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/nats-backlog.md"
+
+      # ============================================================================
+      # System Resources
+      # ============================================================================
+      - alert: FlyFleetHighPodMemoryUsage
+        expr: |
+          sum(container_memory_usage_bytes{namespace="flyfleet", container!="POD"}) / sum(container_spec_memory_limit_bytes{namespace="flyfleet", container!="POD"}) > 0.90
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          component: memory
+        annotations:
+          summary: "Pod memory usage > 90% across namespace flyfleet"
+          description: |
+            Memory utilization: {{ printf \"%.1f%%\" $value }}
+            Risk of OOM kills. Consider adding memory or optimizing application.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/high-memory.md"
+
+      - alert: FlyFleetHighPodCPUUsage
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{namespace="flyfleet", container!="POD"}[5m])) / sum(container_spec_cpu_quota{namespace="flyfleet", container!="POD"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          component: cpu
+        annotations:
+          summary: "Pod CPU usage > 85% across namespace flyfleet"
+          description: |
+            CPU utilization: {{ printf \"%.1f%%\" $value }}
+            Performance degradation likely. Optimize or scale.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/high-cpu.md"
+
+      # ============================================================================
+      # EKS Cluster Health
+      # ============================================================================
+      - alert: FlyFleetNodeNotReady
+        expr: |
+          kube_node_status_condition{condition="Ready", status!="true"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          component: kubernetes
+        annotations:
+          summary: "Kubernetes node {{ $labels.node }} is NotReady"
+          description: |
+            Node has been NotReady for >5 minutes.
+            This impacts pod scheduling and may cause服务中断.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/node-not-ready.md"
+          pagerduty_service: "flyfleet-infrastructure-critical"
+
+      - alert: FlyFleetPodCrashLooping
+        expr: |
+          rate(kube_pod_container_status_restarts_total[1h]) * 60 * 5 > 3
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          component: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} in {{ $labels.namespace }} crash looping ({{ printf \"%.0f\" $value }} restarts/5m)"
+          description: |
+            Pod is crash looping frequently.
+            Check pod logs for root cause.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/pod-crash-loop.md"
+          pagerduty_service: "flyfleet-app-critical"
+
+      # ============================================================================
+      # Certificate Expiry
+      # ============================================================================
+      - alert: FlyFleetTLSCertificateExpiringSoon
+        expr: |
+          (certificate_validity_seconds_expiry - time()) < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+          service: infrastructure
+          component: tls
+        annotations:
+          summary: "TLS certificate for {{ $labels.common_name }} expires in < 7 days"
+          description: |
+            Certificate expires on: {{ printf \"%s\" $labels.expiry }}
+            Renew certificate to avoid service disruption.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/cert-renewal.md"
+
+      - alert: FlyFleetTLSCertificateExpired
+        expr: |
+          certificate_validity_seconds_expiry - time() < 0
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          component: tls
+        annotations:
+          summary: "🚨 CRITICAL: TLS certificate for {{ $labels.common_name }} has expired!"
+          description: |
+            Certificate expired on: {{ printf \"%s\" $labels.expiry }}
+            Service may be unavailable or insecure.
+          runbook_url: "https://github.com/flyfleet/runbooks/blob/main/cert-expired.md"
+          pagerduty_service: "flyfleet-infrastructure-critical"

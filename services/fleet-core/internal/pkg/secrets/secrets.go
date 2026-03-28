@@ -21,7 +21,7 @@ func (m *EnterpriseSecretManager) Fetch(ctx context.Context, value string) (stri
 	if strings.HasPrefix(value, "env:") {
 		envKey := strings.TrimPrefix(value, "env:")
 		resolved := os.Getenv(envKey)
-		
+
 		if resolved == "" {
 			return "MISSING_ENV_VAR_" + envKey, nil
 		}

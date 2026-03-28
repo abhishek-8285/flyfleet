@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
 	"github.com/google/uuid"
-	"github.com/fleet-platform/shared/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -39,7 +39,7 @@ func (s *ais140Service) HandlePanicAlert(ctx context.Context, vehicleID uuid.UUI
 		Longitude: lon,
 	}
 
-	s.logger.Warn("AIS-140 PANIC ALERT RECEIVED", 
+	s.logger.Warn("AIS-140 PANIC ALERT RECEIVED",
 		zap.String("vehicle_id", vehicleID.String()),
 		zap.Float64("lat", lat),
 		zap.Float64("lon", lon),
@@ -67,7 +67,7 @@ func (s *ais140Service) HandlePanicAlert(ctx context.Context, vehicleID uuid.UUI
 		EntityID:       alert.ID,
 		Severity:       models.AlertSeverityCritical,
 	}
-	
+
 	return s.repo.CreateComplianceAlert(ctx, compAlert)
 }
 
@@ -79,7 +79,7 @@ func (s *ais140Service) HandleTamperAlert(ctx context.Context, deviceID, vehicle
 		Status:    string(models.DeviceStatusTampered),
 	}
 
-	s.logger.Warn("AIS-140 DEVICE TAMPER ALERT RECEIVED", 
+	s.logger.Warn("AIS-140 DEVICE TAMPER ALERT RECEIVED",
 		zap.String("device_id", deviceID.String()),
 	)
 
@@ -89,11 +89,11 @@ func (s *ais140Service) HandleTamperAlert(ctx context.Context, deviceID, vehicle
 
 	compAlert := &models.ComplianceAlert{
 		ID:             uuid.New(),
-		OrganizationID: uuid.Nil, 
+		OrganizationID: uuid.Nil,
 		Type:           models.AlertDeviceTamper,
 		EntityID:       deviceID,
 		Severity:       models.AlertSeverityHigh,
 	}
-	
+
 	return s.repo.CreateComplianceAlert(ctx, compAlert)
 }

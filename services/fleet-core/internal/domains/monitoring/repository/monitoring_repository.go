@@ -16,14 +16,14 @@ type MonitoringRepository interface {
 	SaveHealthHistory(ctx context.Context, history *models.HealthHistory) error
 	GetHealthHistory(ctx context.Context, component string, startTime, endTime time.Time, limit int) ([]*models.HealthHistory, error)
 	GetLatestHealthStatus(ctx context.Context, component string) (*models.HealthHistory, error)
-	
+
 	// Alert operations
 	SaveAlert(ctx context.Context, alert *models.HealthAlert) error
 	GetActiveAlerts(ctx context.Context) ([]*models.HealthAlert, error)
 	UpdateAlertStatus(ctx context.Context, alertID, status string) error
 	GetAlertThresholds(ctx context.Context) ([]*models.AlertThreshold, error)
 	SaveAlertThreshold(ctx context.Context, threshold *models.AlertThreshold) error
-	
+
 	// SRE-grade operations
 	SaveSyntheticCheck(ctx context.Context, check *models.SyntheticCheck) error
 	GetSLOs(ctx context.Context) ([]*models.ServiceSLO, error)
@@ -31,12 +31,12 @@ type MonitoringRepository interface {
 	SaveSLO(ctx context.Context, slo *models.ServiceSLO) error
 	GetErrorBudget(ctx context.Context, serviceName string) (*models.ErrorBudget, error)
 	SaveErrorBudget(ctx context.Context, budget *models.ErrorBudget) error
-	
+
 	// Alert grouping & Remediation
 	GetOrCreateAlertGroup(ctx context.Context, groupKey string, component, metric, severity string) (*models.AlertGroup, error)
 	UpdateAlertGroup(ctx context.Context, group *models.AlertGroup) error
 	SaveRemediationAction(ctx context.Context, action *models.RemediationAction) error
-	
+
 	// Incidents
 	CreateIncident(ctx context.Context, incident *models.Incident) error
 	UpdateIncident(ctx context.Context, incident *models.Incident) error
@@ -58,13 +58,13 @@ func (r *monitoringRepository) SaveHealthHistory(ctx context.Context, history *m
 			id, timestamp, component, status, response_time_ms, error, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	
+
 	id := uuid.New().String()
 	_, err := r.db.Exec(ctx, query,
 		id, history.Timestamp, history.Component, history.Status,
 		history.ResponseTime, history.Error, history.CreatedAt,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to save health history: %w", err)
 	}
@@ -82,13 +82,13 @@ func (r *monitoringRepository) GetHealthHistory(ctx context.Context, component s
 		ORDER BY timestamp DESC
 		LIMIT $4
 	`
-	
+
 	rows, err := r.db.Query(ctx, query, component, startTime, endTime, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query health history: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var history []*models.HealthHistory
 	for rows.Next() {
 		var h models.HealthHistory
@@ -101,7 +101,7 @@ func (r *monitoringRepository) GetHealthHistory(ctx context.Context, component s
 		}
 		history = append(history, &h)
 	}
-	
+
 	return history, nil
 }
 
@@ -114,17 +114,17 @@ func (r *monitoringRepository) GetLatestHealthStatus(ctx context.Context, compon
 		ORDER BY timestamp DESC
 		LIMIT 1
 	`
-	
+
 	var h models.HealthHistory
 	err := r.db.QueryRow(ctx, query, component).Scan(
 		&h.ID, &h.Timestamp, &h.Component, &h.Status,
 		&h.ResponseTime, &h.Error, &h.CreatedAt,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest health status: %w", err)
 	}
-	
+
 	return &h, nil
 }
 
@@ -136,13 +136,13 @@ func (r *monitoringRepository) SaveAlert(ctx context.Context, alert *models.Heal
 			severity, message, status, triggered_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
-	
+
 	id := uuid.New().String()
 	_, err := r.db.Exec(ctx, query,
 		id, alert.AlertType, alert.Component, alert.Metric, alert.CurrentValue,
 		alert.Threshold, alert.Severity, alert.Message, alert.Status, alert.TriggeredAt,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to save alert: %w", err)
 	}
@@ -158,13 +158,13 @@ func (r *monitoringRepository) GetActiveAlerts(ctx context.Context) ([]*models.H
 		WHERE status = 'active'
 		ORDER BY triggered_at DESC
 	`
-	
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active alerts: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var alerts []*models.HealthAlert
 	for rows.Next() {
 		var a models.HealthAlert
@@ -178,14 +178,14 @@ func (r *monitoringRepository) GetActiveAlerts(ctx context.Context) ([]*models.H
 		}
 		alerts = append(alerts, &a)
 	}
-	
+
 	return alerts, nil
 }
 
 // UpdateAlertStatus updates the status of an alert
 func (r *monitoringRepository) UpdateAlertStatus(ctx context.Context, alertID, status string) error {
 	now := time.Now()
-	
+
 	var query string
 	if status == "acknowledged" {
 		query = `UPDATE health_alerts SET status = $1, acknowledged_at = $2 WHERE id = $3`
@@ -206,7 +206,7 @@ func (r *monitoringRepository) UpdateAlertStatus(ctx context.Context, alertID, s
 			return fmt.Errorf("failed to update alert status: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -217,13 +217,13 @@ func (r *monitoringRepository) GetAlertThresholds(ctx context.Context) ([]*model
 		FROM alert_thresholds
 		WHERE enabled = true
 	`
-	
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query alert thresholds: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var thresholds []*models.AlertThreshold
 	for rows.Next() {
 		var t models.AlertThreshold
@@ -236,7 +236,7 @@ func (r *monitoringRepository) GetAlertThresholds(ctx context.Context) ([]*model
 		}
 		thresholds = append(thresholds, &t)
 	}
-	
+
 	return thresholds, nil
 }
 
@@ -253,12 +253,12 @@ func (r *monitoringRepository) SaveAlertThreshold(ctx context.Context, threshold
 			enabled = EXCLUDED.enabled,
 			notification_channels = EXCLUDED.notification_channels
 	`
-	
+
 	_, err := r.db.Exec(ctx, query,
 		threshold.Component, threshold.Metric, threshold.Threshold,
 		threshold.Operator, threshold.Severity, threshold.Enabled, threshold.NotificationChannels,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to save alert threshold: %w", err)
 	}

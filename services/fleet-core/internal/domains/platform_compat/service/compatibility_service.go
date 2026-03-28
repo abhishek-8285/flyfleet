@@ -13,28 +13,28 @@ import (
 type PlatformCompatService interface {
 	// Compatibility checks
 	CheckCompatibility(ctx context.Context, endpoint string) *models.CompatibilityResponse
-	
+
 	// Dashboard endpoints
 	GetDashboardStats(ctx context.Context) (*models.DashboardStatsResponse, error)
 	GetAdminDashboardData(ctx context.Context) (*models.AdminDashboardResponse, error)
-	
+
 	// Compliance endpoints
 	RecordHOS(ctx context.Context, req *models.ComplianceHOSRequest) (*models.ComplianceHOSResponse, error)
-	
+
 	// Telemetry endpoints
 	IngestTelemetry(ctx context.Context, req *models.TelemetryRequest) (*models.TelemetryResponse, error)
 	IngestDashcamTelemetry(ctx context.Context, req *models.DashcamTelemetryRequest) (*models.TelemetryResponse, error)
-	
+
 	// ML endpoints
 	GetMLHealth(ctx context.Context) *models.CompatibilityResponse
 	PredictDemand(ctx context.Context, req *models.MLPredictionRequest) (*models.MLPredictionResponse, error)
 	SuggestPricing(ctx context.Context, req *models.MLPricingRequest) (*models.MLPricingResponse, error)
 	TrainModel(ctx context.Context, req *models.MLTrainingRequest) (*models.MLTrainingResponse, error)
-	
+
 	// Route optimization endpoints
 	GetOptimizedRoute(ctx context.Context, routeID string) (*models.GetOptimizedRouteResponse, error)
 	OptimizeRoute(ctx context.Context, req *models.RouteOptimizationRequest) (*models.RouteOptimizationResponse, error)
-	
+
 	// Service health endpoints
 	CheckServiceHealth(ctx context.Context, serviceName string) *models.ServiceHealthResponse
 }
@@ -95,7 +95,7 @@ func (s *platformCompatService) RecordHOS(ctx context.Context, req *models.Compl
 	if req.DriverID == "" {
 		return nil, ErrInvalidHOSData
 	}
-	
+
 	return &models.ComplianceHOSResponse{
 		Status:  "accepted",
 		Message: "use /api/v1/compliance/duty-status/record for canonical endpoint",
@@ -109,7 +109,7 @@ func (s *platformCompatService) IngestTelemetry(ctx context.Context, req *models
 	if req.VehicleID == "" {
 		return nil, ErrInvalidTelemetry
 	}
-	
+
 	return &models.TelemetryResponse{
 		Status:  "accepted",
 		Message: "telemetry ingress compatibility endpoint",
@@ -122,7 +122,7 @@ func (s *platformCompatService) IngestDashcamTelemetry(ctx context.Context, req 
 	if req.VehicleID == "" {
 		return nil, ErrInvalidTelemetry
 	}
-	
+
 	return &models.TelemetryResponse{
 		Status:  "accepted",
 		Message: "dashcam telemetry compatibility endpoint",
@@ -144,18 +144,18 @@ func (s *platformCompatService) PredictDemand(ctx context.Context, req *models.M
 	if req.RouteID == "" {
 		return nil, ErrInvalidPrediction
 	}
-	
+
 	// Calculate prediction (mock implementation)
 	day := time.Now().Day()
 	if t, err := time.Parse("2006-01-02", req.Date); err == nil {
 		day = t.Day()
 	}
-	
+
 	predicted := len(req.RouteID)*7 + day
 	if predicted < 1 {
 		predicted = 1
 	}
-	
+
 	return &models.MLPredictionResponse{
 		RouteID:         req.RouteID,
 		Date:            req.Date,
@@ -170,14 +170,14 @@ func (s *platformCompatService) SuggestPricing(ctx context.Context, req *models.
 	if req.RouteID == "" {
 		return nil, ErrInvalidPricing
 	}
-	
+
 	baseCapacity := req.BaseCapacity
 	if baseCapacity <= 0 {
 		baseCapacity = 50
 	}
-	
+
 	multiplier := 1.0 + float64((len(req.RouteID)%7))/20.0
-	
+
 	return &models.MLPricingResponse{
 		RouteID:             req.RouteID,
 		Date:                req.Date,
@@ -204,7 +204,7 @@ func (s *platformCompatService) GetOptimizedRoute(ctx context.Context, routeID s
 	case "error":
 		return nil, ErrInvalidRoute
 	}
-	
+
 	return &models.GetOptimizedRouteResponse{
 		ID:     routeID,
 		Status: "optimized",
@@ -217,7 +217,7 @@ func (s *platformCompatService) OptimizeRoute(ctx context.Context, req *models.R
 	if len(req.Locations) < 2 {
 		return nil, ErrInsufficientLocations
 	}
-	
+
 	return &models.RouteOptimizationResponse{
 		Optimized: true,
 		Stops:     len(req.Locations),

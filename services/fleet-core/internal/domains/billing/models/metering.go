@@ -21,13 +21,13 @@ type UsageMeter struct {
 
 // ConsumptionEvent represents an atomic unit of usage
 type ConsumptionEvent struct {
-	Time               time.Time `json:"time" db:"time"`
-	OrgID              uuid.UUID `json:"org_id" db:"org_id"`
-	VehicleID          *uuid.UUID `json:"vehicle_id,omitempty" db:"vehicle_id"`
-	MeterCode          string    `json:"meter_code" db:"meter_code"`
-	Amount             float64   `json:"amount" db:"amount"`
+	Time               time.Time              `json:"time" db:"time"`
+	OrgID              uuid.UUID              `json:"org_id" db:"org_id"`
+	VehicleID          *uuid.UUID             `json:"vehicle_id,omitempty" db:"vehicle_id"`
+	MeterCode          string                 `json:"meter_code" db:"meter_code"`
+	Amount             float64                `json:"amount" db:"amount"`
 	Metadata           map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	ProcessedInvoiceID *uuid.UUID `json:"processed_invoice_id,omitempty" db:"processed_invoice_id"`
+	ProcessedInvoiceID *uuid.UUID             `json:"processed_invoice_id,omitempty" db:"processed_invoice_id"`
 }
 
 // UsageSummary represents aggregated usage for an invoice

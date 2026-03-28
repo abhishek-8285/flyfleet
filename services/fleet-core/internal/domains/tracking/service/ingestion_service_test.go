@@ -103,16 +103,16 @@ func (m *mockOutboxRepo) AddToOutbox(_ context.Context, _ pgx.Tx, _ *models.Tele
 func (m *mockOutboxRepo) GetPending(_ context.Context, _ int) ([]repository.OutboxMessage, error) {
 	return nil, nil
 }
-func (m *mockOutboxRepo) MarkProcessed(_ context.Context, _ int64) error { return nil }
+func (m *mockOutboxRepo) MarkProcessed(_ context.Context, _ int64) error       { return nil }
 func (m *mockOutboxRepo) MarkFailed(_ context.Context, _ int64, _ error) error { return nil }
 
 type mockMessageBroker struct{}
 
-func (m *mockMessageBroker) Publish(_ string, _ any) error                    { return nil }
-func (m *mockMessageBroker) PublishJS(_ string, _ any) error                  { return nil }
-func (m *mockMessageBroker) Subscribe(_ string, _ func([]byte)) error          { return nil }
+func (m *mockMessageBroker) Publish(_ string, _ any) error                           { return nil }
+func (m *mockMessageBroker) PublishJS(_ string, _ any) error                         { return nil }
+func (m *mockMessageBroker) Subscribe(_ string, _ func([]byte)) error                { return nil }
 func (m *mockMessageBroker) SubscribeJS(_ string, _, _ string, _ func([]byte)) error { return nil }
-func (m *mockMessageBroker) Close() error                                     { return nil }
+func (m *mockMessageBroker) Close() error                                            { return nil }
 
 // ── Setup helper ───────────────────────────────────────────────────────────────
 

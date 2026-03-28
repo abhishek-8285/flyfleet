@@ -17,6 +17,59 @@ import (
 	"go.uber.org/zap"
 )
 
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createVehicleRequestDTO struct {
+	RegistrationNumber string     `json:"registration_number" validate:"required"`
+	VehicleType        string     `json:"vehicle_type"        validate:"required,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER"`
+	FuelType           string     `json:"fuel_type"           validate:"required,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG"`
+	OwnershipType      string     `json:"ownership_type"      validate:"required,oneof=OWNED LEASED FINANCED VENDOR"`
+	CapacityTonnage    *float64   `json:"capacity_tonnage"`
+	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"`
+	ChassisNumber      *string    `json:"chassis_number"`
+	EngineNumber       *string    `json:"engine_number"`
+	VINNumber          *string    `json:"vin_number"`
+	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"`
+	BranchID           *uuid.UUID `json:"branch_id"`
+	CostCenterID       *uuid.UUID `json:"cost_center_id"`
+	GPSDeviceID        *string    `json:"gps_device_id"`
+	ImmobilizerEnabled bool       `json:"immobilizer_enabled"`
+	AIS140Compliant    bool       `json:"ais140_compliant"`
+	Make               *string    `json:"make"`
+	Model              *string    `json:"model"`
+	Year               *int       `json:"year" validate:"omitempty,min=1900,max=2030"`
+	Color              *string    `json:"color"`
+	// Legacy fields (still accepted from old clients)
+	LicensePlate *string `json:"license_plate"`
+}
+
+type updateVehicleRequestDTO struct {
+	VehicleType        *string    `json:"vehicle_type"      validate:"omitempty,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER"`
+	FuelType           *string    `json:"fuel_type"         validate:"omitempty,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG"`
+	OwnershipType      *string    `json:"ownership_type"    validate:"omitempty,oneof=OWNED LEASED FINANCED VENDOR"`
+	CapacityTonnage    *float64   `json:"capacity_tonnage"`
+	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"`
+	ChassisNumber      *string    `json:"chassis_number"`
+	EngineNumber       *string    `json:"engine_number"`
+	VINNumber          *string    `json:"vin_number"`
+	BranchID           *uuid.UUID `json:"branch_id"`
+	CostCenterID       *uuid.UUID `json:"cost_center_id"`
+	GPSDeviceID        *string    `json:"gps_device_id"`
+	ImmobilizerEnabled *bool      `json:"immobilizer_enabled"`
+	AIS140Compliant    *bool      `json:"ais140_compliant"`
+	Make               *string    `json:"make"`
+	Model              *string    `json:"model"`
+	Year               *int       `json:"year"    validate:"omitempty,min=1900,max=2030"`
+	Color              *string    `json:"color"`
+	// Legacy fields
+	Status    *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
+	Odometer  *int64  `json:"odometer" validate:"omitempty,min=0"`
+	Insurance *string `json:"insurance"`
+}
+
+type assignDriverRequestDTO struct {
+	DriverID uuid.UUID `json:"driver_id" validate:"required"`
+}
+
 type VehicleHandlers struct {
 	service  service.VehicleServiceInterface
 	logger   *zap.Logger
@@ -46,8 +99,8 @@ func (h *VehicleHandlers) RegisterRoutes(r chi.Router) {
 
 // CreateVehicle godoc
 func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateVehicleRequest
-	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+	var dto createVehicleRequestDTO
+	if err := h.decodeAndValidate(r.Body, &dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
@@ -59,7 +112,31 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	vehicle, err := h.service.CreateVehicle(r.Context(), &req, orgID)
+	// Map DTO to model
+	req := &models.CreateVehicleRequest{
+		RegistrationNumber: dto.RegistrationNumber,
+		VehicleType:        dto.VehicleType,
+		FuelType:           dto.FuelType,
+		OwnershipType:      dto.OwnershipType,
+		CapacityTonnage:    dto.CapacityTonnage,
+		FuelTankCapacity:   dto.FuelTankCapacity,
+		ChassisNumber:      dto.ChassisNumber,
+		EngineNumber:       dto.EngineNumber,
+		VINNumber:          dto.VINNumber,
+		ParentVehicleID:    dto.ParentVehicleID,
+		BranchID:           dto.BranchID,
+		CostCenterID:       dto.CostCenterID,
+		GPSDeviceID:        dto.GPSDeviceID,
+		ImmobilizerEnabled: dto.ImmobilizerEnabled,
+		AIS140Compliant:    dto.AIS140Compliant,
+		Make:               dto.Make,
+		Model:              dto.Model,
+		Year:               dto.Year,
+		Color:              dto.Color,
+		LicensePlate:       dto.LicensePlate,
+	}
+
+	vehicle, err := h.service.CreateVehicle(r.Context(), req, orgID)
 	if err != nil {
 		h.logger.Error("failed to create vehicle", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create vehicle", err)
@@ -89,6 +166,12 @@ func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// SECURITY FIX: Verify vehicle belongs to authenticated organization (CWE-639)
+	orgID := h.getOrgID(r)
+	if vehicle.TenantID != orgID {
+		h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found or access denied", nil)
+		return
+	}
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": vehicle})
 }
 
@@ -143,13 +226,37 @@ func (h *VehicleHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var req models.UpdateVehicleRequest
-	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+	var dto updateVehicleRequestDTO
+	if err := h.decodeAndValidate(r.Body, &dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	vehicle, err := h.service.UpdateVehicle(r.Context(), vehicleID, &req)
+	// Map DTO to model
+	req := &models.UpdateVehicleRequest{
+		VehicleType:        dto.VehicleType,
+		FuelType:           dto.FuelType,
+		OwnershipType:      dto.OwnershipType,
+		CapacityTonnage:    dto.CapacityTonnage,
+		FuelTankCapacity:   dto.FuelTankCapacity,
+		ChassisNumber:      dto.ChassisNumber,
+		EngineNumber:       dto.EngineNumber,
+		VINNumber:          dto.VINNumber,
+		BranchID:           dto.BranchID,
+		CostCenterID:       dto.CostCenterID,
+		GPSDeviceID:        dto.GPSDeviceID,
+		ImmobilizerEnabled: dto.ImmobilizerEnabled,
+		AIS140Compliant:    dto.AIS140Compliant,
+		Make:               dto.Make,
+		Model:              dto.Model,
+		Year:               dto.Year,
+		Color:              dto.Color,
+		Status:             dto.Status,
+		Odometer:           dto.Odometer,
+		Insurance:          dto.Insurance,
+	}
+
+	vehicle, err := h.service.UpdateVehicle(r.Context(), vehicleID, req)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
@@ -172,7 +279,13 @@ func (h *VehicleHandlers) DeleteVehicle(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = h.service.DeleteVehicle(r.Context(), vehicleID)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	err = h.service.DeleteVehicle(r.Context(), vehicleID, orgID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
@@ -194,13 +307,19 @@ func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req models.AssignDriverRequest
-	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	var dto assignDriverRequestDTO
+	if err := h.decodeAndValidate(r.Body, &dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, req.DriverID)
+	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, orgID, dto.DriverID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to assign driver", err)
 		return

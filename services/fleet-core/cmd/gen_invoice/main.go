@@ -52,7 +52,7 @@ func main() {
 	}
 
 	fmt.Printf("✅ Invoice generated successfully: %s\n", filename)
-	
+
 	// Also print the absolute path
 	pwd, _ := os.Getwd()
 	fmt.Printf("Absolute path: %s/%s\n", pwd, filename)

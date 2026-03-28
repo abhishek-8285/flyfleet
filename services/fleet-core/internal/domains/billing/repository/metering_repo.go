@@ -26,7 +26,7 @@ func (r *MeteringRepository) RecordConsumption(ctx context.Context, event *model
 
 	query := `INSERT INTO consumption_events (time, org_id, vehicle_id, meter_code, amount, metadata) 
 	          VALUES ($1, $2, $3, $4, $5, $6)`
-	
+
 	_, err := r.db.Exec(ctx, query, event.Time, event.OrgID, event.VehicleID, event.MeterCode, event.Amount, event.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to record consumption: %w", err)
@@ -41,7 +41,7 @@ func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UU
 	          JOIN usage_meters um ON ce.meter_code = um.code
 	          WHERE ce.org_id = $1 AND ce.processed_invoice_id IS NULL
 	          GROUP BY ce.meter_code, um.name, um.unit`
-	
+
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query unbilled usage: %w", err)
@@ -64,7 +64,7 @@ func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UU
 func (r *MeteringRepository) MarkUsageAsBilled(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID) error {
 	query := `UPDATE consumption_events SET processed_invoice_id = $1 
 	          WHERE org_id = $2 AND processed_invoice_id IS NULL`
-	
+
 	_, err := r.db.Exec(ctx, query, invoiceID, orgID)
 	if err != nil {
 		return fmt.Errorf("failed to mark usage as billed: %w", err)
@@ -75,7 +75,7 @@ func (r *MeteringRepository) MarkUsageAsBilled(ctx context.Context, orgID uuid.U
 // ListMeters retrieves all available usage meters
 func (r *MeteringRepository) ListMeters(ctx context.Context) ([]models.UsageMeter, error) {
 	query := `SELECT id, code, name, description, unit, unit_price, currency, status, created_at FROM usage_meters`
-	
+
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query meters: %w", err)

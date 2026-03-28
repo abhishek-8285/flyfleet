@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/dto"
 	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service/mocks"
 	"github.com/google/uuid"
@@ -30,20 +31,20 @@ func TestNotificationService_ResendNotification(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		ctx := context.Background()
-		
+
 		// Expect GetLog to fetch original
 		mockRepo.On("GetLog", ctx, originalID).Return(original, nil)
-		
+
 		// Expect CreateLog to be called with new log (based on original)
 		mockRepo.On("CreateLog", ctx, mock.MatchedBy(func(l *models.NotificationLog) bool {
-			return l.UserEmail == original.UserEmail && 
-			       l.Status == models.StatusQueued &&
-			       l.Metadata["resend_reason"] == "Needed manually"
+			return l.UserEmail == original.UserEmail &&
+				l.Status == models.StatusQueued &&
+				l.Metadata["resend_reason"] == "Needed manually"
 		})).Run(func(args mock.Arguments) {
 			l := args.Get(1).(*models.NotificationLog)
 			l.ID = uuid.New()
 		}).Return(nil)
-		
+
 		// Expect AddEvent to record the resend
 		mockRepo.On("AddEvent", ctx, mock.Anything).Return(nil)
 
@@ -57,7 +58,7 @@ func TestNotificationService_ResendNotification(t *testing.T) {
 	t.Run("NotFound", func(t *testing.T) {
 		ctx := context.Background()
 		notFoundID := uuid.New()
-		
+
 		mockRepo.On("GetLog", ctx, notFoundID).Return(nil, nil)
 
 		_, err := svc.ResendNotification(ctx, notFoundID, "Reason", false)
@@ -74,14 +75,14 @@ func TestNotificationService_UpdateSettings(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		ctx := context.Background()
-		settings := []models.NotificationSettings{
-			{Channel: models.ChannelEmail, Enabled: true},
-			{Channel: models.ChannelSMS, Enabled: false},
+		updates := []dto.SettingUpdate{
+			{ID: uuid.New(), Channel: models.ChannelEmail, Enabled: true},
+			{ID: uuid.New(), Channel: models.ChannelSMS, Enabled: false},
 		}
 
 		mockRepo.On("UpdateSettings", ctx, mock.Anything).Return(nil).Twice()
 
-		err := svc.UpdateSettings(ctx, settings)
+		err := svc.UpdateSettings(ctx, updates)
 
 		assert.NoError(t, err)
 		mockRepo.AssertExpectations(t)

@@ -24,12 +24,25 @@ func NewNotificationService(repo repository.Repository, logger *zap.Logger) *Not
 	}
 }
 
-func (s *NotificationService) ListLogs(ctx context.Context, page, limit int, status, channel, search string) ([]models.NotificationLog, int, error) {
-	return s.repo.ListLogs(ctx, page, limit, status, channel, search)
+func (s *NotificationService) ListLogs(ctx context.Context, page, limit int, status, channel, search string) ([]dto.NotificationLogDTO, int, error) {
+	logs, total, err := s.repo.ListLogs(ctx, page, limit, status, channel, search)
+	if err != nil {
+		return nil, 0, err
+	}
+	// Convert models to DTOs
+	dtoLogs := make([]dto.NotificationLogDTO, len(logs))
+	for i := range logs {
+		dtoLogs[i] = *dto.ToNotificationLogDTO(&logs[i])
+	}
+	return dtoLogs, total, nil
 }
 
-func (s *NotificationService) GetLogDetail(ctx context.Context, id uuid.UUID) (*models.NotificationLog, error) {
-	return s.repo.GetLog(ctx, id)
+func (s *NotificationService) GetLogDetail(ctx context.Context, id uuid.UUID) (*dto.NotificationLogDTO, error) {
+	log, err := s.repo.GetLog(ctx, id)
+	if err != nil || log == nil {
+		return nil, err
+	}
+	return dto.ToNotificationLogDTO(log), nil
 }
 
 func (s *NotificationService) SendNotification(ctx context.Context, req dto.SendNotificationRequest) (uuid.UUID, error) {
@@ -141,13 +154,19 @@ func (s *NotificationService) ResendNotification(ctx context.Context, id uuid.UU
 	return newLog.ID, nil
 }
 
-func (s *NotificationService) GetSettings(ctx context.Context) ([]models.NotificationSettings, error) {
-	return s.repo.GetSettings(ctx)
+func (s *NotificationService) GetSettings(ctx context.Context) ([]dto.SettingsResponse, error) {
+	settings, err := s.repo.GetSettings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return dto.ToSettingsResponse(settings), nil
 }
 
-func (s *NotificationService) UpdateSettings(ctx context.Context, settings []models.NotificationSettings) error {
-	for i := range settings {
-		if err := s.repo.UpdateSettings(ctx, &settings[i]); err != nil {
+func (s *NotificationService) UpdateSettings(ctx context.Context, updates []dto.SettingUpdate) error {
+	for i := range updates {
+		// Convert DTO to model
+		model := updates[i].ToDomain()
+		if err := s.repo.UpdateSettings(ctx, model); err != nil {
 			return err
 		}
 	}
@@ -228,8 +247,12 @@ func (s *NotificationService) UpdateUserPreference(ctx context.Context, userId u
 	return s.repo.AddPreferenceAudit(ctx, audit)
 }
 
-func (s *NotificationService) GetGlobalDefaults(ctx context.Context) (*models.GlobalNotificationDefault, error) {
-	return s.repo.GetGlobalDefaults(ctx)
+func (s *NotificationService) GetGlobalDefaults(ctx context.Context) (*dto.GlobalDefaultResponse, error) {
+	defaults, err := s.repo.GetGlobalDefaults(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return dto.ToGlobalDefaultResponse(defaults), nil
 }
 
 func (s *NotificationService) UpdateGlobalDefaults(ctx context.Context, req dto.GlobalDefaultUpdateRequest, updatedBy uuid.UUID) error {

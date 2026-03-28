@@ -35,7 +35,7 @@ func (w *DeletionWorker) Start(ctx context.Context) {
 		if err := json.Unmarshal(m.Data, &req); err != nil {
 			return
 		}
-		
+
 		if req.RequestType == models.RequestTypeDeletion {
 			w.logger.Info("received deletion request via NATS", zap.String("id", req.ID.String()))
 			err := w.svc.ProcessDeletionRequest(ctx, req.ID)

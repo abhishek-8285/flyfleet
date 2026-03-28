@@ -61,10 +61,10 @@ type VehicleProfile struct {
 	ID              string       `json:"id"`
 	Name            string       `json:"name"`
 	VehicleClass    VehicleClass `json:"vehicle_class"`
-	Height          float64      `json:"height"`           // in meters
-	Weight          float64      `json:"weight"`           // in tons
+	Height          float64      `json:"height"`          // in meters
+	Weight          float64      `json:"weight"`          // in tons
 	PollutionClass  string       `json:"pollution_class"` // e.g., BS-VI
-	PermitTypes     []string     `json:"permit_types"`     // e.g., All India Permit, State Permit
+	PermitTypes     []string     `json:"permit_types"`    // e.g., All India Permit, State Permit
 	Capacity        int          `json:"capacity"`
 	Speed           float64      `json:"speed"` // average speed in km/h
 	StartTime       time.Time    `json:"start_time"`
@@ -89,22 +89,22 @@ const (
 
 // RoadRestriction represents a constraint on a specific road segment
 type RoadRestriction struct {
-	ID                     string          `json:"id"`
-	RoadID                 string          `json:"road_id"`
-	RestrictionType        RestrictionType `json:"restriction_type"`
-	AllowedVehicleClasses  []VehicleClass  `json:"allowed_vehicle_classes"`
-	PermitRequired         bool            `json:"permit_required"`
-	MaxWeight              float64         `json:"max_weight"`
-	MaxHeight              float64         `json:"max_height"`
+	ID                    string          `json:"id"`
+	RoadID                string          `json:"road_id"`
+	RestrictionType       RestrictionType `json:"restriction_type"`
+	AllowedVehicleClasses []VehicleClass  `json:"allowed_vehicle_classes"`
+	PermitRequired        bool            `json:"permit_required"`
+	MaxWeight             float64         `json:"max_weight"`
+	MaxHeight             float64         `json:"max_height"`
 }
 
 // RoadTimeRestriction represents time-based access rules
 type RoadTimeRestriction struct {
-	ID                     string         `json:"id"`
-	RoadID                 string         `json:"road_id"`
-	StartTime              string         `json:"start_time"` // HH:MM
-	EndTime                string         `json:"end_time"`   // HH:MM
-	AllowedVehicleClasses  []VehicleClass `json:"allowed_vehicle_classes"`
+	ID                    string         `json:"id"`
+	RoadID                string         `json:"road_id"`
+	StartTime             string         `json:"start_time"` // HH:MM
+	EndTime               string         `json:"end_time"`   // HH:MM
+	AllowedVehicleClasses []VehicleClass `json:"allowed_vehicle_classes"`
 }
 
 // VehiclePermit represents state transport permits
@@ -167,6 +167,7 @@ type OptimizationGoals struct {
 type RouteOptimizationResult struct {
 	ID                 string             `json:"id"`
 	RequestID          string             `json:"request_id"`
+	OrganizationID     uuid.UUID          `json:"organization_id"`
 	OptimizationTime   time.Time          `json:"optimization_time"`
 	TotalDistance      float64            `json:"total_distance"` // in km
 	TotalTime          int                `json:"total_time"`     // in minutes

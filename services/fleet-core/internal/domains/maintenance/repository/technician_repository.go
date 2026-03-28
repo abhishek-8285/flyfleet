@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
+	"github.com/google/uuid"
 )
 
 type TechnicianRepository interface {
@@ -27,7 +27,7 @@ type TechnicianRepository interface {
 func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *models.Technician) error {
 	query := `
 		INSERT INTO maintenance_technicians (
-			id, organization_id, user_id, name, specialization, certifications,
+			id, org_id, user_id, name, specialization, certifications,
 			hourly_rate, availability_status, current_workload, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
@@ -41,7 +41,7 @@ func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *
 	certJSON, _ := json.Marshal(tech.Certifications)
 
 	_, err := r.db.Exec(ctx, query,
-		tech.ID, tech.OrganizationID, tech.UserID, tech.Name, tech.Specialization,
+		tech.ID, tech.OrgID, tech.UserID, tech.Name, tech.Specialization,
 		certJSON, tech.HourlyRate, tech.AvailabilityStatus, tech.CurrentWorkload,
 		tech.CreatedAt, tech.UpdatedAt,
 	)
@@ -50,14 +50,14 @@ func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *
 
 func (r *MaintenanceRepositoryImpl) GetTechnicianByID(ctx context.Context, id uuid.UUID) (*models.Technician, error) {
 	query := `
-		SELECT id, organization_id, user_id, name, specialization, certifications,
+		SELECT id, org_id, user_id, name, specialization, certifications,
 			   hourly_rate, availability_status, current_workload, created_at, updated_at
 		FROM maintenance_technicians WHERE id = $1`
 
 	var tech models.Technician
 	var certJSON []byte
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&tech.ID, &tech.OrganizationID, &tech.UserID, &tech.Name, &tech.Specialization,
+		&tech.ID, &tech.OrgID, &tech.UserID, &tech.Name, &tech.Specialization,
 		&certJSON, &tech.HourlyRate, &tech.AvailabilityStatus, &tech.CurrentWorkload,
 		&tech.CreatedAt, &tech.UpdatedAt,
 	)
@@ -94,9 +94,9 @@ func (r *MaintenanceRepositoryImpl) UpdateWorkload(ctx context.Context, techID u
 
 func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, orgID uuid.UUID) ([]*models.Technician, error) {
 	query := `
-		SELECT id, organization_id, user_id, name, specialization, certifications,
+		SELECT id, org_id, user_id, name, specialization, certifications,
 			   hourly_rate, availability_status, current_workload, created_at, updated_at
-		FROM maintenance_technicians WHERE organization_id = $1`
+		FROM maintenance_technicians WHERE org_id = $1`
 
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
@@ -109,7 +109,7 @@ func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, orgID u
 		var tech models.Technician
 		var certJSON []byte
 		err := rows.Scan(
-			&tech.ID, &tech.OrganizationID, &tech.UserID, &tech.Name, &tech.Specialization,
+			&tech.ID, &tech.OrgID, &tech.UserID, &tech.Name, &tech.Specialization,
 			&certJSON, &tech.HourlyRate, &tech.AvailabilityStatus, &tech.CurrentWorkload,
 			&tech.CreatedAt, &tech.UpdatedAt,
 		)
@@ -143,7 +143,7 @@ func (r *MaintenanceRepositoryImpl) GetSkillsByTechnician(ctx context.Context, t
 func (r *MaintenanceRepositoryImpl) UpdateTechnician(ctx context.Context, tech *models.Technician) error {
 	query := `
 		UPDATE maintenance_technicians SET
-			organization_id = $1, user_id = $2, name = $3, specialization = $4,
+			org_id = $1, user_id = $2, name = $3, specialization = $4,
 			certifications = $5, hourly_rate = $6, availability_status = $7,
 			current_workload = $8, updated_at = NOW()
 		WHERE id = $9`
@@ -151,7 +151,7 @@ func (r *MaintenanceRepositoryImpl) UpdateTechnician(ctx context.Context, tech *
 	certJSON, _ := json.Marshal(tech.Certifications)
 
 	_, err := r.db.Exec(ctx, query,
-		tech.OrganizationID, tech.UserID, tech.Name, tech.Specialization,
+		tech.OrgID, tech.UserID, tech.Name, tech.Specialization,
 		certJSON, tech.HourlyRate, tech.AvailabilityStatus, tech.CurrentWorkload,
 		tech.ID,
 	)

@@ -78,7 +78,8 @@ func RecordTripEvent(event TripMetricEvent) {
 // Mount this at GET /internal/metrics for scraping.
 //
 // To upgrade to Prometheus exposition format, replace with:
-//   promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+//
+//	promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 func MetricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)

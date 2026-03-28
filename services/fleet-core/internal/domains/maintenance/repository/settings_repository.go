@@ -23,15 +23,15 @@ func NewSettingsRepository(db *pgxpool.Pool) *SettingsRepository {
 // Get retrieves settings for an organization
 func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.MaintenanceSettings, error) {
 	query := `
-		SELECT organization_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
+		SELECT org_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			   low_stock_threshold, approval_threshold,
 			   auto_assign_enabled, notification_enabled,
 			   created_at, updated_at
-		FROM maintenance_settings WHERE organization_id = $1
+		FROM maintenance_settings WHERE org_id = $1
 	`
 	settings := &models.MaintenanceSettings{}
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&settings.OrganizationID, &settings.SLAP1Hours, &settings.SLAP2Hours, &settings.SLAP3Hours,
+		&settings.OrgID, &settings.SLAP1Hours, &settings.SLAP2Hours, &settings.SLAP3Hours,
 		&settings.LowStockThreshold, &settings.ApprovalThreshold,
 		&settings.AutoAssignEnabled, &settings.NotificationEnabled,
 		&settings.CreatedAt, &settings.UpdatedAt,
@@ -46,11 +46,11 @@ func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.MaintenanceSettings) error {
 	query := `
 		INSERT INTO maintenance_settings (
-			organization_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
+			org_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			low_stock_threshold, approval_threshold,
 			auto_assign_enabled, notification_enabled
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (organization_id) DO UPDATE SET
+		ON CONFLICT (org_id) DO UPDATE SET
 			sla_p1_hours = EXCLUDED.sla_p1_hours,
 			sla_p2_hours = EXCLUDED.sla_p2_hours,
 			sla_p3_hours = EXCLUDED.sla_p3_hours,
@@ -61,7 +61,7 @@ func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.Mainte
 		RETURNING created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		settings.OrganizationID, settings.SLAP1Hours, settings.SLAP2Hours, settings.SLAP3Hours,
+		settings.OrgID, settings.SLAP1Hours, settings.SLAP2Hours, settings.SLAP3Hours,
 		settings.LowStockThreshold, settings.ApprovalThreshold,
 		settings.AutoAssignEnabled, settings.NotificationEnabled,
 	).Scan(&settings.CreatedAt, &settings.UpdatedAt)
@@ -75,7 +75,7 @@ func (r *SettingsRepository) GetOrDefault(ctx context.Context, orgID uuid.UUID) 
 	}
 	if settings == nil {
 		return &models.MaintenanceSettings{
-			OrganizationID:      orgID,
+			OrgID:               orgID,
 			SLAP1Hours:          4,
 			SLAP2Hours:          24,
 			SLAP3Hours:          72,

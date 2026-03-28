@@ -101,6 +101,24 @@ func (s *iamService) Login(ctx context.Context, email, password string) (string,
 
 func (s *iamService) ValidateToken(tokenString string) (*IAMClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &IAMClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// SECURITY: Validate the signing algorithm to prevent algorithm switching attacks
+		// Reject tokens that use none, HS256 with public key, or unexpected algorithms
+		if token.Header["alg"] == nil {
+			return nil, errors.New("missing algorithm in token header")
+		}
+
+		alg := token.Header["alg"].(string)
+
+		// Only allow HS256 for this service
+		if alg != jwt.SigningMethodHS256.Alg() {
+			return nil, errors.New("invalid signing algorithm")
+		}
+
+		// Verify the token's declared method matches what we expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+
 		return s.jwtSecret, nil
 	})
 
@@ -111,6 +129,22 @@ func (s *iamService) ValidateToken(tokenString string) (*IAMClaims, error) {
 	claims, ok := token.Claims.(*IAMClaims)
 	if !ok {
 		return nil, errors.New("invalid token claims")
+	}
+
+	// SECURITY: Check token expiration
+	// jwt.ParseWithClaims already validates exp, but we add explicit check for clarity
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("token has expired")
+	}
+
+	// SECURITY: Additional user status validation (check if user still exists and is active)
+	// This prevents use of tokens for deleted/inactive users
+	user, err := s.repo.GetUserByID(context.Background(), claims.UserID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	if user.Status != "active" {
+		return nil, errors.New("user account is not active")
 	}
 
 	return claims, nil

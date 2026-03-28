@@ -23,7 +23,7 @@ import (
 func TestTenantGuard_Ownership(t *testing.T) {
 	logger := zap.NewNop()
 	metrics := analytics.NewMetrics()
-	
+
 	// Create pgxmock
 	mockDB, err := pgxmock.NewPool()
 	if err != nil {
@@ -53,7 +53,7 @@ func TestTenantGuard_Ownership(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := chi.NewRouter()
 		handler.RegisterRoutes(r)
-		
+
 		mockService.On("GetVehicleDailyStats", mock.Anything, vehicleID, orgID, mock.Anything, mock.Anything).
 			Return(nil, nil).Once()
 

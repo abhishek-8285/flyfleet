@@ -41,6 +41,12 @@ func (h *DocumentHandlers) UploadDocument(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		return
+	}
+
 	var req models.UploadDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid request body")
@@ -52,7 +58,7 @@ func (h *DocumentHandlers) UploadDocument(w http.ResponseWriter, r *http.Request
 	}
 
 	uploaderID := h.getUserID(r)
-	doc, err := h.docsSvc.Upload(r.Context(), vehicleID, &req, uploaderID)
+	doc, err := h.docsSvc.Upload(r.Context(), vehicleID, orgID, &req, uploaderID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeError(w, http.StatusNotFound, "Vehicle not found")
@@ -74,7 +80,13 @@ func (h *DocumentHandlers) ListDocuments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	docs, err := h.docsSvc.ListDocuments(r.Context(), vehicleID)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		return
+	}
+
+	docs, err := h.docsSvc.ListDocuments(r.Context(), vehicleID, orgID)
 	if err != nil {
 		h.logger.Error("list documents failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to list documents")
@@ -94,13 +106,19 @@ func (h *DocumentHandlers) VerifyDocumentHash(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		return
+	}
+
 	providedHash := r.URL.Query().Get("hash")
 	if len(providedHash) != 64 {
 		h.writeError(w, http.StatusBadRequest, "hash query param must be a 64-character SHA-256 hex string")
 		return
 	}
 
-	doc, err := h.docsSvc.GetDocument(r.Context(), docID)
+	doc, err := h.docsSvc.GetDocument(r.Context(), docID, orgID)
 	if err != nil {
 		h.logger.Error("get document failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to retrieve document")
@@ -138,9 +156,19 @@ func (h *DocumentHandlers) writeError(w http.ResponseWriter, code int, msg strin
 	h.writeJSON(w, code, map[string]string{"error": msg})
 }
 
-func (h *DocumentHandlers) getUserID(r *http.Request) *uuid.UUID {
+func (h *DocumentHandlers) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		// In this context we re-use OrgIDKey as a placeholder; real user ID would come from auth context
+		if s, ok := val.(string); ok {
+			if id, err := uuid.Parse(s); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *DocumentHandlers) getUserID(r *http.Request) *uuid.UUID {
+	if val := r.Context().Value(middleware.UserIDKey); val != nil {
 		if s, ok := val.(string); ok {
 			if id, err := uuid.Parse(s); err == nil {
 				return &id

@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -161,37 +163,42 @@ func (r *PostgresDeviceRepository) StoreTelemetryBatch(ctx context.Context, devi
 		return nil
 	}
 
-	query := `
-		INSERT INTO telemetry_points (
-			id, device_id, batch_id, timestamp, latitude, longitude,
-			speed_kph, heading, altitude, accuracy, satellites,
-			can_bus_data, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
-	`
+	// Batch insert to avoid N+1 queries - critical for high-throughput telemetry
+	if len(telemetry) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, point := range telemetry {
+			var canBusDataJSON []byte
+			if point.CANBus != nil {
+				// In production, use json.Marshal
+				canBusDataJSON = []byte("{}") // Placeholder
+			}
 
-	for _, point := range telemetry {
-		var canBusDataJSON []byte
-		if point.CANBus != nil {
-			// In production, use json.Marshal
-			canBusDataJSON = []byte("{}") // Placeholder
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, NOW())",
+				i*13+1, i*13+2, i*13+3, i*13+4, i*13+5, i*13+6, i*13+7, i*13+8, i*13+9, i*13+10, i*13+11, i*13+12))
+			args = append(args,
+				uuid.New().String(),
+				deviceID,
+				batchID,
+				point.Timestamp,
+				point.GPS.Latitude,
+				point.GPS.Longitude,
+				point.SpeedKph,
+				point.Heading,
+				point.Altitude,
+				point.GPS.Accuracy,
+				point.GPS.Satellites,
+				canBusDataJSON,
+			)
 		}
-
-		_, err := r.db.Exec(ctx, query,
-			uuid.New().String(),
-			deviceID,
-			batchID,
-			point.Timestamp,
-			point.GPS.Latitude,
-			point.GPS.Longitude,
-			point.SpeedKph,
-			point.Heading,
-			point.Altitude,
-			point.GPS.Accuracy,
-			point.GPS.Satellites,
-			canBusDataJSON,
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO telemetry_points (id, device_id, batch_id, timestamp, latitude, longitude, "+
+				"speed_kph, heading, altitude, accuracy, satellites, can_bus_data, created_at) VALUES %s",
+			strings.Join(placeholders, ", "),
 		)
+		_, err := r.db.Exec(ctx, batchQuery, args...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to batch insert telemetry: %w", err)
 		}
 	}
 

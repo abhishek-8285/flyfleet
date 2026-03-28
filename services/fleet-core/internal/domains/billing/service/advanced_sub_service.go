@@ -52,7 +52,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 	if err != nil {
 		return err
 	}
-	
+
 	var oldPlan, newPlan *models.Plan
 	for i := range plans {
 		if plans[i].ID == sub.PlanID {
@@ -69,7 +69,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 	// Calculate base prices
 	var oldPlanBasePrice, newPlanBasePrice float64
 	var oldPlanCurrency, newPlanCurrency string
-	
+
 	for _, comp := range oldPlan.Components {
 		if comp.Type == models.ComponentFlat {
 			oldPlanBasePrice += comp.UnitPrice
@@ -140,7 +140,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 		TotalAmount:   newCharge,
 		BalanceDue:    newCharge,
 	}
-	
+
 	err = s.billServ.CreateInvoice(ctx, inv)
 	if err != nil {
 		return err

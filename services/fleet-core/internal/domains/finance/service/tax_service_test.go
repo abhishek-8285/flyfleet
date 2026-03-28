@@ -48,7 +48,7 @@ func TestValidateGSTIN(t *testing.T) {
 		{"12345", false},
 		{"invalidgstin123", false},
 		{"", false},
-		{"27AAAAA0000A1Z", false}, // too short
+		{"27AAAAA0000A1Z", false},   // too short
 		{"27AAAAA0000A1Z55", false}, // too long
 		{" 27AAAAA0000A1Z5 ", true}, // whitespace handling
 	}

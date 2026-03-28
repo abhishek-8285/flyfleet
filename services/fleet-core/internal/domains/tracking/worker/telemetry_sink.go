@@ -19,10 +19,10 @@ const (
 
 // TelemetryBulkSinkWorker consumes raw telemetry from NATS and persists it in batches.
 type TelemetryBulkSinkWorker struct {
-	mb        messaging.MessageBroker
-	repo      repository.TelemetryRepository
-	logger    *zap.Logger
-	
+	mb     messaging.MessageBroker
+	repo   repository.TelemetryRepository
+	logger *zap.Logger
+
 	buffer []models.TelemetryEvent
 	mu     sync.Mutex
 	stop   chan struct{}
@@ -89,7 +89,7 @@ func (w *TelemetryBulkSinkWorker) flush() {
 		w.mu.Unlock()
 		return
 	}
-	
+
 	toFlush := w.buffer
 	w.buffer = make([]models.TelemetryEvent, 0, batchSize)
 	w.mu.Unlock()
@@ -103,8 +103,8 @@ func (w *TelemetryBulkSinkWorker) flush() {
 		// In a production scenario, we might want to dead-letter these or retry.
 		// For stabilization MVP, we log and drop to prevent worker hang.
 	} else {
-		w.logger.Debug("bulk flush successful", 
-			zap.Int("count", len(toFlush)), 
+		w.logger.Debug("bulk flush successful",
+			zap.Int("count", len(toFlush)),
 			zap.Duration("latency", time.Since(start)),
 		)
 	}

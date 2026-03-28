@@ -17,16 +17,16 @@ func CompressJSON(data interface{}) ([]byte, error) {
 
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
-	
+
 	if _, err := gz.Write(jsonData); err != nil {
 		_ = gz.Close()
 		return nil, fmt.Errorf("failed to write compressed data: %w", err)
 	}
-	
+
 	if err := gz.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close gzip writer: %w", err)
 	}
-	
+
 	return b.Bytes(), nil
 }
 

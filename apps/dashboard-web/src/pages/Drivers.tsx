@@ -21,7 +21,6 @@ const Drivers: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<DriverStatusFilter>("all");
   const [safetyFilter, setSafetyFilter] = useState<SafetyScoreFilter>("all");
   const { uiStrings } = useUIStrings("drivers");
-  const [systemMeta, setSystemMeta] = useState<any>(null);
 
   const [selectedDriver, setSelectedDriver] = useState<EnterpriseDriver | null>(
     null,

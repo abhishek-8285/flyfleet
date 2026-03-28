@@ -76,18 +76,20 @@ make_request() {
     local endpoint="$2"
     local data="$3"
     local token="$4"
-    
-    local curl_opts="-s -w '\n%{http_code}' -X $method"
-    
+
+    # SECURITY FIX: Use array to avoid command injection; no eval
+    local curl_opts=(-s -w $'\n%{http_code}')
+    curl_opts+=(-X "$method")
+
     if [ -n "$data" ]; then
-        curl_opts="$curl_opts -H 'Content-Type: application/json' -d '$data'"
+        curl_opts+=(-H 'Content-Type: application/json' -d "$data")
     fi
-    
+
     if [ -n "$token" ]; then
-        curl_opts="$curl_opts -H 'Authorization: Bearer $token'"
+        curl_opts+=(-H "Authorization: Bearer $token")
     fi
-    
-    eval "curl $curl_opts '$AUTH_BASE_URL$endpoint'" 2>/dev/null
+
+    curl "${curl_opts[@]}" "$AUTH_BASE_URL$endpoint" 2>/dev/null
 }
 
 get_response_body() {
