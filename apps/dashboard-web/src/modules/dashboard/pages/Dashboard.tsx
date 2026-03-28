@@ -1,5 +1,5 @@
 import { AlertCircle, RefreshCcw } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { dashboardApi } from "../../../services/dashboardApi";
 import telemetryService from "../../../services/telemetryService";
@@ -28,7 +28,7 @@ const Dashboard: React.FC = () => {
   const { alerts } = useSelector((state: RootState) => state.alerts);
   const [isRetrying, setIsRetrying] = useState(false);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     dispatch(fetchStatsStart());
     setIsRetrying(true);
     try {
@@ -40,14 +40,14 @@ const Dashboard: React.FC = () => {
       dispatch(setAlerts(data.alerts || []));
     } catch (err: any) {
       const isForbidden = err?.response?.status === 403 || err?.status === 403 || err?.message?.includes("403");
-      
+
       if (isForbidden) {
         // Only gracefully degrade for specific roles like Driver who have limited views
         // Other unauthorized users should see an error or be kicked out completely
         const user = JSON.parse(localStorage.getItem("user") || "{}");
         const role = (user?.role_id || user?.role || "").toLowerCase();
-        
-        if (role.includes("driver") || role === "c57c4ec8-5190-4776-9267-06c3da35bc3e") {
+
+        if (role.includes("driver") || role === "staff") {
           dispatch(
             fetchStatsSuccess({
               total_vehicles: 0,
@@ -63,7 +63,7 @@ const Dashboard: React.FC = () => {
           dispatch(setAlerts([]));
           dispatch(fetchStatsFailure(null as any));
         } else {
-          // If not a driver, they shouldn't even be on this page, throw a hard 403 error
+          // If not a driver/staff, they shouldn't even be on this page, throw a hard 403 error
           dispatch(fetchStatsFailure("Access Denied: You do not have permission to view the Fleet Command dashboard."));
         }
       } else {
@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setIsRetrying(false);
     }
-  };
+  }, [dispatch]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
     return () => {
       telemetryService.disconnect();
     };
-  }, [dispatch]);
+  }, [dispatch, fetchDashboardData]);
 
   const mapMarkers = Object.values(vehicles).map((v) => ({
     id: v.id,

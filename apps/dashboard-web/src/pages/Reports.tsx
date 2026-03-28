@@ -11,7 +11,7 @@ const Reports: React.FC = () => {
     const fetchReports = async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL || "/api/v1"}/reports/categories`,
+          `${import.meta.env.VITE_API_URL || "/api/v1"}/reports/categories`,
         );
         if (res.ok) {
           const data = await res.json();

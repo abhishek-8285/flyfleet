@@ -1,7 +1,6 @@
 /// <reference lib="webworker" />
+/* eslint-disable no-restricted-globals */
 export {}
-
-type VehicleData = any;
 
 interface VFeature {
     type: "Feature";

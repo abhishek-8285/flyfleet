@@ -37,7 +37,7 @@ const IntegrationsCenter: React.FC = () => {
     const fetchTabs = async () => {
       try {
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL || "/api/v1"}/integrations/tabs`,
+          `${import.meta.env.VITE_API_URL || "/api/v1"}/integrations/tabs`,
         );
         if (res.ok) {
           const payload = await res.json();

@@ -1,16 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 const roles = [
-  { role: "super_admin", email: "admin@flyfleet.com", password: "fleet_password" },
-  { role: "org_admin", email: "org_admin@delta.io", password: "fleet_password" },
-  { role: "fleet_manager", email: "fleet_manager@delta.io", password: "fleet_password" },
-  { role: "dispatcher", email: "dispatcher@delta.io", password: "fleet_password" },
-  { role: "fleet_operator", email: "operator@delta.io", password: "fleet_password" },
-  { role: "maintenance_manager", email: "maintenance@delta.io", password: "fleet_password" },
-  { role: "analyst", email: "analyst@delta.io", password: "fleet_password" },
-  { role: "support_agent", email: "support_agent@delta.io", password: "fleet_password" },
-  { role: "billing_admin", email: "billing@delta.io", password: "fleet_password" },
-  { role: "driver", email: "driver@delta.io", password: "fleet_password" },
+  { role: "super_admin", email: "admin@flyfleet.com", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "org_admin", email: "org_admin@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "fleet_operator", email: "operator@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "maintenance_manager", email: "maintenance@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "analyst", email: "analyst@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "support_agent", email: "support_agent@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "billing_admin", email: "billing@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
 ];
 
 test.describe("Deep Dashboard Crawl For All Roles", () => {

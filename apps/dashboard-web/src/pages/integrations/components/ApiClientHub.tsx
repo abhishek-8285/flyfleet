@@ -20,7 +20,7 @@ const ApiClientHub: React.FC = () => {
     const fetchClients = async () => {
       try {
         const res = await fetch(
-          `{process.env.REACT_APP_API_URL || '/api/v1'}/api/v1/integrations/apiclienthub`,
+          `{import.meta.env.VITE_API_URL || '/api/v1'}/api/v1/integrations/apiclienthub`,
         );
         const payload = await res.json();
         setClients(payload.data || payload || []);

@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store";
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 export const CustomerPortalLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { uiStrings } = useUIStrings("layout_portal");
+  const { isAuthenticated } = useSelector((state: RootState) => state.customerAuth);
 
   useEffect(() => {
-    const token = localStorage.getItem("customer_token");
-    if (!token) {
+    if (!isAuthenticated) {
       navigate("/portal/login", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, isAuthenticated]);
 
   const [menuItems, setMenuitems] = useState<any[]>([]);
   useEffect(() => {

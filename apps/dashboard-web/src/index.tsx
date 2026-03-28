@@ -1,6 +1,4 @@
 import "leaflet/dist/leaflet.css";
-import posthog from "posthog-js";
-import { PostHogProvider } from "posthog-js/react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
@@ -11,9 +9,9 @@ import { initializeTraceFetch } from "./utils/traceFetch";
 
 initializeTraceFetch();
 
-// posthog.init(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || "dummy_key", {
+// posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY || "dummy_key", {
 //   api_host:
-//     process.env.REACT_APP_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+//     import.meta.env.VITE_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
 //   person_profiles: "always",
 // });
 

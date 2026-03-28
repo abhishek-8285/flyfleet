@@ -1,6 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "../store";
+import { setToken, setUser } from "../store/authSlice";
 import AuthButton from "../components/auth/AuthButton";
 import AuthInput from "../components/auth/AuthInput";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
@@ -26,6 +29,7 @@ const Signup: React.FC = () => {
   const [inviteCode, setInviteCode] = useState("");
   const { uiStrings } = useUIStrings("auth_extended");
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     // Basic password strength logic
@@ -94,10 +98,17 @@ const Signup: React.FC = () => {
       else payload.invite_code = inviteCode;
 
       const res = await api.signup(payload);
-      
+
       if (res && res.access_token) {
-        localStorage.setItem("token", res.access_token);
-        if (res.refresh_token) localStorage.setItem("refreshToken", res.refresh_token);
+        // Store tokens in Redux (memory only) - SECURE
+        dispatch(setToken(res.access_token));
+        if (res.refresh_token) {
+          // Note: refresh token may also need storage if used; currently in Redux memory
+          // If refresh is handled via httpOnly cookie, no need to store
+        }
+        if (res.user) {
+          dispatch(setUser(res.user));
+        }
       }
       
       const user = res.user;

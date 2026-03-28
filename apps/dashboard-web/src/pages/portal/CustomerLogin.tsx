@@ -1,6 +1,9 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { AppDispatch } from "../../store";
+import { setCustomerToken } from "../../store/customerAuthSlice";
 
 const CustomerLogin: React.FC = () => {
   const [apiKey, setApiKey] = useState("");
@@ -8,6 +11,7 @@ const CustomerLogin: React.FC = () => {
   const [error, setError] = useState("");
   const [uiStrings, setUiStrings] = useState<any>(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
     fetch("/api/v1/ui/global_config")
@@ -37,7 +41,8 @@ const CustomerLogin: React.FC = () => {
 
       const token = response.data.token;
       if (token) {
-        localStorage.setItem("customer_token", token);
+        // Store token in Redux (memory only) - SECURE
+        dispatch(setCustomerToken(token));
         navigate("/portal/dashboard");
       } else {
         setError("Invalid credentials received");

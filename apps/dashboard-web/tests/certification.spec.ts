@@ -15,7 +15,7 @@ test.describe("Final Launch Certification - Hyperscale Reliability", () => {
     console.log("[TEST] Reached login page. Filling credentials...");
     await page.fill('input[type="text"]', "admin@flyfleet.com");
     await page.click('button:has-text("Continue")');
-    await page.fill('input[type="password"]', "fleet_password");
+    await page.fill('input[type="password"]', process.env.TEST_PASSWORD || "change-me-in-test-env");
     console.log("[TEST] Clicking Sign In...");
     await page.click('button:has-text("Sign In")', { force: true });
 

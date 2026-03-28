@@ -1,0 +1,98 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
+import { resolve } from 'path';
+
+// Security headers plugin for Vite
+const securityHeadersPlugin = () => ({
+  name: 'security-headers',
+  transformIndexHtml(html) {
+    return html.replace(
+      '</head>',
+      `
+      <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+      <meta http-equiv="X-Content-Type-Options" content="nosniff">
+      <meta http-equiv="X-Frame-Options" content="DENY">
+      <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+      <meta name="referrer" content="strict-origin-when-cross-origin">
+      </head>`
+    );
+  },
+});
+
+export default defineConfig({
+  plugins: [react(), securityHeadersPlugin()],
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-redux',
+      '@reduxjs/toolkit',
+      '@tanstack/react-query',
+      'lucide-react',
+      '@heroicons/react',
+      'date-fns',
+    ],
+    // Vite 8 uses Rolldown instead of esbuild; use rolldownOptions to avoid deprecation warning
+    rolldownOptions: {
+      // Keep esbuild-like behavior for compatibility
+      platform: 'browser',
+      target: 'es2020',
+    },
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@flyfleet/config': resolve(__dirname, '../../packages/config/src'),
+    },
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8084',
+        changeOrigin: true,
+      },
+      '/auth': {
+        target: 'http://localhost:8084',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          // Vendor chunk - React ecosystem
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-redux') || id.includes('react-router-dom')) {
+            return 'vendor';
+          }
+          // Charts & Maps - heavy visualization libraries
+          if (id.includes('recharts') || id.includes('leaflet') || id.includes('maplibre-gl') || id.includes('supercluster')) {
+            return 'charts-maps';
+          }
+          // Icons
+          if (id.includes('lucide-react') || id.includes('@heroicons/react') || id.includes('material-symbols')) {
+            return 'icons';
+          }
+          // Animation
+          if (id.includes('framer-motion')) {
+            return 'animations';
+          }
+          // Date/utility
+          if (id.includes('date-fns')) {
+            return 'date-utils';
+          }
+        },
+      },
+    },
+  },
+  define: {
+    'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || '/api/v1'),
+    'process.env.REACT_APP_PUBLIC_POSTHOG_KEY': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || ''),
+    'process.env.REACT_APP_PUBLIC_POSTHOG_HOST': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'),
+  },
+});

@@ -20,7 +20,7 @@ const WebhookManager: React.FC = () => {
     const fetchWebhooks = async () => {
       try {
         const res = await fetch(
-          `{process.env.REACT_APP_API_URL || '/api/v1'}/api/v1/integrations/webhookmanager`,
+          `{import.meta.env.VITE_API_URL || '/api/v1'}/api/v1/integrations/webhookmanager`,
         );
         const payload = await res.json();
         setWebhooks(payload.data || payload || []);

@@ -5,6 +5,7 @@
  *   - At least 2 distinct routes
  *   - 1 navigation event
  */
+/* eslint-disable testing-library/no-unnecessary-act, testing-library/no-wait-for-multiple-assertions */
 import {
     act,
     fireEvent,
@@ -16,6 +17,9 @@ import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthProvider";
 
+import { RBACProvider } from "../context/RBACProvider";
+import apiClient from "../services/apiClient";
+
 // Mock the API client so no real HTTP requests are made in tests
 jest.mock("../services/apiClient", () => ({
   __esModule: true,
@@ -24,9 +28,6 @@ jest.mock("../services/apiClient", () => ({
     put: jest.fn(),
   },
 }));
-
-import { RBACProvider } from "../context/RBACProvider";
-import apiClient from "../services/apiClient";
 
 // Mock window.location
 const originalLocation = window.location;
