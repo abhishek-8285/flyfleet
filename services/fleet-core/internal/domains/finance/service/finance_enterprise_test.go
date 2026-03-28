@@ -8,26 +8,26 @@ import (
 // TestTaxCalculationService_GST validates CGST/SGST vs IGST split logic.
 func TestTaxCalculationService_GST(t *testing.T) {
 	tests := []struct {
-		name          string
-		amount        float64
-		rate          float64
-		interState    bool
-		expectedIGST  float64
-		expectedCGST  float64
-		expectedSGST  float64
+		name         string
+		amount       float64
+		rate         float64
+		interState   bool
+		expectedIGST float64
+		expectedCGST float64
+		expectedSGST float64
 	}{
 		{
-			name: "Intra-state 18% GST splits into CGST+SGST",
+			name:   "Intra-state 18% GST splits into CGST+SGST",
 			amount: 1000, rate: 18, interState: false,
 			expectedIGST: 0, expectedCGST: 90, expectedSGST: 90,
 		},
 		{
-			name: "Inter-state 18% → IGST only",
+			name:   "Inter-state 18% → IGST only",
 			amount: 1000, rate: 18, interState: true,
 			expectedIGST: 180, expectedCGST: 0, expectedSGST: 0,
 		},
 		{
-			name: "Zero-rated fuel",
+			name:   "Zero-rated fuel",
 			amount: 1000, rate: 0, interState: false,
 			expectedIGST: 0, expectedCGST: 0, expectedSGST: 0,
 		},
@@ -171,9 +171,9 @@ func TestFraudRiskLevel(t *testing.T) {
 // TestTripProfitMargin validates profit margin calculation.
 func TestTripProfitMargin(t *testing.T) {
 	cases := []struct {
-		revenue      float64
-		totalCost    float64
-		expectedPct  float64
+		revenue     float64
+		totalCost   float64
+		expectedPct float64
 	}{
 		{10000, 7000, 30.0},
 		{10000, 10000, 0.0},

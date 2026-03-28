@@ -412,7 +412,7 @@ func (r *pgGovernanceRepository) EnforceRetentionPolicy(ctx context.Context, org
 	entityMap := map[string]string{
 		"telemetry": "device_id",
 		"trips":     "driver_id",
-		"fuel_logs":  "driver_id",
+		"fuel_logs": "driver_id",
 	}
 
 	entityCol, approved := entityMap[tableName]

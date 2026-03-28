@@ -5,18 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/database"
 	"github.com/fleet-platform/shared/pkg/messaging"
 	"github.com/fleet-platform/shared/pkg/models"
+	"github.com/flyfleet/fleet-core-service/internal/domains/tracking"
+	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/processor"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/processor"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -90,6 +91,10 @@ func (h *TelemetryHandler) errorJSON(w http.ResponseWriter, message string, stat
 // IngestGPS - High-throughput GPS ingestion endpoint (JetStream)
 // Legacy in-process storage removed. Now persistent via NATS JetStream.
 func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX: Limit request body size to prevent OOM attacks
+	const maxBodySize = 10 * 1024 // 10KB max for GPS payload
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
 	var payload GPSPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		h.errorJSON(w, "Invalid Request Body", http.StatusBadRequest)
@@ -106,8 +111,21 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
-		if err == nil {
+		// SECURITY FIX: Use proper JWT signature validation instead of ParseUnverified
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			// Reject tokens if no secret configured - don't fall back to unverified parsing
+			h.logger.Error("JWT_SECRET not configured, rejecting authentication")
+			h.errorJSON(w, "Server authentication misconfiguration", http.StatusInternalServerError)
+			return
+		}
+		token, err := new(jwt.Parser).Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(jwtSecret), nil
+		})
+		if err == nil && token.Valid {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
@@ -116,13 +134,20 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 					orgIDStr = orgClaim
 				}
 			}
+		} else {
+			h.logger.Warn("Invalid JWT token", zap.Error(err))
+			h.errorJSON(w, "Invalid authentication token", http.StatusUnauthorized)
+			return
 		}
+	} else if authHeader != "" {
+		h.errorJSON(w, "Invalid authorization header format", http.StatusUnauthorized)
+		return
 	}
 
 	if h.redis != nil {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Millisecond)
 		defer cancel()
-		
+
 		// 1. Revocation Check (Zombie Kill Switch)
 		isRevoked, err := h.redis.SIsMember(ctx, "auth:revoked_devices", payload.DeviceID).Result()
 		if err == nil && isRevoked {
@@ -171,7 +196,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vehicleID, orgID uuid.UUID
-	
+
 	// Fast Path: Redis Cache
 	if h.redis != nil {
 		cacheKey := "device:resolve:" + payload.DeviceID
@@ -210,7 +235,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	timestamp := time.Unix(payload.Timestamp, 0)
-	
+
 	// Compliance check: Insurance status
 	complianceViolation := false
 	if h.redis != nil {
@@ -270,6 +295,10 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 
 // IngestOBD - OBD-II data ingestion (JetStream)
 func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX: Limit request body size to prevent OOM attacks
+	const maxBodySize = 10 * 1024 // 10KB max for OBD payload
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+
 	var payload struct {
 		DeviceID  string          `json:"device_id" validate:"required"`
 		Timestamp int64           `json:"timestamp" validate:"required"`
@@ -288,8 +317,21 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
-		if err == nil {
+		// SECURITY FIX: Use proper JWT signature validation instead of ParseUnverified
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			// Reject tokens if no secret configured - don't fall back to unverified parsing
+			h.logger.Error("JWT_SECRET not configured, rejecting authentication")
+			h.errorJSON(w, "Server authentication misconfiguration", http.StatusInternalServerError)
+			return
+		}
+		token, err := new(jwt.Parser).Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(jwtSecret), nil
+		})
+		if err == nil && token.Valid {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
@@ -298,7 +340,14 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 					orgIDStr = orgClaim
 				}
 			}
+		} else {
+			h.logger.Warn("Invalid JWT token", zap.Error(err))
+			h.errorJSON(w, "Invalid authentication token", http.StatusUnauthorized)
+			return
 		}
+	} else if authHeader != "" {
+		h.errorJSON(w, "Invalid authorization header format", http.StatusUnauthorized)
+		return
 	}
 
 	if h.redis != nil {
@@ -394,8 +443,21 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
-		if err == nil {
+		// SECURITY FIX: Use proper JWT signature validation instead of ParseUnverified
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			// Reject tokens if no secret configured - don't fall back to unverified parsing
+			h.logger.Error("JWT_SECRET not configured, rejecting authentication")
+			h.errorJSON(w, "Server authentication misconfiguration", http.StatusInternalServerError)
+			return
+		}
+		token, err := new(jwt.Parser).Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(jwtSecret), nil
+		})
+		if err == nil && token.Valid {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
@@ -404,7 +466,14 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 					orgIDStr = orgClaim
 				}
 			}
+		} else {
+			h.logger.Warn("Invalid JWT token", zap.Error(err))
+			h.errorJSON(w, "Invalid authentication token", http.StatusUnauthorized)
+			return
 		}
+	} else if authHeader != "" {
+		h.errorJSON(w, "Invalid authorization header format", http.StatusUnauthorized)
+		return
 	}
 
 	if h.redis != nil {

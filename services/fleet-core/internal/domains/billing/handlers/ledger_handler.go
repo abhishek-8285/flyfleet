@@ -4,11 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	currency := r.URL.Query().Get("currency")
 	if currency == "" {
 		currency = "USD"
@@ -26,6 +32,11 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 
 func (h *BillingHandler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 
 	var req struct {
 		Amount   float64 `json:"amount" validate:"required"`

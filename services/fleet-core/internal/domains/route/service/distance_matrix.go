@@ -23,7 +23,7 @@ type OSRMDistanceProvider struct {
 }
 
 type osrmResponse struct {
-	Code string `json:"code"`
+	Code   string `json:"code"`
 	Routes []struct {
 		Distance float64 `json:"distance"`
 		Duration float64 `json:"duration"`
@@ -71,15 +71,15 @@ type HaversineDistanceProvider struct{}
 
 func (p *HaversineDistanceProvider) GetDistanceAndTime(ctx context.Context, origin, destination models.Location, vehicle *models.VehicleProfile) (float64, int, error) {
 	dist := HaversineDistance(origin.Latitude, origin.Longitude, destination.Latitude, destination.Longitude)
-	
+
 	speed := 40.0
 	if vehicle != nil && vehicle.Speed > 0 {
 		speed = vehicle.Speed
 	}
-	
+
 	// time = (distance / speed) * 60 minutes
 	travelTime := int((dist / speed) * 60)
-	
+
 	return dist, travelTime, nil
 }
 
@@ -93,7 +93,7 @@ func (p *MockTrafficProvider) GetDistanceAndTime(ctx context.Context, origin, de
 	if err != nil {
 		return 0, 0, err
 	}
-	
+
 	// Simulate traffic (10% to 50% increase in time)
 	// In a real implementation, this would call Google or MapmyIndia
 	trafficFactor := 1.2

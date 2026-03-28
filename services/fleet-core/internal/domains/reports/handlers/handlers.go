@@ -8,6 +8,7 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/reports/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/reports/service"
+	"github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -63,19 +64,21 @@ func (h *ReportHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get Organization ID and User ID from context (should be set by auth middleware)
-	orgID := h.getOrgID(r)
-	if orgID == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization context required", nil)
 		return
 	}
-	req.OrganizationID = uuid.MustParse(orgID)
+	req.OrganizationID = orgID
 
-	userID := h.getUserID(r)
-	if userID == "" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "User ID not found in context", nil)
+	userID := middleware.GetUserID(r.Context())
+	if userID == uuid.Nil {
+		h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "user context required", nil)
 		return
 	}
-	req.CreatedBy = uuid.MustParse(userID)
+	req.CreatedBy = userID
 
 	id, err := h.svc.CreateReport(r.Context(), &req)
 	if err != nil {
@@ -249,22 +252,4 @@ func (h *ReportHandler) writeJSONResponse(w http.ResponseWriter, statusCode int,
 
 func (h *ReportHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
 	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
-}
-
-func (h *ReportHandler) getOrgID(r *http.Request) string {
-	if val := r.Context().Value(orgIDKey); val != nil {
-		if id, ok := val.(string); ok {
-			return id
-		}
-	}
-	return ""
-}
-
-func (h *ReportHandler) getUserID(r *http.Request) string {
-	if val := r.Context().Value(userIDKey); val != nil {
-		if id, ok := val.(string); ok {
-			return id
-		}
-	}
-	return ""
 }

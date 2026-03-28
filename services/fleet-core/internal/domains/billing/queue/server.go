@@ -24,11 +24,11 @@ type PDFRenderer interface {
 
 // BillingWorkerServer handles asynchronous billing tasks
 type BillingWorkerServer struct {
-	server *asynq.Server
-	mux    *asynq.ServeMux
-	service BillingProcessor
+	server      *asynq.Server
+	mux         *asynq.ServeMux
+	service     BillingProcessor
 	invoiceServ PDFRenderer
-	logger  *zap.Logger
+	logger      *zap.Logger
 }
 
 func NewBillingWorkerServer(redisAddr string, s BillingProcessor, invS PDFRenderer, logger *zap.Logger) *BillingWorkerServer {
@@ -79,8 +79,8 @@ func (ws *BillingWorkerServer) HandleGenerateInvoice(ctx context.Context, t *asy
 		return fmt.Errorf("generate draft invoice failed: %w", err)
 	}
 
-	ws.logger.Info("Successfully generated automated draft invoice", 
-		zap.String("org_id", payload.OrgID.String()), 
+	ws.logger.Info("Successfully generated automated draft invoice",
+		zap.String("org_id", payload.OrgID.String()),
 		zap.String("invoice_id", invoice.ID.String()))
 
 	return nil

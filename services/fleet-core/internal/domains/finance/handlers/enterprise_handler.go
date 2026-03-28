@@ -6,6 +6,7 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
+	"github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -13,13 +14,13 @@ import (
 
 // EnterpriseFinanceHandlers groups all new enterprise-grade finance API handlers.
 type EnterpriseFinanceHandlers struct {
-	eInvoice    *service.EInvoiceService
-	tds         *service.TDSTaxService
-	vendorPay   *service.VendorPaymentService
-	tripProfit  *service.TripProfitService
-	fraudSvc    *service.FraudDetectionService
-	reconSvc    *service.FuelCardReconciliationService
-	logger      *zap.Logger
+	eInvoice   *service.EInvoiceService
+	tds        *service.TDSTaxService
+	vendorPay  *service.VendorPaymentService
+	tripProfit *service.TripProfitService
+	fraudSvc   *service.FraudDetectionService
+	reconSvc   *service.FuelCardReconciliationService
+	logger     *zap.Logger
 }
 
 func NewEnterpriseFinanceHandlers(
@@ -75,7 +76,12 @@ func (h *EnterpriseFinanceHandlers) RegisterRoutes(r chi.Router) {
 
 // GenerateEInvoice handles POST /gst/einvoice
 func (h *EnterpriseFinanceHandlers) GenerateEInvoice(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 	var req models.GenerateEInvoiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
@@ -115,7 +121,12 @@ func (h *EnterpriseFinanceHandlers) GetEInvoice(w http.ResponseWriter, r *http.R
 
 // DeductTDS handles POST /tds/deduct
 func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 	var req models.DeductTDSRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
@@ -136,7 +147,12 @@ func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Req
 
 // GetTDSReport handles GET /tds/report?fy=2024-25&quarter=Q1
 func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 	fy := r.URL.Query().Get("fy")
 	quarter := r.URL.Query().Get("quarter")
 
@@ -155,7 +171,12 @@ func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.
 
 // CreateVendorPayment handles POST /vendors/payments
 func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 	createdBy := orgID // simplified; in production use JWT claims
 
 	var req models.CreateVendorPaymentRequest
@@ -177,7 +198,12 @@ func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r
 
 // ListVendorPayments handles GET /vendors/payments
 func (h *EnterpriseFinanceHandlers) ListVendorPayments(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 
 	var vendorID *uuid.UUID
 	if v := r.URL.Query().Get("vendor_id"); v != "" {
@@ -207,7 +233,12 @@ func (h *EnterpriseFinanceHandlers) GetTripProfit(w http.ResponseWriter, r *http
 		http.Error(w, `{"error":"invalid trip id"}`, http.StatusBadRequest)
 		return
 	}
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 
 	result, err := h.tripProfit.CalculateTripProfit(r.Context(), tripID, orgID)
 	if err != nil {
@@ -221,7 +252,12 @@ func (h *EnterpriseFinanceHandlers) GetTripProfit(w http.ResponseWriter, r *http
 
 // GetFinanceDashboard handles GET /finance/dashboard
 func (h *EnterpriseFinanceHandlers) GetFinanceDashboard(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 
 	metrics, err := h.tripProfit.GetDashboardMetrics(r.Context(), orgID)
 	if err != nil {
@@ -235,7 +271,12 @@ func (h *EnterpriseFinanceHandlers) GetFinanceDashboard(w http.ResponseWriter, r
 
 // RunReconciliation handles POST /reconciliation/run
 func (h *EnterpriseFinanceHandlers) RunReconciliation(w http.ResponseWriter, r *http.Request) {
-	orgID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
 
 	matched, unmatched, err := h.reconSvc.RunReconciliation(r.Context(), orgID)
 	if err != nil {
@@ -266,17 +307,22 @@ func (h *EnterpriseFinanceHandlers) ManualMatch(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	userID := orgIDFromHeader(r)
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		return
+	}
+	userID := middleware.GetUserID(r.Context())
+	if userID == uuid.Nil {
+		h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+		http.Error(w, `{"error":"unauthorized: user context required"}`, http.StatusUnauthorized)
+		return
+	}
 	if err := h.reconSvc.ManualMatch(r.Context(), reconID, body.InternalTransactionID, userID); err != nil {
 		http.Error(w, `{"error":"failed to match"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// orgIDFromHeader extracts the org ID from request header.
-func orgIDFromHeader(r *http.Request) uuid.UUID {
-	id, _ := uuid.Parse(r.Header.Get("X-Organization-ID"))
-	return id
 }

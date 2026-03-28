@@ -25,17 +25,17 @@ func (m *MockTokenService) ValidateToken(ctx context.Context, token uuid.UUID) (
 func TestTokenSecurity_InvalidToken(t *testing.T) {
 	mockSvc := new(MockTokenService)
 	token := uuid.New()
-	
+
 	mockSvc.On("ValidateToken", mock.Anything, token).Return(nil, fmt.Errorf("token invalid or expired"))
-	
+
 	_, err := mockSvc.ValidateToken(context.Background(), token)
 	if err == nil {
 		t.Fatalf("Expected error for invalid token, got nil")
 	}
-	
+
 	if err.Error() != "token invalid or expired" {
 		t.Errorf("Expected 'token invalid or expired', got %s", err.Error())
 	}
-	
+
 	mockSvc.AssertExpectations(t)
 }

@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"errors"
-	analyticsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/analytics/middleware"
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
+	analyticsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/analytics/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/utils"
@@ -67,110 +67,110 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		r.Use(h.rateLimiter.OrgRateLimit)
 
 		// Predictive Models
-	r.Route("/predictive-models", func(r chi.Router) {
-		r.Post("/", h.CreatePredictiveModel)
-		r.Get("/", h.ListPredictiveModels)
-		r.Get("/version", h.GetPredictiveModelByVersion)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetPredictiveModel)
-			r.Put("/", h.UpdatePredictiveModel)
-			r.Delete("/", h.DeletePredictiveModel)
+		r.Route("/predictive-models", func(r chi.Router) {
+			r.Post("/", h.CreatePredictiveModel)
+			r.Get("/", h.ListPredictiveModels)
+			r.Get("/version", h.GetPredictiveModelByVersion)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetPredictiveModel)
+				r.Put("/", h.UpdatePredictiveModel)
+				r.Delete("/", h.DeletePredictiveModel)
+			})
 		})
-	})
 
-	// Prediction Results
-	r.Route("/predictions", func(r chi.Router) {
-		r.Post("/", h.CreatePredictionResult)
-		r.Get("/", h.ListPredictionResults)
-		r.Get("/org", h.GetPredictionResultsByOrg)
-		r.Get("/{id}", h.GetPredictionResult)
-		r.Get("/model/{modelId}", h.GetPredictionResultsByModel)
-	})
-
-	// Analytics Jobs
-	r.Route("/jobs", func(r chi.Router) {
-		r.Post("/", h.CreateAnalyticsJob)
-		r.Get("/", h.ListAnalyticsJobs)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetAnalyticsJob)
-			r.Put("/", h.UpdateAnalyticsJob)
-			r.Delete("/", h.DeleteAnalyticsJob)
+		// Prediction Results
+		r.Route("/predictions", func(r chi.Router) {
+			r.Post("/", h.CreatePredictionResult)
+			r.Get("/", h.ListPredictionResults)
+			r.Get("/org", h.GetPredictionResultsByOrg)
+			r.Get("/{id}", h.GetPredictionResult)
+			r.Get("/model/{modelId}", h.GetPredictionResultsByModel)
 		})
-	})
 
-	// Phase 8: Operations & ML Lifecycle
-	r.Route("/deployments", func(r chi.Router) {
-		r.Post("/", h.DeployModel)
-	})
-
-	r.Route("/risk-events", func(r chi.Router) {
-		r.Post("/", h.CreateDriverRiskEvent)
-		r.Get("/", h.GetDriverRiskEvents)
-	})
-
-	r.Route("/quotas", func(r chi.Router) {
-		r.Get("/", h.GetAnalyticsQuota)
-	})
-
-	r.Route("/ops", func(r chi.Router) {
-		r.Post("/reconciliation", h.RunReconciliation)
-		r.Post("/backfill", h.RunHistoricalBackfill)
-	})
-
-	// Fleet Analytics
-	r.Route("/fleet", func(r chi.Router) {
-		r.Post("/", h.CreateFleetAnalytics)
-		r.Get("/", h.ListFleetAnalytics)
-		r.Get("/period", h.GetFleetAnalyticsByPeriod)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetFleetAnalytics)
-			r.Put("/", h.UpdateFleetAnalytics)
-			r.Delete("/", h.DeleteFleetAnalytics)
+		// Analytics Jobs
+		r.Route("/jobs", func(r chi.Router) {
+			r.Post("/", h.CreateAnalyticsJob)
+			r.Get("/", h.ListAnalyticsJobs)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetAnalyticsJob)
+				r.Put("/", h.UpdateAnalyticsJob)
+				r.Delete("/", h.DeleteAnalyticsJob)
+			})
 		})
-	})
 
-	// Driver Behavior
-	r.Route("/driver-behavior", func(r chi.Router) {
-		r.Post("/", h.CreateDriverBehaviorAnalytics)
-		r.Get("/", h.ListDriverBehaviorAnalytics)
-		r.Get("/driver", h.GetDriverBehaviorAnalyticsByDriver)
-		r.Get("/org", h.GetDriverBehaviorAnalyticsByOrg)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetDriverBehaviorAnalytics)
-			r.Put("/", h.UpdateDriverBehaviorAnalytics)
-			r.Delete("/", h.DeleteDriverBehaviorAnalytics)
+		// Phase 8: Operations & ML Lifecycle
+		r.Route("/deployments", func(r chi.Router) {
+			r.Post("/", h.DeployModel)
 		})
-	})
 
-	// Predictive Maintenance
-	r.Route("/predictive-maintenance", func(r chi.Router) {
-		r.Post("/", h.CreatePredictiveMaintenanceAnalytics)
-		r.Get("/", h.ListPredictiveMaintenanceAnalytics)
-		r.Get("/vehicle", h.GetPredictiveMaintenanceAnalyticsByVehicle)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetPredictiveMaintenanceAnalytics)
-			r.Put("/", h.UpdatePredictiveMaintenanceAnalytics)
-			r.Delete("/", h.DeletePredictiveMaintenanceAnalytics)
+		r.Route("/risk-events", func(r chi.Router) {
+			r.Post("/", h.CreateDriverRiskEvent)
+			r.Get("/", h.GetDriverRiskEvents)
 		})
-	})
 
-	// Fleet Analytics with Ownership Guard
-	r.Route("/analytics/fleet", func(r chi.Router) {
-		r.Use(h.guard.ResourceOwnershipGuard())
-		r.Get("/summary", h.GetFleetSummary)
-		r.Get("/hourly", h.GetFleetHourlyStats)
-	})
+		r.Route("/quotas", func(r chi.Router) {
+			r.Get("/", h.GetAnalyticsQuota)
+		})
 
-	// Stats routes with cursor pagination
-	r.Group(func(r chi.Router) {
-		r.Use(h.rateLimiter.OrgRateLimit)
-		r.Use(h.guard.ResourceOwnershipGuard())
-		r.Get("/stats/vehicle/{vehicleID}", h.GetVehicleDailyStats)
-		r.Get("/stats/driver/{driverID}", h.GetDriverDailyStats)
-	})
+		r.Route("/ops", func(r chi.Router) {
+			r.Post("/reconciliation", h.RunReconciliation)
+			r.Post("/backfill", h.RunHistoricalBackfill)
+		})
 
-	// Health Check
-	r.Get("/health", h.HealthCheck)
+		// Fleet Analytics
+		r.Route("/fleet", func(r chi.Router) {
+			r.Post("/", h.CreateFleetAnalytics)
+			r.Get("/", h.ListFleetAnalytics)
+			r.Get("/period", h.GetFleetAnalyticsByPeriod)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetFleetAnalytics)
+				r.Put("/", h.UpdateFleetAnalytics)
+				r.Delete("/", h.DeleteFleetAnalytics)
+			})
+		})
+
+		// Driver Behavior
+		r.Route("/driver-behavior", func(r chi.Router) {
+			r.Post("/", h.CreateDriverBehaviorAnalytics)
+			r.Get("/", h.ListDriverBehaviorAnalytics)
+			r.Get("/driver", h.GetDriverBehaviorAnalyticsByDriver)
+			r.Get("/org", h.GetDriverBehaviorAnalyticsByOrg)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetDriverBehaviorAnalytics)
+				r.Put("/", h.UpdateDriverBehaviorAnalytics)
+				r.Delete("/", h.DeleteDriverBehaviorAnalytics)
+			})
+		})
+
+		// Predictive Maintenance
+		r.Route("/predictive-maintenance", func(r chi.Router) {
+			r.Post("/", h.CreatePredictiveMaintenanceAnalytics)
+			r.Get("/", h.ListPredictiveMaintenanceAnalytics)
+			r.Get("/vehicle", h.GetPredictiveMaintenanceAnalyticsByVehicle)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetPredictiveMaintenanceAnalytics)
+				r.Put("/", h.UpdatePredictiveMaintenanceAnalytics)
+				r.Delete("/", h.DeletePredictiveMaintenanceAnalytics)
+			})
+		})
+
+		// Fleet Analytics with Ownership Guard
+		r.Route("/analytics/fleet", func(r chi.Router) {
+			r.Use(h.guard.ResourceOwnershipGuard())
+			r.Get("/summary", h.GetFleetSummary)
+			r.Get("/hourly", h.GetFleetHourlyStats)
+		})
+
+		// Stats routes with cursor pagination
+		r.Group(func(r chi.Router) {
+			r.Use(h.rateLimiter.OrgRateLimit)
+			r.Use(h.guard.ResourceOwnershipGuard())
+			r.Get("/stats/vehicle/{vehicleID}", h.GetVehicleDailyStats)
+			r.Get("/stats/driver/{driverID}", h.GetDriverDailyStats)
+		})
+
+		// Health Check
+		r.Get("/health", h.HealthCheck)
 	})
 }
 
@@ -1500,7 +1500,7 @@ func (h *AnalyticsHandler) GetDriverRiskEvents(w http.ResponseWriter, r *http.Re
 	driverID, _ := uuid.Parse(driverIDStr)
 	start, _ := time.Parse(time.RFC3339, r.URL.Query().Get("start"))
 	end, _ := time.Parse(time.RFC3339, r.URL.Query().Get("end"))
-	
+
 	events, err := h.service.GetDriverRiskEvents(r.Context(), driverID, h.getOrgID(r), start, end)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch events", err)
@@ -1519,14 +1519,20 @@ func (h *AnalyticsHandler) GetAnalyticsQuota(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *AnalyticsHandler) RunReconciliation(w http.ResponseWriter, r *http.Request) {
-	var req struct { Start time.Time `json:"start"`; End time.Time `json:"end"` }
+	var req struct {
+		Start time.Time `json:"start"`
+		End   time.Time `json:"end"`
+	}
 	json.NewDecoder(r.Body).Decode(&req)
 	h.service.RunReconciliation(r.Context(), h.getOrgID(r), req.Start, req.End)
 	h.writeJSONResponse(w, http.StatusAccepted, map[string]string{"status": "triggered"})
 }
 
 func (h *AnalyticsHandler) RunHistoricalBackfill(w http.ResponseWriter, r *http.Request) {
-	var req struct { Start time.Time `json:"start"`; End time.Time `json:"end"` }
+	var req struct {
+		Start time.Time `json:"start"`
+		End   time.Time `json:"end"`
+	}
 	json.NewDecoder(r.Body).Decode(&req)
 	h.service.RunHistoricalBackfill(r.Context(), h.getOrgID(r), req.Start, req.End)
 	h.writeJSONResponse(w, http.StatusAccepted, map[string]string{"status": "triggered"})

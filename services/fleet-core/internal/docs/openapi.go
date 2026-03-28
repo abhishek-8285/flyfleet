@@ -13,9 +13,9 @@ import (
 )
 
 type openAPIDoc struct {
-	OpenAPI string                         `json:"openapi"`
-	Info    openAPIInfo                    `json:"info"`
-	Servers []openAPIServer                `json:"servers"`
+	OpenAPI string                          `json:"openapi"`
+	Info    openAPIInfo                     `json:"info"`
+	Servers []openAPIServer                 `json:"servers"`
 	Paths   map[string]map[string]openAPIOp `json:"paths"`
 }
 
@@ -31,9 +31,9 @@ type openAPIServer struct {
 }
 
 type openAPIOp struct {
-	Summary     string                      `json:"summary"`
-	OperationID string                      `json:"operationId"`
-	Tags        []string                    `json:"tags,omitempty"`
+	Summary     string                     `json:"summary"`
+	OperationID string                     `json:"operationId"`
+	Tags        []string                   `json:"tags,omitempty"`
 	Responses   map[string]openAPIResponse `json:"responses"`
 }
 

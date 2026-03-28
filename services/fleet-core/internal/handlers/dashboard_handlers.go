@@ -7,8 +7,8 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
 	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
-	vehicleservice "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
 	monitoringservice "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
+	vehicleservice "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
 	"github.com/flyfleet/fleet-core-service/internal/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -90,7 +90,7 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 
 	// Real Incident Metrics
 	incidentMetrics, _ := h.supportRepo.GetDashboardMetrics(ctx, uuid.Nil)
-	
+
 	// Real Recent Activity from Audit Logs
 	activity, _ := h.supportRepo.GetRecentAuditFailures(ctx, 5) // Reusing as a proxy for activity
 
@@ -136,7 +136,7 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 
 func (h *DashboardHandlers) GetDashboardTrends(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("dashboard trends request")
-	
+
 	points, err := h.supportRepo.GetActivityTrend(r.Context(), 7)
 	if err != nil {
 		h.logger.Error("failed to get dashboard trends", zap.Error(err))
@@ -144,7 +144,7 @@ func (h *DashboardHandlers) GetDashboardTrends(w http.ResponseWriter, r *http.Re
 	}
 
 	trends := map[string]interface{}{
-		"range": "7d",
+		"range":  "7d",
 		"points": points,
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -153,7 +153,7 @@ func (h *DashboardHandlers) GetDashboardTrends(w http.ResponseWriter, r *http.Re
 
 func (h *DashboardHandlers) GetTopErrors(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("dashboard top errors request")
-	
+
 	errors, err := h.supportRepo.GetRecentAuditFailures(r.Context(), 5)
 	if err != nil {
 		h.logger.Error("failed to get top errors", zap.Error(err))
@@ -183,7 +183,7 @@ func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	
+
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)
@@ -199,7 +199,7 @@ func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 
 	orgID := user.OrgID
 	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, orgID)
-	
+
 	// Use orgSvc to get organizations
 	orgs, _, _ := h.orgSvc.GetOrganizations(ctx, 1, 100, "")
 

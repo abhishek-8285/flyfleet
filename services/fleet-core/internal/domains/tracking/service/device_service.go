@@ -9,13 +9,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
+	"go.uber.org/zap"
 )
 
 // DeviceService handles device business logic

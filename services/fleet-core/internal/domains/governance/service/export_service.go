@@ -84,7 +84,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	storagePath := fmt.Sprintf("/tmp/exports/%s/dsar_%s.%s", req.OrganizationID, requestID, strings.ToLower(req.Format))
 	var size int64
 	var checksum string
-	
+
 	switch strings.ToUpper(req.Format) {
 	case "CSV":
 		size, checksum, err = s.generator.GenerateCSV(data, storagePath)
@@ -152,7 +152,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 
 	// Update Request Status to COMPLETED
 	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusCompleted, nil, nil)
-	
+
 	s.publishEvent("governance.export.generated", export)
 
 	return export, nil

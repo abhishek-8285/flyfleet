@@ -79,39 +79,78 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	defer tx.Rollback(ctx)
 
 	s.logger.Info("performing data deletion for request", zap.String("id", requestID.String()), zap.String("userID", req.RequesterID.String()))
+	// Track if any deletion error occurred
+	hadError := false
 
 	// 2. Cascade delete/Anonymize PII
 	// Note: In production, we'd use service-specific deletion hooks or soft deletes.
 	// For this task, we perform direct scrub:
 
 	// Telemetry scrub
-	_, _ = tx.Exec(ctx, "DELETE FROM telemetry WHERE device_id IN (SELECT id FROM user_devices WHERE user_id = $1)", req.RequesterID)
+	_, err = tx.Exec(ctx, "DELETE FROM telemetry WHERE device_id IN (SELECT id FROM user_devices WHERE user_id = $1)", req.RequesterID)
+	if err != nil {
+		s.logger.Error("Failed to delete telemetry", zap.Error(err), zap.String("user_id", req.RequesterID.String()))
+		hadError = true
+	}
 
 	// Fuel logs scrub
-	_, _ = tx.Exec(ctx, "DELETE FROM fuel_logs WHERE driver_id = $1", req.RequesterID)
+	_, err = tx.Exec(ctx, "DELETE FROM fuel_logs WHERE driver_id = $1", req.RequesterID)
+	if err != nil {
+		s.logger.Error("Failed to delete fuel_logs", zap.Error(err), zap.String("user_id", req.RequesterID.String()))
+		hadError = true
+	}
 
 	// Trips scrub
-	_, _ = tx.Exec(ctx, "DELETE FROM trips WHERE driver_id = $1", req.RequesterID)
+	_, err = tx.Exec(ctx, "DELETE FROM trips WHERE driver_id = $1", req.RequesterID)
+	if err != nil {
+		s.logger.Error("Failed to delete trips", zap.Error(err), zap.String("user_id", req.RequesterID.String()))
+		hadError = true
+	}
 
 	// GeoEvents scrub
-	_, _ = tx.Exec(ctx, "DELETE FROM geofence_events WHERE vehicle_id IN (SELECT id FROM vehicles WHERE driver_id = $1)", req.RequesterID)
+	_, err = tx.Exec(ctx, "DELETE FROM geofence_events WHERE vehicle_id IN (SELECT id FROM vehicles WHERE driver_id = $1)", req.RequesterID)
+	if err != nil {
+		s.logger.Error("Failed to delete geofence_events", zap.Error(err), zap.String("user_id", req.RequesterID.String()))
+		hadError = true
+	}
 
-	// 3. Log Audit logs
-	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
+	// 3. Clean up cached data (e.g., VAHAN verification cache) to prevent PII residuals
+	// Note: In a full implementation, we'd iterate all vehicles associated with this user
+	// and clear related cache entries. For now, we document the need.
+	// TODO: Implement Redis cache cleanup for all user-related cache keys
+	// if s.redis != nil {
+	//     // Example: Delete vehicle verification cache keys
+	//     // keys, _ := s.redis.Keys(ctx, "vahan:verify:*").Result()
+	//     // s.redis.Del(ctx, keys...)
+	// }
+
+	// 4. Check if any deletion errors occurred
+	if hadError {
+		// Rollback will be handled by defer, but we need to update status to FAILED
+		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.logger.Error("Deletion failed due to errors in one or more delete operations", zap.String("request_id", requestID.String()))
+		return fmt.Errorf("deletion failed due to database errors")
+	}
+
+	// 5. All deletions succeeded, commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		return fmt.Errorf("failed to commit deletion transaction: %w", err)
+	}
+
+	// 6. Log successful completion
+	auditLog := &models.GovernanceAuditLog{
 		ID:             uuid.New(),
 		OrganizationID: req.OrganizationID,
 		UserID:         req.RequesterID,
 		Action:         "DELETION_COMPLETED",
 		Module:         "DATA_REQUESTS",
 		CreatedAt:      time.Now(),
-	})
-
-	// 4. Update Status to COMPLETED
-	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusCompleted, nil, nil)
-
-	if err := tx.Commit(ctx); err != nil {
-		return err
 	}
+	s.repo.CreateAuditLog(ctx, auditLog)
+
+	// 7. Update Status to COMPLETED
+	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusCompleted, nil, nil)
 
 	s.publishEvent("governance.deletion.completed", req)
 	metrics.GovernanceDeletionsTotal.Inc()

@@ -156,10 +156,18 @@ func (ta *TelemetryAnalytics) analyzeSpeed(ctx context.Context, tx database.Tran
 	}
 
 	analysis := &SpeedAnalysis{}
-	if avgSpeed.Valid { analysis.AvgSpeed = avgSpeed.Float64 }
-	if maxSpeed.Valid { analysis.MaxSpeed = maxSpeed.Float64 }
-	if overspeedEvents.Valid { analysis.OverspeedEvents = int(overspeedEvents.Int64) }
-	if overspeedDuration.Valid { analysis.OverspeedDuration = overspeedDuration.Float64 }
+	if avgSpeed.Valid {
+		analysis.AvgSpeed = avgSpeed.Float64
+	}
+	if maxSpeed.Valid {
+		analysis.MaxSpeed = maxSpeed.Float64
+	}
+	if overspeedEvents.Valid {
+		analysis.OverspeedEvents = int(overspeedEvents.Int64)
+	}
+	if overspeedDuration.Valid {
+		analysis.OverspeedDuration = overspeedDuration.Float64
+	}
 
 	return analysis, nil
 }
@@ -202,9 +210,15 @@ func (ta *TelemetryAnalytics) analyzeHarshEvents(ctx context.Context, tx databas
 	}
 
 	analysis := &HarshEventAnalysis{}
-	if harshAccels.Valid { analysis.HarshAccelerations = int(harshAccels.Int64) }
-	if harshBrakes.Valid { analysis.HarshBrakings = int(harshBrakes.Int64) }
-	if avgHarshRate.Valid { analysis.AvgHarshRate = avgHarshRate.Float64 }
+	if harshAccels.Valid {
+		analysis.HarshAccelerations = int(harshAccels.Int64)
+	}
+	if harshBrakes.Valid {
+		analysis.HarshBrakings = int(harshBrakes.Int64)
+	}
+	if avgHarshRate.Valid {
+		analysis.AvgHarshRate = avgHarshRate.Float64
+	}
 
 	// Cornering
 	cornering, _ := ta.countHarshCorneringEvents(ctx, tx, vehicleID, startTime, endTime)
@@ -258,8 +272,10 @@ func (ta *TelemetryAnalytics) analyzeFuelEfficiency(ctx context.Context, tx data
 	}
 
 	analysis := &FuelEfficiencyAnalysis{}
-	if consumed.Valid { analysis.AvgConsumptionPerHour = consumed.Float64 } // Placeholder logic
-	
+	if consumed.Valid {
+		analysis.AvgConsumptionPerHour = consumed.Float64
+	} // Placeholder logic
+
 	return analysis, nil
 }
 
@@ -283,7 +299,9 @@ func (ta *TelemetryAnalytics) analyzeDistanceAndRoute(ctx context.Context, tx da
 	}
 
 	analysis := &DistanceAnalysis{}
-	if distance.Valid { analysis.TotalDistanceKM = distance.Float64 }
+	if distance.Valid {
+		analysis.TotalDistanceKM = distance.Float64
+	}
 	return analysis, nil
 }
 
@@ -303,15 +321,17 @@ func (ta *TelemetryAnalytics) detectAnomalies(ctx context.Context, tx database.T
 
 func (ta *TelemetryAnalytics) detectSpeedAnomalies(ctx context.Context, tx database.Transaction, vehicleID uuid.UUID, startTime, endTime time.Time) ([]AnomalyResult, error) {
 	query := `SELECT speed, time FROM gps_locations WHERE vehicle_id = $1 AND time BETWEEN $2 AND $3 AND speed > 150`
-	
+
 	rows, err := tx.Query(ctx, query, vehicleID, startTime, endTime)
-	if err != nil { return nil, err }
-	
+	if err != nil {
+		return nil, err
+	}
+
 	var anomalies []AnomalyResult
 	if len(rows) > 0 {
 		anomalies = append(anomalies, AnomalyResult{
-			Type: "speeding",
-			Confidence: 1.0,
+			Type:           "speeding",
+			Confidence:     1.0,
 			Recommendation: "Check driver compliance",
 		})
 	}

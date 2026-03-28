@@ -14,12 +14,12 @@ import (
 type FraudSignal string
 
 const (
-	SignalMultiVehicleCard     FraudSignal = "MULTI_VEHICLE_CARD"
-	SignalRepeatedStation      FraudSignal = "REPEATED_STATION"
-	SignalNighttimeFueling     FraudSignal = "NIGHTTIME_FUELING"
-	SignalSuddenSpike          FraudSignal = "SUDDEN_FUEL_SPIKE"
-	SignalExceedsTankCapacity  FraudSignal = "EXCEEDS_TANK_CAPACITY"
-	SignalHighFrequency        FraudSignal = "HIGH_FREQUENCY_FILLS"
+	SignalMultiVehicleCard    FraudSignal = "MULTI_VEHICLE_CARD"
+	SignalRepeatedStation     FraudSignal = "REPEATED_STATION"
+	SignalNighttimeFueling    FraudSignal = "NIGHTTIME_FUELING"
+	SignalSuddenSpike         FraudSignal = "SUDDEN_FUEL_SPIKE"
+	SignalExceedsTankCapacity FraudSignal = "EXCEEDS_TANK_CAPACITY"
+	SignalHighFrequency       FraudSignal = "HIGH_FREQUENCY_FILLS"
 )
 
 // FraudDetectionService scores fuel log events for fraud risk.

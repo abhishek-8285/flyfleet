@@ -27,7 +27,7 @@ func NewEmergencySnapshotWorker(repo repository.EmergencyRepository, log *zap.Lo
 
 func (w *EmergencySnapshotWorker) Run(ctx context.Context) {
 	w.log.Info("Starting Emergency Snapshot Worker")
-	
+
 	// Initial run
 	w.takeSnapshots(ctx)
 
@@ -73,8 +73,8 @@ func (w *EmergencySnapshotWorker) takeSnapshots(ctx context.Context) {
 		}
 
 		if err := w.repo.CreateIncidentSnapshot(ctx, snapshot); err != nil {
-			w.log.Error("Failed to create incident snapshot", 
-				zap.Error(err), 
+			w.log.Error("Failed to create incident snapshot",
+				zap.Error(err),
 				zap.String("incident_id", inc.ID.String()))
 		} else {
 			emergency.BackupSnapshotsTotal.Inc()

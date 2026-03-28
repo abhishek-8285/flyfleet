@@ -1,0 +1,213 @@
+groups:
+  - name: flyfleet-slo-recording-rules
+    interval: 1m
+    rules:
+      # ============================================================================
+      # API Service SLOs (fleet-core)
+      # ============================================================================
+      - record: sli:api:availability:percentage
+        expr: |
+          100 * (
+            sum(rate(http_requests_total{status!~"5.."}[1d])) /
+            clamp_min(sum(rate(http_requests_total[1d])), 1)
+          )
+        labels:
+          slo: "api-availability"
+          window: "30d"
+
+      - record: sli:api:latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[1h])) by (le)
+          )
+        labels:
+          slo: "api-latency"
+          window: "7d"
+
+      - record: sli:api:latency:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[1h])) by (le)
+          )
+        labels:
+          slo: "api-latency"
+          window: "7d"
+
+      - record: sli:api:error_rate:percentage
+        expr: |
+          100 * (
+            sum(rate(http_requests_total{status=~"5.."}[1h])) /
+            clamp_min(sum(rate(http_requests_total[1h])), 1)
+          )
+        labels:
+          slo: "api-errors"
+          window: "30d"
+
+      # ============================================================================
+      # Telemetry Ingestion SLOs
+      # ============================================================================
+      - record: sli:telemetry:ingestion_rate
+        expr: |
+          rate(telemetry_events_received_total[1m])
+        labels:
+          slo: "telemetry-throughput"
+          window: "1m"
+
+      - record: sli:telemetry:latency:p50
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(telemetry_ingestion_latency_seconds_bucket[1h])) by (le)
+          )
+        labels:
+          slo: "telemetry-latency"
+          window: "7d"
+
+      - record: sli:telemetry:latency:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(telemetry_ingestion_latency_seconds_bucket[1h])) by (le)
+          )
+        labels:
+          slo: "telemetry-latency"
+          window: "7d"
+
+      - record: sli:telemetry:data_loss:rate
+        expr: |
+          100 * (
+            sum(rate(telemetry_gaps_total[1h])) /
+            clamp_min(sum(rate(telemetry_expected_total[1h])), 1)
+          )
+        labels:
+          slo: "telemetry-data-loss"
+          window: "24h"
+
+      # ============================================================================
+      # Command & Control SLOs
+      # ============================================================================
+      - record: sli:commands:success_rate:percentage
+        expr: |
+          100 * (
+            sum(rate(device_command_events_total{result="success"}[1h])) /
+            clamp_min(sum(rate(device_command_events_total[1h])), 1)
+          )
+        labels:
+          slo: "command-success-rate"
+          window: "30d"
+
+      - record: sli:commands:ack_latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(device_command_ack_latency_seconds_bucket[1h])) by (le)
+          )
+        labels:
+          slo: "command-latency"
+          window: "7d"
+
+      - record: sli:commands:queue_depth:avg
+        expr: |
+          avg(command_queue_depth{command_type="device"})
+        labels:
+          slo: "command-queue-depth"
+          window: "5m"
+
+      # ============================================================================
+      # Database SLOs
+      # ============================================================================
+      - record: sli:database:availability:percentage
+        expr: |
+          100 * (
+            sum(rate(pg_up[1m])) /
+            count(pg_up)
+          )
+        labels:
+          slo: "database-availability"
+          service: "postgresql"
+          window: "30d"
+
+      - record: sli:database:latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(pg_stat_statements_mean_exec_time[5m])) by (query_type)
+          )
+        labels:
+          slo: "database-latency"
+          service: "postgresql"
+          window: "7d"
+
+      - record: sli:database:connections:utilization:percentage
+        expr: |
+          100 * (
+            sum(pgpool_active_connections) /
+            sum(pgpool_max_connections)
+          )
+        labels:
+          slo: "database-connection-utilization"
+          service: "postgresql"
+          window: "5m"
+
+      # ============================================================================
+      # NATS JetStream SLOs
+      # ============================================================================
+      - record: sli:nats:throughput:balance
+        expr: |
+          100 * (
+            sum(rate(nats_jetstream_messages_received_total[1m])) /
+            clamp_min(sum(rate(nats_jetstream_messages_sent_total[1m])), 1)
+          )
+        labels:
+          slo: "nats-throughput-balance"
+          service: "nats"
+          window: "1h"
+
+      - record: sli:nats:storage:utilization:percentage
+        expr: |
+          100 * (
+            sum(nats_jetstream_storage_usage_bytes) /
+            sum(nats_jetstream_storage_limit_bytes)
+          )
+        labels:
+          slo: "nats-storage-utilization"
+          service: "nats"
+          window: "5m"
+
+      - record: sli:nats:consumer:lag:bytes
+        expr: |
+          sum(nats_jetstream_consumer_pending_bytes)
+        labels:
+          slo: "nats-consumer-lag"
+          service: "nats"
+          window: "5m"
+
+      # ============================================================================
+      # Business SLOs
+      # ============================================================================
+      - record: sli:business:active_organizations:count
+        expr: |
+          active_organizations
+        labels:
+          slo: "organizations-active"
+          window: "1h"
+
+      - record: sli:business:active_trips:count
+        expr: |
+          active_trips
+        labels:
+          slo: "trips-active"
+          window: "1m"
+
+      - record: sli:business:trips_completion_rate:percentage
+        expr: |
+          100 * (
+            sum(rate(trips_completed_total[1d])) /
+            sum(rate(trips_started_total[1d]))
+          )
+        labels:
+          slo: "trips-completion-rate"
+          window: "1d"
+
+      - record: sli:business:invoices_generated:rate
+        expr: |
+          rate(invoices_generated_total[1h])
+        labels:
+          slo: "invoices-generation-rate"
+          window: "1h"

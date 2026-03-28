@@ -7,7 +7,6 @@ import { logout } from "../../store/authSlice";
 import { getSidebarCollapsed, setSidebarCollapsed } from "../../utils/storage";
 
 const Layout: React.FC = () => {
-  const { uiStrings: globalStrings } = useUIStrings("global");
   const { uiStrings: headerStrings } = useUIStrings("header");
   const { uiStrings: sidebarStrings } = useUIStrings("sidebar");
 
@@ -242,25 +241,25 @@ const Layout: React.FC = () => {
             {isProfileOpen && (
               <div className="absolute bottom-full left-0 mb-2 w-full bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-200">
                 <div className="p-2 space-y-1">
-                  <a
-                    href="#"
-                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors"
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       person
                     </span>
                     {headerStrings?.user_profile_settings || "My Profile"}
-                  </a>
-                  <a
-                    href="#"
-                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors"
+                  </button>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       settings_suggest
                     </span>
                     {sidebarStrings?.nav_org_settings ||
                       "Organization Settings"}
-                  </a>
+                  </button>
                 </div>
                 <div className="border-t border-border-color p-2">
                   <button

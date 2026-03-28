@@ -38,7 +38,7 @@ func (w *ExportProcessingWorker) Start(ctx context.Context) {
 			w.logger.Error("failed to unmarshal request for export", zap.Error(err))
 			return
 		}
-		
+
 		if req.RequestType == models.RequestTypeExport {
 			w.logger.Info("received export request via NATS", zap.String("id", req.ID.String()))
 			_, err := w.svc.ProcessExportRequest(ctx, req.ID)

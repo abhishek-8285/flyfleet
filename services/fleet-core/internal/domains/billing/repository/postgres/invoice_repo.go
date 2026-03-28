@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/domain/invoice"
 	"github.com/google/uuid"
@@ -43,22 +45,37 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 		return nil, fmt.Errorf("failed to insert invoice: %w", err)
 	}
 
-	for i := range inv.Items {
-		item := &inv.Items[i]
-		itemQuery := `
-			INSERT INTO invoice_items (
-				org_id, invoice_id, description, quantity, unit_price, amount,
-				created_by, updated_by
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			RETURNING id, created_at, updated_at
-		`
-		err = tx.QueryRow(ctx, itemQuery,
-			inv.OrgID, inv.ID, item.Description, item.Quantity, item.UnitPrice, item.Amount,
-			inv.CreatedBy, inv.UpdatedBy,
-		).Scan(&item.ID, &item.CreatedAt, &item.UpdatedAt)
+	// Batch insert items to avoid N+1 queries
+	if len(inv.Items) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, item := range inv.Items {
+			item.ID = uuid.New()
+			item.CreatedAt = time.Now()
+			item.UpdatedAt = time.Now()
 
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*10+1, i*10+2, i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9, i*10+10))
+			args = append(args,
+				item.ID,
+				inv.OrgID,
+				inv.ID,
+				item.Description,
+				item.Quantity,
+				item.UnitPrice,
+				item.Amount,
+				inv.CreatedBy,
+				inv.UpdatedBy,
+				item.CreatedAt,
+			)
+		}
+		// Note: created_at defaults to NOW() in schema, so we don't need to provide it
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO invoice_items (id, org_id, invoice_id, description, quantity, unit_price, amount, created_by, updated_by) VALUES %s",
+			strings.Join(placeholders, ", "),
+		)
+		_, err = tx.Exec(ctx, batchQuery, args...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to insert invoice item: %w", err)
+			return nil, fmt.Errorf("failed to batch insert invoice items: %w", err)
 		}
 	}
 
@@ -156,4 +173,3 @@ func (r *InvoiceRepository) Delete(ctx context.Context, orgID, id uuid.UUID) err
 	_, err := r.pool.Exec(ctx, query, id, orgID)
 	return err
 }
-

@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -199,7 +201,16 @@ func (h *FinanceHandlers) ListRevenueExperiments(w http.ResponseWriter, r *http.
 }
 
 func getOrgID(r *http.Request) string {
-	return strings.TrimSpace(r.Header.Get("X-Organization-ID"))
+	// SECURITY FIX: Get org ID from context only, not from client-supplied headers
+	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		switch v := val.(type) {
+		case string:
+			return strings.TrimSpace(v)
+		case uuid.UUID:
+			return v.String()
+		}
+	}
+	return ""
 }
 
 func parseIntDefault(raw string, fallback int) int {

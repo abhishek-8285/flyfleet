@@ -21,7 +21,7 @@ func (m *DriverSecurityMiddleware) DeviceFingerprintMiddleware(next http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fingerprint := r.Header.Get("X-Device-Fingerprint")
 		if fingerprint == "" {
-			m.logger.Warn("missing device fingerprint header", 
+			m.logger.Warn("missing device fingerprint header",
 				zap.String("path", r.URL.Path),
 				zap.String("remote_addr", r.RemoteAddr))
 			http.Error(w, "Missing device fingerprint", http.StatusForbidden)
@@ -31,7 +31,7 @@ func (m *DriverSecurityMiddleware) DeviceFingerprintMiddleware(next http.Handler
 		// In a real implementation, we would validate this fingerprint against
 		// a known list for the driver or check for anomalies.
 		// For now, presence check is sufficient.
-		
+
 		ctx := context.WithValue(r.Context(), "device_fingerprint", fingerprint)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -49,9 +49,9 @@ func (m *DriverSecurityMiddleware) GeoFenceMiddleware(next http.Handler) http.Ha
 			// 2. Fetch last known location or trip route bounds
 			// 3. Calculate distance
 			// 4. Deny if outside reasonable bounds
-			
-			m.logger.Debug("request with coordinates", 
-				zap.String("lat", lat), 
+
+			m.logger.Debug("request with coordinates",
+				zap.String("lat", lat),
 				zap.String("long", long))
 		}
 

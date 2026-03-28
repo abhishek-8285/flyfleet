@@ -28,7 +28,7 @@ type GovernanceRepository interface {
 	GetExportByRequestID(ctx context.Context, requestID uuid.UUID) (*models.GovernanceExport, error)
 	CreateDownloadToken(ctx context.Context, token *models.DownloadToken) error
 	GetExportByToken(ctx context.Context, token uuid.UUID) (*models.GovernanceExport, error)
-	
+
 	CheckLegalHold(ctx context.Context, entityID uuid.UUID) (bool, error)
 	SaveExportLineage(ctx context.Context, lineage *models.ExportLineage) error
 	SaveComplianceReport(ctx context.Context, report *models.ComplianceReport) error

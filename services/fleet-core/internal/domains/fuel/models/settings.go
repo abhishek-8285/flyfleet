@@ -8,20 +8,20 @@ import (
 )
 
 type FuelSettings struct {
-	OrganizationID     uuid.UUID       `json:"organization_id" db:"organization_id" validate:"required,uuid"`
-	DefaultCurrency    string          `json:"default_currency" db:"default_currency" validate:"required,len=3"`
-	AllowedFuelTypes   json.RawMessage `json:"allowed_fuel_types" db:"allowed_fuel_types"`
-	ValidationRules    json.RawMessage `json:"validation_rules" db:"validation_rules"`
-	AutoSyncEnabled    bool            `json:"auto_sync_enabled" db:"auto_sync_enabled"`
-	CreatedAt          time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at" db:"updated_at"`
+	OrganizationID   uuid.UUID       `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	DefaultCurrency  string          `json:"default_currency" db:"default_currency" validate:"required,len=3"`
+	AllowedFuelTypes json.RawMessage `json:"allowed_fuel_types" db:"allowed_fuel_types"`
+	ValidationRules  json.RawMessage `json:"validation_rules" db:"validation_rules"`
+	AutoSyncEnabled  bool            `json:"auto_sync_enabled" db:"auto_sync_enabled"`
+	CreatedAt        time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 type UpdateFuelSettingsRequest struct {
-	DefaultCurrency    *string          `json:"default_currency,omitempty" validate:"omitempty,len=3"`
-	AllowedFuelTypes   *json.RawMessage `json:"allowed_fuel_types,omitempty"`
-	ValidationRules    *json.RawMessage `json:"validation_rules,omitempty"`
-	AutoSyncEnabled    *bool            `json:"auto_sync_enabled,omitempty"`
+	DefaultCurrency  *string          `json:"default_currency,omitempty" validate:"omitempty,len=3"`
+	AllowedFuelTypes *json.RawMessage `json:"allowed_fuel_types,omitempty"`
+	ValidationRules  *json.RawMessage `json:"validation_rules,omitempty"`
+	AutoSyncEnabled  *bool            `json:"auto_sync_enabled,omitempty"`
 }
 
 type FuelAuditLog struct {

@@ -39,12 +39,16 @@ func NewVahanIntegrationService(repo repository.IndiaIntegrationRepository, redi
 func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID uuid.UUID, vehicleID uuid.UUID, regNumber string) (*models.VehicleVerification, error) {
 	// Try Redis cache first
 	if s.redis != nil {
-		cacheKey := fmt.Sprintf("vahan:verify:%s", regNumber)
+		// SECURITY FIX: Include orgID in cache key to prevent cross-tenant cache collision
+		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), regNumber)
 		val, err := s.redis.Get(ctx, cacheKey).Result()
 		if err == nil {
 			var cached models.VehicleVerification
 			if err := json.Unmarshal([]byte(val), &cached); err == nil {
-				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber))
+				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber), zap.String("org_id", orgID.String()))
+				// SECURITY FIX: Remove PII fields from cached response to avoid exposure in Redis
+				cached.OwnerName = ""
+				cached.RCStatus = ""
 				return &cached, nil
 			}
 		}
@@ -85,7 +89,11 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 
 	// Store in Redis cache with 24h TTL
 	if s.redis != nil {
-		cacheKey := fmt.Sprintf("vahan:verify:%s", regNumber)
+		// SECURITY FIX: Include orgID in cache key to prevent cross-tenant cache collision
+		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), regNumber)
+		// SECURITY FIX: Remove PII before caching to prevent exposure if Redis is compromised
+		verification.OwnerName = ""
+		verification.RCStatus = ""
 		if data, err := json.Marshal(verification); err == nil {
 			s.redis.Set(ctx, cacheKey, data, 24*time.Hour)
 		}
@@ -123,6 +131,6 @@ func (s *VahanIntegrationServiceImpl) BulkVerifyVehicle(ctx context.Context, org
 
 	// The individual VerifyVehicle already saves to DB, but if we wanted to true bulk save:
 	// err := s.repo.BulkCreateVehicleVerification(ctx, results)
-	
+
 	return results, nil
 }

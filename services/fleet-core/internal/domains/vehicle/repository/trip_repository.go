@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,14 +30,18 @@ func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
 			start_time, end_time, distance, status, organization_id, fuel_consumed_liters, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		trip.ID, trip.TripID, trip.VehicleID, trip.DriverID,
 		startLocJSON, endLocJSON, trip.StartTime, trip.EndTime,
 		trip.Distance, trip.Status, trip.OrganizationID, trip.FuelConsumed, trip.CreatedAt, trip.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-func (r *TripRepository) scanTrip(row interface{ Scan(dest ...interface{}) error }) (*models.Trip, error) {
+func (r *TripRepository) scanTrip(row interface {
+	Scan(dest ...interface{}) error
+}) (*models.Trip, error) {
 	var trip models.Trip
 	var startLocJSON, endLocJSON []byte
 	err := row.Scan(
@@ -56,12 +61,18 @@ const tripSelectCols = `id, trip_id, vehicle_id, driver_id, start_location, end_
 
 func (r *TripRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
 	query := fmt.Sprintf(`SELECT %s FROM trips WHERE id = $1`, tripSelectCols)
-	return r.scanTrip(r.db.QueryRow(ctx, query, id))
+	start := time.Now()
+	row := r.db.QueryRow(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return r.scanTrip(row)
 }
 
 func (r *TripRepository) GetByTripID(ctx context.Context, tripID string) (*models.Trip, error) {
 	query := fmt.Sprintf(`SELECT %s FROM trips WHERE trip_id = $1`, tripSelectCols)
-	return r.scanTrip(r.db.QueryRow(ctx, query, tripID))
+	start := time.Now()
+	row := r.db.QueryRow(ctx, query, tripID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return r.scanTrip(row)
 }
 
 func (r *TripRepository) List(ctx context.Context, params models.TripListParams) ([]models.Trip, int, error) {
@@ -100,17 +111,22 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 
 	// Count query
 	countQuery := "SELECT COUNT(*) " + baseQuery
+	start := time.Now()
 	var total int
 	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		metrics.RecordDBQuery(countQuery, time.Since(start))
 		return nil, 0, err
 	}
+	metrics.RecordDBQuery(countQuery, time.Since(start))
 
 	// List query
 	listQuery := fmt.Sprintf(`SELECT %s %s ORDER BY start_time DESC LIMIT $%d OFFSET $%d`,
 		tripSelectCols, baseQuery, argIdx, argIdx+1)
 	args = append(args, params.Limit, offset)
 
+	listStart := time.Now()
 	rows, err := r.db.Query(ctx, listQuery, args...)
+	metrics.RecordDBQuery(listQuery, time.Since(listStart))
 	if err != nil {
 		return nil, 0, err
 	}
@@ -185,12 +201,17 @@ func (r *TripRepository) Update(ctx context.Context, id uuid.UUID, req *models.U
 	query := fmt.Sprintf("UPDATE trips SET %s WHERE id = $%d", strings.Join(sets, ", "), argIdx)
 	args = append(args, id)
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *TripRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM trips WHERE id = $1", id)
+	query := "DELETE FROM trips WHERE id = $1"
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -200,7 +221,9 @@ func (r *TripRepository) AddTelemetry(ctx context.Context, t *models.Telemetry) 
 		INSERT INTO telemetry (id, trip_id, latitude, longitude, speed, heading, event_type, event_time)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, t.ID, t.TripID, t.Latitude, t.Longitude, t.Speed, t.Heading, t.EventType, t.EventTime)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -209,7 +232,9 @@ func (r *TripRepository) GetTelemetry(ctx context.Context, tripID uuid.UUID, lim
 		SELECT id, trip_id, latitude, longitude, speed, heading, event_type, event_time
 		FROM telemetry WHERE trip_id = $1 ORDER BY event_time DESC LIMIT $2
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, tripID, limit)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +256,9 @@ func (r *TripRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*mod
 	query := `SELECT id, organization_id, retention_period, policies, updated_at FROM trip_settings WHERE organization_id = $1`
 	var s models.TripSettings
 	var policiesJSON []byte
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, orgID).Scan(&s.ID, &s.OrganizationID, &s.RetentionPeriod, &policiesJSON, &s.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		// Return defaults if not found
 		return &models.TripSettings{
@@ -253,6 +280,8 @@ func (r *TripRepository) UpsertSettings(ctx context.Context, s *models.TripSetti
 		ON CONFLICT (organization_id) DO UPDATE SET
 			retention_period = $3, policies = $4, updated_at = NOW()
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, uuid.New(), s.OrganizationID, s.RetentionPeriod, policiesJSON)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

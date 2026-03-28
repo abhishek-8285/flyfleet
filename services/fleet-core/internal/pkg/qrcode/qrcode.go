@@ -28,16 +28,16 @@ func GenerateSVG(content string, size int) (string, error) {
 	// Manual SVG construction from the bit matrix
 	matrix := qr.Bitmap()
 	moduleCount := len(matrix)
-	
+
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" shape-rendering="crispEdges">`, moduleCount, moduleCount))
 	sb.WriteString(`<path fill="#ffffff" d="M0 0h%v v%vh-%v z"/>`)
 	sb.WriteString(`<path fill="#000000" d="`)
-	
+
 	for y, row := range matrix {
 		var spanStart int
 		inSpan := false
-		
+
 		for x, active := range row {
 			if active && !inSpan {
 				spanStart = x

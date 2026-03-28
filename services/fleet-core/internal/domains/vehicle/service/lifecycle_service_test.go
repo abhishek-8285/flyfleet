@@ -13,6 +13,10 @@ import (
 	"go.uber.org/zap"
 )
 
+func withOrgID(ctx context.Context, orgID uuid.UUID) context.Context {
+	return context.WithValue(ctx, "org_id", orgID)
+}
+
 // ------------------------------------------------------------------
 // Mocks
 // ------------------------------------------------------------------
@@ -36,8 +40,8 @@ func (m *mockVehicleRepo) Create(ctx context.Context, v *models.Vehicle) error {
 func (m *mockVehicleRepo) GetByOrgID(ctx context.Context, orgID uuid.UUID, l, o int) ([]*models.Vehicle, int64, error) {
 	return nil, 0, nil
 }
-func (m *mockVehicleRepo) Delete(ctx context.Context, id uuid.UUID) error { return nil }
-func (m *mockVehicleRepo) AssignDriver(ctx context.Context, v, d uuid.UUID) error { return nil }
+func (m *mockVehicleRepo) Delete(ctx context.Context, id, orgID uuid.UUID) error         { return nil }
+func (m *mockVehicleRepo) AssignDriver(ctx context.Context, v, orgID, d uuid.UUID) error { return nil }
 func (m *mockVehicleRepo) GetStats(ctx context.Context) (*models.VehicleStats, error) {
 	return nil, nil
 }
@@ -90,9 +94,11 @@ func setupLifecycleSvc() (*service.LifecycleService, *mockVehicleRepo, *mockComp
 func TestSetMaintenance_Idempotent(t *testing.T) {
 	svc, vr, _, er := setupLifecycleSvc()
 	ctx := context.Background()
+	orgID := uuid.New()
+	ctx = withOrgID(ctx, orgID)
 	vid := uuid.New()
 
-	vehicle := &models.Vehicle{ID: vid, Status: models.StatusMaintenance, Version: 1}
+	vehicle := &models.Vehicle{ID: vid, TenantID: orgID, Status: models.StatusMaintenance, Version: 1}
 	vr.On("GetByID", ctx, vid).Return(vehicle, nil)
 	// Update should NOT be called (idempotent)
 	er.On("Append", ctx, mock.Anything).Return(nil).Maybe()
@@ -107,9 +113,11 @@ func TestSetMaintenance_Idempotent(t *testing.T) {
 func TestSetMaintenance_FromActive(t *testing.T) {
 	svc, vr, _, er := setupLifecycleSvc()
 	ctx := context.Background()
+	orgID := uuid.New()
+	ctx = withOrgID(ctx, orgID)
 	vid := uuid.New()
 
-	vehicle := &models.Vehicle{ID: vid, Status: models.StatusActive, Version: 1}
+	vehicle := &models.Vehicle{ID: vid, TenantID: orgID, Status: models.StatusActive, Version: 1}
 	vr.On("GetByID", ctx, vid).Return(vehicle, nil)
 	vr.On("Update", ctx, mock.Anything).Return(nil)
 	er.On("Append", ctx, mock.MatchedBy(func(e *models.VehicleEvent) bool {
@@ -126,9 +134,11 @@ func TestSetMaintenance_FromActive(t *testing.T) {
 func TestSetMaintenance_DecommissionedGuard(t *testing.T) {
 	svc, vr, _, _ := setupLifecycleSvc()
 	ctx := context.Background()
+	orgID := uuid.New()
+	ctx = withOrgID(ctx, orgID)
 	vid := uuid.New()
 
-	vehicle := &models.Vehicle{ID: vid, Status: models.StatusDecommissioned, Version: 1}
+	vehicle := &models.Vehicle{ID: vid, TenantID: orgID, Status: models.StatusDecommissioned, Version: 1}
 	vr.On("GetByID", ctx, vid).Return(vehicle, nil)
 
 	_, err := svc.SetMaintenance(ctx, vid)
@@ -139,9 +149,11 @@ func TestSetMaintenance_DecommissionedGuard(t *testing.T) {
 func TestDecommission_Idempotent(t *testing.T) {
 	svc, vr, _, _ := setupLifecycleSvc()
 	ctx := context.Background()
+	orgID := uuid.New()
+	ctx = withOrgID(ctx, orgID)
 	vid := uuid.New()
 
-	vehicle := &models.Vehicle{ID: vid, Status: models.StatusDecommissioned, Version: 1}
+	vehicle := &models.Vehicle{ID: vid, TenantID: orgID, Status: models.StatusDecommissioned, Version: 1}
 	vr.On("GetByID", ctx, vid).Return(vehicle, nil)
 
 	result, err := svc.Decommission(ctx, vid, "already done")
@@ -154,9 +166,11 @@ func TestDecommission_Idempotent(t *testing.T) {
 func TestActivate_BlockedByLegalHold(t *testing.T) {
 	svc, vr, cr, _ := setupLifecycleSvc()
 	ctx := context.Background()
+	orgID := uuid.New()
+	ctx = withOrgID(ctx, orgID)
 	vid := uuid.New()
 
-	vehicle := &models.Vehicle{ID: vid, Status: models.StatusSuspended, Version: 1}
+	vehicle := &models.Vehicle{ID: vid, TenantID: orgID, Status: models.StatusSuspended, Version: 1}
 	vr.On("GetByID", ctx, vid).Return(vehicle, nil)
 	cr.On("Get", ctx, vid).Return(&models.VehicleCompliance{LegalHold: true}, nil)
 

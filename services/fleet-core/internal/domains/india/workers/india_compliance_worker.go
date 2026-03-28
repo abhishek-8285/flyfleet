@@ -57,7 +57,7 @@ func (w *IndiaComplianceWorker) Process(ctx context.Context) {
 	} else {
 		for _, v := range vehicles {
 			w.publishEvent("india.compliance.vehicle_expiry", v)
-			
+
 			// If insurance is already expired, mark it in Redis for the ingestion worker
 			if v.InsuranceExpiry.Before(time.Now()) {
 				key := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", v.VehicleID.String())
@@ -84,9 +84,9 @@ func (w *IndiaComplianceWorker) Process(ctx context.Context) {
 		w.logger.Error("failed to fetch expiring local permits", zap.Error(err))
 	} else {
 		for _, p := range permits {
-			// We can use vehicle_expiry or a specific permit_expiry if needed, 
+			// We can use vehicle_expiry or a specific permit_expiry if needed,
 			// but prompt said vehicle, driver, gst. I'll use vehicle_expiry for permits too or just log.
-			w.publishEvent("india.compliance.vehicle_expiry", p) 
+			w.publishEvent("india.compliance.vehicle_expiry", p)
 		}
 	}
 

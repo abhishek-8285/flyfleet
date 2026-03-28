@@ -27,33 +27,33 @@ func generateFor(category string, filename string) {
 		Currency:      "INR",
 		TotalAmount:   56000.00,
 		Metadata: map[string]interface{}{
-			"vehicle_no": "DL-01-LH-8783",
+			"vehicle_no":     "DL-01-LH-8783",
 			"consignee_name": "Sample Consignee Ltd",
 		},
 	}
 
 	items := []models.InvoiceItem{
 		{
-			Description: category + " Premium High-Value Supply", 
-			Quantity: 1, 
-			UnitPrice: 50000.00, 
-			TaxPercent: 12.0,
-			HSNCode: "7113", // Jewelry HSN
+			Description: category + " Premium High-Value Supply",
+			Quantity:    1,
+			UnitPrice:   50000.00,
+			TaxPercent:  12.0,
+			HSNCode:     "7113", // Jewelry HSN
 			CustomFields: map[string]interface{}{
-				"purity": "22 Karat",
+				"purity":       "22 Karat",
 				"gross_weight": "12.50g",
-				"net_weight": "11.20g",
-				"stone_chg": "Rs. 4500",
-				"batch_no": "B-99281",
-				"expiry_date": "21-Dec-2027",
-				"mfd_date": "21-Mar-2026",
+				"net_weight":   "11.20g",
+				"stone_chg":    "Rs. 4500",
+				"batch_no":     "B-99281",
+				"expiry_date":  "21-Dec-2027",
+				"mfd_date":     "21-Mar-2026",
 			},
 		},
 	}
 
 	generator := pdf.NewPDFGenerator(60 * time.Second)
 	html := pdf.GenerateInvoiceHTML(invoice, items)
-	
+
 	pdfData, err := generator.GenerateFromHTML(context.Background(), html, pdf.DefaultA4Portrait())
 	if err != nil {
 		fmt.Printf("❌ Failed to generate %s: %v\n", category, err)

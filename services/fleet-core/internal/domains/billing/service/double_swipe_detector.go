@@ -30,14 +30,14 @@ func (d *DoubleSwipeDetector) Detect(ctx context.Context, tx *india_models.FASTa
 	// 1. Look for previous transactions for the same vehicle and toll plaza
 	// window of 2 minutes
 	twoMinutesAgo := tx.TransactionTime.Add(-2 * time.Minute)
-	
+
 	existing, _, err := d.indiaRepo.ListFASTagTransactions(
-		ctx, 
-		&tx.VehicleID, 
-		nil, 
-		&twoMinutesAgo, 
-		&tx.TransactionTime, 
-		10, 
+		ctx,
+		&tx.VehicleID,
+		nil,
+		&twoMinutesAgo,
+		&tx.TransactionTime,
+		10,
 		0,
 	)
 	if err != nil {
@@ -52,8 +52,8 @@ func (d *DoubleSwipeDetector) Detect(ctx context.Context, tx *india_models.FASTa
 
 		if prev.TollPlazaID == tx.TollPlazaID && prev.Amount == tx.Amount {
 			// DOUBLE SWIPE DETECTED
-			d.logger.Warn("Double-Swipe detected for FASTag", 
-				zap.String("vehicle_id", tx.VehicleID.String()), 
+			d.logger.Warn("Double-Swipe detected for FASTag",
+				zap.String("vehicle_id", tx.VehicleID.String()),
 				zap.String("toll_plaza", tx.TollPlaza),
 				zap.Float64("amount", tx.Amount),
 			)

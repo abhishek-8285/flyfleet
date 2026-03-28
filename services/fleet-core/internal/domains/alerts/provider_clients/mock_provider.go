@@ -23,7 +23,7 @@ func (p *mockProvider) Name() string {
 
 func (p *mockProvider) Send(ctx context.Context, log *models.NotificationLog) (map[string]any, error) {
 	fmt.Printf("[%s] Sending to %s (Channel: %s): %s\n", p.name, log.Recipient, log.Channel, log.Subject)
-	
+
 	// Simulate some latency
 	time.Sleep(100 * time.Millisecond)
 

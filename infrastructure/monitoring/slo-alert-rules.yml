@@ -4,8 +4,8 @@ groups:
       - alert: FlyFleetAuthAvailabilityWarning
         expr: |
           100 * (
-            sum(rate(auth_login_requests_total{status="success"}[1h])) /
-            clamp_min(sum(rate(auth_login_requests_total[1h])), 1)
+            sum(rate(auth_login_success_total[1h])) /
+            clamp_min(sum(rate(auth_login_attempts_total[1h])), 1)
           ) < 99.95
         for: 15m
         labels:
@@ -18,8 +18,8 @@ groups:
       - alert: FlyFleetAuthAvailabilityCritical
         expr: |
           100 * (
-            sum(rate(auth_login_requests_total{status="success"}[30m])) /
-            clamp_min(sum(rate(auth_login_requests_total[30m])), 1)
+            sum(rate(auth_login_success_total[30m])) /
+            clamp_min(sum(rate(auth_login_attempts_total[30m])), 1)
           ) < 99.9
         for: 10m
         labels:

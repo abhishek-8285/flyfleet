@@ -139,10 +139,10 @@ func (s *integrationsService) RotateAPIClientKey(ctx context.Context, id uuid.UU
 
 	rawKey := generateSecureKey(32)
 	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
-	
+
 	client.ClientSecretHash = string(hash)
 	client.UpdatedBy = s.getUserID(ctx)
-	return rawKey, s.repo.UpdateAPIClient(ctx, client) 
+	return rawKey, s.repo.UpdateAPIClient(ctx, client)
 }
 
 func (s *integrationsService) ListAPIClients(ctx context.Context, orgID uuid.UUID) ([]*models.APIClient, error) {

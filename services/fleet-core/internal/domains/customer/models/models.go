@@ -31,22 +31,22 @@ type CustomerContact struct {
 }
 
 type CustomerAddress struct {
-	ID         uuid.UUID `json:"id" db:"id"`
-	CustomerID uuid.UUID `json:"customer_id" db:"customer_id"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	CustomerID  uuid.UUID `json:"customer_id" db:"customer_id"`
 	AddressType *string   `json:"address_type" db:"address_type"` // BILLING, SHIPPING, WAREHOUSE
-	Address    []byte    `json:"address" db:"address"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	Address     []byte    `json:"address" db:"address"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
 type CustomerContract struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	CustomerID     uuid.UUID `json:"customer_id" db:"customer_id"`
-	ContractNumber *string   `json:"contract_number" db:"contract_number"`
-	ValidFrom      time.Time `json:"valid_from" db:"valid_from"`
+	ID             uuid.UUID  `json:"id" db:"id"`
+	CustomerID     uuid.UUID  `json:"customer_id" db:"customer_id"`
+	ContractNumber *string    `json:"contract_number" db:"contract_number"`
+	ValidFrom      time.Time  `json:"valid_from" db:"valid_from"`
 	ValidTo        *time.Time `json:"valid_to" db:"valid_to"`
-	Terms          []byte    `json:"terms" db:"terms"`
-	Status         string    `json:"status" db:"status"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	Terms          []byte     `json:"terms" db:"terms"`
+	Status         string     `json:"status" db:"status"`
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
 }
 
 type CustomerCreditLimit struct {
@@ -82,39 +82,39 @@ type CustomerSession struct {
 }
 
 type CustomerAPIKey struct {
-	ID          uuid.UUID  `json:"id" db:"id"`
-	CustomerID  uuid.UUID  `json:"customer_id" db:"customer_id"`
-	KeyName     string     `json:"key_name" db:"key_name"`
-	APIKeyHash  string     `json:"api_key_hash" db:"api_key_hash"`
-	ExpiresAt   *time.Time `json:"expires_at" db:"expires_at"`
-	Status      string     `json:"status" db:"status"`
-	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
+	ID         uuid.UUID  `json:"id" db:"id"`
+	CustomerID uuid.UUID  `json:"customer_id" db:"customer_id"`
+	KeyName    string     `json:"key_name" db:"key_name"`
+	APIKeyHash string     `json:"api_key_hash" db:"api_key_hash"`
+	ExpiresAt  *time.Time `json:"expires_at" db:"expires_at"`
+	Status     string     `json:"status" db:"status"`
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
 }
 
 // Booking Requests
 type BookingRequest struct {
-	ID                  uuid.UUID `json:"id" db:"id"`
-	CustomerID          uuid.UUID `json:"customer_id" db:"customer_id"`
-	PickupLocation      []byte    `json:"pickup_location" db:"pickup_location"`
-	DropLocation        []byte    `json:"drop_location" db:"drop_location"`
-	CargoType           *string   `json:"cargo_type" db:"cargo_type"`
-	Weight              *float64  `json:"weight" db:"weight"`
-	Volume              *float64  `json:"volume" db:"volume"`
-	VehicleType         *string   `json:"vehicle_type" db:"vehicle_type"`
+	ID                  uuid.UUID  `json:"id" db:"id"`
+	CustomerID          uuid.UUID  `json:"customer_id" db:"customer_id"`
+	PickupLocation      []byte     `json:"pickup_location" db:"pickup_location"`
+	DropLocation        []byte     `json:"drop_location" db:"drop_location"`
+	CargoType           *string    `json:"cargo_type" db:"cargo_type"`
+	Weight              *float64   `json:"weight" db:"weight"`
+	Volume              *float64   `json:"volume" db:"volume"`
+	VehicleType         *string    `json:"vehicle_type" db:"vehicle_type"`
 	RequestedPickupTime *time.Time `json:"requested_pickup_time" db:"requested_pickup_time"`
-	Status              string    `json:"status" db:"status"` // REQUESTED, QUOTED, CONFIRMED, REJECTED
-	CreatedAt           time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at" db:"updated_at"`
+	Status              string     `json:"status" db:"status"` // REQUESTED, QUOTED, CONFIRMED, REJECTED
+	CreatedAt           time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt           time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 type BookingQuote struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	BookingID   uuid.UUID `json:"booking_id" db:"booking_id"`
-	QuoteAmount float64   `json:"quote_amount" db:"quote_amount"`
-	Currency    string    `json:"currency" db:"currency"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	BookingID   uuid.UUID  `json:"booking_id" db:"booking_id"`
+	QuoteAmount float64    `json:"quote_amount" db:"quote_amount"`
+	Currency    string     `json:"currency" db:"currency"`
 	ValidUntil  *time.Time `json:"valid_until" db:"valid_until"`
-	Status      string    `json:"status" db:"status"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	Status      string     `json:"status" db:"status"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 }
 
 type BookingValidation struct {
@@ -128,30 +128,30 @@ type BookingValidation struct {
 
 // Shipment
 type Shipment struct {
-	ID          uuid.UUID `json:"id" db:"id"`
-	CustomerID  uuid.UUID `json:"customer_id" db:"customer_id"`
-	TripID      *uuid.UUID `json:"trip_id" db:"trip_id"`
-	BookingID   *uuid.UUID `json:"booking_id" db:"booking_id"`
-	Status      string    `json:"status" db:"status"` // BOOKED, CONFIRMED, ASSIGNED, IN_TRANSIT, AT_CHECKPOINT, DELIVERED, CANCELLED
-	Origin      []byte    `json:"origin" db:"origin"`
-	Destination []byte    `json:"destination" db:"destination"`
-	DistanceKm        *float64   `json:"distance_km" db:"distance_km"`
-	EwayBillNumber    *string    `json:"eway_bill_number" db:"eway_bill_number"`
-	EwayBillExpiry    *time.Time `json:"eway_bill_expiry" db:"eway_bill_expiry"`
-	EwayBillDocument  *string    `json:"eway_bill_document" db:"eway_bill_document"`
-	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
+	ID               uuid.UUID  `json:"id" db:"id"`
+	CustomerID       uuid.UUID  `json:"customer_id" db:"customer_id"`
+	TripID           *uuid.UUID `json:"trip_id" db:"trip_id"`
+	BookingID        *uuid.UUID `json:"booking_id" db:"booking_id"`
+	Status           string     `json:"status" db:"status"` // BOOKED, CONFIRMED, ASSIGNED, IN_TRANSIT, AT_CHECKPOINT, DELIVERED, CANCELLED
+	Origin           []byte     `json:"origin" db:"origin"`
+	Destination      []byte     `json:"destination" db:"destination"`
+	DistanceKm       *float64   `json:"distance_km" db:"distance_km"`
+	EwayBillNumber   *string    `json:"eway_bill_number" db:"eway_bill_number"`
+	EwayBillExpiry   *time.Time `json:"eway_bill_expiry" db:"eway_bill_expiry"`
+	EwayBillDocument *string    `json:"eway_bill_document" db:"eway_bill_document"`
+	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 type ShipmentStop struct {
-	ID             uuid.UUID `json:"id" db:"id"`
-	ShipmentID     uuid.UUID `json:"shipment_id" db:"shipment_id"`
-	StopType       string    `json:"stop_type" db:"stop_type"` // PICKUP, DROPOFF, CHECKPOINT
-	Sequence       int       `json:"sequence" db:"sequence"`
-	Location       []byte    `json:"location" db:"location"`
+	ID              uuid.UUID  `json:"id" db:"id"`
+	ShipmentID      uuid.UUID  `json:"shipment_id" db:"shipment_id"`
+	StopType        string     `json:"stop_type" db:"stop_type"` // PICKUP, DROPOFF, CHECKPOINT
+	Sequence        int        `json:"sequence" db:"sequence"`
+	Location        []byte     `json:"location" db:"location"`
 	ExpectedArrival *time.Time `json:"expected_arrival" db:"expected_arrival"`
-	ActualArrival  *time.Time `json:"actual_arrival" db:"actual_arrival"`
-	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	ActualArrival   *time.Time `json:"actual_arrival" db:"actual_arrival"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 }
 
 type ShipmentEvent struct {
@@ -175,12 +175,12 @@ type ShipmentStatusLog struct {
 
 // Delivery Proof
 type DeliveryProof struct {
-	ID            uuid.UUID `json:"id" db:"id"`
-	ShipmentID    uuid.UUID `json:"shipment_id" db:"shipment_id"`
-	ReceiverName  string    `json:"receiver_name" db:"receiver_name"`
-	ReceiverPhone *string   `json:"receiver_phone" db:"receiver_phone"`
-	SignatureUrl  *string   `json:"signature_url" db:"signature_url"`
-	PhotoUrl      *string   `json:"photo_url" db:"photo_url"`
+	ID            uuid.UUID  `json:"id" db:"id"`
+	ShipmentID    uuid.UUID  `json:"shipment_id" db:"shipment_id"`
+	ReceiverName  string     `json:"receiver_name" db:"receiver_name"`
+	ReceiverPhone *string    `json:"receiver_phone" db:"receiver_phone"`
+	SignatureUrl  *string    `json:"signature_url" db:"signature_url"`
+	PhotoUrl      *string    `json:"photo_url" db:"photo_url"`
 	DeliveredAt   *time.Time `json:"delivered_at" db:"delivered_at"`
 	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }

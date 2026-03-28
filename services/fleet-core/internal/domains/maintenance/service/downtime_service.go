@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type DowntimeService struct {
@@ -32,7 +32,7 @@ func (s *DowntimeService) CalculateVehicleMetrics(ctx context.Context, vehicleID
 
 	var totalDowntime int
 	var repairCount int
-	
+
 	for _, d := range downtimes {
 		if d.DowntimeEnd != nil {
 			totalDowntime += d.DowntimeMinutes
@@ -63,18 +63,18 @@ func (s *DowntimeService) RecordDowntime(ctx context.Context, downtime *models.V
 	query := `
 		INSERT INTO vehicle_downtime (id, organization_id, vehicle_id, downtime_start, downtime_end, downtime_minutes, reason, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`
-	
+
 	if downtime.ID == uuid.Nil {
 		downtime.ID = uuid.New()
 	}
-	
+
 	if downtime.DowntimeEnd != nil {
 		downtime.DowntimeMinutes = int(downtime.DowntimeEnd.Sub(downtime.DowntimeStart).Minutes())
 	}
 
-	_, err := s.repo.GetDB().Exec(ctx, query, 
-		downtime.ID, downtime.OrganizationID, downtime.VehicleID, 
-		downtime.DowntimeStart, downtime.DowntimeEnd, downtime.DowntimeMinutes, 
+	_, err := s.repo.GetDB().Exec(ctx, query,
+		downtime.ID, downtime.OrgID, downtime.VehicleID,
+		downtime.DowntimeStart, downtime.DowntimeEnd, downtime.DowntimeMinutes,
 		downtime.Reason)
 	return err
 }

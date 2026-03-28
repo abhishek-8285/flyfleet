@@ -13,12 +13,12 @@ import (
 )
 
 type AccountingService struct {
-	repo          *repository.AccountingRepository
-	ledgerRepo    *repository.LedgerRepository
-	invoiceRepo   Repository
-	storage       storage.ObjectStorage
-	exporters     map[models.ExternalSystem]models.AccountingExporter
-	logger        *zap.Logger
+	repo        *repository.AccountingRepository
+	ledgerRepo  *repository.LedgerRepository
+	invoiceRepo Repository
+	storage     storage.ObjectStorage
+	exporters   map[models.ExternalSystem]models.AccountingExporter
+	logger      *zap.Logger
 }
 
 func NewAccountingService(
@@ -87,7 +87,7 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 	// For now, let's assume Save can take a string key too or we use a temporary hack
 	// Actually, let's update ObjectStorage to support generic file saving
 	// Since I can't easily change it now, I'll return the data directly for local download in handler
-	
+
 	err = s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusCompleted, fileKey, len(entries), "")
 	return export, err
 }

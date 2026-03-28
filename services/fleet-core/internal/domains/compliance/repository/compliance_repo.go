@@ -5,8 +5,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/fleet-platform/shared/pkg/logger"
+	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/google/uuid"
 )
 
@@ -16,7 +16,7 @@ type ComplianceRepository interface {
 	GetLatestDutyStatus(ctx context.Context, driverID uuid.UUID) (*models.DriverDutyLog, error)
 	GetDutyLogsByDriver(ctx context.Context, driverID uuid.UUID, since, to time.Time) ([]models.DriverDutyLog, error)
 	RecordBreakLog(ctx context.Context, log *models.DriverBreakLog) error
-	
+
 	// Violations
 	RecordViolation(ctx context.Context, violation *models.DriverComplianceViolation) error
 	GetViolationsForEscalation(ctx context.Context, driverID uuid.UUID, since time.Time) ([]models.DriverComplianceViolation, error)
@@ -26,7 +26,7 @@ type ComplianceRepository interface {
 	CreatePanicAlert(ctx context.Context, alert *models.PanicAlert) error
 	RecordDeviceHealth(ctx context.Context, log *models.DeviceHealthLog) error
 	CreateComplianceAlert(ctx context.Context, alert *models.ComplianceAlert) error
-	
+
 	// Documents
 	CreateVehicleDocument(ctx context.Context, doc *models.VehicleDocument) error
 	GetVehicleDocuments(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleDocument, error)
@@ -47,7 +47,7 @@ type ComplianceRepository interface {
 	UpdateDashboardMetrics(ctx context.Context, metrics *models.ComplianceDashboardMetrics) error
 	GetOfflineDevices(ctx context.Context, threshold time.Time) ([]models.AIS140Device, error)
 	RegisterDevice(ctx context.Context, device *models.AIS140Device) error
-	
+
 	// Maintenance
 	CleanupOldData(ctx context.Context, retentionLimit time.Time) (int64, error)
 	RecordAuditLog(ctx context.Context, audit *models.ComplianceAuditLog) error

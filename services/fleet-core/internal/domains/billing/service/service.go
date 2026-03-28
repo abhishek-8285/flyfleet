@@ -33,34 +33,34 @@ type Repository interface {
 }
 
 type BillingService struct {
-	repo       Repository
-	auditRepo  *repository.AuditLogRepository
-	subServ    *SubscriptionService
-	meterServ  *MeteringService
-	hwServ     *HardwareService
-	ledgerServ *LedgerService
-	taxServ    *TaxService
-	seqServ    *SequenceService
-	notifServ  *NotificationService
-	dunningS   *DunningService
+	repo        Repository
+	auditRepo   *repository.AuditLogRepository
+	subServ     *SubscriptionService
+	meterServ   *MeteringService
+	hwServ      *HardwareService
+	ledgerServ  *LedgerService
+	taxServ     *TaxService
+	seqServ     *SequenceService
+	notifServ   *NotificationService
+	dunningS    *DunningService
 	queueClient QueueProvider
-	logger     *zap.Logger
+	logger      *zap.Logger
 }
 
 func NewBillingService(repo Repository, auditRepo *repository.AuditLogRepository, subServ *SubscriptionService, meterServ *MeteringService, hwServ *HardwareService, ledgerServ *LedgerService, taxServ *TaxService, seqServ *SequenceService, notifServ *NotificationService, dunningS *DunningService, qClient QueueProvider, logger *zap.Logger) *BillingService {
 	return &BillingService{
-		repo:       repo,
-		auditRepo:  auditRepo,
-		subServ:    subServ,
-		meterServ:  meterServ,
-		hwServ:     hwServ,
-		ledgerServ: ledgerServ,
-		taxServ:    taxServ,
-		seqServ:    seqServ,
-		notifServ:  notifServ,
-		dunningS:   dunningS,
+		repo:        repo,
+		auditRepo:   auditRepo,
+		subServ:     subServ,
+		meterServ:   meterServ,
+		hwServ:      hwServ,
+		ledgerServ:  ledgerServ,
+		taxServ:     taxServ,
+		seqServ:     seqServ,
+		notifServ:   notifServ,
+		dunningS:    dunningS,
 		queueClient: qClient,
-		logger:     logger,
+		logger:      logger,
 	}
 }
 
@@ -157,7 +157,7 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 			}
 			inv.TotalAmount = inv.Subtotal - inv.DiscountAmount + totalTax
 			inv.BalanceDue = inv.TotalAmount - inv.AmountPaid
-			
+
 			// Save tax lines later after invoice creation
 			defer func(lines []models.InvoiceTaxLine) {
 				_ = s.repo.CreateTaxLines(ctx, lines)

@@ -112,7 +112,13 @@ func (h *BulkHandlers) GetBulkJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	job, err := h.service.GetJob(r.Context(), jobID)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
+		return
+	}
+
+	job, err := h.service.GetJob(r.Context(), jobID, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Job not found", err)
 		return
@@ -132,7 +138,13 @@ func (h *BulkHandlers) GetJobRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	records, err := h.service.GetJobRecords(r.Context(), jobID, status)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
+		return
+	}
+
+	records, err := h.service.GetJobRecords(r.Context(), jobID, orgID, status)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch records", err)
 		return

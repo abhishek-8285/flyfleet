@@ -29,7 +29,7 @@ type GovernanceService interface {
 	ApproveRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error
 	VerifyRequest(ctx context.Context, id, orgID, userID uuid.UUID, status string) error
 	RejectRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error
-	
+
 	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error)
 	UpdateSettings(ctx context.Context, orgID, userID uuid.UUID, settings *models.GovernanceSettings) error
 
@@ -58,7 +58,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 
 	gReq := &models.GovernanceRequest{
 		ID:             uuid.New(),
-		OrganizationID:  orgID,
+		OrganizationID: orgID,
 		RequesterID:    userID,
 		RequestType:    req.RequestType,
 		DataScope:      req.DataScope,
@@ -80,7 +80,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID:  orgID,
+		OrganizationID: orgID,
 		UserID:         userID,
 		Action:         "CREATE_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -337,16 +337,16 @@ func (s *governanceService) EnforceRetention(ctx context.Context) error {
 		for table, days := range policies {
 			count, err := s.repo.EnforceRetentionPolicy(ctx, setting.OrganizationID, table, days)
 			if err != nil {
-				s.logger.Error("failed to enforce retention policy", 
-					zap.String("orgID", setting.OrganizationID.String()), 
-					zap.String("table", table), 
+				s.logger.Error("failed to enforce retention policy",
+					zap.String("orgID", setting.OrganizationID.String()),
+					zap.String("table", table),
 					zap.Error(err))
 				continue
 			}
 			if count > 0 {
-				s.logger.Info("enforced retention policy", 
-					zap.String("orgID", setting.OrganizationID.String()), 
-					zap.String("table", table), 
+				s.logger.Info("enforced retention policy",
+					zap.String("orgID", setting.OrganizationID.String()),
+					zap.String("table", table),
 					zap.Int64("deleted_rows", count))
 				metrics.GovernanceDeletionsTotal.Add(float64(count))
 			}

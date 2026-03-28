@@ -8,17 +8,17 @@ import (
 )
 
 type BulkJob struct {
-	ID            uuid.UUID `json:"id"`
+	ID             uuid.UUID `json:"id"`
 	OrganizationID uuid.UUID `json:"organization_id"`
-	FileName      string    `json:"file_name"`
-	Status        string    `json:"status"` // processing, completed, failed, partial_success
-	TotalRecords  int       `json:"total_records"`
-	SuccessCount  int       `json:"success_count"`
-	FailedCount   int       `json:"failed_count"`
-	RetryCount    int       `json:"retry_count"`
-	CreatedBy     uuid.UUID `json:"created_by"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	FileName       string    `json:"file_name"`
+	Status         string    `json:"status"` // processing, completed, failed, partial_success
+	TotalRecords   int       `json:"total_records"`
+	SuccessCount   int       `json:"success_count"`
+	FailedCount    int       `json:"failed_count"`
+	RetryCount     int       `json:"retry_count"`
+	CreatedBy      uuid.UUID `json:"created_by"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type BulkJobRecord struct {

@@ -1,0 +1,325 @@
+{
+  "dashboard": {
+    "title": "FlyFleet Business Metrics",
+    "uid": "flyfleet-business-metrics",
+    "version": 1,
+    "schemaVersion": 38,
+    "timezone": "browser",
+    "refresh": "1m",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "tags": ["flyfleet", "business", "kpi"],
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Organizations",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "active_organizations",
+            "legendFormat": "Total",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "green", "value": 50 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Active Trips",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "active_trips",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 100 },
+                { "color": "green", "value": 500 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Trip Completion Rate (7d)",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sli:business:trips_completion_rate:percentage",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0.8,
+            "max": 1,
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0.8 },
+                { "color": "orange", "value": 0.9 },
+                { "color": "green", "value": 0.95 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Invoice Generation Rate",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "rate(billing_invoices_generated_total[1h])",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "invoices/hour",
+            "color": { "mode": "palette-classic" }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Daily Revenue (INR)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(increase(trip_revenue_total[1d]))",
+            "legendFormat": "Daily Revenue",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "INR", "label": "Revenue" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Top 10 Vehicles by Distance (Last 7d)",
+        "type": "table",
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "topk(10, sum(increase(vehicle_odometer_km[7d])) by (vehicle_id))",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Active Drivers vs Vehicles Utilization",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "driver_active_total",
+            "legendFormat": "Active Drivers",
+            "refId": "A"
+          },
+          {
+            "expr": "vehicles_active_total",
+            "legendFormat": "Active Vehicles",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Count" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Fleet Utilization Rate",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 12, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "fleet_utilization_rate_percentage",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "yellow", "value": 0.5 },
+                { "color": "green", "value": 0.7 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Customer NPS Score",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 12, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "customer_nps_score",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": -100 },
+                { "color": "yellow", "value": 0 },
+                { "color": "green", "value": 50 },
+                { "color": "dark-green", "value": 70 }
+              ]
+            },
+            "mappings": [
+              { "type": "value", "options": { "-100": "Poor", "0": "Average", "50": "Good", "70": "Excellent" }}
+            ]
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Average Trip Profit Margin",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "trip_profit_margin_percentage",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0 },
+                { "color": "orange", "value": 0.1 },
+                { "color": "green", "value": 0.2 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Payment Collection Efficiency",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "billing_collection_efficiency_percentage",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "steps": [
+                { "color": "red", "value": 0.8 },
+                { "color": "yellow", "value": 0.9 },
+                { "color": "green", "value": 0.95 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Support Ticket Resolution Time (p95)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(support_ticket_resolution_time_seconds_bucket[1h])) by (le))",
+            "legendFormat": "p95 Resolution Time",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Seconds" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Customer CSAT Score (7d rolling avg)",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "avg_over_time(support_csat_score[7d])",
+            "legendFormat": "CSAT (7d avg)",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "number", "min": 1, "max": 5, "label": "Rating" },
+          { "format": "short" }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "org_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "query": "label_values(active_organizations, org_id)",
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "period",
+          "type": "interval",
+          "datasource": "Prometheus",
+          "query": "1h",
+          "includeAll": true
+        }
+      ]
+    }
+  }
+}

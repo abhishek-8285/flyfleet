@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,9 +31,11 @@ func (r *SafetyRepository) CreateSafetyEvent(ctx context.Context, event *models.
 		event.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		event.ID, event.DriverID, event.TripID, event.EventType,
 		event.Severity, event.GPSLat, event.GPSLng, event.Timestamp, event.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

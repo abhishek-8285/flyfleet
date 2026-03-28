@@ -6,7 +6,7 @@ GREEN := \033[0;32m
 YELLOW := \033[0;33m
 RESET := \033[0m
 
-.PHONY: help dev test lint build ci bootstrap clean docker-build docker-push
+.PHONY: help dev test lint build ci bootstrap clean docker-build docker-push self-hosted
 
 #=====================================================================
 # Development Workflow Targets
@@ -82,6 +82,15 @@ test:coverage: ## Generate test coverage report
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 .PHONY: test:coverage
+
+test:coverage:gate ## Run tests and enforce coverage threshold (default: 70%)
+	@echo "$(YELLOW)Running tests with coverage enforcement...$(RESET)"
+	@go test ./... -coverprofile=coverage.out -covermode=atomic
+	@bash scripts/check_coverage.sh
+.PHONY: test:coverage:gate
+
+coverage: test:coverage:gate ## Alias for test:coverage:gate
+.PHONY: coverage
 
 lint: ## Run all linters (Go staticcheck, golint, frontend eslint)
 	@echo "$(YELLOW)Running Go linters...$(RESET)"
@@ -279,3 +288,70 @@ monolith-compat-gate:
 
 monolith-status-bundle:
 	bash scripts/generate_monolith_status_bundle.sh /home/abhishek/Desktop/flyfleet/tmp
+
+#=====================================================================
+# Self-Hosted Deployment Targets
+#=====================================================================
+
+self-hosted: self-hosted-setup ## Deploy FlyFleet to local k3s cluster (alias for self-hosted-setup)
+.PHONY: self-hosted
+
+self-hosted-setup: ## Set up complete self-hosted FlyFleet stack (k3s + registry + deploy)
+	@echo "$(YELLOW)Setting up self-hosted FlyFleet on k3s...$(RESET)"
+	@cd infrastructure/self-hosted && ./scripts/setup.sh
+	@echo "$(GREEN)✓ Self-hosted setup complete!$(RESET)"
+.PHONY: self-hosted-setup
+
+self-hosted-deploy: ## Deploy FlyFleet to existing k3s cluster (assumes images built)
+	@echo "$(YELLOW)Deploying FlyFleet to k3s...$(RESET)"
+	helm upgrade --install flyfleet infrastructure/helm/flyfleet \
+		--namespace flyfleet \
+		--create-namespace \
+		--set global.imageRegistry="localhost:5000/flyfleet" \
+		--set global.imageTag="latest" \
+		--set global.postgres.host="fleet-postgres" \
+		--set global.redis.host="fleet-redis" \
+		--set global.nats.url="nats://fleet-nats.flyfleet.svc.cluster.local:4222" \
+		--set global.jwtSecret="dev-secret-change-in-production" \
+		--set global.postgres.password="fleet_password" \
+		--wait
+	@echo "$(GREEN)✓ Deployment complete!$(RESET)"
+	@kubectl get pods -n flyfleet
+.PHONY: self-hosted-deploy
+
+self-hosted-registry: ## Deploy local Docker registry to k3s
+	@kubectl apply -f infrastructure/self-hosted/k3s/registry.yaml
+	@echo "Waiting for registry..."
+	@sleep 5
+	@kubectl -n registry get pods,svc
+.PHONY: self-hosted-registry
+
+self-hosted-build: ## Build fleet-core-service image for local registry
+	@echo "Building fleet-core-service..."
+	docker build -t localhost:5000/flyfleet/fleet-core-service:latest \
+		-f infrastructure/docker/GoService.Dockerfile \
+		--build-arg SERVICE_NAME=fleet-core .
+	docker push localhost:5000/flyfleet/fleet-core-service:latest
+	@echo "$(GREEN)✓ Image built and pushed$(RESET)"
+.PHONY: self-hosted-build
+
+self-hosted-logs: ## Show logs from fleet-core-service
+	@kubectl logs -n flyfleet deployment/flyfleet-fleet-core-service -f || \
+		kubectl logs -n flyfleet -l app=fleet-core-service -f
+.PHONY: self-hosted-logs
+
+self-hosted-portforward: ## Port-forward fleet-core-service to localhost:8084
+	@echo "Port-forwarding fleet-core-service:8084 -> localhost:8084"
+	@echo "Press Ctrl+C to stop"
+	@kubectl port-forward -n flyfleet svc/fleet-core-service 8084:8084
+.PHONY: self-hosted-portforward
+
+self-hosted-clean: ## Remove all self-hosted resources
+	@echo "$(YELLOW)Cleaning up self-hosted resources...$(RESET)"
+	-helm uninstall flyfleet -n flyfleet 2>/dev/null || true
+	-kubectl delete namespace flyfleet 2>/dev/null || true
+	-kubectl delete -f infrastructure/self-hosted/k3s/registry.yaml 2>/dev/null || true
+	-kubectl delete namespace registry 2>/dev/null || true
+	@echo "$(GREEN)✓ Cleanup complete$(RESET)"
+.PHONY: self-hosted-clean
+

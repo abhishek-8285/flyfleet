@@ -202,7 +202,7 @@ func (r *AlertRepository) UpdateRule(ctx context.Context, id string, updates map
 			continue
 		}
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", key, argIndex))
-		
+
 		// Handle special JSON fields
 		switch key {
 		case "conditions", "actions", "vehicles", "driver_ids":
@@ -265,7 +265,7 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 	err := r.db.QueryRow(ctx, query,
 		id, alert.OrgID, alert.RuleID, alert.Type, alert.Severity,
 		alert.VehicleID, alert.DriverID, locationJSON, alert.Timestamp,
-		detailsJSON, alert.Status, alert.DedupKey, 
+		detailsJSON, alert.Status, alert.DedupKey,
 		alert.EscalationLevel, alert.SLADeadline, now, now, alert.CreatedBy, alert.UpdatedBy,
 	).Scan(&alert.ID, &alert.CreatedAt, &alert.UpdatedAt)
 
@@ -489,7 +489,7 @@ func (r *AlertRepository) GetActiveRulesForVehicle(ctx context.Context, vehicleI
 	for rows.Next() {
 		var rule models.AlertRule
 		var conditionsJSON, actionsJSON, vehiclesJSON, driverIDsJSON []byte
-		
+
 		err := rows.Scan(
 			&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
 			&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
@@ -531,7 +531,7 @@ func (r *AlertRepository) GetActiveRulesForDriver(ctx context.Context, driverID 
 	for rows.Next() {
 		var rule models.AlertRule
 		var conditionsJSON, actionsJSON, vehiclesJSON, driverIDsJSON []byte
-		
+
 		err := rows.Scan(
 			&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
 			&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
@@ -594,7 +594,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 		FROM alerts 
 		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY type`
-	
+
 	typeRows, err := r.db.Query(ctx, typeQuery, orgID, fromDate, toDate)
 	if err != nil {
 		return nil, err
@@ -614,7 +614,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 		FROM alerts 
 		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY status`
-	
+
 	statusRows, err := r.db.Query(ctx, statusQuery, orgID, fromDate, toDate)
 	if err != nil {
 		return nil, err
@@ -638,11 +638,31 @@ func (r *AlertRepository) GetStats(ctx context.Context) (*models.AlertStats, err
 			COUNT(CASE WHEN severity = 'critical' AND status != 'resolved' THEN 1 END) as critical_alerts,
 			COUNT(CASE WHEN status != 'resolved' THEN 1 END) as open_alerts
 		FROM alerts`
-	
+
 	var stats models.AlertStats
 	err := r.db.QueryRow(ctx, query).Scan(&stats.TotalAlerts, &stats.NewAlerts, &stats.CriticalAlerts, &stats.OpenAlerts)
 	if err != nil {
 		return nil, err
 	}
 	return &stats, nil
+}
+
+// GetTemplate retrieves a notification template by alert type, channel, language, and org.
+// Returns sql.ErrNoRows if no matching template exists.
+func (r *AlertRepository) GetTemplate(ctx context.Context, alertType, channel, language string, orgID uuid.UUID) (*models.Template, error) {
+	query := `
+		SELECT id, org_id, alert_type, channel, language, subject, body, created_at, updated_at
+		FROM alert_templates
+		WHERE alert_type = $1 AND channel = $2 AND language = $3 AND org_id = $4
+		LIMIT 1`
+
+	var tpl models.Template
+	err := r.db.QueryRow(ctx, query, alertType, channel, language, orgID).Scan(
+		&tpl.ID, &tpl.OrgID, &tpl.AlertType, &tpl.Channel, &tpl.Language,
+		&tpl.Subject, &tpl.Body, &tpl.CreatedAt, &tpl.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &tpl, nil
 }

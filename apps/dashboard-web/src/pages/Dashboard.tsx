@@ -25,7 +25,6 @@ const Dashboard = () => {
   });
   const [trips, setTrips] = useState<Trip[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState<number>(30000); // 30s default
   const [division, setDivision] = useState("Global Fleet Ops");
@@ -34,7 +33,6 @@ const Dashboard = () => {
   const [globalConfig, setGlobalConfig] = useState<any>(null);
 
   const fetchData = async () => {
-    setLoading(true);
     try {
       const [tripsData, alertsData, statsData] = await Promise.all([
         api
@@ -83,8 +81,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Failed to load dashboard data", error);
-    } finally {
-      setLoading(false);
     }
   };
 

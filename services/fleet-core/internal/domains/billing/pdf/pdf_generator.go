@@ -17,20 +17,20 @@ import (
 
 // PDFOptions represents PDF generation options
 type PDFOptions struct {
-	Landscape           bool    `json:"landscape"`
-	PrintBackground     bool    `json:"printBackground"`
-	Scale               float64 `json:"scale"`
-	PaperWidth          float64 `json:"paperWidth"`  // inches
-	PaperHeight         float64 `json:"paperHeight"` // inches
-	MarginTop           float64 `json:"marginTop"`   // inches
-	MarginBottom        float64 `json:"marginBottom"`
-	MarginLeft          float64 `json:"marginLeft"`
-	MarginRight         float64 `json:"marginRight"`
-	PageRanges          string  `json:"pageRanges"`
-	IgnoreInvalidPageRanges bool `json:"ignoreInvalidPageRanges"`
-	HeaderTemplate      string  `json:"headerTemplate"`
-	FooterTemplate      string  `json:"footerTemplate"`
-	PreferCSSPageSize   bool    `json:"preferCSSPageSize"`
+	Landscape               bool    `json:"landscape"`
+	PrintBackground         bool    `json:"printBackground"`
+	Scale                   float64 `json:"scale"`
+	PaperWidth              float64 `json:"paperWidth"`  // inches
+	PaperHeight             float64 `json:"paperHeight"` // inches
+	MarginTop               float64 `json:"marginTop"`   // inches
+	MarginBottom            float64 `json:"marginBottom"`
+	MarginLeft              float64 `json:"marginLeft"`
+	MarginRight             float64 `json:"marginRight"`
+	PageRanges              string  `json:"pageRanges"`
+	IgnoreInvalidPageRanges bool    `json:"ignoreInvalidPageRanges"`
+	HeaderTemplate          string  `json:"headerTemplate"`
+	FooterTemplate          string  `json:"footerTemplate"`
+	PreferCSSPageSize       bool    `json:"preferCSSPageSize"`
 }
 
 // DefaultA4Portrait returns default A4 portrait options
@@ -97,7 +97,7 @@ func (g *PDFGenerator) reportFailure() {
 // GenerateFromHTML generates a PDF from HTML content with safety checks
 func (g *PDFGenerator) GenerateFromHTML(ctx context.Context, html string, options PDFOptions) ([]byte, error) {
 	if broken, reason := g.isBroken(); broken {
-		return nil, fmt.Errorf(reason)
+		return nil, fmt.Errorf("%s", reason)
 	}
 
 	// Termux/Android Fix: Explicitly define the Chrome path and headless flags

@@ -19,9 +19,9 @@ func NewDeviceTwinService(repo *repository.DiagnosticsRepository) *DeviceTwinSer
 
 func (s *DeviceTwinService) UpdateDesiredState(ctx context.Context, deviceID uuid.UUID, state json.RawMessage) error {
 	// Abstracting repo query for twin updaters
-	// query := `INSERT INTO device_twins (device_id, desired_state, updated_at) 
-	// 		  VALUES ($1, $2, NOW()) 
-	// 		  ON CONFLICT (device_id) 
+	// query := `INSERT INTO device_twins (device_id, desired_state, updated_at)
+	// 		  VALUES ($1, $2, NOW())
+	// 		  ON CONFLICT (device_id)
 	// 		  DO UPDATE SET desired_state = EXCLUDED.desired_state, updated_at = NOW()`
 
 	// Assuming we export DB pool or expose this from repo in future.
@@ -39,6 +39,6 @@ func (s *DeviceTwinService) SyncReportedState(ctx context.Context, deviceID uuid
 }
 
 func (s *DeviceTwinService) DetectConfigurationDrift(ctx context.Context, deviceID uuid.UUID) (bool, error) {
-	// A naive check would compare JSON blobs. 
+	// A naive check would compare JSON blobs.
 	return false, nil
 }

@@ -5,38 +5,38 @@ import "errors"
 // Platform compatibility service errors
 var (
 	// General errors
-	ErrCompatibilityFailed   = errors.New("compatibility check failed")
-	ErrInvalidRequest        = errors.New("invalid request")
-	ErrServiceNotFound       = errors.New("service not found")
-	ErrServiceUnavailable    = errors.New("service unavailable")
-	
+	ErrCompatibilityFailed = errors.New("compatibility check failed")
+	ErrInvalidRequest      = errors.New("invalid request")
+	ErrServiceNotFound     = errors.New("service not found")
+	ErrServiceUnavailable  = errors.New("service unavailable")
+
 	// Route optimization errors
 	ErrInvalidRoute          = errors.New("invalid route")
 	ErrRouteNotFound         = errors.New("route not found")
 	ErrInvalidLocations      = errors.New("invalid locations")
 	ErrInsufficientLocations = errors.New("at least two locations are required")
-	
+
 	// ML service errors
-	ErrMLServiceUnavailable  = errors.New("ML service unavailable")
-	ErrInvalidPrediction     = errors.New("invalid prediction request")
-	ErrInvalidPricing        = errors.New("invalid pricing request")
-	ErrTrainingFailed        = errors.New("training job failed")
-	
+	ErrMLServiceUnavailable = errors.New("ML service unavailable")
+	ErrInvalidPrediction    = errors.New("invalid prediction request")
+	ErrInvalidPricing       = errors.New("invalid pricing request")
+	ErrTrainingFailed       = errors.New("training job failed")
+
 	// Telemetry errors
 	ErrInvalidTelemetry      = errors.New("invalid telemetry data")
 	ErrTelemetryIngestFailed = errors.New("telemetry ingestion failed")
-	
+
 	// Compliance errors
-	ErrInvalidHOSData        = errors.New("invalid HOS data")
-	ErrHOSRecordFailed       = errors.New("HOS record failed")
-	
+	ErrInvalidHOSData  = errors.New("invalid HOS data")
+	ErrHOSRecordFailed = errors.New("HOS record failed")
+
 	// Rate limiting errors
-	ErrRateLimitExceeded     = errors.New("rate limit exceeded")
-	
+	ErrRateLimitExceeded = errors.New("rate limit exceeded")
+
 	// Validation errors
-	ErrRequiredField         = errors.New("required field is missing")
-	ErrInvalidFormat         = errors.New("invalid format")
-	ErrInvalidValue          = errors.New("invalid value")
+	ErrRequiredField = errors.New("required field is missing")
+	ErrInvalidFormat = errors.New("invalid format")
+	ErrInvalidValue  = errors.New("invalid value")
 )
 
 // PlatformError represents a platform compatibility error

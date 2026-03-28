@@ -42,7 +42,7 @@ func (rl *RateLimiter) OrgRateLimit(next http.Handler) http.Handler {
 		}
 
 		key := fmt.Sprintf("rate_limit:%s:%d", orgID.String(), time.Now().Unix())
-		
+
 		val, err := rl.cache.Increment(ctx, key, 1*time.Second)
 		if err != nil {
 			rl.logger.Error("Rate limiter cache error", zap.Error(err))
@@ -51,8 +51,8 @@ func (rl *RateLimiter) OrgRateLimit(next http.Handler) http.Handler {
 		}
 
 		if int(val) > limit {
-			rl.logger.Warn("Organization rate limit exceeded", 
-				zap.String("org_id", orgID.String()), 
+			rl.logger.Warn("Organization rate limit exceeded",
+				zap.String("org_id", orgID.String()),
 				zap.Int("limit", limit))
 			w.Header().Set("Retry-After", "1")
 			http.Error(w, fmt.Sprintf("Organization rate limit exceeded (%d req/sec)", limit), http.StatusTooManyRequests)

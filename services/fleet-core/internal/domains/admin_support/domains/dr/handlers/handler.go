@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/dto"
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
@@ -16,12 +18,17 @@ import (
 )
 
 type DrHandlers struct {
-	service service.DrService
-	logger  *zap.Logger
+	service   service.DrService
+	logger    *zap.Logger
+	validator *validator.Validate
 }
 
 func NewDrHandlers(service service.DrService, logger *zap.Logger) *DrHandlers {
-	return &DrHandlers{service: service, logger: logger}
+	return &DrHandlers{
+		service:   service,
+		logger:    logger,
+		validator: validator.New(),
+	}
 }
 
 func (h *DrHandlers) RegisterRoutes(r chi.Router) {
@@ -304,21 +311,32 @@ func (h *DrHandlers) GetDRTestSettings(w http.ResponseWriter, r *http.Request) {
 		h.errorJSON(w, "Failed to load settings", http.StatusInternalServerError)
 		return
 	}
-	h.json(w, map[string]any{"data": settings}, http.StatusOK)
+	// Convert model to DTO
+	settingsDTO := dto.FromDRTestSettingsModel(settings)
+	h.json(w, map[string]any{"data": settingsDTO}, http.StatusOK)
 }
 
 func (h *DrHandlers) UpdateDRTestSettings(w http.ResponseWriter, r *http.Request) {
-	var settings models.DRTestSettings
-	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+	var req dto.DRTestSettingsDTO
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	if err := h.service.UpdateDRTestSettings(r.Context(), &settings); err != nil {
+
+	if err := h.validator.Struct(req); err != nil {
+		h.errorJSON(w, "validation failed: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Convert DTO to model
+	settings := req.ToModel()
+	if err := h.service.UpdateDRTestSettings(r.Context(), settings); err != nil {
 		h.logger.Error("failed to update dr test settings", zap.Error(err))
 		h.errorJSON(w, "Failed to save settings", http.StatusInternalServerError)
 		return
 	}
-	h.json(w, map[string]any{"data": settings}, http.StatusOK)
+	// Return DTO (not model)
+	h.json(w, map[string]any{"data": req}, http.StatusOK)
 }
 
 func (h *DrHandlers) GetDRTestDetail(w http.ResponseWriter, r *http.Request) {

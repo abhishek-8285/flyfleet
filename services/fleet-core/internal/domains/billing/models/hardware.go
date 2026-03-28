@@ -22,15 +22,15 @@ const (
 )
 
 type HardwareProduct struct {
-	ID                uuid.UUID        `json:"id" db:"id"`
-	Name              string           `json:"name" db:"name"`
-	ModelCode         string           `json:"model_code" db:"model_code"`
-	Category          HardwareCategory `json:"category" db:"category"`
-	OneTimePrice      float64          `json:"one_time_price" db:"one_time_price"`
-	LeaseMonthlyPrice *float64         `json:"lease_monthly_price,omitempty" db:"lease_monthly_price"`
-	Currency          string           `json:"currency" db:"currency"`
+	ID                uuid.UUID              `json:"id" db:"id"`
+	Name              string                 `json:"name" db:"name"`
+	ModelCode         string                 `json:"model_code" db:"model_code"`
+	Category          HardwareCategory       `json:"category" db:"category"`
+	OneTimePrice      float64                `json:"one_time_price" db:"one_time_price"`
+	LeaseMonthlyPrice *float64               `json:"lease_monthly_price,omitempty" db:"lease_monthly_price"`
+	Currency          string                 `json:"currency" db:"currency"`
 	Metadata          map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	CreatedAt         time.Time        `json:"created_at" db:"created_at"`
+	CreatedAt         time.Time              `json:"created_at" db:"created_at"`
 }
 
 type DeviceAssignment struct {

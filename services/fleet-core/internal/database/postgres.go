@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	pgx "github.com/jackc/pgx/v5"
+	pgxpool "github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +21,12 @@ func NewPostgresPool(ctx context.Context, databaseURL string, logger *zap.Logger
 	config.MaxConnLifetime = 1 * time.Hour
 	config.MaxConnIdleTime = 30 * time.Minute
 	config.HealthCheckPeriod = 1 * time.Minute
+
+	// Optimize for prepared statement caching to reduce query parse/plan overhead
+	// Use CacheStatement mode to ensure all queries are prepared and cached on the server
+	if config.ConnConfig != nil {
+		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

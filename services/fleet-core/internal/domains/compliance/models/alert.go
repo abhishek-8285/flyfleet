@@ -12,7 +12,7 @@ const (
 	AlertPanic            AlertType = "PANIC_ALERT"
 	AlertDeviceTamper     AlertType = "DEVICE_TAMPER"
 	AlertDeviceOffline    AlertType = "DEVICE_OFFLINE"
-	AlertDriverViolation AlertType = "DRIVER_VIOLATION"
+	AlertDriverViolation  AlertType = "DRIVER_VIOLATION"
 	AlertDocumentExpiring AlertType = "DOCUMENT_EXPIRING"
 	AlertDocumentExpired  AlertType = "DOCUMENT_EXPIRED"
 )

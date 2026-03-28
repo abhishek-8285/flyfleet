@@ -63,15 +63,6 @@ func NewFuelService(
 }
 
 func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error) {
-	// Check for duplicate transaction within window
-	isDuplicate, err := s.repo.CheckDuplicate(ctx, req.VehicleID, orgID, req.TransactionDate, DuplicateFuelLogWindow)
-	if err != nil {
-		s.logger.Error("failed to check for duplicate", zap.Error(err))
-	}
-	if isDuplicate {
-		return nil, ErrDuplicateFuelLog
-	}
-
 	// Validate odometer
 	lastOdo, err := s.repo.GetLastOdometer(ctx, req.VehicleID, orgID)
 	if err == nil && lastOdo > 0 {
@@ -80,7 +71,7 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		}
 	}
 
-	// Phase 4: Validate against tank capacity
+	// Validate against tank capacity
 	specs, err := s.repo.GetVehicleSpecs(ctx, req.VehicleID)
 	if err == nil && specs != nil {
 		if req.Quantity > specs.TankCapacityLiters {
@@ -92,18 +83,22 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		}
 	}
 
-	// Phase 7: Driver Fuel Limit Controls
-	if err := s.validateFuelLimits(ctx, orgID, req.DriverID, req.Quantity, req.TotalCost); err != nil {
-		return nil, err
+	// Check for duplicate transaction within window
+	isDuplicate, err := s.repo.CheckDuplicate(ctx, req.VehicleID, orgID, req.TransactionDate, DuplicateFuelLogWindow)
+	if err != nil {
+		s.logger.Error("failed to check for duplicate", zap.Error(err))
+	}
+	if isDuplicate {
+		return nil, ErrDuplicateFuelLog
 	}
 
-	// Validate cost (with small epsilon for floating point)
+	// Validate cost
 	expectedCost := req.Quantity * req.UnitPrice
 	if req.TotalCost < expectedCost-0.05 || req.TotalCost > expectedCost+0.05 {
 		return nil, ErrInvalidCost
 	}
 
-	// GST Validation and Calculation
+	// GST Validation
 	if req.VendorGSTIN != nil && *req.VendorGSTIN != "" {
 		if !s.taxService.ValidateGSTIN(*req.VendorGSTIN) {
 			s.logger.Warn("Invalid Vendor GSTIN provided", zap.String("gstin", *req.VendorGSTIN))
@@ -115,6 +110,7 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		}
 	}
 
+	// Build fuel log
 	var gstAmount *float64
 	if req.GSTRate != nil && *req.GSTRate > 0 {
 		res := s.taxService.CalculateGST(req.TotalCost, *req.GSTRate, false)
@@ -146,7 +142,7 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		UpdatedAt:       time.Now(),
 	}
 
-	// Run anomaly checks using previous odometer context when available.
+	// Anomaly check
 	var previousLog *models.FuelLog
 	if lastOdo > 0 {
 		previousLog = &models.FuelLog{Odometer: lastOdo}
@@ -156,17 +152,31 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 		log.AnomalyReason = &anomalyResult.AnomalyType
 	}
 
-	if err := s.repo.Create(ctx, log); err != nil {
-		s.logger.Error("failed to create fuel log", zap.Error(err))
+	// SECURITY FIX: Atomic check-and-insert to prevent TOCTOU race condition
+	// This method handles limit validation and insertion in a single transaction
+	if err := s.repo.CreateWithLimitValidation(ctx, log, req.Quantity, req.TotalCost); err != nil {
+		// Check if it's a known limit error
+		if strings.Contains(err.Error(), "limit exceeded") {
+			s.logger.Warn("fuel limit validation failed",
+				zap.String("driver_id", req.DriverID.String()),
+				zap.Float64("quantity", req.Quantity),
+				zap.Float64("amount", req.TotalCost),
+				zap.Error(err))
+			return nil, err
+		}
+		// Other errors
+		s.logger.Error("failed to create fuel log with limit validation", zap.Error(err))
 		return nil, err
 	}
+
+	// Audit log
 	s.writeAuditLog(ctx, &models.FuelAuditLog{
 		FuelLogID: log.ID,
 		Action:    "create",
 		ChangedBy: userID,
 		NewValues: mustJSONMarshal(map[string]interface{}{
-			"status":       log.Status,
-			"quantity":     log.Quantity,
+			"status":   log.Status,
+			"quantity": log.Quantity,
 		}),
 	})
 

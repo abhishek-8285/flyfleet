@@ -31,7 +31,7 @@ func TestTripFinancialService_CalculateFinancials_Success(t *testing.T) {
 	ctx := context.Background()
 
 	trip := &models.Trip{
-		ID:              "trip-123",
+		ID:                "trip-123",
 		GSTClassification: "intrastate",
 	}
 
@@ -50,7 +50,7 @@ func TestTripFinancialService_CalculateFinancials_Interstate(t *testing.T) {
 	ctx := context.Background()
 
 	trip := &models.Trip{
-		ID:              "trip-123",
+		ID:                "trip-123",
 		GSTClassification: "interstate",
 	}
 
@@ -70,7 +70,7 @@ func TestTripFinancialService_CalculateFinancials_Intrastate(t *testing.T) {
 	ctx := context.Background()
 
 	trip := &models.Trip{
-		ID:              "trip-123",
+		ID:                "trip-123",
 		GSTClassification: "intrastate",
 	}
 
@@ -104,9 +104,9 @@ func TestTripFinancialService_CalculateFinancials_WithDelay(t *testing.T) {
 func TestTripFinancialService_CalculateFinancials_TDS(t *testing.T) {
 	logger := zap.NewNop()
 	config := &FinancialConfig{
-		BaseRatePerKM:         100.0,
-		TDSThreshold:          30000.0,
-		TDSRate:               2.0,
+		BaseRatePerKM: 100.0,
+		TDSThreshold:  30000.0,
+		TDSRate:       2.0,
 	}
 	service := NewTripFinancialService(logger, config)
 	ctx := context.Background()
@@ -173,7 +173,7 @@ func TestTripFinancialService_GenerateInvoiceData(t *testing.T) {
 	ctx := context.Background()
 
 	trip := &models.Trip{
-		ID:              "trip-123",
+		ID:                "trip-123",
 		GSTClassification: "interstate",
 	}
 
@@ -205,7 +205,7 @@ func TestTripFinancialService_IsReverseChargeApplicable(t *testing.T) {
 
 	// Interstate
 	trip1 := &models.Trip{
-		ID:              "trip-123",
+		ID:                "trip-123",
 		GSTClassification: "interstate",
 	}
 	financials1, _ := service.CalculateFinancials(ctx, trip1, 500.0, 50.0, 480, 500)
@@ -213,7 +213,7 @@ func TestTripFinancialService_IsReverseChargeApplicable(t *testing.T) {
 
 	// Intrastate
 	trip2 := &models.Trip{
-		ID:              "trip-456",
+		ID:                "trip-456",
 		GSTClassification: "intrastate",
 	}
 	financials2, _ := service.CalculateFinancials(ctx, trip2, 500.0, 50.0, 480, 500)

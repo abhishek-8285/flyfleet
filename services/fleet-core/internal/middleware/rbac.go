@@ -28,8 +28,8 @@ func RequireRole(logger *zap.Logger, requiredRoles ...string) func(http.Handler)
 			}
 
 			if !allowed {
-				logger.Warn("Access denied: insufficient role", 
-					zap.String("user_role", role), 
+				logger.Warn("Access denied: insufficient role",
+					zap.String("user_role", role),
 					zap.Any("required_roles", requiredRoles))
 				http.Error(w, "Forbidden: Insufficient Permissions", http.StatusForbidden)
 				return

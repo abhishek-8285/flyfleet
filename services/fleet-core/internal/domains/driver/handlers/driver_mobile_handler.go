@@ -35,14 +35,14 @@ func (h *DriverHandler) UpdateDutyStatus(w http.ResponseWriter, r *http.Request)
 
 	if err := h.service.UpdateDutyStatus(r.Context(), driverID, orgID, &req); err != nil {
 		h.logger.Error("failed to update duty status", zap.Error(err))
-		
+
 		// Map domain errors to status codes
 		statusCode := http.StatusInternalServerError
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "safety violation") || 
-		   strings.Contains(errMsg, "limit exceeded") ||
-		   strings.Contains(errMsg, "break required") ||
-		   strings.Contains(errMsg, "mandatory rest") {
+		if strings.Contains(errMsg, "safety violation") ||
+			strings.Contains(errMsg, "limit exceeded") ||
+			strings.Contains(errMsg, "break required") ||
+			strings.Contains(errMsg, "mandatory rest") {
 			statusCode = http.StatusForbidden // HOOS violation
 		} else if errMsg == "invalid driver id" {
 			statusCode = http.StatusBadRequest
@@ -111,12 +111,16 @@ func (h *DriverHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 // @Router /drivers/{id}/messages [get]
 func (h *DriverHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
-	
+
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 { page = 1 }
-	
+	if page < 1 {
+		page = 1
+	}
+
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
-	if pageSize < 1 { pageSize = 20 }
+	if pageSize < 1 {
+		pageSize = 20
+	}
 
 	// Extract orgID from context
 	orgID := h.getOrgID(r)
@@ -225,6 +229,7 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "SOS triggered"})
 }
+
 // GetPerformance godoc
 // @Summary Get driver performance summary
 // @Description Get comprehensive performance metrics for a driver
@@ -236,10 +241,10 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 // @Router /drivers/{id}/performance [get]
 func (h *DriverHandler) GetPerformance(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
-	
+
 	// Extract orgID from context
 	orgID := h.getOrgID(r)
-	
+
 	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), driverID, orgID.String())
 	if err != nil {
 		h.logger.Error("failed to get driver performance summary", zap.Error(err))

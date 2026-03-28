@@ -15,13 +15,13 @@ func TestNotifyAuthorities_CriticalDispatchesAll(t *testing.T) {
 
 	orgID := uuid.New()
 	incident := &models.SOSIncident{
-		ID:           uuid.New(),
-		OrgID:        orgID,
-		VehicleID:    uuid.New(),
-		Severity:     models.SeverityCritical,
-		IncidentType: models.TypePanic,
-		Latitude:     28.4505,
-		Longitude:    77.0263,
+		ID:             uuid.New(),
+		OrgID:          orgID,
+		VehicleID:      uuid.New(),
+		Severity:       models.SeverityCritical,
+		IncidentType:   models.TypePanic,
+		Latitude:       28.4505,
+		Longitude:      77.0263,
 		SimulationMode: false,
 	}
 
@@ -34,8 +34,8 @@ func TestNotifyAuthorities_SkipsSimulation(t *testing.T) {
 	svc := NewEmergencyAuthorityService(nil, nil, logger)
 
 	incident := &models.SOSIncident{
-		ID:           uuid.New(),
-		Severity:     models.SeverityCritical,
+		ID:             uuid.New(),
+		Severity:       models.SeverityCritical,
 		SimulationMode: true,
 	}
 

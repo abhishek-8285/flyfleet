@@ -42,7 +42,7 @@ func (s *LocalStorage) GetPath(invoice *models.Invoice) string {
 	// Organize by year/month for better management
 	year := invoice.InvoiceDate.Format("2006")
 	month := invoice.InvoiceDate.Format("01")
-	
+
 	return filepath.Join(
 		s.basePath,
 		year,
@@ -54,7 +54,7 @@ func (s *LocalStorage) GetPath(invoice *models.Invoice) string {
 // Save saves a PDF to local storage
 func (s *LocalStorage) Save(ctx context.Context, invoice *models.Invoice, pdfData []byte) error {
 	path := s.GetPath(invoice)
-	
+
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -78,7 +78,7 @@ func (s *LocalStorage) Save(ctx context.Context, invoice *models.Invoice, pdfDat
 // Get retrieves a PDF from local storage
 func (s *LocalStorage) Get(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
 	path := s.GetPath(invoice)
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -98,7 +98,7 @@ func (s *LocalStorage) GetPresignedURL(ctx context.Context, invoice *models.Invo
 // Exists checks if a PDF exists in storage
 func (s *LocalStorage) Exists(ctx context.Context, invoice *models.Invoice) (bool, error) {
 	path := s.GetPath(invoice)
-	
+
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -113,7 +113,7 @@ func (s *LocalStorage) Exists(ctx context.Context, invoice *models.Invoice) (boo
 // Delete removes a PDF from storage (soft delete - renames)
 func (s *LocalStorage) Delete(ctx context.Context, invoice *models.Invoice) error {
 	path := s.GetPath(invoice)
-	
+
 	// Rename instead of delete for audit trail
 	deletedPath := path + ".deleted"
 	if err := os.Rename(path, deletedPath); err != nil {
@@ -243,7 +243,7 @@ func (s *LocalStorage) CleanupOldFiles(ctx context.Context, olderThan time.Durat
 func (s *LocalStorage) HealthCheck(ctx context.Context) error {
 	// Check if base path exists and is writable
 	testFile := filepath.Join(s.basePath, ".healthcheck")
-	
+
 	if err := os.WriteFile(testFile, []byte("ok"), 0644); err != nil {
 		return fmt.Errorf("storage not writable: %w", err)
 	}

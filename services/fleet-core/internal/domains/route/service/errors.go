@@ -1,46 +1,50 @@
 package service
 
-import "errors"
+import (
+	"database/sql"
+	"errors"
+)
 
 // Route optimization service errors
 var (
 	// General errors
-	ErrRouteNotFound          = errors.New("route not found")
-	ErrInvalidRoute           = errors.New("invalid route")
-	ErrInvalidRequest         = errors.New("invalid optimization request")
-	ErrInvalidResult          = errors.New("invalid optimization result")
-	
+	ErrNotFound       = sql.ErrNoRows
+	ErrRouteNotFound  = errors.New("route not found")
+	ErrInvalidRoute   = errors.New("invalid route")
+	ErrInvalidRequest = errors.New("invalid optimization request")
+	ErrInvalidResult  = errors.New("invalid optimization result")
+
 	// Request errors
-	ErrInvalidOrganization    = errors.New("invalid organization ID")
-	ErrInvalidStops           = errors.New("invalid stops")
-	ErrInvalidVehicles        = errors.New("invalid vehicles")
-	ErrInvalidCoordinates     = errors.New("invalid coordinates")
-	ErrInvalidLocation        = errors.New("invalid location")
-	
+	ErrInvalidOrganization = errors.New("invalid organization ID")
+	ErrInvalidStops        = errors.New("invalid stops")
+	ErrInvalidVehicles     = errors.New("invalid vehicles")
+	ErrInvalidCoordinates  = errors.New("invalid coordinates")
+	ErrInvalidLocation     = errors.New("invalid location")
+
 	// Optimization errors
-	ErrOptimizationFailed     = errors.New("optimization failed")
-	ErrNoVehiclesAvailable    = errors.New("no vehicles available")
-	ErrNoStopsProvided        = errors.New("no stops provided")
-	ErrInfeasibleConstraints  = errors.New("infeasible constraints")
-	
+	ErrOptimizationFailed    = errors.New("optimization failed")
+	ErrNoVehiclesAvailable   = errors.New("no vehicles available")
+	ErrNoStopsProvided       = errors.New("no stops provided")
+	ErrInfeasibleConstraints = errors.New("infeasible constraints")
+
 	// Job errors
-	ErrJobNotFound            = errors.New("job not found")
-	ErrJobFailed              = errors.New("job failed")
-	ErrJobAlreadyRunning      = errors.New("job already running")
-	ErrJobAlreadyCompleted    = errors.New("job already completed")
-	ErrInvalidJobStatus       = errors.New("invalid job status")
-	
+	ErrJobNotFound         = errors.New("job not found")
+	ErrJobFailed           = errors.New("job failed")
+	ErrJobAlreadyRunning   = errors.New("job already running")
+	ErrJobAlreadyCompleted = errors.New("job already completed")
+	ErrInvalidJobStatus    = errors.New("invalid job status")
+
 	// Result errors
 	ErrResultNotFound         = errors.New("result not found")
 	ErrResultGenerationFailed = errors.New("result generation failed")
-	
+
 	// Validation errors
-	ErrRequiredField          = errors.New("required field is missing")
-	ErrInvalidFormat          = errors.New("invalid format")
-	ErrInvalidValue           = errors.New("invalid value")
-	ErrInvalidDateRange       = errors.New("end date must be after start date")
-	ErrInvalidLatitude        = errors.New("latitude must be between -90 and 90")
-	ErrInvalidLongitude       = errors.New("longitude must be between -180 and 180")
+	ErrRequiredField    = errors.New("required field is missing")
+	ErrInvalidFormat    = errors.New("invalid format")
+	ErrInvalidValue     = errors.New("invalid value")
+	ErrInvalidDateRange = errors.New("end date must be after start date")
+	ErrInvalidLatitude  = errors.New("latitude must be between -90 and 90")
+	ErrInvalidLongitude = errors.New("longitude must be between -180 and 180")
 )
 
 // RouteError represents a route optimization domain error

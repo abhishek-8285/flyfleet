@@ -9,10 +9,10 @@ import (
 type NotificationChannel string
 
 const (
-	ChannelEmail  NotificationChannel = "EMAIL"
-	ChannelSMS    NotificationChannel = "SMS"
-	ChannelPush   NotificationChannel = "PUSH"
-	ChannelInApp  NotificationChannel = "IN_APP"
+	ChannelEmail NotificationChannel = "EMAIL"
+	ChannelSMS   NotificationChannel = "SMS"
+	ChannelPush  NotificationChannel = "PUSH"
+	ChannelInApp NotificationChannel = "IN_APP"
 )
 
 type NotificationStatus string
@@ -69,16 +69,16 @@ type NotificationSettings struct {
 }
 
 type NotificationTemplate struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
+	ID        uuid.UUID           `json:"id"`
+	Name      string              `json:"name"`
 	Channel   NotificationChannel `json:"channel"`
-	Language  string    `json:"language"`
-	Subject   string    `json:"subject"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
-	CreatedBy uuid.UUID `json:"created_by"`
-	UpdatedAt time.Time `json:"updated_at"`
-	UpdatedBy uuid.UUID `json:"updated_by"`
+	Language  string              `json:"language"`
+	Subject   string              `json:"subject"`
+	Body      string              `json:"body"`
+	CreatedAt time.Time           `json:"created_at"`
+	CreatedBy uuid.UUID           `json:"created_by"`
+	UpdatedAt time.Time           `json:"updated_at"`
+	UpdatedBy uuid.UUID           `json:"updated_by"`
 }
 type UserNotificationPreference struct {
 	ID             uuid.UUID `json:"id"`

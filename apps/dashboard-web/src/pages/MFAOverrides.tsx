@@ -7,7 +7,7 @@ import api from '../services/api';
 
 const MFAOverrides: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user: _ } = useAuth(); // Auth context required, user not used
     const [organizations, setOrganizations] = useState<any[]>([]);
     const [overrides, setOverrides] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(true);

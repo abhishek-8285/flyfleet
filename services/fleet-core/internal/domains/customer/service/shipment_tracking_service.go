@@ -36,7 +36,7 @@ func (s *ShipmentTrackingService) GetLiveTracking(ctx context.Context, shipmentI
 	// Since we don't have the fully running tracker, we return mock tracking telemetry
 	currentLat := 19.0760
 	currentLng := 72.8777
-	
+
 	tracking := &models.ShipmentTrackingData{
 		ShipmentID:      shipment.ID,
 		TrackingNumber:  "TRK-" + shipment.ID.String()[:8], // Stub

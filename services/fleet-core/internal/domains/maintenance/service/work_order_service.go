@@ -17,15 +17,15 @@ import (
 
 // WorkOrderService handles work order business logic
 type WorkOrderService struct {
-	workOrderRepo *repository.WorkOrderRepository
-	partsRepo     *repository.WorkOrderPartsRepository
-	inventoryRepo *repository.InventoryRepository
-	settingsRepo  *repository.SettingsRepository
-	vendorRepo    *repository.VendorRepository
+	workOrderRepo  *repository.WorkOrderRepository
+	partsRepo      *repository.WorkOrderPartsRepository
+	inventoryRepo  *repository.InventoryRepository
+	settingsRepo   *repository.SettingsRepository
+	vendorRepo     *repository.VendorRepository
 	inspectionRepo *repository.InspectionRepository
-	techRepo      repository.TechnicianRepository
-	nc            *nats.Conn
-	logger        *zap.Logger
+	techRepo       repository.TechnicianRepository
+	nc             *nats.Conn
+	logger         *zap.Logger
 }
 
 // NewWorkOrderService creates a new work order service
@@ -56,7 +56,7 @@ func NewWorkOrderService(
 // CreateWorkOrder creates a new work order
 func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uuid.UUID, req *models.CreateWorkOrderRequest) (*models.WorkOrder, error) {
 	wo := &models.WorkOrder{
-		OrganizationID:  orgID,
+		OrgID:           orgID,
 		VehicleID:       req.VehicleID,
 		Title:           req.Title,
 		Description:     &req.Description,
@@ -89,10 +89,10 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 
 	// Emit event
 	eventData, _ := json.Marshal(map[string]interface{}{
-		"organization_id": wo.OrganizationID.String(),
-		"vehicle_id":      wo.VehicleID.String(),
-		"work_order_id":   wo.ID.String(),
-		"timestamp":       time.Now().Unix(),
+		"org_id":        wo.OrgID.String(),
+		"vehicle_id":    wo.VehicleID.String(),
+		"work_order_id": wo.ID.String(),
+		"timestamp":     time.Now().Unix(),
 	})
 	if s.nc != nil {
 		s.nc.Publish("fleet.maintenance.work_order.created", eventData)
@@ -101,8 +101,8 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 	return wo, nil
 }
 
-// GetWorkOrder retrieves a work order by ID with parts
-func (s *WorkOrderService) GetWorkOrder(ctx context.Context, id uuid.UUID) (*models.WorkOrder, error) {
+// GetWorkOrder retrieves a work order by ID with parts, ensuring it belongs to the specified organization
+func (s *WorkOrderService) GetWorkOrder(ctx context.Context, id, orgID uuid.UUID) (*models.WorkOrder, error) {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get work order: %w", err)
@@ -149,7 +149,7 @@ func (s *WorkOrderService) ListWorkOrders(ctx context.Context, filter models.Wor
 }
 
 // UpdateWorkOrder updates a work order
-func (s *WorkOrderService) UpdateWorkOrder(ctx context.Context, id uuid.UUID, req *models.UpdateWorkOrderRequest) (*models.WorkOrder, error) {
+func (s *WorkOrderService) UpdateWorkOrder(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req *models.UpdateWorkOrderRequest) (*models.WorkOrder, error) {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get work order: %w", err)
@@ -199,12 +199,12 @@ func (s *WorkOrderService) UpdateWorkOrder(ctx context.Context, id uuid.UUID, re
 	return wo, nil
 }
 
-func (s *WorkOrderService) ChangeStatus(ctx context.Context, id uuid.UUID, status models.WorkOrderStatus) error {
-	return s.UpdateWorkOrderStatus(ctx, id, status)
+func (s *WorkOrderService) ChangeStatus(ctx context.Context, id, orgID uuid.UUID, status models.WorkOrderStatus) error {
+	return s.UpdateWorkOrderStatus(ctx, id, orgID, status)
 }
 
 // UpdateWorkOrderStatus changes work order status
-func (s *WorkOrderService) UpdateWorkOrderStatus(ctx context.Context, id uuid.UUID, status models.WorkOrderStatus) error {
+func (s *WorkOrderService) UpdateWorkOrderStatus(ctx context.Context, id, orgID uuid.UUID, status models.WorkOrderStatus) error {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get work order: %w", err)
@@ -236,7 +236,7 @@ func (s *WorkOrderService) UpdateWorkOrderStatus(ctx context.Context, id uuid.UU
 }
 
 // ApproveWorkOrder handles the approval workflow
-func (s *WorkOrderService) ApproveWorkOrder(ctx context.Context, id uuid.UUID, userID uuid.UUID, role string) error {
+func (s *WorkOrderService) ApproveWorkOrder(ctx context.Context, id, orgID uuid.UUID, userID uuid.UUID, role string) error {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get work order: %w", err)
@@ -269,7 +269,7 @@ func (s *WorkOrderService) ApproveWorkOrder(ctx context.Context, id uuid.UUID, u
 }
 
 // RejectWorkOrder rejects a work order
-func (s *WorkOrderService) RejectWorkOrder(ctx context.Context, id uuid.UUID, userID uuid.UUID, reason string) error {
+func (s *WorkOrderService) RejectWorkOrder(ctx context.Context, id, orgID, userID uuid.UUID, reason string) error {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get work order: %w", err)
@@ -287,7 +287,7 @@ func (s *WorkOrderService) RejectWorkOrder(ctx context.Context, id uuid.UUID, us
 }
 
 // CloseWorkOrder closes a work order
-func (s *WorkOrderService) CloseWorkOrder(ctx context.Context, id uuid.UUID) error {
+func (s *WorkOrderService) CloseWorkOrder(ctx context.Context, id, orgID uuid.UUID) error {
 	wo, err := s.workOrderRepo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get work order: %w", err)
@@ -309,7 +309,7 @@ func (s *WorkOrderService) CloseWorkOrder(ctx context.Context, id uuid.UUID) err
 }
 
 // AssignPart assigns a part to a work order
-func (s *WorkOrderService) AssignPart(ctx context.Context, workOrderID uuid.UUID, req *models.AssignPartRequest) (*models.WorkOrderPart, error) {
+func (s *WorkOrderService) AssignPart(ctx context.Context, workOrderID, orgID uuid.UUID, req *models.AssignPartRequest) (*models.WorkOrderPart, error) {
 	wo, err := s.workOrderRepo.GetByID(ctx, workOrderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get work order: %w", err)
@@ -347,7 +347,7 @@ func (s *WorkOrderService) AssignPart(ctx context.Context, workOrderID uuid.UUID
 }
 
 // RemovePart removes a part from a work order
-func (s *WorkOrderService) RemovePart(ctx context.Context, workOrderID, partID uuid.UUID) error {
+func (s *WorkOrderService) RemovePart(ctx context.Context, workOrderID, orgID, partID uuid.UUID) error {
 	wo, err := s.workOrderRepo.GetByID(ctx, workOrderID)
 	if err != nil {
 		return fmt.Errorf("failed to get work order: %w", err)
@@ -390,7 +390,7 @@ func (s *WorkOrderService) AutoAssignTechnician(ctx context.Context, wo *models.
 		return nil
 	}
 
-	technicians, err := s.techRepo.ListTechnicians(ctx, wo.OrganizationID)
+	technicians, err := s.techRepo.ListTechnicians(ctx, wo.OrgID)
 	if err != nil {
 		return fmt.Errorf("failed to list technicians: %w", err)
 	}
@@ -428,8 +428,8 @@ func (s *WorkOrderService) AutoAssignTechnician(ctx context.Context, wo *models.
 			return fmt.Errorf("failed to update work order assignment: %w", err)
 		}
 		_ = s.techRepo.UpdateWorkload(ctx, bestTech.ID, 1)
-		
-		s.logger.Info("auto-assigned technician", 
+
+		s.logger.Info("auto-assigned technician",
 			zap.String("work_order_id", wo.ID.String()),
 			zap.String("technician_id", bestTech.ID.String()),
 			zap.String("skill", requiredSkill),

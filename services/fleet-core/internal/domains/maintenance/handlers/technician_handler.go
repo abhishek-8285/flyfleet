@@ -26,6 +26,6 @@ func (h *TechnicianHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *TechnicianHandler) ListTechnicians(w http.ResponseWriter, r *http.Request) {
-    // Implementation placeholder
-    w.WriteHeader(http.StatusNotImplemented)
+	// Implementation placeholder
+	w.WriteHeader(http.StatusNotImplemented)
 }

@@ -28,12 +28,12 @@ func (s *ContractPricingService) CalculateContractRate(ctx context.Context, cust
 
 	// 1. Fetch active contract from repo
 	// contract, err := s.repo.GetActiveContract(ctx, customerID)
-	
+
 	// Stub calculation mimicking a complex enterprise rule engine
 	baseRate := 4000.0
 	perKmRate := 18.5
 	distanceMock := 200.0 // kilometers
-	
+
 	total := baseRate + (perKmRate * distanceMock)
 
 	// If weight > 20000 kg, add heavy cargo surcharge

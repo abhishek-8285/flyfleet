@@ -13,6 +13,13 @@ func TestProviderHealthService(t *testing.T) {
 		Addr: "localhost:6379",
 	})
 	ctx := context.Background()
+
+	// Skip if Redis is not available
+	if _, err := rdb.Ping(ctx).Result(); err != nil {
+		t.Skip("Redis not available - skipping provider health service test")
+		return
+	}
+
 	rdb.FlushDB(ctx)
 
 	logger, _ := zap.NewDevelopment()

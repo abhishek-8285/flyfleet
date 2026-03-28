@@ -23,7 +23,6 @@ export const DriverFilters: React.FC<DriverFiltersProps> = ({
   onSafetyChange,
 }) => {
   const { uiStrings: rawUiStrings } = useUIStrings("drivers");
-  const { uiStrings: commonStrings } = useUIStrings("common");
   const uiStrings = rawUiStrings || {};
 
   return (

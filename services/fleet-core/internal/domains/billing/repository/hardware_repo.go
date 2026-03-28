@@ -38,7 +38,7 @@ func (r *HardwareRepository) ListProducts(ctx context.Context) ([]models.Hardwar
 func (r *HardwareRepository) GetAssignmentByDevice(ctx context.Context, deviceID string) (*models.DeviceAssignment, error) {
 	query := `SELECT id, org_id, device_id, product_id, billing_type, status, activated_at, invoice_id, created_at, updated_at 
 	          FROM billing_device_assignments WHERE device_id = $1`
-	
+
 	var a models.DeviceAssignment
 	err := r.db.QueryRow(ctx, query, deviceID).Scan(
 		&a.ID, &a.OrgID, &a.DeviceID, &a.ProductID, &a.BillingType, &a.Status, &a.ActivatedAt, &a.InvoiceID, &a.CreatedAt, &a.UpdatedAt,

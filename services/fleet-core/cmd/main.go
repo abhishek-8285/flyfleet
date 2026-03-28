@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"sort"
@@ -12,66 +13,67 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/cache"
 	shareddb "github.com/fleet-platform/shared/pkg/database"
 	sharedmessaging "github.com/fleet-platform/shared/pkg/messaging"
 	"github.com/flyfleet/fleet-core-service/internal/config"
 	"github.com/flyfleet/fleet-core-service/internal/control"
 	"github.com/flyfleet/fleet-core-service/internal/database"
 	"github.com/flyfleet/fleet-core-service/internal/docs"
-	"github.com/flyfleet/fleet-core-service/internal/gateway"
-	"github.com/flyfleet/fleet-core-service/internal/logadapter"
-	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
-	dashHandlers "github.com/flyfleet/fleet-core-service/internal/handlers"
-	"github.com/fleet-platform/shared/pkg/cache"
-	monitorSvc "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
-	monitoringrepo "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
-	adminsupportsupportrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/repository"
-	adminsupportsupportservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/service"
-	adminsupportsupporthandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/handlers"
+	adminsupportdrhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/handlers"
 	adminsupportdrrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/repository"
 	adminsupportdrservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/service"
-	adminsupportdrhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/handlers"
+	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/handlers"
+	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
+	adminsupportorghandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/handlers"
 	adminsupportorgrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/repository"
 	adminsupportorgservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
-	adminsupportorghandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/handlers"
-	adminsupportemergencyservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
-	adminsupportemergencyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/handlers"
-	"github.com/flyfleet/fleet-core-service/internal/repository"
+	adminsupportsupporthandlers "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/handlers"
+	adminsupportsupportrepo "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/repository"
+	adminsupportsupportservice "github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/service"
+	monitoringrepo "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
+	monitorSvc "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
+	"github.com/flyfleet/fleet-core-service/internal/gateway"
+	dashHandlers "github.com/flyfleet/fleet-core-service/internal/handlers"
+	"github.com/flyfleet/fleet-core-service/internal/logadapter"
+	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	"github.com/flyfleet/fleet-core-service/internal/repository"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	// Domains
-	governanceHandlers "github.com/flyfleet/fleet-core-service/internal/domains/governance/handlers"
-	governanceRepo     "github.com/flyfleet/fleet-core-service/internal/domains/governance/repository"
-	governanceService  "github.com/flyfleet/fleet-core-service/internal/domains/governance/service"
-	govMiddleware      "github.com/flyfleet/fleet-core-service/internal/domains/governance/middleware"
-	govUtils           "github.com/flyfleet/fleet-core-service/internal/domains/governance/utils"
-	govWorkers         "github.com/flyfleet/fleet-core-service/internal/domains/governance/workers"
-	indiav2handlers    "github.com/flyfleet/fleet-core-service/internal/domains/india/handlers"
-	indiav2repo        "github.com/flyfleet/fleet-core-service/internal/domains/india/repository"
-	indiav2service     "github.com/flyfleet/fleet-core-service/internal/domains/india/service"
-	billingv2storage   "github.com/flyfleet/fleet-core-service/internal/domains/billing/storage"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	indiav2workers     "github.com/flyfleet/fleet-core-service/internal/domains/india/workers"
+	billingv2storage "github.com/flyfleet/fleet-core-service/internal/domains/billing/storage"
+	governanceHandlers "github.com/flyfleet/fleet-core-service/internal/domains/governance/handlers"
+	govMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/governance/middleware"
+	governanceRepo "github.com/flyfleet/fleet-core-service/internal/domains/governance/repository"
+	governanceService "github.com/flyfleet/fleet-core-service/internal/domains/governance/service"
+	govUtils "github.com/flyfleet/fleet-core-service/internal/domains/governance/utils"
+	govWorkers "github.com/flyfleet/fleet-core-service/internal/domains/governance/workers"
+	indiav2handlers "github.com/flyfleet/fleet-core-service/internal/domains/india/handlers"
+	indiav2repo "github.com/flyfleet/fleet-core-service/internal/domains/india/repository"
+	indiav2service "github.com/flyfleet/fleet-core-service/internal/domains/india/service"
+	indiav2workers "github.com/flyfleet/fleet-core-service/internal/domains/india/workers"
 	integrationsv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/integrations/handlers"
-	integrationsv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/integrations/repository"
-	integrationsv2service  "github.com/flyfleet/fleet-core-service/internal/domains/integrations/service"
-	reportsv2handlers  "github.com/flyfleet/fleet-core-service/internal/domains/reports/handlers"
-	reportsv2queue     "github.com/flyfleet/fleet-core-service/internal/domains/reports/queue"
-	reportsv2repo      "github.com/flyfleet/fleet-core-service/internal/domains/reports/repository"
-	reportsv2service   "github.com/flyfleet/fleet-core-service/internal/domains/reports/service"
-	settingsHandlers   "github.com/flyfleet/fleet-core-service/internal/domains/settings/handlers"
+	integrationsv2repo "github.com/flyfleet/fleet-core-service/internal/domains/integrations/repository"
+	integrationsv2service "github.com/flyfleet/fleet-core-service/internal/domains/integrations/service"
+	reportsv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/reports/handlers"
+	reportsv2queue "github.com/flyfleet/fleet-core-service/internal/domains/reports/queue"
+	reportsv2repo "github.com/flyfleet/fleet-core-service/internal/domains/reports/repository"
+	reportsv2service "github.com/flyfleet/fleet-core-service/internal/domains/reports/service"
+	settingsHandlers "github.com/flyfleet/fleet-core-service/internal/domains/settings/handlers"
 	settingsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/settings/middleware"
-	settingsRepo       "github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
-	settingsService    "github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
+	settingsRepo "github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
+	settingsService "github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
 
-	alertalertrepo    "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/repository"
-	alertalertrule    "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/rule_engine"
-	alertproviders    "github.com/flyfleet/fleet-core-service/internal/domains/alert/providers"
-	alertalertservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/service"
 	alertalerthandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/handlers"
-	alertnotifyrepo   "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/repository"
-	alertnotifyservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service"
+	alertalertrepo "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/repository"
+	alertalertrule "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/rule_engine"
+	alertalertservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/service"
 	alertnotifyhandlers "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/handlers"
+	alertnotifyrepo "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/repository"
+	alertnotifyservice "github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service"
+	alertproviders "github.com/flyfleet/fleet-core-service/internal/domains/alert/providers"
 
 	vehHandlers "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/handlers"
 	vehProcessor "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/processor"
@@ -83,83 +85,119 @@ import (
 	financeRepo "github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
 	financeService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
 
+	geoEngine "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/engine"
 	geoHandlers "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/handlers"
-	geoRepo     "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/repository"
-	geoService  "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/service"
-	geoEngine   "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/engine"
+	geoRepo "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/repository"
+	geoService "github.com/flyfleet/fleet-core-service/internal/domains/geofencing/service"
 
 	emergencyHandlers "github.com/flyfleet/fleet-core-service/internal/domains/emergency/handlers"
 	emergencyRepo "github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
 	emergencyService "github.com/flyfleet/fleet-core-service/internal/domains/emergency/service"
-	
-	trackingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/tracking/handlers"
-	trackingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
-	trackingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/tracking/service"
+
 	trackingv2analytics "github.com/flyfleet/fleet-core-service/internal/domains/tracking/analytics"
+	trackingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/tracking/handlers"
+	trackingv2repo "github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	trackingv2service "github.com/flyfleet/fleet-core-service/internal/domains/tracking/service"
 
 	maintenHandlers "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/handlers"
-	maintenRepo     "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
-	maintenService  "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
+	maintenRepo "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
+	maintenService "github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
 
 	fuelHandlers "github.com/flyfleet/fleet-core-service/internal/domains/fuel/handlers"
-	fuelRepo     "github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
-	fuelService  "github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
+	fuelRepo "github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
+	fuelService "github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
 
 	routeHandlers "github.com/flyfleet/fleet-core-service/internal/domains/route/handlers"
-	routeRepo     "github.com/flyfleet/fleet-core-service/internal/domains/route/repository"
-	routeService  "github.com/flyfleet/fleet-core-service/internal/domains/route/service"
+	routeRepo "github.com/flyfleet/fleet-core-service/internal/domains/route/repository"
+	routeService "github.com/flyfleet/fleet-core-service/internal/domains/route/service"
 
 	diagHandlers "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/handlers"
-	diagRepo     "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/repository"
-	diagService  "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+	diagRepo "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/repository"
+	diagService "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
 
 	platformcompat "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat"
 	platformcompathandlers "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/handlers"
-	platformcompatservice  "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
+	platformcompatservice "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
 
 	analyticsPackage "github.com/flyfleet/fleet-core-service/internal/domains/analytics"
-	analyticsCache   "github.com/flyfleet/fleet-core-service/internal/domains/analytics/cache"
+	analyticsCache "github.com/flyfleet/fleet-core-service/internal/domains/analytics/cache"
 	analyticsHandlers "github.com/flyfleet/fleet-core-service/internal/domains/analytics/handlers"
 	analyticsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/analytics/middleware"
 	analyticsQueue "github.com/flyfleet/fleet-core-service/internal/domains/analytics/queue"
-	analyticsRepo     "github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
-	analyticsService  "github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
+	analyticsRepo "github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
+	analyticsService "github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
 
 	billingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/billing/handlers"
-	billingv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
-	billingv2service  "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
-	billingv2queue    "github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
-	billingv2pdf      "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	billingv2models   "github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	billingv2models "github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	billingv2pdf "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	billingv2queue "github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
+	billingv2repo "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
+	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
 
 	compliancev2handlers "github.com/flyfleet/fleet-core-service/internal/domains/compliance/handlers"
-	compliancev2repo     "github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
-	compliancev2service  "github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
+	compliancev2repo "github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
+	compliancev2service "github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
 
 	authv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/auth/handlers"
-	authv2repo     "github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
-	authv2service  "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	authv2repo "github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
+	authv2service "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
 
 	driverHandlers "github.com/flyfleet/fleet-core-service/internal/domains/driver/handlers"
-	driverRepo     "github.com/flyfleet/fleet-core-service/internal/domains/driver/repository"
-	driverService  "github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
 	driverMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/driver/middleware"
+	driverRepo "github.com/flyfleet/fleet-core-service/internal/domains/driver/repository"
+	driverService "github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking"
 	trackingRepo "github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
+	videoHandlers "github.com/flyfleet/fleet-core-service/internal/domains/video/handlers"
+	videoRepo "github.com/flyfleet/fleet-core-service/internal/domains/video/repository"
+	videoService "github.com/flyfleet/fleet-core-service/internal/domains/video/service"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	videoHandlers "github.com/flyfleet/fleet-core-service/internal/domains/video/handlers"
-	videoRepo     "github.com/flyfleet/fleet-core-service/internal/domains/video/repository"
-	videoService  "github.com/flyfleet/fleet-core-service/internal/domains/video/service"
+
+	// OpenTelemetry Observability
+	platformmw "github.com/flyfleet/fleet-core-service/internal/platform/middleware"
+	observability "github.com/flyfleet/fleet-core-service/internal/platform/observability"
+
+	// Metrics Registration - Import all domain metrics packages to register them with Prometheus
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/admin_support"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/alert"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/alerts"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/analytics"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/auth"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/billing"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/compliance"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/customer"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/driver"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/emergency"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/fuel"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/geofencing"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/india"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/integrations"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/maintenance"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/monitoring"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/platform_compat"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/reports"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/route"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/settings"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/tracking"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/trip"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/vehicle"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/video"
+	// Sub-package metrics
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/metrics"
+	_ "github.com/flyfleet/fleet-core-service/internal/domains/governance/metrics"
+	// Platform cost metrics
+	_ "github.com/flyfleet/fleet-core-service/internal/platform/cost"
 )
 
 type billingQueueProvider struct {
@@ -177,6 +215,36 @@ func (p *billingQueueProvider) EnqueueRenderPDF(ctx context.Context, invoiceID u
 		return nil
 	}
 	return p.producer.EnqueueInvoiceRender(ctx, invoiceID.String())
+}
+
+// updateDatabasePoolMetrics periodically collects stats from each pool and updates Prometheus gauges.
+func updateDatabasePoolMetrics(pools *database.DatabasePools) {
+	// Helper to update a specific pool's metrics
+	updatePool := func(poolName string, pool *pgxpool.Pool) {
+		if pool == nil {
+			return
+		}
+		stat := pool.Stat()
+		active := float64(stat.AcquiredConns())
+		idle := float64(stat.IdleConns())
+		max := float64(stat.MaxConns())
+
+		metrics.DatabaseConnectionsActive.WithLabelValues(poolName).Set(active)
+		metrics.DatabaseConnectionsIdle.WithLabelValues(poolName).Set(idle)
+		metrics.DatabaseConnectionsMax.WithLabelValues(poolName).Set(max)
+
+		if max > 0 {
+			util := (active / max) * 100
+			metrics.DatabaseConnectionUtilization.WithLabelValues(poolName).Set(util)
+		} else {
+			metrics.DatabaseConnectionUtilization.WithLabelValues(poolName).Set(0)
+		}
+	}
+
+	updatePool("critical", pools.Critical)
+	updatePool("high", pools.High)
+	updatePool("medium", pools.Medium)
+	updatePool("low", pools.Low)
 }
 
 func main() {
@@ -199,6 +267,17 @@ func main() {
 	// 3. Load Config
 	cfg := config.Load()
 	logger.Info("Configuration loaded", zap.String("db_url", cfg.DatabaseURL), zap.String("port", cfg.Port))
+
+	// 4. Initialize OpenTelemetry Tracer (if endpoint configured)
+	if otelEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); otelEndpoint != "" {
+		shutdown, err := observability.InitTracer(ctx, "fleet-core-service", otelEndpoint)
+		if err != nil {
+			logger.Warn("Failed to initialize OpenTelemetry tracer", zap.Error(err))
+		} else {
+			defer shutdown(ctx)
+			logger.Info("OpenTelemetry tracer initialized", zap.String("endpoint", otelEndpoint))
+		}
+	}
 
 	// 3. Initialize Database (Main pgxpool)
 	// Termux/Android Hardening: Strictly limit connections to protect phone memory
@@ -223,10 +302,13 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				// Update database pool metrics
+				updateDatabasePoolMetrics(pools)
+
 				if pools.Critical != nil {
 					s := pools.Critical.Stat()
 					logger.Info("DB Pool Saturation Audit", zap.String("pool", "CRITICAL"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
-					
+
 					// Auto Pool Shedding logic
 					if sharedRedisClient != nil {
 						if float64(s.AcquiredConns()) > float64(s.MaxConns())*0.90 {
@@ -248,20 +330,6 @@ func main() {
 					s := pools.Low.Stat()
 					logger.Info("DB Pool Saturation Audit", zap.String("pool", "LOW"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
 				}
-			}
-		}
-	}()
-
-	// 3.2 Start Runtime Metrics Collection
-	go func() {
-		ticker := time.NewTicker(30 * time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				metrics.UpdateRuntimeMetrics()
 			}
 		}
 	}()
@@ -304,7 +372,7 @@ func main() {
 		logger.Warn("Failed to initialize Redis cache, some features might be limited", zap.Error(err))
 	} else {
 		defer redisCache.Close()
-		
+
 		rOpt, err := redis.ParseURL(cfg.RedisURL)
 		if err == nil {
 			sharedRedisClient = redis.NewClient(rOpt)
@@ -323,6 +391,31 @@ func main() {
 	// 6.1 Initialize Domain Metrics
 	trackingMetrics := trackingv2.NewMetrics()
 
+	// 6.2 Start pprof server for performance profiling (if enabled)
+	if os.Getenv("ENABLE_PPROF") == "true" {
+		pprofAddr := os.Getenv("PPROF_ADDR")
+		if pprofAddr == "" {
+			pprofAddr = "127.0.0.1:6060"
+		}
+		pprofSrv := &http.Server{
+			Addr:    pprofAddr,
+			Handler: http.DefaultServeMux,
+		}
+		go func() {
+			logger.Info("Starting pprof server", zap.String("addr", pprofAddr))
+			if err := pprofSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Fatal("pprof server failed", zap.Error(err))
+			}
+		}()
+		// Ensure pprof server shuts down gracefully
+		go func() {
+			<-ctx.Done()
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			pprofSrv.Shutdown(shutdownCtx)
+		}()
+	}
+
 	// 5. Initialize Router
 	r := chi.NewRouter()
 
@@ -333,6 +426,7 @@ func main() {
 	r.Use(systemGuard.Middleware)
 	r.Use(chiMiddleware.RequestID)
 	r.Use(coremiddleware.TraceIDMiddleware)
+	r.Use(platformmw.Observability("fleet-core-service"))
 	r.Use(metrics.HTTPMetricsMiddleware(logger))
 	r.Use(chiMiddleware.RealIP)
 	r.Use(chiMiddleware.Logger)
@@ -349,7 +443,7 @@ func main() {
 	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENFORCE_BFF_AUTH_GATE")), "true") {
 		r.Use(coremiddleware.NewBFFAuthGate(cfg.JWTSecret, []string{
 			"/health",
-			"/swagger",
+			// "/swagger" removed - admin documentation now requires authentication
 			"/api/control/",
 			"/api/v1/auth/login",
 			"/api/v1/auth/register",
@@ -358,14 +452,15 @@ func main() {
 			"/api/v1/ui/",
 			"/api/v1/legal/",
 			"/api/v1/dashboard/stats",
-			"/api/v1/admin/dashboard/data",
+			// SECURITY FIX: Removed "/api/v1/admin/dashboard/data" from public routes
+			// Admin dashboard data must require authentication
 		}))
 	}
 
 	// Pre-initialize Repositories (needed by multiple routes and workers)
 	vRepo := vehRepo.NewVehicleRepository(pools.High, logger)
 	vBulkRepo := vehRepo.NewBulkRepository(pools.High)
-	
+
 	// Driver Domain Repositories
 	dRepo := driverRepo.NewDriverRepository(pools.High)
 	dOnboardingRepo := driverRepo.NewOnboardingRepository(pools.High)
@@ -398,8 +493,8 @@ func main() {
 
 	// Driver Domain Handler
 	dHandler := driverHandlers.NewDriverHandler(
-		dService, dOnboardingSvc, dShiftSvc, dTrainingSvc, 
-		dPayrollSvc, dRatingSvc, dSafetySvc, dMobileSyncSvc, 
+		dService, dOnboardingSvc, dShiftSvc, dTrainingSvc,
+		dPayrollSvc, dRatingSvc, dSafetySvc, dMobileSyncSvc,
 		dSecurityMid, logger,
 	)
 
@@ -417,43 +512,45 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	// Comprehensive readiness probe with dependencies
+	// SECURITY: Sanitized to not leak internal error details
 	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
 		checks := map[string]interface{}{
-			"status":   "pass",
-			"service":  "fleet-core-service",
+			"status":    "pass",
+			"service":   "fleet-core-service",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-			"checks":   map[string]string{},
+			"checks":    map[string]string{},
 		}
 
-		// Check database
+		// Check database (generic messages only - no error details)
 		if pools.Critical != nil {
 			if err := pools.Critical.Ping(ctx); err != nil {
-				checks["checks"].(map[string]string)["database"] = "fail: " + err.Error()
+				checks["checks"].(map[string]string)["database"] = "unavailable"
 				checks["status"] = "fail"
 			} else {
-				checks["checks"].(map[string]string)["database"] = "pass"
+				checks["checks"].(map[string]string)["database"] = "ready"
 			}
 		} else {
-			checks["checks"].(map[string]string)["database"] = "skip (pool nil)"
+			checks["checks"].(map[string]string)["database"] = "unavailable (pool nil)"
+			checks["status"] = "fail"
 		}
 
 		// Check Redis
 		if sharedRedisClient != nil {
 			if _, err := sharedRedisClient.Ping(ctx).Result(); err != nil {
-				checks["checks"].(map[string]string)["redis"] = "fail: " + err.Error()
+				checks["checks"].(map[string]string)["redis"] = "unavailable"
 				checks["status"] = "fail"
 			} else {
-				checks["checks"].(map[string]string)["redis"] = "pass"
+				checks["checks"].(map[string]string)["redis"] = "ready"
 			}
 		} else {
-			checks["checks"].(map[string]string)["redis"] = "skip (not connected)"
+			checks["checks"].(map[string]string)["redis"] = "not configured"
 		}
 
 		// Check NATS
 		if nc != nil && nc.IsConnected() {
-			checks["checks"].(map[string]string)["nats"] = "pass"
+			checks["checks"].(map[string]string)["nats"] = "connected"
 		} else {
-			checks["checks"].(map[string]string)["nats"] = "skip (not connected)"
+			checks["checks"].(map[string]string)["nats"] = "disconnected"
 		}
 
 		// Overall status
@@ -485,52 +582,70 @@ func main() {
 	})
 
 	// 6. Initialize Domains & Register Routes
+	// Setup Global JWKS Auth Gate for protected routes
+	jwksURL := os.Getenv("JWKS_URL")
+	if jwksURL == "" {
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8081"
+		}
+		// Fallback to localhost relative to the port tests run on natively
+		jwksURL = "http://127.0.0.1:" + port + "/api/v1/auth/.well-known/jwks.json"
+	}
+	authGate := coremiddleware.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", logger)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		// IAM Domain (Superseded by auth_v2)
 		/*
-		orgR := iamrepo.NewOrganizationRepository(dbSQL)
-		orgS := iamservice.NewOrganizationService(orgR)
-		iamR := iamrepo.NewIAMRepository(db)
-		iamS := iamservice.NewIAMService(iamR, orgS, cfg.JWTSecret)
-		iamH := iamhandlers.NewIAMHandlers(iamS)
-		iamH.RegisterRoutes(r)
+			orgR := iamrepo.NewOrganizationRepository(dbSQL)
+			orgS := iamservice.NewOrganizationService(orgR)
+			iamR := iamrepo.NewIAMRepository(db)
+			iamS := iamservice.NewIAMService(iamR, orgS, cfg.JWTSecret)
+			iamH := iamhandlers.NewIAMHandlers(iamS)
+			iamH.RegisterRoutes(r)
 		*/
 
 		// Driver Domain
-		r.Route("/drivers", dHandler.RegisterRoutes)
+		r.Route("/drivers", func(r chi.Router) {
+			// Require elevated roles for mutating operations
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
+			dHandler.RegisterRoutes(r)
+		})
 
 		// Vehicle Domain
 		vService := vehService.NewVehicleService(vRepo, logger)
 		vHandlers := vehHandlers.NewVehicleHandlers(vService, logger)
 		r.Route("/vehicles", func(r chi.Router) {
+			// Require elevated roles for mutating operations
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
 			vHandlers.RegisterRoutes(r)
 		})
 		vBulkProcessor := vehProcessor.NewBulkProcessor(vBulkRepo, vRepo, logger)
 		vBulkService := vehService.NewBulkService(vBulkRepo, vBulkProcessor, logger)
 		vBulkHandlers := vehHandlers.NewBulkHandlers(vBulkService, logger)
 		r.Route("/bulk-jobs", func(r chi.Router) {
+			// Bulk jobs are mutating operations
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager"))
 			vBulkHandlers.RegisterRoutes(r)
 		})
 		// vTripRepo := vehRepo.NewTripRepository(db)
 		// vTripService := vehService.NewTripService(vTripRepo, logger)
 		// vTripHandlers := vehHandlers.NewTripHandlers(vTripService, logger)
 
-
-
-
-
 		// Route Optimization Domain
 		roRepo := routeRepo.NewRouteOptimizationRepository(pools.High)
 		roService := routeService.NewRouteOptimizationService(roRepo, "") // osrmURL is currently empty as per existing pattern
 		roHandlers := routeHandlers.NewRouteOptimizationHandler(roService, logger)
 		r.Route("/routes", func(r chi.Router) {
+			// Route creation/modification requires elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
 			roHandlers.RegisterRoutes(r)
 		})
 
 		// Initialize Platform Compatibility Service
 		compatHub := platformcompatservice.NewHub(logger)
 		go compatHub.Run(ctx)
-		
+
 		// Bridge NATS alerts to WebSockets
 		nc.Subscribe("billing.v2.alerts", func(m *nats.Msg) {
 			var alert struct {
@@ -545,7 +660,7 @@ func main() {
 		if err := wsGateway.Start(); err != nil {
 			logger.Warn("Failed to start websocket gateway", zap.Error(err))
 		}
-		
+
 		compatService := platformcompatservice.NewPlatformCompatService(logger)
 		platformCompatHandlers := platformcompathandlers.NewHandlers(compatService, compatHub, logger)
 		platformCompatHandlers.RegisterRoutes(r)
@@ -558,6 +673,9 @@ func main() {
 		diagRollout := diagService.NewFirmwareRolloutService(diagR)
 		diagH := diagHandlers.NewDiagnosticsHandler(diagTelemetry, diagCommand, diagRollout)
 		r.Route("/diagnostics", func(r chi.Router) {
+			r.Use(authGate.Handler)
+			r.Use(coremiddleware.TenantContextMiddleware(logger))
+			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "fleet_manager", "dispatcher"))
 			diagH.RegisterRoutes(r)
 		})
 
@@ -567,8 +685,10 @@ func main() {
 		reportsService := reportsv2service.NewReportService(reportsRepo, reportsQueue, logger)
 		reportsHandler := reportsv2handlers.NewReportHandler(reportsService, logger)
 		r.Route("/reports", func(r chi.Router) {
+			// Reports generation may require elevated roles for operations like create/delete
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "reporter"))
 			r.Use(systemGuard.LowPriorityShedder)
-			r.Use(reportsv2handlers.ContextMiddleware)
+			r.Use(coremiddleware.TenantContextMiddleware(logger))
 			reportsHandler.RegisterRoutes(r)
 		})
 
@@ -577,35 +697,39 @@ func main() {
 		intService := integrationsv2service.NewIntegrationsService(intRepo, cfg.JWTSecret, logger)
 		intHandler := integrationsv2handlers.NewHandlers(intService)
 		r.Route("/", func(r chi.Router) {
+			// Integrations configuration changes require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
 			intHandler.RegisterRoutes(r)
 		})
 
 		// India Integration Domain (migrated in monolith)
 		indiaRepo := indiav2repo.NewIndiaIntegrationRepository(pools.Low)
 		indiaService := indiav2service.NewIndiaIntegrationService(indiaRepo, sharedRedisClient)
-		
+
 		// Initialize India V2 sub-services
 		gstService := indiav2service.NewGSTIntegrationService(indiaRepo, logger)
-		
+
 		fastagService := indiav2service.NewFastagIntegrationService(indiaRepo, doubleSwipeDetector, logger)
 		vahanService := indiav2service.NewVahanIntegrationService(indiaRepo, sharedRedisClient, logger)
 		sarathiService := indiav2service.NewSarathiIntegrationService(indiaRepo, sharedRedisClient, logger)
 		ewaybillService := indiav2service.NewEWayBillIntegrationService(indiaRepo, logger)
 		bulkService := indiav2service.NewBulkVerificationService(vahanService)
 		encryptionService := indiav2service.NewEncryptionService()
-		
+
 		indiaHandlersLegacy := indiav2handlers.NewIndiaIntegrationHandlers(
-			indiaService, 
-			fastagService, 
-			ewaybillService, 
-			vahanService, 
-			sarathiService, 
-			gstService, 
-			bulkService, 
+			indiaService,
+			fastagService,
+			ewaybillService,
+			vahanService,
+			sarathiService,
+			gstService,
+			bulkService,
 			encryptionService,
 			sharedRedisClient,
 		)
 		r.Route("/india", func(r chi.Router) {
+			// India compliance operations require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "compliance_manager", "fleet_manager"))
 			r.Route("/fastag", func(r chi.Router) {
 				r.Get("/transactions/{id}", indiaHandlersLegacy.GetFASTagTransaction)
 				r.Get("/transactions", indiaHandlersLegacy.ListFASTagTransactions)
@@ -656,13 +780,15 @@ func main() {
 		setService := settingsService.NewSettingsService(setRepo, logger)
 		setHandlers := settingsHandlers.NewSettingsHandlers(setService, logger)
 		r.With(settingsMiddleware.UserContextMiddleware).Route("/settings", func(r chi.Router) {
+			// Settings changes require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
 			setHandlers.RegisterRoutes(r)
 		})
 
 		// Governance Domain (migrated in monolith)
 		govRepo := governanceRepo.NewGovernanceRepository(pools.Low)
 		govService := governanceService.NewGovernanceService(govRepo, nc, logger)
-		
+
 		// Enterprise Governance Extensions
 		govAggregator := governanceService.NewGovernanceDataAggregator(pools.Low, logger)
 		govMasker := governanceService.NewMaskingService()
@@ -684,8 +810,10 @@ func main() {
 		govRetentionWorker := govWorkers.NewGovernanceRetentionWorker(govService, logger)
 		go govRetentionWorker.Start(ctx)
 
-		govHandler := governanceHandlers.NewGovernanceHandler(govService, govExportSvc, govAccessReviewSvc)
+		govHandler := governanceHandlers.NewGovernanceHandler(govService, govExportSvc, govAccessReviewSvc, logger)
 		r.Route("/governance", func(r chi.Router) {
+			// Governance operations require elevated roles (compliance, data deletion, export)
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "compliance_manager", "data_protection_officer"))
 			govRateLimiter := govMiddleware.DSARRateLimit(sharedRedisClient, nc, logger)
 			govHandler.RegisterRoutes(r, govRateLimiter)
 		})
@@ -695,24 +823,40 @@ func main() {
 		notificationCh := make(chan adminsupportsupportservice.NotificationEvent, 100)
 		adminTicketService := adminsupportsupportservice.NewTicketService(adminTicketRepo, logger, notificationCh)
 		adminTicketHandler := adminsupportsupporthandlers.NewTicketHandlers(adminTicketService, logger)
-		adminTicketHandler.RegisterRoutes(r)
+		r.Group(func(r chi.Router) {
+			// Admin support endpoints require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
+			adminTicketHandler.RegisterRoutes(r)
+		})
 
 		adminDRRepo := adminsupportdrrepo.NewDrRepository(pools.Low, logger)
 		adminDRService := adminsupportdrservice.NewDrService(adminDRRepo, logger)
 		adminDRHandler := adminsupportdrhandlers.NewDrHandlers(adminDRService, logger)
-		adminDRHandler.RegisterRoutes(r)
+		r.Group(func(r chi.Router) {
+			// Admin support endpoints require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
+			adminDRHandler.RegisterRoutes(r)
+		})
 
 		adminOrgRepo := adminsupportorgrepo.NewOrganizationRepository(pools.Low, logger)
 		adminOrgService := adminsupportorgservice.NewOrganizationService(adminOrgRepo, logger)
 		adminOrgHandler := adminsupportorghandlers.NewOrganizationHandlers(adminOrgService, logger)
-		adminOrgHandler.RegisterRoutes(r)
+		r.Group(func(r chi.Router) {
+			// Admin support endpoints require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
+			adminOrgHandler.RegisterRoutes(r)
+		})
 
 		adminEmergencyService, err := adminsupportemergencyservice.NewEmergencyService(nc, logger)
 		if err != nil {
 			logger.Fatal("Failed to initialize emergency service", zap.Error(err))
 		}
 		adminEmergencyHandler := adminsupportemergencyhandlers.NewEmergencyHandler(adminEmergencyService, logger)
-		adminEmergencyHandler.RegisterRoutes(r)
+		r.Group(func(r chi.Router) {
+			// Admin support endpoints require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
+			adminEmergencyHandler.RegisterRoutes(r)
+		})
 
 		// Alert Domains (migrated in monolith)
 		alertRepo := alertalertrepo.NewAlertRepository(pools.Low)
@@ -725,13 +869,20 @@ func main() {
 		)
 		alertSvc := alertalertservice.NewAlertService(alertRepo, alertRuleEngine, alertNotificationService, logger)
 		alertHandler := alertalerthandlers.NewAlertHandler(alertSvc, logger)
-		alertHandler.RegisterRoutes(r)
+		r.Group(func(r chi.Router) {
+			// Alert operations require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "safety_manager", "compliance_manager"))
+			alertHandler.RegisterRoutes(r)
+		})
 
 		notifyRepo := alertnotifyrepo.NewNotificationRepository(pools.Low)
 		notifySvc := alertnotifyservice.NewNotificationService(notifyRepo, logger)
 		notifyHandler := alertnotifyhandlers.NewNotificationHandlers(notifySvc, logger)
-		notifyHandler.RegisterRoutes(r)
-
+		r.Group(func(r chi.Router) {
+			// Notification operations require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "safety_manager", "compliance_manager"))
+			notifyHandler.RegisterRoutes(r)
+		})
 
 		// Analytics Domain
 		aMetrics := analyticsPackage.NewMetrics()
@@ -739,13 +890,15 @@ func main() {
 		aQueue := analyticsQueue.NewAnalyticsQueueClient("localhost:6379") // Placeholder
 		aRepo := analyticsRepo.NewAnalyticsRepository(pools.Medium, logger)
 		aService := analyticsService.NewAnalyticsService(aRepo, aCache, aQueue, aMetrics, logger)
-		
+
 		aGuard := analyticsMiddleware.NewTenantGuard(pools.Medium, aMetrics, logger)
 		aRateLimiter := analyticsMiddleware.NewRateLimiter(aCache, aService, logger)
 		aQualityValidator := analyticsMiddleware.NewDataQualityValidator(logger)
-		
+
 		aHandlers := analyticsHandlers.NewAnalyticsHandler(aService, aGuard, logger, aRateLimiter, aQualityValidator)
 		r.Group(func(r chi.Router) {
+			// Analytics mutations require elevated roles (data stewardship)
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "data_analyst", "analytics_manager"))
 			r.Use(systemGuard.LowPriorityShedder)
 			aHandlers.RegisterRoutes(r)
 		})
@@ -754,9 +907,16 @@ func main() {
 		trkRepo := trackingv2repo.NewDeviceRepository(pools.Critical, logger)
 		trkService := trackingv2service.NewDeviceService(trkRepo, cfg.JWTSecret, nil, aService, nc, logger)
 		trkHandler := trackingv2handlers.NewDeviceHandler(trkService, logger)
-		trkHandler.RegisterRoutes(r)
 		trkTelemetryHandler := trackingv2handlers.NewTelemetryHandler(shareddb.WrapPool(pools.Critical, logger), sharedMB, sharedRedisClient, logger, trackingMetrics)
-		trkTelemetryHandler.RegisterRoutes(r)
+		// Protect tracking device management and telemetry routes with role-based mutations
+		r.Group(func(r chi.Router) {
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "device_manager"))
+			trkHandler.RegisterRoutes(r)
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "device_manager"))
+			trkTelemetryHandler.RegisterRoutes(r)
+		})
 
 		trkAnalytics := trackingv2analytics.NewTelemetryAnalytics(shareddb.WrapPool(pools.Critical, logger), logger)
 		trkAnalyticsHandler := trackingv2handlers.NewAnalyticsHandler(trkAnalytics, logger)
@@ -780,31 +940,18 @@ func main() {
 		r.Get("/ui/misc/legal_docs", uiHandlers.GetLegalDocs)
 		r.Get("/ui/menus/{menuId}", uiHandlers.GetMenuById)
 
-
 		// Dashboard & Support Domain (consolidated from BFF)
 		supportRepo := repository.NewSupportRepository(pools.Critical, logger)
 		monitorHandlers := dashHandlers.NewMonitoringHandlers(logger, pulseService)
 		dashboardHandlers := dashHandlers.NewDashboardHandlers(logger, authSvc, vService, adminOrgService, pulseService, supportRepo)
 		supportHandlers := dashHandlers.NewSupportCompatHandlers(logger, authSvc, adminOrgService, supportRepo)
 
-		// Setup Global JWKS Auth Gate for protected routes
-		jwksURL := os.Getenv("JWKS_URL")
-		if jwksURL == "" {
-			port := os.Getenv("PORT")
-			if port == "" {
-				port = "8081"
-			}
-			// Fallback to localhost relative to the port tests run on natively
-			jwksURL = "http://127.0.0.1:" + port + "/api/v1/auth/.well-known/jwks.json"
-		}
-		authGate := coremiddleware.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", logger)
-
 		// Protected Dashboard & Admin routes
 		r.Group(func(r chi.Router) {
 			r.Use(authGate.Handler)
 			r.Use(coremiddleware.TenantContextMiddleware(logger))
 			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
-			
+
 			r.Get("/dashboard/stats", dashboardHandlers.GetGlobalStats)
 			r.Get("/dashboard/overview", dashboardHandlers.GetAdminDashboardData)
 			r.Get("/dashboard/data", dashboardHandlers.GetAdminDashboardData)
@@ -820,15 +967,15 @@ func main() {
 		})
 		r.Route("/support", func(r chi.Router) {
 			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "support_agent"))
-			
+
 			r.Get("/dashboard/trends", dashboardHandlers.GetDashboardTrends)
 			r.Get("/dashboard/top-errors", dashboardHandlers.GetTopErrors)
 			r.Get("/dashboard/summary", dashboardHandlers.GetGlobalStats)
 			r.Get("/dashboard/recent-activity", dashboardHandlers.GetAdminDashboardData)
-			
+
 			r.Get("/slas", monitorHandlers.GetSLAMetrics)
 			r.Get("/tickets", supportHandlers.GetIncidents)
-			
+
 			r.Route("/incidents", func(r chi.Router) {
 				r.Get("/", supportHandlers.GetIncidents)
 				r.Get("/metrics", supportHandlers.GetIncidentMetrics)
@@ -836,7 +983,7 @@ func main() {
 				r.Get("/feed", supportHandlers.GetIncidentFeed)
 				r.Get("/detail", supportHandlers.GetIncidentDetail)
 				r.Post("/comment", supportHandlers.AddUserNote) // Compat for comment
-				r.Patch("/update", supportHandlers.AddUserNote)  // Compat for update
+				r.Patch("/update", supportHandlers.AddUserNote) // Compat for update
 			})
 
 			r.Route("/users", func(r chi.Router) {
@@ -851,7 +998,7 @@ func main() {
 					r.Get("/permissions", supportHandlers.GetUserPermissions)
 					r.Get("/notes", supportHandlers.GetUserNotes)
 					r.Post("/notes", supportHandlers.AddUserNote)
-					
+
 					// Admin Actions
 					r.Post("/password-reset", supportHandlers.ResetPassword)
 					r.Post("/unlock", supportHandlers.UnlockAccount)
@@ -865,12 +1012,17 @@ func main() {
 		r.Get("/monitoring/health", monitorHandlers.GetSystemHealth)
 		r.Get("/monitoring/sla", monitorHandlers.GetSLAMetrics)
 
-		// ML Service Proxy (to Sidecar)
+		// ML Service Proxy (to Sidecar) - SECURITY FIX: Require authentication
 		if cfg.MLServiceURL != "" {
 			mlProxy, err := gateway.NewServiceProxy("/api/v1/ml", cfg.MLServiceURL, logger)
 			if err == nil {
-				r.Handle("/ml", mlProxy)
-				r.Handle("/ml/*", mlProxy)
+				// Wrap ML routes with authGate to prevent unauthenticated access
+				r.Group(func(r chi.Router) {
+					r.Use(authGate.Handler)
+					r.Use(coremiddleware.TenantContextMiddleware(logger))
+					r.Handle("/ml", mlProxy)
+					r.Handle("/ml/*", mlProxy)
+				})
 			}
 		}
 
@@ -886,6 +1038,8 @@ func main() {
 		finService := financeService.NewFinanceService(finRepo, logger)
 		finHandlers := financeHandlers.NewFinanceHandlers(finService, logger)
 		r.Route("/finance", func(r chi.Router) {
+			// Finance operations require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "finance_manager"))
 			finHandlers.RegisterRoutes(r)
 		})
 
@@ -897,28 +1051,34 @@ func main() {
 		fuelSvc := fuelService.NewFuelService(fuelLogRepo, fuelSettingsRepo, anomalySvc, taxSvc, logger)
 		fuelHandler := fuelHandlers.NewFuelHandler(fuelSvc, logger)
 		r.Route("/fuel", func(r chi.Router) {
+			// Fuel logs require elevated roles for modifications
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
 			fuelHandler.RegisterRoutes(r)
 		})
 
 		// Maintenance Domain
 		workOrderService := maintenService.NewWorkOrderService(
-			workOrderRepo, 
-			partsRepo, 
-			inventoryRepo, 
-			maintenSettingsRepo, 
-			vendorRepo, 
-			inspectionRepo, 
+			workOrderRepo,
+			partsRepo,
+			inventoryRepo,
+			maintenSettingsRepo,
+			vendorRepo,
+			inspectionRepo,
 			maintenRepository,
-			nc, 
+			nc,
 			logger,
 		)
 		maintenServiceSvc := maintenService.NewMaintenanceService(maintenRepository, logger)
 		maintenHandler := maintenHandlers.NewMaintenanceHandler(maintenServiceSvc, logger)
 		workOrderHandler := maintenHandlers.NewWorkOrderHandler(workOrderService, logger)
 		r.Route("/maintenance", func(r chi.Router) {
+			// Maintenance records require elevated roles for changes
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
 			maintenHandler.RegisterRoutes(r)
 		})
 		r.Route("/work-orders", func(r chi.Router) {
+			// Work order management requires elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "mechanic"))
 			workOrderHandler.RegisterRoutes(r)
 		})
 		// Billing Domain (migrated v2 in monolith)
@@ -946,18 +1106,18 @@ func main() {
 		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
 		billTaskProducer := billingv2queue.NewTaskProducer(nil) // No asynq client for now
 		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
-		
+
 		billQueue := &billingQueueProvider{producer: billTaskProducer}
 
 		var billService *billingv2service.BillingService
 		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
-		
+
 		billService = billingv2service.NewBillingService(
-			billRepo, billAuditRepo, billSubService, billMeterService, 
-			billHWService, billLedgerService, billTaxService, billSeqService, 
+			billRepo, billAuditRepo, billSubService, billMeterService,
+			billHWService, billLedgerService, billTaxService, billSeqService,
 			billNotifService, billDunningService, billQueue, logger,
 		)
-		
+
 		// Initialize switchable storage based on config flag
 		var billStorage billingv2storage.ObjectStorage
 		if cfg.BillingStorageType == "s3" {
@@ -982,14 +1142,14 @@ func main() {
 		if err != nil {
 			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
 		}
-		
+
 		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
 		_ = billWorker // Silencing for now until worker.Start is called
 
 		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
 		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
 		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
-		
+
 		// billAccountingService initialization with empty exporters
 		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
 
@@ -997,10 +1157,12 @@ func main() {
 		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
 
 		billHandler := billingv2handlers.NewBillingHandler(
-			billService, billInvoiceService, billSubService, billMeterService, 
-			billCNService, billHWService, billLedgerService, billAdvSubService, 
+			billService, billInvoiceService, billSubService, billMeterService,
+			billCNService, billHWService, billLedgerService, billAdvSubService,
 			billAnalyticsH, billAccountingH, logger,
 		)
+		// Billing operations require elevated roles (finance, admin)
+		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "finance_manager", "billing_manager"))
 		billHandler.RegisterRoutes(r)
 
 		// Emergency Domain
@@ -1030,10 +1192,14 @@ func main() {
 		gService := geoService.NewGeofenceService(gRepo, nc, logger)
 		gHandlers := geoHandlers.NewGeofenceHandler(gService, logger)
 		r.Route("/geofencing", func(r chi.Router) {
+			// Geofence management requires elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
 			gHandlers.RegisterRoutes(r)
 		})
 		emHandlers := emergencyHandlers.NewEmergencyHandlers(emService, emAnalyticsSvc, logger)
 		r.Route("/emergency", func(r chi.Router) {
+			// Emergency response endpoints require elevated roles
+			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "emergency_responder"))
 			emHandlers.RegisterRoutes(r)
 		})
 	})
@@ -1041,8 +1207,10 @@ func main() {
 	// Video Domain
 	vidRepo := videoRepo.NewVideoRepository(pools.High)
 	vidService := videoService.NewVideoService(vidRepo)
-	vidHandlers := videoHandlers.NewVideoHandler(vidService)
+	vidHandlers := videoHandlers.NewVideoHandler(vidService, logger)
 	r.Route("/api/v1/video", func(r chi.Router) {
+		// Video access and management requires elevated roles
+		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "safety_manager"))
 		vidHandlers.RegisterRoutes(r)
 	})
 
@@ -1065,7 +1233,7 @@ func main() {
 				logger.Error("Recovered from panic in billing init", zap.Any("error", r))
 			}
 		}()
-		
+
 		// Billing Domain with Resilience
 		billRepo := billingv2repo.NewBillingRepository(pools.Medium)
 		billAuditRepo := billingv2repo.NewAuditLogRepository(pools.Low)
@@ -1091,18 +1259,18 @@ func main() {
 		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
 		billTaskProducer := billingv2queue.NewTaskProducer(nil)
 		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
-		
+
 		billQueue := &billingQueueProvider{producer: billTaskProducer}
 
 		var billService *billingv2service.BillingService
 		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
-		
+
 		billService = billingv2service.NewBillingService(
-			billRepo, billAuditRepo, billSubService, billMeterService, 
-			billHWService, billLedgerService, billTaxService, billSeqService, 
+			billRepo, billAuditRepo, billSubService, billMeterService,
+			billHWService, billLedgerService, billTaxService, billSeqService,
 			billNotifService, billDunningService, billQueue, logger,
 		)
-		
+
 		// Initialize switchable storage based on config flag
 		var billStorage billingv2storage.ObjectStorage
 		if cfg.BillingStorageType == "s3" {
@@ -1127,24 +1295,26 @@ func main() {
 		if err != nil {
 			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
 		}
-		
+
 		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
 		_ = billWorker // Silencing for now until worker.Start is called
 
 		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
 		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
 		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
-		
+
 		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
 
 		billAnalyticsH := billingv2handlers.NewAnalyticsHandler(billAnalyticsService, logger)
 		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
 
 		billHandler := billingv2handlers.NewBillingHandler(
-			billService, billInvoiceService, billSubService, billMeterService, 
-			billCNService, billHWService, billLedgerService, billAdvSubService, 
+			billService, billInvoiceService, billSubService, billMeterService,
+			billCNService, billHWService, billLedgerService, billAdvSubService,
 			billAnalyticsH, billAccountingH, logger,
 		)
+		// Billing operations require elevated roles (finance, admin)
+		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "finance_manager", "billing_manager"))
 		billHandler.RegisterRoutes(r)
 		logger.Info("✅ Billing Domain initialized with Isolation Shield.")
 	}()
@@ -1164,6 +1334,8 @@ func main() {
 		sharedRedisClient,
 	)
 	r.Route("/api", func(r chi.Router) {
+		// India compliance endpoints require elevated roles (regulatory)
+		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "compliance_manager", "india_compliance_officer"))
 		r.Route("/fastag", func(r chi.Router) {
 			r.Post("/transactions", indiaHandlersLegacy.CreateFASTagTransaction)
 			r.Post("/sync", indiaHandlersLegacy.SyncFASTag)
@@ -1242,7 +1414,7 @@ func main() {
 		{From: "/api/v1/admin/organizations", To: "/api/v1/organizations"},
 		{From: "/api/v1/admin/devices", To: "/api/v1/diagnostics/devices"},
 		{From: "/api/v1/emergency", To: "/api/v1/emergency"},
-			// Legacy non-v1 aliases intentionally removed to keep monolith surface canonical on /api/v1.
+		// Legacy non-v1 aliases intentionally removed to keep monolith surface canonical on /api/v1.
 		{From: "/api/search", To: "/api/v1/search"},
 		{From: "/api/timeline", To: "/api/v1/timeline"},
 		{From: "/api/v1/search", To: "/api/v1/search"},
@@ -1509,31 +1681,35 @@ func main() {
 	}
 
 	// 8. Start Server
-	r.Get("/swagger/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
-		serverURL := fmt.Sprintf("http://localhost:%s", cfg.Port)
-		spec, err := docs.BuildOpenAPIJSON(r, serverURL)
-		if err != nil {
-			logger.Error("Failed to generate OpenAPI", zap.Error(err))
-			http.Error(w, "failed to generate openapi", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(spec)
-	})
-	r.Get("/swagger/openapi.combined.json", func(w http.ResponseWriter, _ *http.Request) {
-		serverURL := fmt.Sprintf("http://localhost:%s", cfg.Port)
-		spec, err := docs.BuildCombinedOpenAPIJSON(r, serverURL, enabledUpstreams)
-		if err != nil {
-			logger.Error("Failed to generate combined OpenAPI", zap.Error(err))
-			http.Error(w, "failed to generate combined openapi", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(spec)
-	})
-	r.Get("/swagger", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<!doctype html>
+	// Admin API Documentation - RESTRICTED TO ADMIN ONLY
+	r.Route("/api/swagger", func(r chi.Router) {
+		// Require admin authentication
+		r.Use(coremiddleware.RequireRole(logger, "super_admin", "admin"))
+		r.Get("/openapi.json", func(w http.ResponseWriter, _ *http.Request) {
+			serverURL := fmt.Sprintf("http://localhost:%s", cfg.Port)
+			spec, err := docs.BuildOpenAPIJSON(r, serverURL)
+			if err != nil {
+				logger.Error("Failed to generate OpenAPI", zap.Error(err))
+				http.Error(w, "failed to generate openapi", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(spec)
+		})
+		r.Get("/openapi.combined.json", func(w http.ResponseWriter, _ *http.Request) {
+			serverURL := fmt.Sprintf("http://localhost:%s", cfg.Port)
+			spec, err := docs.BuildCombinedOpenAPIJSON(r, serverURL, enabledUpstreams)
+			if err != nil {
+				logger.Error("Failed to generate combined OpenAPI", zap.Error(err))
+				http.Error(w, "failed to generate combined openapi", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(spec)
+		})
+		r.Get("", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte(`<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -1546,12 +1722,13 @@ func main() {
   <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
   <script>
     window.ui = SwaggerUIBundle({
-      url: "/swagger/openapi.combined.json",
+      url: "/api/swagger/openapi.combined.json",
       dom_id: "#swagger-ui"
     });
   </script>
 </body>
 </html>`))
+		})
 	})
 
 	srv := &http.Server{

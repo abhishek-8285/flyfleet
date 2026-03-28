@@ -51,11 +51,11 @@ func TestMaskSensitive(t *testing.T) {
 
 func TestScrubberCore(t *testing.T) {
 	var buf bytes.Buffer
-	
+
 	// Create a base core that writes to a buffer
 	encoder := zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig())
 	baseCore := zapcore.NewCore(encoder, zapcore.AddSync(&buf), zap.DebugLevel)
-	
+
 	// Wrap it with our scrubber
 	scrubber := NewScrubberCore(baseCore)
 	logger := zap.New(scrubber)

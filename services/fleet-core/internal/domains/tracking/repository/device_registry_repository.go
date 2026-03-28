@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	platformmetrics "github.com/flyfleet/fleet-core-service/internal/platform/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -39,6 +42,7 @@ func (r *PostgresDeviceRegistryRepository) GetByDeviceID(ctx context.Context, de
 		FROM device_registry
 		WHERE device_id = $1`
 
+	start := time.Now()
 	d := &models.DeviceRegistry{}
 	var vehicleID *uuid.UUID
 	var lastHB *time.Time
@@ -46,6 +50,7 @@ func (r *PostgresDeviceRegistryRepository) GetByDeviceID(ctx context.Context, de
 		&d.DeviceID, &vehicleID, &d.FirmwareVersion, &d.SimICCID, &d.Carrier,
 		&lastHB, &d.Status, &d.CertificateHash, &d.CreatedAt, &d.UpdatedAt,
 	)
+	metrics.RecordDBQuery(q, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +79,7 @@ func (r *PostgresDeviceRegistryRepository) UpsertDevice(ctx context.Context, dev
 			certificate_hash = EXCLUDED.certificate_hash,
 			updated_at       = NOW()`
 
+	start := time.Now()
 	var vehicleID *string
 	if device.VehicleID != "" {
 		vehicleID = &device.VehicleID
@@ -83,6 +89,7 @@ func (r *PostgresDeviceRegistryRepository) UpsertDevice(ctx context.Context, dev
 		device.SimICCID, device.Carrier, device.Status,
 		device.CertificateHash,
 	)
+	metrics.RecordDBQuery(q, time.Since(start))
 	return err
 }
 
@@ -92,7 +99,9 @@ func (r *PostgresDeviceRegistryRepository) UpdateLastHeartbeat(ctx context.Conte
 		UPDATE device_registry
 		SET last_heartbeat = NOW(), status = 'active', updated_at = NOW()
 		WHERE device_id = $1`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, q, deviceID)
+	metrics.RecordDBQuery(q, time.Since(start))
 	return err
 }
 
@@ -105,8 +114,10 @@ func (r *PostgresDeviceRegistryRepository) CreateCommand(ctx context.Context, de
 		RETURNING id`
 
 	expiresAt := time.Now().Add(ttl)
+	start := time.Now()
 	var commandID string
 	err := r.db.QueryRow(ctx, q, deviceID, cmdType, params, expiresAt).Scan(&commandID)
+	metrics.RecordDBQuery(q, time.Since(start))
 	return commandID, err
 }
 
@@ -120,7 +131,9 @@ func (r *PostgresDeviceRegistryRepository) GetPendingCommands(ctx context.Contex
 		  AND expires_at > NOW()
 		ORDER BY issued_at ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, q, deviceID)
+	metrics.RecordDBQuery(q, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +155,34 @@ func (r *PostgresDeviceRegistryRepository) GetPendingCommands(ctx context.Contex
 }
 
 // AckCommand marks a command as executed and stores the device's result payload.
+// It also records command acknowledgement latency for SLO monitoring.
 func (r *PostgresDeviceRegistryRepository) AckCommand(ctx context.Context, commandID string, result string) error {
-	const q = `
+	// Fetch command metadata (issued_at, type) before updating
+	const getQ = `SELECT issued_at, type FROM device_commands WHERE id = $1`
+	startGet := time.Now()
+	var issuedAt time.Time
+	var cmdType string
+	err := r.db.QueryRow(ctx, getQ, commandID).Scan(&issuedAt, &cmdType)
+	metrics.RecordDBQuery(getQ, time.Since(startGet))
+	if err != nil {
+		return fmt.Errorf("failed to get command metadata: %w", err)
+	}
+
+	// Update to executed
+	const updateQ = `
 		UPDATE device_commands
 		SET status = 'executed', executed_at = NOW(), result = $2
 		WHERE id = $1`
-	_, err := r.db.Exec(ctx, q, commandID, result)
-	return err
+	startUpdate := time.Now()
+	_, err = r.db.Exec(ctx, updateQ, commandID, result)
+	metrics.RecordDBQuery(updateQ, time.Since(startUpdate))
+	if err != nil {
+		return fmt.Errorf("failed to ack command: %w", err)
+	}
+
+	// Record latency (duration from issuance to execution)
+	latency := time.Since(issuedAt)
+	platformmetrics.RecordCommandLatency(cmdType, latency)
+
+	return nil
 }

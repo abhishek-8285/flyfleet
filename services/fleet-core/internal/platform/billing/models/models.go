@@ -16,11 +16,11 @@ type Plan struct {
 }
 
 type Subscription struct {
-	ID             uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
-	PlanID         uuid.UUID `json:"plan_id"`
-	Status         string    `json:"status"`
-	StartDate      time.Time `json:"start_date"`
+	ID             uuid.UUID  `json:"id"`
+	OrganizationID uuid.UUID  `json:"organization_id"`
+	PlanID         uuid.UUID  `json:"plan_id"`
+	Status         string     `json:"status"`
+	StartDate      time.Time  `json:"start_date"`
 	EndDate        *time.Time `json:"end_date,omitempty"`
 }
 

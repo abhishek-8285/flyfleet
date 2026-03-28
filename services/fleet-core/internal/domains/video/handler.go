@@ -483,7 +483,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		UploadID string           `json:"upload_id"`
+		UploadID string             `json:"upload_id"`
 		Metadata UploadVideoRequest `json:"metadata"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

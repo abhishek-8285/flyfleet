@@ -36,4 +36,3 @@ type Repository interface {
 	GetByID(ctx context.Context, orgID, id uuid.UUID) (*Payment, error)
 	ListByInvoice(ctx context.Context, orgID, invoiceID uuid.UUID) ([]Payment, error)
 }
-

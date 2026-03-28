@@ -37,8 +37,9 @@ func AuthMiddleware(iamSvc service.IAMService) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-			ctx = context.WithValue(ctx, OrgIDKey, claims.OrgID)
+			// Store UUIDs as strings to maintain type consistency across handlers
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID.String())
+			ctx = context.WithValue(ctx, OrgIDKey, claims.OrgID.String())
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -47,8 +48,15 @@ func AuthMiddleware(iamSvc service.IAMService) func(http.Handler) http.Handler {
 func RBACMiddleware(iamSvc service.IAMService, resource, action string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			userID, ok := r.Context().Value(UserIDKey).(uuid.UUID)
-			if !ok {
+			// Context stores UUID as string, convert back to uuid.UUID
+			userIDStr, ok := r.Context().Value(UserIDKey).(string)
+			if !ok || userIDStr == "" {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}

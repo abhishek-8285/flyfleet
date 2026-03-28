@@ -17,8 +17,8 @@ import (
 
 // AnalyticsWorkerServer handles asynchronous analytics tasks
 type AnalyticsWorkerServer struct {
-	server *asynq.Server
-	mux    *asynq.ServeMux
+	server  *asynq.Server
+	mux     *asynq.ServeMux
 	repo    repository.AnalyticsRepository
 	service analytics.AnalyticsService
 	logger  *zap.Logger
@@ -81,8 +81,8 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 
 	// 1.1 Tenant Validation (Security Hardening)
 	if job.OrganizationID != payload.OrganizationID {
-		ws.logger.Error("Tenant mismatch detected in analytics job", 
-			zap.String("job_org", job.OrganizationID.String()), 
+		ws.logger.Error("Tenant mismatch detected in analytics job",
+			zap.String("job_org", job.OrganizationID.String()),
 			zap.String("payload_org", payload.OrganizationID.String()))
 		return fmt.Errorf("tenant mismatch: %w", asynq.SkipRetry)
 	}
@@ -197,7 +197,7 @@ func (ws *AnalyticsWorkerServer) HandleCacheInvalidateTask(ctx context.Context, 
 		return err
 	}
 
-	ws.logger.Info("Processing cache invalidation task", 
+	ws.logger.Info("Processing cache invalidation task",
 		zap.String("org_id", payload.OrganizationID.String()),
 		zap.String("pattern", payload.Pattern),
 		zap.String("type", payload.ResourceType))
@@ -234,7 +234,7 @@ func (ws *AnalyticsWorkerServer) processDriverBehaviorJob(ctx context.Context, j
 	// 2. Perform Weighted Rollup
 	var totalDistance, totalHours, totalIdle float64
 	var totalOverspeed, totalHarsh, totalFatigue, totalViolation int
-	
+
 	for _, s := range stats {
 		totalDistance += s.TotalDistance
 		totalHours += s.TotalDrivingHours
@@ -246,15 +246,23 @@ func (ws *AnalyticsWorkerServer) processDriverBehaviorJob(ctx context.Context, j
 	// Fetch harsh events from repository if not in stats (example fallback)
 	// For this spec, we assume they are populated in DriverDailyStats or retrieved via special rollup.
 	// We'll use the stats for scoring.
-	
+
 	// 3. Safety Scoring Formula (Spec compliant)
 	// Weighted: 100 - (Overspeed * 2) - (Harsh * 3) - (Fatigue * 8) - (Violation * 15)
 	// Note: In a real system, these would be normalized by distance or hours.
-	score := 100.0 - (float64(totalOverspeed)*2.0) - (float64(totalHarsh)*3.0) - (float64(totalFatigue)*8.0) - (float64(totalViolation)*15.0)
-	if score < 0 { score = 0 }
+	score := 100.0 - (float64(totalOverspeed) * 2.0) - (float64(totalHarsh) * 3.0) - (float64(totalFatigue) * 8.0) - (float64(totalViolation) * 15.0)
+	if score < 0 {
+		score = 0
+	}
 
 	riskLevel := "Safe"
-	if score < 50 { riskLevel = "Dangerous" } else if score < 75 { riskLevel = "Risky" } else if score < 90 { riskLevel = "Moderate" }
+	if score < 50 {
+		riskLevel = "Dangerous"
+	} else if score < 75 {
+		riskLevel = "Risky"
+	} else if score < 90 {
+		riskLevel = "Moderate"
+	}
 
 	analytics := &models.DriverBehaviorAnalytics{
 		ID:                  uuid.New().String(),
@@ -300,10 +308,10 @@ func (ws *AnalyticsWorkerServer) processPredictiveMaintenanceJob(ctx context.Con
 	endDate := time.Now()
 	startDate := endDate.Add(-7 * 24 * time.Hour)
 	vStats, _, err := ws.service.GetVehicleDailyStats(ctx, vehicleID, job.OrganizationID, startDate, endDate, "", 100)
-	
+
 	features := map[string]interface{}{
-		"engine_temp":      95.0, // Mocked as we don't have direct points here, but would be avg from vStats
-		"vibration_level":  2.5,
+		"engine_temp":       95.0, // Mocked as we don't have direct points here, but would be avg from vStats
+		"vibration_level":   2.5,
 		"last_service_days": 45.0,
 	}
 	if err == nil && len(vStats) > 0 {

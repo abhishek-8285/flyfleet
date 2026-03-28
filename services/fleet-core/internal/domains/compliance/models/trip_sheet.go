@@ -17,16 +17,16 @@ const (
 )
 
 type TripSheet struct {
-	ID         uuid.UUID  `json:"id" db:"id"`
-	VehicleID  uuid.UUID  `json:"vehicle_id" db:"vehicle_id"`
-	DriverID   uuid.UUID  `json:"driver_id" db:"driver_id"`
-	TripStart  *time.Time `json:"trip_start" db:"trip_start"`
-	TripEnd    *time.Time `json:"trip_end" db:"trip_end"`
-	Origin     string     `json:"origin" db:"origin"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	VehicleID   uuid.UUID  `json:"vehicle_id" db:"vehicle_id"`
+	DriverID    uuid.UUID  `json:"driver_id" db:"driver_id"`
+	TripStart   *time.Time `json:"trip_start" db:"trip_start"`
+	TripEnd     *time.Time `json:"trip_end" db:"trip_end"`
+	Origin      string     `json:"origin" db:"origin"`
 	Destination string     `json:"destination" db:"destination"`
-	Status     TripStatus `json:"status" db:"status"`
-	DistanceKM float64    `json:"distance_km" db:"distance_km"`
-	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+	Status      TripStatus `json:"status" db:"status"`
+	DistanceKM  float64    `json:"distance_km" db:"distance_km"`
+	CreatedAt   time.Time  `json:"created_at" db:"created_at"`
 }
 
 type TripEvent struct {

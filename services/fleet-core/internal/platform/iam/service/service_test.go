@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,8 +22,8 @@ type MockOrganizationService struct {
 	mock.Mock
 }
 
-func (m *MockOrganizationService) Onboard(ctx context.Context, name, ownerID string) (*models.Organization, error) {
-	args := m.Called(ctx, name, ownerID)
+func (m *MockOrganizationService) Onboard(ctx context.Context, name, taxID string) (*models.Organization, error) {
+	args := m.Called(ctx, name, taxID)
 	return args.Get(0).(*models.Organization), args.Error(1)
 }
 
@@ -37,6 +39,14 @@ func (m *MockRepository) CreateUser(ctx context.Context, user *models.User) erro
 
 func (m *MockRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
+func (m *MockRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -74,8 +84,11 @@ func TestIAMService_JWT(t *testing.T) {
 		OrganizationID: orgID,
 		Email:          "test@example.com",
 		PasswordHash:   string(hashedPassword),
+		Status:         "active",
 	}
 	repo.On("GetUserByEmail", mock.Anything, "test@example.com").Return(user, nil)
+	// ValidateToken also checks user status, so stub GetUserByID
+	repo.On("GetUserByID", mock.Anything, userID).Return(user, nil)
 
 	token, err := svc.Login(context.Background(), "test@example.com", "password")
 	assert.NoError(t, err)
@@ -109,4 +122,126 @@ func TestIAMService_CheckPermission(t *testing.T) {
 	allowed, err = svc.CheckPermission(context.Background(), userID, "vehicle", "write")
 	assert.NoError(t, err)
 	assert.False(t, allowed)
+}
+
+func TestIAMService_ValidateToken_AlgorithmCheck(t *testing.T) {
+	repo := new(MockRepository)
+	orgSvc := new(MockOrganizationService)
+	iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+
+	// Test 1: Reject missing algorithm
+	t.Run("Reject missing algorithm", func(t *testing.T) {
+		noAlgToken := `eyJ1c2VyX2lkIjoiMDAwMDAwMDAwMDAwMDAwIn0.eyJleHAiOjE3MDAwMDAwMDB9.`
+		_, err := iamSvc.ValidateToken(noAlgToken)
+		assert.Error(t, err)
+		// Error message can be "missing algorithm" or generic "invalid token"
+	})
+
+	// Test 2: Reject non-HS256 algorithm
+	t.Run("Reject non-HS256 algorithm", func(t *testing.T) {
+		// Token with alg: RS256 (simulated)
+		malformedToken := `eyJhbGciOiJSUzI1NiJ9.eyJ1c2VyX2lkIjoiMDAwMDAwMDAwMDAwMDAwIiwiZXhwIjoxNjc4OTk5OTk5fQ.`
+		_, err := iamSvc.ValidateToken(malformedToken)
+		assert.Error(t, err)
+	})
+}
+
+func TestIAMService_ValidateToken_ExpirationCheck(t *testing.T) {
+	validUserID := uuid.New()
+	validOrgID := uuid.New()
+	activeUser := &models.User{
+		ID:             validUserID,
+		OrganizationID: validOrgID,
+		Status:         "active",
+	}
+
+	// Create an expired token
+	expiredClaims := &IAMClaims{
+		UserID: validUserID,
+		OrgID:  validOrgID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
+		},
+	}
+	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, expiredClaims)
+	expiredTokenStr, _ := expiredToken.SignedString([]byte("test-secret"))
+
+	t.Run("Reject expired token", func(t *testing.T) {
+		repo := new(MockRepository)
+		orgSvc := new(MockOrganizationService)
+		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+
+		// User exists but token is expired
+		repo.On("GetUserByID", mock.Anything, validUserID).Return(activeUser, nil)
+
+		_, err := iamSvc.ValidateToken(expiredTokenStr)
+		assert.Error(t, err)
+		// jwt.ParseWithClaims returns generic "invalid token" for expiration
+		// Our code also checks expiration explicitly, but the library catches it first
+	})
+}
+
+func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
+	validUserID := uuid.New()
+	validOrgID := uuid.New()
+
+	// Create a valid, non-expired token
+	validClaims := &IAMClaims{
+		UserID: validUserID,
+		OrgID:  validOrgID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+	validToken := jwt.NewWithClaims(jwt.SigningMethodHS256, validClaims)
+	validTokenStr, _ := validToken.SignedString([]byte("test-secret"))
+
+	t.Run("Reject inactive user", func(t *testing.T) {
+		repo := new(MockRepository)
+		orgSvc := new(MockOrganizationService)
+		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+
+		inactiveUser := &models.User{
+			ID:             validUserID,
+			OrganizationID: validOrgID,
+			Status:         "inactive",
+		}
+		repo.On("GetUserByID", mock.Anything, validUserID).Return(inactiveUser, nil)
+
+		_, err := iamSvc.ValidateToken(validTokenStr)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not active")
+	})
+
+	t.Run("Reject non-existent user", func(t *testing.T) {
+		repo := new(MockRepository)
+		orgSvc := new(MockOrganizationService)
+		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+
+		repo.On("GetUserByID", mock.Anything, validUserID).Return((*models.User)(nil), assert.AnError)
+
+		_, err := iamSvc.ValidateToken(validTokenStr)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "user not found")
+	})
+
+	t.Run("Accept active user", func(t *testing.T) {
+		repo := new(MockRepository)
+		orgSvc := new(MockOrganizationService)
+		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+
+		activeUser := &models.User{
+			ID:             validUserID,
+			OrganizationID: validOrgID,
+			Status:         "active",
+		}
+		repo.On("GetUserByID", mock.Anything, validUserID).Return(activeUser, nil)
+
+		claims, err := iamSvc.ValidateToken(validTokenStr)
+		assert.NoError(t, err)
+		assert.Equal(t, validUserID, claims.UserID)
+		assert.Equal(t, validOrgID, claims.OrgID)
+	})
 }

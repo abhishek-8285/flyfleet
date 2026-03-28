@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -89,6 +90,7 @@ func (r *emergencyRepository) CreateIncident(ctx context.Context, incident *mode
 		INSERT INTO sos_incidents (id, vehicle_id, driver_id, trip_id, device_id, org_id, timestamp, latitude, longitude, location_address, status, severity, incident_type, panic_source, speed, heading, metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		incident.ID, incident.VehicleID, incident.DriverID, incident.TripID, incident.DeviceID, incident.OrgID,
 		incident.Timestamp, incident.Latitude, incident.Longitude, incident.LocationAddress,
@@ -96,6 +98,7 @@ func (r *emergencyRepository) CreateIncident(ctx context.Context, incident *mode
 		incident.Speed, incident.Heading, incident.Metadata, incident.HighRiskLocation, incident.SimulationMode,
 		incident.DriverFeedback, incident.FeedbackNotes, incident.CreatedAt, incident.UpdatedAt,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to create SOS incident: %w", err)
 	}
@@ -106,11 +109,12 @@ func (r *emergencyRepository) GetIncidentByID(ctx context.Context, id uuid.UUID)
 	query := `
 		SELECT id, vehicle_id, driver_id, trip_id, device_id, org_id, timestamp, latitude, longitude,
 			   location_address, status, severity, incident_type, panic_source, speed, heading,
-			   metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes, 
+			   metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes,
 			   acknowledged_at, resolved_at, acknowledged_by, resolved_by, created_at, updated_at
 		FROM sos_incidents
 		WHERE id = $1
 	`
+	start := time.Now()
 	var incident models.SOSIncident
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&incident.ID, &incident.VehicleID, &incident.DriverID, &incident.TripID, &incident.DeviceID, &incident.OrgID,
@@ -121,6 +125,7 @@ func (r *emergencyRepository) GetIncidentByID(ctx context.Context, id uuid.UUID)
 		&incident.AcknowledgedAt, &incident.ResolvedAt, &incident.AcknowledgedBy, &incident.ResolvedBy,
 		&incident.CreatedAt, &incident.UpdatedAt,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -142,7 +147,9 @@ func (r *emergencyRepository) GetActiveIncidentsByOrg(ctx context.Context, orgID
 		WHERE i.org_id = $1 AND i.status IN ('TRIGGERED', 'ACKNOWLEDGED')
 		ORDER BY i.timestamp DESC
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active incidents: %w", err)
 	}
@@ -179,7 +186,9 @@ func (r *emergencyRepository) ListActiveIncidents(ctx context.Context) ([]models
 		WHERE i.status IN ('TRIGGERED', 'ACKNOWLEDGED')
 		ORDER BY i.timestamp DESC
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query all active incidents: %w", err)
 	}
@@ -219,7 +228,9 @@ func (r *emergencyRepository) UpdateIncidentStatus(ctx context.Context, id uuid.
 		args = []interface{}{status, id}
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, args...)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update incident status: %w", err)
 	}
@@ -231,9 +242,11 @@ func (r *emergencyRepository) LogIncidentAction(ctx context.Context, log *models
 		INSERT INTO incident_logs (id, incident_id, user_id, action, notes, timestamp)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		log.ID, log.IncidentID, log.UserID, log.Action, log.Notes, log.Timestamp,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to log incident action: %w", err)
 	}
@@ -242,7 +255,9 @@ func (r *emergencyRepository) LogIncidentAction(ctx context.Context, log *models
 
 func (r *emergencyRepository) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
 	query := `SELECT id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE org_id = $1 AND is_active = TRUE ORDER BY priority ASC`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query emergency contacts: %w", err)
 	}
@@ -279,6 +294,7 @@ func (r *emergencyRepository) GetRecentSOSByVehicle(ctx context.Context, vehicle
 		LIMIT 1
 	`
 
+	start := time.Now()
 	var incident models.SOSIncident
 	err := r.db.QueryRow(ctx, query, vehicleID, minutes, incidentType).Scan(
 		&incident.ID, &incident.VehicleID, &incident.DriverID, &incident.TripID, &incident.DeviceID, &incident.OrgID,
@@ -287,6 +303,7 @@ func (r *emergencyRepository) GetRecentSOSByVehicle(ctx context.Context, vehicle
 		&incident.Speed, &incident.Heading, &incident.Metadata, &incident.AcknowledgedBy,
 		&incident.ResolvedBy, &incident.CreatedAt, &incident.UpdatedAt,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -328,27 +345,29 @@ func (r *emergencyRepository) GetIncidentMetrics(ctx context.Context, orgID uuid
 		  AND i.timestamp <= $3
 	`
 
-	var metrics IncidentMetrics
+	start := time.Now()
+	var im IncidentMetrics
 	var avgResponse, avgResolution *float64
 
 	err := r.db.QueryRow(ctx, query, orgID, startDate, endDate).Scan(
-		&metrics.TotalIncidents, &metrics.AcknowledgedCount, &metrics.ResolvedCount,
-		&metrics.FalseAlarmCount, &metrics.CriticalCount, &metrics.MediumCount, &metrics.LowCount,
+		&im.TotalIncidents, &im.AcknowledgedCount, &im.ResolvedCount,
+		&im.FalseAlarmCount, &im.CriticalCount, &im.MediumCount, &im.LowCount,
 		&avgResponse, &avgResolution,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get incident metrics: %w", err)
 	}
 
 	if avgResponse != nil {
-		metrics.AvgResponseTimeMin = *avgResponse
+		im.AvgResponseTimeMin = *avgResponse
 	}
 	if avgResolution != nil {
-		metrics.AvgResolutionTimeMin = *avgResolution
+		im.AvgResolutionTimeMin = *avgResolution
 	}
 
-	return &metrics, nil
+	return &im, nil
 }
 
 func (r *emergencyRepository) GetIncidentAuditHistory(ctx context.Context, incidentID uuid.UUID) (*models.IncidentAuditHistory, error) {
@@ -367,7 +386,9 @@ func (r *emergencyRepository) GetIncidentAuditHistory(ctx context.Context, incid
 		ORDER BY timestamp ASC
 	`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, incidentID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit logs: %w", err)
 	}
@@ -412,13 +433,17 @@ func (r *emergencyRepository) CreateEscalation(ctx context.Context, escalation *
 		INSERT INTO emergency_escalations (id, incident_id, contact_id, notification_channel, status, attempted_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, escalation.ID, escalation.IncidentID, escalation.ContactID, escalation.NotificationChannel, escalation.Status, escalation.AttemptedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) UpdateEscalationStatus(ctx context.Context, id uuid.UUID, status string, respondedAt *time.Time) error {
 	query := `UPDATE emergency_escalations SET status = $1, responded_at = $2 WHERE id = $3`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, status, respondedAt, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -426,13 +451,17 @@ func (r *emergencyRepository) CreateContact(ctx context.Context, contact *models
 	query := `
 		INSERT INTO emergency_contacts (id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, contact.ID, contact.OrgID, contact.Name, contact.Role, contact.Phone, contact.Email, contact.Priority, contact.IsActive, contact.CreatedAt, contact.UpdatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) ListContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
 	query := `SELECT id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE org_id = $1 ORDER BY priority ASC`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -453,13 +482,17 @@ func (r *emergencyRepository) CreateResponseUnit(ctx context.Context, unit *mode
 	query := `
 		INSERT INTO emergency_response_units (id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, unit.ID, unit.OrgID, unit.UnitType, unit.Name, unit.Phone, unit.CoverageCity, unit.CoverageState, unit.IsActive)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) ListResponseUnits(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
 	query := `SELECT id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active FROM emergency_response_units WHERE org_id = $1 AND is_active = TRUE`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -485,14 +518,18 @@ func (r *emergencyRepository) UpdateVehicleHaltState(ctx context.Context, vehicl
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (vehicle_id) DO UPDATE SET halted = $3, updated_at = $4
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, vehicleID, orgID, halted, time.Now())
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) GetVehicleHaltState(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
 	var halted bool
 	query := `SELECT halted FROM emergency_vehicle_state WHERE vehicle_id = $1`
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, vehicleID).Scan(&halted)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err == pgx.ErrNoRows {
 		return false, nil
 	}
@@ -503,7 +540,9 @@ func (r *emergencyRepository) LogTimelineEvent(ctx context.Context, event *model
 	query := `
 		INSERT INTO incident_timeline (id, incident_id, event_type, actor, metadata, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, event.ID, event.IncidentID, event.EventType, event.Actor, event.Metadata, event.CreatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -513,7 +552,9 @@ func (r *emergencyRepository) GetTimeline(ctx context.Context, incidentID uuid.U
 		FROM incident_timeline
 		WHERE incident_id = $1
 		ORDER BY created_at ASC`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, incidentID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -534,13 +575,17 @@ func (r *emergencyRepository) CreateMedia(ctx context.Context, media *models.Inc
 	query := `
 		INSERT INTO incident_media (id, incident_id, media_type, file_url, uploaded_by, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, media.ID, media.IncidentID, media.MediaType, media.FileURL, media.UploadedBy, media.CreatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) GetMediaByIncident(ctx context.Context, incidentID uuid.UUID) ([]models.IncidentMedia, error) {
 	query := `SELECT id, incident_id, media_type, file_url, uploaded_by, created_at FROM incident_media WHERE incident_id = $1`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, incidentID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -560,14 +605,18 @@ func (r *emergencyRepository) CreateVehicleSnapshot(ctx context.Context, snapsho
 	query := `
 		INSERT INTO incident_vehicle_snapshot (incident_id, speed, heading, engine_status, fuel_level, battery_voltage, gps_accuracy, device_signal_strength, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, snapshot.IncidentID, snapshot.Speed, snapshot.Heading, snapshot.EngineStatus, snapshot.FuelLevel, snapshot.BatteryVoltage, snapshot.GPSAccuracy, snapshot.DeviceSignalStrength, snapshot.CreatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) GetVehicleSnapshot(ctx context.Context, incidentID uuid.UUID) (*models.IncidentVehicleSnapshot, error) {
 	query := `SELECT incident_id, speed, heading, engine_status, fuel_level, battery_voltage, gps_accuracy, device_signal_strength, created_at FROM incident_vehicle_snapshot WHERE incident_id = $1`
+	start := time.Now()
 	var s models.IncidentVehicleSnapshot
 	err := r.db.QueryRow(ctx, query, incidentID).Scan(&s.IncidentID, &s.Speed, &s.Heading, &s.EngineStatus, &s.FuelLevel, &s.BatteryVoltage, &s.GPSAccuracy, &s.DeviceSignalStrength, &s.CreatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -584,7 +633,9 @@ func (r *emergencyRepository) GetIncidentsByDay(ctx context.Context, orgID uuid.
 		WHERE org_id = $1 AND timestamp >= NOW() - ($2 || ' days')::INTERVAL
 		GROUP BY date
 		ORDER BY date ASC`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID, days)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +658,9 @@ func (r *emergencyRepository) GetIncidentTypeDistribution(ctx context.Context, o
 		FROM sos_incidents
 		WHERE org_id = $1
 		GROUP BY type`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +687,9 @@ func (r *emergencyRepository) GetVehicleSafetyScores(ctx context.Context, orgID 
 		GROUP BY v.id, v.registration_number
 		ORDER BY safety_score ASC
 		LIMIT 10`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -653,7 +708,9 @@ func (r *emergencyRepository) GetVehicleSafetyScores(ctx context.Context, orgID 
 
 func (r *emergencyRepository) ArchiveOldSnapshots(ctx context.Context, olderThan time.Time) (int64, error) {
 	query := `DELETE FROM incident_vehicle_snapshot WHERE created_at < $1`
+	start := time.Now()
 	res, err := r.db.Exec(ctx, query, olderThan)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return 0, err
 	}
@@ -662,7 +719,9 @@ func (r *emergencyRepository) ArchiveOldSnapshots(ctx context.Context, olderThan
 
 func (r *emergencyRepository) GetCriticalIncidentsForSnapshot(ctx context.Context, since time.Time) ([]models.SOSIncident, error) {
 	query := `SELECT * FROM sos_incidents WHERE severity = 'CRITICAL' AND created_at >= $1`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, since)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -691,25 +750,29 @@ func (r *emergencyRepository) CreateIncidentSnapshot(ctx context.Context, snapsh
 		INSERT INTO emergency_incident_snapshots (incident_id, vehicle_id, org_id, incident_type, severity, status, latitude, longitude, snapshot_data)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		snapshot.IncidentID, snapshot.VehicleID, snapshot.OrgID,
 		snapshot.IncidentType, snapshot.Severity, snapshot.Status,
 		snapshot.Latitude, snapshot.Longitude, snapshot.SnapshotData)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
 	query := `
-		SELECT 
+		SELECT
 			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
 			status, severity, incident_type, panic_source, speed, heading, metadata,
 			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
 			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
-		FROM sos_incidents 
+		FROM sos_incidents
 		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		ORDER BY timestamp DESC
 	`
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID, start, end)
+	sharedmetrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +804,7 @@ func (r *emergencyRepository) ArchiveOldIncidents(ctx context.Context, olderThan
 			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
 			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
 		)
-		SELECT 
+		SELECT
 			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
 			status, severity, incident_type, panic_source, speed, heading, metadata,
 			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
@@ -749,25 +812,31 @@ func (r *emergencyRepository) ArchiveOldIncidents(ctx context.Context, olderThan
 		FROM sos_incidents
 		WHERE (status = 'RESOLVED' OR status = 'FALSE_ALARM') AND updated_at < $1
 	`
+	start := time.Now()
 	res, err := r.db.Exec(ctx, moveQuery, olderThan)
+	sharedmetrics.RecordDBQuery(moveQuery, time.Since(start))
 	if err != nil {
 		return 0, err
 	}
-	
+
 	count := res.RowsAffected()
 	if count > 0 {
 		deleteQuery := `DELETE FROM sos_incidents WHERE (status = 'RESOLVED' OR status = 'FALSE_ALARM') AND updated_at < $1`
+		start2 := time.Now()
 		_, err = r.db.Exec(ctx, deleteQuery, olderThan)
+		sharedmetrics.RecordDBQuery(deleteQuery, time.Since(start2))
 		if err != nil {
 			return count, fmt.Errorf("archive succeeded but delete failed: %w", err)
 		}
 	}
-	
+
 	return count, nil
 }
 func (r *emergencyRepository) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, feedback string, notes string) error {
 	query := `UPDATE sos_incidents SET driver_feedback = $2, feedback_notes = $3, updated_at = $4 WHERE id = $1`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, incidentID, feedback, notes, time.Now())
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -776,14 +845,18 @@ func (r *emergencyRepository) LogSLAViolation(ctx context.Context, v *models.SLA
 		INSERT INTO incident_sla_violations (id, incident_id, severity, breach_type, breach_time, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, v.ID, v.IncidentID, v.Severity, v.BreachType, v.BreachTime, v.CreatedAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) ArchiveOldMedia(ctx context.Context, olderThan time.Time) (int64, error) {
 	// 1 year retention for media as per enterprise requirement
 	query := `DELETE FROM incident_media WHERE created_at < $1`
+	start := time.Now()
 	res, err := r.db.Exec(ctx, query, olderThan)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return 0, err
 	}
@@ -795,7 +868,9 @@ func (r *emergencyRepository) RecordContactNotification(ctx context.Context, inc
 		INSERT INTO emergency_contact_responses (incident_id, contact_id, response_status, created_at)
 		VALUES ($1, $2, 'NOTIFIED', NOW())
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, incidentID, contactID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -805,20 +880,24 @@ func (r *emergencyRepository) UpdateContactResponse(ctx context.Context, inciden
 		SET response_status = $1, responded_at = NOW(), notes = $2
 		WHERE incident_id = $3 AND contact_id = $4
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, status, notes, incidentID, contactID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 func (r *emergencyRepository) GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error) {
 	query := `
-		SELECT location_address 
-		FROM sos_incidents 
+		SELECT location_address
+		FROM sos_incidents
 		WHERE org_id = $1 AND location_address IS NOT NULL AND location_address != ''
-		GROUP BY location_address 
-		ORDER BY COUNT(*) DESC 
+		GROUP BY location_address
+		ORDER BY COUNT(*) DESC
 		LIMIT $2
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID, limit)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -836,8 +915,10 @@ func (r *emergencyRepository) GetTopLocations(ctx context.Context, orgID uuid.UU
 
 func (r *emergencyRepository) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
 	query := `SELECT COUNT(*) FROM sos_incidents WHERE org_id = $1 AND created_at >= $2`
+	start := time.Now()
 	var count int
 	err := r.db.QueryRow(ctx, query, orgID, since).Scan(&count)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return count, err
 }
 
@@ -852,7 +933,9 @@ func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFo
 		ORDER BY updated_at ASC
 		LIMIT 50
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, cutoff)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -877,7 +960,9 @@ func (r *emergencyRepository) EnqueueDeviceEvent(ctx context.Context, vehicleID 
 		INSERT INTO device_event_queue (vehicle_id, event_type, payload, next_retry_at)
 		VALUES ($1, $2, $3, NOW())
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, vehicleID, eventType, payload)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -890,7 +975,9 @@ func (r *emergencyRepository) GetPendingDeviceEvents(ctx context.Context, limit 
 		ORDER BY next_retry_at ASC
 		LIMIT $1
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, limit)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -910,16 +997,21 @@ func (r *emergencyRepository) GetPendingDeviceEvents(ctx context.Context, limit 
 
 // Phase 3: MarkDeviceEventDelivered marks a queued event as delivered.
 func (r *emergencyRepository) MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `UPDATE device_event_queue SET status='DELIVERED' WHERE id=$1`, id)
+	query := `UPDATE device_event_queue SET status='DELIVERED' WHERE id=$1`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
 // Phase 3: IncrementDeviceEventRetry increments retry count and schedules next attempt.
 func (r *emergencyRepository) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE device_event_queue SET retry_count = retry_count + 1, next_retry_at = $2,
+	query := `UPDATE device_event_queue SET retry_count = retry_count + 1, next_retry_at = $2,
 		 status = CASE WHEN retry_count >= 5 THEN 'FAILED' ELSE 'PENDING' END
-		 WHERE id = $1`, id, nextRetryAt)
+		 WHERE id = $1`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id, nextRetryAt)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -929,7 +1021,9 @@ func (r *emergencyRepository) LogAuthorityDelivery(ctx context.Context, log *mod
 		INSERT INTO authority_delivery_logs (id, incident_id, authority_type, delivery_status, response_code, response_body, retry_count)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, log.ID, log.IncidentID, log.AuthorityType, log.DeliveryStatus, log.ResponseCode, log.ResponseBody, log.RetryCount)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -940,7 +1034,9 @@ func (r *emergencyRepository) UpdateAuthorityDelivery(ctx context.Context, id uu
 		SET delivery_status = $1, response_code = $2, response_body = $3, updated_at = NOW()
 		WHERE id = $4
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, status, responseCode, responseBody, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -950,7 +1046,9 @@ func (r *emergencyRepository) CreateTimelineEvent(ctx context.Context, event *mo
 		INSERT INTO incident_timeline_events (id, incident_id, event_type, event_data)
 		VALUES ($1, $2, $3, $4)
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, event.ID, event.IncidentID, event.EventType, event.EventData)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -962,7 +1060,9 @@ func (r *emergencyRepository) GetTimelineEvents(ctx context.Context, incidentID 
 		WHERE incident_id = $1
 		ORDER BY created_at ASC
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, incidentID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -987,7 +1087,9 @@ func (r *emergencyRepository) GetAuthoritiesByLocation(ctx context.Context, lat,
 		WHERE ST_Contains(zone_polygon, ST_SetSRID(ST_Point($1, $2), 4326))
 		ORDER BY priority ASC
 	`
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, lng, lat) // Point(lng, lat) for SRID 4326
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query authorities by location: %w", err)
 	}

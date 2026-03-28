@@ -17,7 +17,7 @@ import (
 
 func main() {
 	log.Println("Starting Step 34: Soak Testing Simulation (Long-Duration Stability)")
-	
+
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://user:password@localhost:5432/testdb?sslmode=disable"
@@ -37,12 +37,12 @@ func main() {
 	telemetryService := service.NewTelemetryService(repo, healthService)
 
 	log.Println("Simulating background load for stability check...")
-	
+
 	// Simulation of 24h run (condensed to visible activity for validation)
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	// In a real soak test, this runs for 24h. 
+	// In a real soak test, this runs for 24h.
 	// For this validation, we'll run 10 iterations to prove stability.
 	for i := 0; i < 10; i++ {
 		select {

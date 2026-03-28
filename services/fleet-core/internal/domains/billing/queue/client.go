@@ -42,8 +42,8 @@ func (c *BillingQueueClient) EnqueueGenerateInvoice(ctx context.Context, payload
 		return fmt.Errorf("enqueue task: %w", err)
 	}
 
-	c.logger.Info("Enqueued invoice generation task", 
-		zap.String("org_id", payload.OrgID.String()), 
+	c.logger.Info("Enqueued invoice generation task",
+		zap.String("org_id", payload.OrgID.String()),
 		zap.String("task_id", info.ID))
 	return nil
 }
@@ -62,8 +62,8 @@ func (c *BillingQueueClient) EnqueueDunningTask(ctx context.Context, payload mod
 		return fmt.Errorf("enqueue dunning task: %w", err)
 	}
 
-	c.logger.Info("Enqueued dunning task", 
-		zap.String("invoice_id", payload.InvoiceID.String()), 
+	c.logger.Info("Enqueued dunning task",
+		zap.String("invoice_id", payload.InvoiceID.String()),
 		zap.String("task_id", info.ID))
 	return nil
 }
@@ -84,8 +84,8 @@ func (c *BillingQueueClient) EnqueueRenderPDF(ctx context.Context, invoiceID uui
 		return fmt.Errorf("enqueue render pdf task: %w", err)
 	}
 
-	c.logger.Info("Enqueued PDF rendering task", 
-		zap.String("invoice_id", invoiceID.String()), 
+	c.logger.Info("Enqueued PDF rendering task",
+		zap.String("invoice_id", invoiceID.String()),
 		zap.String("task_id", info.ID))
 	return nil
 }

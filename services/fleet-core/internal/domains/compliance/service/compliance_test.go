@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/fleet-platform/shared/pkg/logger"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -145,9 +145,9 @@ func TestRecordDutyStatus_ValidTransition(t *testing.T) {
 
 	// Action: Transition to ON_DUTY_NOT_DRIVING
 	req := &pb.RecordDutyStatusRequest{
-		DriverId: driverIDStr,
+		DriverId:  driverIDStr,
 		VehicleId: uuid.New().String(),
-		Status:   pb.DutyStatus_ON_DUTY_NOT_DRIVING,
+		Status:    pb.DutyStatus_ON_DUTY_NOT_DRIVING,
 	}
 
 	resp, err := svc.RecordDutyStatus(ctx, req)
@@ -158,7 +158,7 @@ func TestRecordDutyStatus_ValidTransition(t *testing.T) {
 	assert.NotNil(t, resp.Log)
 	assert.Equal(t, pb.DutyStatus_ON_DUTY_NOT_DRIVING, resp.Log.Status)
 	assert.Equal(t, driverIDStr, resp.Log.DriverId)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
@@ -188,7 +188,7 @@ func TestRecordDutyStatus_InvalidTransition(t *testing.T) {
 	// Assert
 	assert.ErrorIs(t, err, service.ErrInvalidTransition)
 	assert.Nil(t, resp)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
@@ -209,6 +209,6 @@ func TestGetCurrentDutyStatus_NewDriver(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, pb.DutyStatus_OFF_DUTY, resp.Status) // Defaults to OFF_DUTY
-	
+
 	mockRepo.AssertExpectations(t)
 }

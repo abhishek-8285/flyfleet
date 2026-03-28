@@ -43,16 +43,24 @@ func TestAuthMiddleware(t *testing.T) {
 	mockSvc := new(MockIAMService)
 	handler := AuthMiddleware(mockSvc)
 
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value(UserIDKey)
-		assert.NotNil(t, userID)
-		w.WriteHeader(http.StatusOK)
-	})
-
-	// Case: Valid Token
+	// Case: Valid Token - verify UUIDs stored as strings
 	userID := uuid.New()
 	orgID := uuid.New()
 	mockSvc.On("ValidateToken", "valid-token").Return(&service.IAMClaims{UserID: userID, OrgID: orgID}, nil)
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// SECURITY FIX: Verify UserID is stored as string (not uuid.UUID)
+		userIDVal, ok := r.Context().Value(UserIDKey).(string)
+		assert.True(t, ok, "UserID should be string")
+		assert.Equal(t, userID.String(), userIDVal)
+
+		// Verify OrgID is stored as string (not uuid.UUID)
+		orgIDVal, ok := r.Context().Value(OrgIDKey).(string)
+		assert.True(t, ok, "OrgID should be string")
+		assert.Equal(t, orgID.String(), orgIDVal)
+
+		w.WriteHeader(http.StatusOK)
+	})
 
 	req := httptest.NewRequest("GET", "/", nil)
 	req.Header.Set("Authorization", "Bearer valid-token")
@@ -78,11 +86,12 @@ func TestRBACMiddleware(t *testing.T) {
 
 	userID := uuid.New()
 
-	// Case: Allowed
+	// Case: Allowed - Context stores UserID as string, RBACMiddleware parses it to uuid.UUID
 	mockSvc.On("CheckPermission", mock.Anything, userID, "vehicle", "read").Return(true, nil).Once()
 
 	req := httptest.NewRequest("GET", "/", nil)
-	ctx := context.WithValue(req.Context(), UserIDKey, userID)
+	// SECURITY FIX: Store UserID as string in context (as AuthMiddleware does)
+	ctx := context.WithValue(req.Context(), UserIDKey, userID.String())
 	rr := httptest.NewRecorder()
 
 	handler(next).ServeHTTP(rr, req.WithContext(ctx))

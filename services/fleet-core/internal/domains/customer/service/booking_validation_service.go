@@ -87,7 +87,7 @@ func (s *BookingValidationService) ValidateBooking(ctx context.Context, booking 
 		// Save the validation result to the repository. Note: Add CreateBookingValidation to repo later if needed,
 		// or handle it in a batch. For simplicity, we are just conceptually recording it here.
 		// A full implementation would call s.repo.CreateBookingValidation(ctx, validationRecord)
-		
+
 		s.logger.Info("Validation executed",
 			zap.String("type", v.ValidationType),
 			zap.String("status", status),

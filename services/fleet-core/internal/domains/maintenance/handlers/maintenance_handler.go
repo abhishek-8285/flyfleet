@@ -51,7 +51,7 @@ func (h *MaintenanceHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/upcoming", h.GetUpcomingMaintenance)
 	r.Get("/overdue", h.GetOverdueMaintenance)
 	r.Get("/summary", h.GetMaintenanceSummary)
-	
+
 	// Note: This route was originally /vehicles/{vehicle_id}/maintenance-history
 	// If we want to keep it under /maintenance, we could change it or register it elsewhere
 	r.Get("/vehicles/{vehicle_id}/history", h.GetVehicleMaintenanceHistory)
@@ -92,7 +92,13 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 func (h *MaintenanceHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	schedule, err := h.service.GetSchedule(r.Context(), id)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	schedule, err := h.service.GetSchedule(r.Context(), id, orgID)
 	if err != nil {
 		h.logger.Error("failed to get maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
@@ -184,6 +190,12 @@ func (h *MaintenanceHandler) ListSchedules(w http.ResponseWriter, r *http.Reques
 func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
 	var req models.UpdateScheduleRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
@@ -191,7 +203,7 @@ func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	schedule, err := h.service.UpdateSchedule(r.Context(), id, &req)
+	schedule, err := h.service.UpdateSchedule(r.Context(), id, orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to update maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
@@ -205,7 +217,13 @@ func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Reque
 func (h *MaintenanceHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteSchedule(r.Context(), id); err != nil {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	if err := h.service.DeleteSchedule(r.Context(), id, orgID); err != nil {
 		h.logger.Error("failed to delete maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
 		return
@@ -243,7 +261,13 @@ func (h *MaintenanceHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	logEntry, err := h.service.GetLog(r.Context(), id)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	logEntry, err := h.service.GetLog(r.Context(), id, orgID)
 	if err != nil {
 		h.logger.Error("failed to get maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
@@ -332,6 +356,12 @@ func (h *MaintenanceHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
 	var req models.UpdateLogRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
@@ -339,7 +369,7 @@ func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logEntry, err := h.service.UpdateLog(r.Context(), id, &req)
+	logEntry, err := h.service.UpdateLog(r.Context(), id, orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to update maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
@@ -353,7 +383,13 @@ func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	if err := h.service.DeleteLog(r.Context(), id); err != nil {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	if err := h.service.DeleteLog(r.Context(), id, orgID); err != nil {
 		h.logger.Error("failed to delete maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
 		return
@@ -371,6 +407,12 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
 	limit := 20
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if limitVal, err := strconv.Atoi(limitStr); err == nil && limitVal > 0 && limitVal <= 100 {
@@ -378,7 +420,7 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 		}
 	}
 
-	logs, err := h.service.GetMaintenanceHistory(r.Context(), vehicleID, limit)
+	logs, err := h.service.GetMaintenanceHistory(r.Context(), vehicleID, orgID, limit)
 	if err != nil {
 		h.logger.Error("failed to get maintenance history", zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get maintenance history", nil)

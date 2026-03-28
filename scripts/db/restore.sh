@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-# Configuration
+# Configuration - require explicit DB_PASSWORD, no defaults
+: "${DB_PASSWORD:?ERROR: DB_PASSWORD environment variable is required. Set it with your database password.}"
 DB_HOST=${DB_HOST:-localhost}
 DB_PORT=${DB_PORT:-5433}
 DB_USER=${DB_USER:-fleet_user}
@@ -22,6 +23,6 @@ fi
 echo "Starting restoration of $DB_NAME from $BACKUP_FILE..."
 
 # Restore data via psql utilizing zcat since it's gzipped
-zcat "$BACKUP_FILE" | PGPASSWORD=${DB_PASSWORD:-fleet_password} psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME"
+zcat "$BACKUP_FILE" | PGPASSWORD="${DB_PASSWORD}" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME"
 
 echo "Restoration completed successfully."

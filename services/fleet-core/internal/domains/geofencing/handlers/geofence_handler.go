@@ -15,6 +15,41 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/service"
 )
 
+// DTOs for request payloads (separate from models to avoid mass assignment)
+
+type createGeofenceRequestDTO struct {
+	Name          string                 `json:"name" binding:"required,max=100"`
+	Type          string                 `json:"type" binding:"required,oneof=circle polygon route_corridor"`
+	Center        *models.Location       `json:"center,omitempty"`
+	RadiusMeters  *int                   `json:"radius,omitempty"`
+	Coordinates   []models.Location      `json:"coordinates,omitempty"`
+	RoutePolyline *string                `json:"route_polyline,omitempty"`
+	BufferMeters  *int                   `json:"buffer_meters,omitempty"`
+	EntryAlert    bool                   `json:"entry_alert"`
+	ExitAlert     bool                   `json:"exit_alert"`
+	SpeedLimit    *int                   `json:"speed_limit,omitempty"`
+	Vehicles      []uuid.UUID            `json:"vehicles"`
+	ActiveHours   *models.ActiveHours    `json:"active_hours,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+}
+
+type updateGeofenceRequestDTO struct {
+	Name          *string                `json:"name,omitempty"`
+	Type          *string                `json:"type,omitempty"`
+	Center        *models.Location       `json:"center,omitempty"`
+	RadiusMeters  *int                   `json:"radius,omitempty"`
+	Coordinates   []models.Location      `json:"coordinates,omitempty"`
+	RoutePolyline *string                `json:"route_polyline,omitempty"`
+	BufferMeters  *int                   `json:"buffer_meters,omitempty"`
+	EntryAlert    *bool                  `json:"entry_alert,omitempty"`
+	ExitAlert     *bool                  `json:"exit_alert,omitempty"`
+	SpeedLimit    *int                   `json:"speed_limit,omitempty"`
+	Vehicles      []uuid.UUID            `json:"vehicles,omitempty"`
+	ActiveHours   *models.ActiveHours    `json:"active_hours,omitempty"`
+	Metadata      map[string]interface{} `json:"metadata,omitempty"`
+	Active        *bool                  `json:"active,omitempty"`
+}
+
 type GeofenceHandler struct {
 	service  *service.GeofenceService
 	logger   *zap.Logger
@@ -42,8 +77,8 @@ func (h *GeofenceHandler) RegisterRoutes(r chi.Router) {
 
 // CreateGeofence handles creating a new geofence
 func (h *GeofenceHandler) CreateGeofence(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateGeofenceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto createGeofenceRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("Invalid request body for creating geofence", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -54,12 +89,30 @@ func (h *GeofenceHandler) CreateGeofence(w http.ResponseWriter, r *http.Request)
 	if !h.requireAuthContext(w, orgID, userID) {
 		return
 	}
+
+	// Map DTO to model
+	req := &models.CreateGeofenceRequest{
+		Name:          dto.Name,
+		Type:          dto.Type,
+		Center:        dto.Center,
+		RadiusMeters:  dto.RadiusMeters,
+		Coordinates:   dto.Coordinates,
+		RoutePolyline: dto.RoutePolyline,
+		BufferMeters:  dto.BufferMeters,
+		EntryAlert:    dto.EntryAlert,
+		ExitAlert:     dto.ExitAlert,
+		SpeedLimit:    dto.SpeedLimit,
+		Vehicles:      dto.Vehicles,
+		ActiveHours:   dto.ActiveHours,
+		Metadata:      dto.Metadata,
+	}
+
 	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	geofence, err := h.service.Create(r.Context(), orgID, userID, &req)
+	geofence, err := h.service.Create(r.Context(), orgID, userID, req)
 	if err != nil {
 		h.logger.Error("Failed to create geofence", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -169,8 +222,8 @@ func (h *GeofenceHandler) UpdateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var req models.UpdateGeofenceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto updateGeofenceRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("Invalid request body for updating geofence", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -181,12 +234,31 @@ func (h *GeofenceHandler) UpdateGeofence(w http.ResponseWriter, r *http.Request)
 	if !h.requireAuthContext(w, orgID, userID) {
 		return
 	}
+
+	// Map DTO to model
+	req := &models.UpdateGeofenceRequest{
+		Name:          dto.Name,
+		Type:          dto.Type,
+		Center:        dto.Center,
+		RadiusMeters:  dto.RadiusMeters,
+		Coordinates:   dto.Coordinates,
+		RoutePolyline: dto.RoutePolyline,
+		BufferMeters:  dto.BufferMeters,
+		EntryAlert:    dto.EntryAlert,
+		ExitAlert:     dto.ExitAlert,
+		SpeedLimit:    dto.SpeedLimit,
+		Vehicles:      dto.Vehicles,
+		ActiveHours:   dto.ActiveHours,
+		Metadata:      dto.Metadata,
+		Active:        dto.Active,
+	}
+
 	if err := h.validate.Struct(req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	updatedGeofence, err := h.service.Update(r.Context(), id, orgID, &req)
+	updatedGeofence, err := h.service.Update(r.Context(), id, orgID, req)
 	if err != nil {
 		h.logger.Error("Failed to update geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -317,9 +389,9 @@ func (h *GeofenceHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	if id, err := uuid.Parse(r.Header.Get("X-Organization-ID")); err == nil {
-		return id
-	}
+	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 
@@ -334,9 +406,9 @@ func (h *GeofenceHandler) getUserID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	if id, err := uuid.Parse(r.Header.Get("X-User-ID")); err == nil {
-		return id
-	}
+	// SECURITY FIX: Removed fallback to X-User-ID header to prevent header spoofing
+	// The user ID must come from validated JWT context only
+	h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 

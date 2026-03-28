@@ -5,13 +5,6 @@ import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { useAuth } from "../context/AuthProvider";
 
-interface Organization {
-  id: string;
-  name: string;
-  role: string;
-  isLocked?: boolean;
-}
-
 const OrgSelection: React.FC = () => {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -21,7 +14,6 @@ const OrgSelection: React.FC = () => {
   const { user } = useAuth();
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
-  const [loading_orgs, setLoading_orgs] = React.useState(true);
 
   React.useEffect(() => {
     const fetchOrgs = async () => {
@@ -33,8 +25,6 @@ const OrgSelection: React.FC = () => {
         setOrgs(payload.data || payload || []);
       } catch (error) {
         console.error("Failed to fetch orgs", error);
-      } finally {
-        setLoading_orgs(false);
       }
     };
     fetchOrgs();

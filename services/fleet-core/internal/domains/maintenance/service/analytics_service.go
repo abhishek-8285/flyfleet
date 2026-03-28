@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type AnalyticsService struct {
@@ -78,8 +78,8 @@ func (s *AnalyticsService) UpdateVehicleLifecycleMetrics(ctx context.Context, ve
 	// 1. Get total cost and event count
 	var totalCost float64
 	var eventCount int
-	err := s.repo.GetDB().QueryRow(ctx, 
-		"SELECT COALESCE(SUM(cost), 0), COUNT(*) FROM maintenance_logs WHERE vehicle_id = $1", 
+	err := s.repo.GetDB().QueryRow(ctx,
+		"SELECT COALESCE(SUM(cost), 0), COUNT(*) FROM maintenance_logs WHERE vehicle_id = $1",
 		vehicleID).Scan(&totalCost, &eventCount)
 	if err != nil {
 		return err

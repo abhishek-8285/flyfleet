@@ -1,46 +1,95 @@
-# Getting Started with Create React App
+# FlyFleet Dashboard Web
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React-based administrative dashboard for FlyFleet, built with Vite, TypeScript, and Tailwind CSS.
 
-## Available Scripts
+## Tech Stack
 
-In the project directory, you can run:
+- **Vite 8** - Fast build tool and dev server
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Utility-first CSS framework
+- **React Query** - Data fetching and caching
+- **Redux Toolkit** - State management
+- **Vitest** - Unit testing (migrated from Jest)
 
-### `npm start`
+## Prerequisites
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- Node.js 18+ (Node 20+ recommended)
+- npm 9+
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Development
 
-### `npm test`
+### Install dependencies
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+From the monorepo root:
 
-### `npm run build`
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Run development server
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm run dev --workspace=@flyfleet/dashboard-web
+# or
+cd apps/dashboard-web
+npm run dev
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The dev server will start at http://localhost:3000 with API proxy to `http://localhost:8084`.
 
-### `npm run eject`
+### Available scripts
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Type-check and build for production (outputs to `dist/`) |
+| `npm run preview` | Preview production build locally |
+| `npm test` | Run unit tests once (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run lint` | Run ESLint |
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Testing
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+The project uses Vitest with React Testing Library. Tests are located alongside source files:
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- `src/**/*.test.{ts,tsx}` - Unit tests
+- `src/**/*.spec.{ts,tsx}` - Specification tests
 
-## Learn More
+Test setup file: `src/setupTests.ts` (includes `@testing-library/jest-dom`)
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Building for Production
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+```bash
+npm run build --workspace=@flyfleet/dashboard-web
+```
+
+Outputs optimized static files to `apps/dashboard-web/dist/`. These can be served by any static file server or deployed to CDN/S3.
+
+### Environment Variables
+
+- `VITE_API_URL` - Backend API base URL (defaults to `/api/v1`)
+- `REACT_APP_PUBLIC_POSTHOG_KEY` - PostHog analytics key
+- `REACT_APP_PUBLIC_POSTHOG_HOST` - PostHog host (defaults to `https://us.i.posthog.com`)
+
+At runtime, these are injected via Vite’s `define` config. For production, set them in your hosting environment.
+
+## Migrated from Create React App
+
+This project was originally created with Create React App and has been migrated to Vite. The migration included:
+
+- Replaced `react-scripts` with Vite + `@vitejs/plugin-react`
+- Updated test runner from Jest to Vitest
+- Preserved all existing functionality and tests
+- Maintained ESLint configuration via `eslint-config-react-app`
+
+## Notes
+
+- The `eslintConfig` still extends `react-app` and `react-app/jest` for compatibility. Consider migrating to standalone ESLint config in future.
+- Some legacy tests may need updates for full Vitest compatibility.
+- CSS modules and asset imports work via Vite’s built-in support.
+
+---
+
+**Last Updated:** 2026-03-28
+**Maintainer:** FlyFleet Frontend Team

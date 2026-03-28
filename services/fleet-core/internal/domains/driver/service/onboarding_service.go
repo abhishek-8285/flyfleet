@@ -29,10 +29,10 @@ func NewOnboardingService(repo OnboardingRepo, logger *zap.Logger) *OnboardingSe
 
 func (s *OnboardingService) StartOnboarding(ctx context.Context, driverID string) error {
 	initialStep := &models.OnboardingStep{
-		DriverID: driverID,
-		Step:     "APPLICATION",
-		Status:   "COMPLETED",
-		Remarks:  "Application submitted",
+		DriverID:    driverID,
+		Step:        "APPLICATION",
+		Status:      "COMPLETED",
+		Remarks:     "Application submitted",
 		CompletedAt: func() *time.Time { t := time.Now(); return &t }(),
 	}
 

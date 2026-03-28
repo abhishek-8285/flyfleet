@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -54,6 +55,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
+	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
 		id, driver.OrgID, driver.FirstName, driver.LastName, driver.Email, driver.Phone,
 		driver.EmployeeCode, driver.AadhaarNumber, driver.PanNumber,
@@ -62,6 +64,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 		driver.ExperienceYears, driver.Rating, driver.TotalTrips, driver.TotalDistanceKm,
 		driver.TotalHoursDriven, driver.BehaviorScore, metadataJSON, now, now,
 	).Scan(&driver.ID, &driver.CreatedAt, &driver.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return fmt.Errorf("failed to create driver: %w", err)
@@ -75,10 +78,12 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 	query := `SELECT id, org_id, first_name, last_name, full_name, email, status, created_at
 	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
 		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -93,10 +98,12 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 	query := `SELECT id, org_id, first_name, last_name, full_name, email, license_number, status, created_at
 	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, licenseNumber).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
 		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -122,6 +129,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 	var driver models.Driver
 	var addressJSON, emergencyContactJSON, documentsJSON, attendanceJSON, schedulesJSON, metadataJSON []byte
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
 		&driver.Email, &driver.Phone, &driver.EmployeeCode, &driver.AadhaarNumber,
@@ -134,6 +142,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		&attendanceJSON, &schedulesJSON, &metadataJSON, &driver.CreatedAt,
 		&driver.UpdatedAt, &driver.DeletedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -218,7 +227,9 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	// Count query
 	var totalCount int
 	countSQL := countQuery + whereClause
+	start := time.Now()
 	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
+	metrics.RecordDBQuery(countSQL, time.Since(start))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count drivers: %w", err)
 	}
@@ -257,7 +268,9 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 
 	listSQL := baseQuery + whereClause + " ORDER BY " + orderBy + limitClause
 
+	start = time.Now()
 	rows, err := r.db.Query(ctx, listSQL, args...)
+	metrics.RecordDBQuery(listSQL, time.Since(start))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list drivers: %w", err)
 	}
@@ -320,7 +333,9 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 	query := fmt.Sprintf("UPDATE drivers SET %s, updated_at = $%d WHERE id = $%d AND deleted_at IS NULL",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update driver: %w", err)
 	}
@@ -335,7 +350,9 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 // Delete performs soft delete of a driver
 func (r *DriverRepository) Delete(ctx context.Context, id string) error {
 	query := "UPDATE drivers SET deleted_at = NOW(), status = 'inactive' WHERE id = $1 AND deleted_at IS NULL"
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to delete driver: %w", err)
 	}
@@ -354,7 +371,9 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 		SET current_vehicle_id = $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL`
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, vehicleID, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to assign vehicle: %w", err)
 	}
@@ -373,7 +392,9 @@ func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string)
 		SET current_vehicle_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deleted_at IS NULL`
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to unassign vehicle: %w", err)
 	}
@@ -392,7 +413,9 @@ func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID str
 		SET behavior_score = behavior_score + $1, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL`
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, scoreChange, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update behavior score: %w", err)
 	}
@@ -414,7 +437,9 @@ func (r *DriverRepository) IncrementStats(ctx context.Context, driverID string, 
 		    updated_at = NOW()
 		WHERE id = $3 AND deleted_at IS NULL`
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, distanceKm, hoursDriven, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to increment driver stats: %w", err)
 	}
@@ -448,11 +473,13 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score, d.attendance_records`
 
 	var analytics models.DriverAnalytics
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, driverID).Scan(
 		&analytics.TotalTrips, &analytics.TotalDistanceKm, &analytics.TotalHoursDriven,
 		&analytics.AverageRating, &analytics.CurrentBehaviorScore, &analytics.CompletedTrips,
 		&analytics.CancelledTrips, &analytics.AttendanceRate,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -486,7 +513,9 @@ func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehic
 		  AND deleted_at IS NULL
 		ORDER BY created_at ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, vehicleID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active drivers: %w", err)
 	}
@@ -545,6 +574,7 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
+	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
 		id, behavior.DriverID, behavior.OrgID, behavior.PeriodStart, behavior.PeriodEnd,
 		behavior.Score, behavior.SafetyScore, behavior.EfficiencyScore, behavior.ComplianceScore,
@@ -555,6 +585,7 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 		behavior.NightDrivingHours, behavior.HighwayPercentage, behavior.CityDrivingPercentage,
 		behavior.RiskLevel, riskFactorsJSON, improvementAreasJSON, metadataJSON, now, now,
 	).Scan(&behavior.ID, &behavior.CreatedAt, &behavior.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return fmt.Errorf("failed to create behavior record: %w", err)
@@ -579,7 +610,9 @@ func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID stri
 			AND period_end <= $3
 		ORDER BY period_start DESC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query behavior records: %w", err)
 	}
@@ -648,11 +681,13 @@ func (r *DriverRepository) CreateIncident(ctx context.Context, incident *models.
 		return fmt.Errorf("failed to marshal details: %w", err)
 	}
 
+	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
 		id, incident.DriverID, incident.OrgID, incident.Type, incident.Severity,
 		incident.Timestamp, locationJSON, incident.Speed, detailsJSON,
 		incident.Resolved, incident.ResolutionNotes, now,
 	).Scan(&incident.ID, &incident.CreatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return fmt.Errorf("failed to create incident: %w", err)
@@ -693,7 +728,9 @@ func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, fi
 
 	query := baseQuery + whereClause + " ORDER BY timestamp DESC"
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query incidents: %w", err)
 	}
@@ -734,7 +771,9 @@ func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, fi
 // UpdateIncidentResolution updates incident resolution status
 func (r *DriverRepository) UpdateIncidentResolution(ctx context.Context, incidentID string, resolved bool, notes string) error {
 	query := `UPDATE driver_incidents SET resolved = $1, resolution_notes = $2, updated_at = NOW() WHERE id = $3`
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, resolved, notes, incidentID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update incident resolution: %w", err)
 	}
@@ -761,10 +800,12 @@ func (r *DriverRepository) CreateBehaviorScoreUpdate(ctx context.Context, update
 		return fmt.Errorf("failed to marshal details: %w", err)
 	}
 
+	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
 		id, update.DriverID, update.ScoreChange, update.Reason,
 		update.EventType, detailsJSON, update.CreatedBy, now,
 	).Scan(&update.ID, &update.CreatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		return fmt.Errorf("failed to create behavior score update: %w", err)
@@ -792,11 +833,13 @@ func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID stri
 			AND period_end >= CURRENT_DATE - INTERVAL '30 days'`
 
 	var summary models.DriverBehavior
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, driverID).Scan(
 		&summary.Score, &summary.SafetyScore, &summary.EfficiencyScore, &summary.ComplianceScore,
 		&summary.HarshAccelerations, &summary.HarshBrakings, &summary.SpeedingIncidents,
 		&summary.FuelConsumption, &summary.DistanceDriven, &summary.RiskLevel,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -837,12 +880,13 @@ func (r *DriverRepository) CreateAuditLog(ctx context.Context, audit *models.Dri
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
+	start := time.Now()
 	_, err = r.db.Exec(ctx, query,
 		id, audit.DriverID, audit.OrgID, audit.Action,
 		oldValueJSON, newValueJSON, audit.UserID, audit.UserType, audit.UserEmail,
 		audit.Reason, metadataJSON, audit.IPAddress, audit.UserAgent, audit.CreatedAt,
 	)
-
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to create audit log: %w", err)
 	}
@@ -916,7 +960,9 @@ func (r *DriverRepository) GetAuditLogs(ctx context.Context, filter models.Audit
 	// Count
 	var totalCount int
 	countSQL := countQuery + whereClause
+	start := time.Now()
 	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
+	metrics.RecordDBQuery(countSQL, time.Since(start))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count audit logs: %w", err)
 	}
@@ -940,7 +986,9 @@ func (r *DriverRepository) GetAuditLogs(ctx context.Context, filter models.Audit
 
 	listSQL := baseQuery + whereClause + limitClause
 
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, listSQL, args...)
+	metrics.RecordDBQuery(listSQL, time.Since(queryStart))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query audit logs: %w", err)
 	}
@@ -1037,6 +1085,7 @@ func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID,
 	}
 	return r.CreateAuditLog(ctx, audit)
 }
+
 // EndDutyStatusLog ends a duty status log
 func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
 	query := `
@@ -1047,7 +1096,9 @@ func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, d
 		WHERE id = $1
 	`
 
+	start := time.Now()
 	result, err := r.db.Exec(ctx, query, logID, durationMinutes)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to end duty status log: %w", err)
 	}
@@ -1058,6 +1109,7 @@ func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, d
 
 	return nil
 }
+
 // GetDutyStatusLogs retrieves duty status logs for a driver within a time range
 func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
 	query := `
@@ -1068,7 +1120,9 @@ func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID strin
 		ORDER BY started_at ASC`
 
 	fmt.Printf("[DEBUG GetDutyStatusLogs] Fetching logs for driver %s between %v and %v\n", driverID, startDate, endDate)
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		fmt.Printf("[DEBUG GetDutyStatusLogs] Error querying: %v\n", err)
 		return nil, fmt.Errorf("failed to query duty status logs: %w", err)
@@ -1121,7 +1175,9 @@ func (r *DriverRepository) GetDriversWithExpiringDocuments(ctx context.Context, 
 		WHERE license_expiry <= $1 AND status = 'active' AND deleted_at IS NULL`
 
 	expiryDate := time.Now().AddDate(0, 0, days)
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, expiryDate)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -1137,4 +1193,210 @@ func (r *DriverRepository) GetDriversWithExpiringDocuments(ctx context.Context, 
 		drivers = append(drivers, &d)
 	}
 	return drivers, nil
+}
+
+// ==========================
+// Attendance methods
+// ==========================
+
+// CreateAttendance inserts a new attendance record
+func (r *DriverRepository) CreateAttendance(ctx context.Context, att *models.DriverAttendance) error {
+	query := `
+		INSERT INTO driver_attendance (
+			id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		RETURNING id, created_at, updated_at
+	`
+	now := time.Now()
+	if att.ID == uuid.Nil {
+		att.ID = uuid.New()
+	}
+	if att.CreatedAt.IsZero() {
+		att.CreatedAt = now
+	}
+	att.UpdatedAt = now
+
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
+		att.ID, att.DriverID, att.OrgID, att.AttendanceDate, att.Status, att.CheckInTime, att.CheckOutTime, att.Remarks, att.CreatedAt, att.UpdatedAt,
+	).Scan(&att.ID, &att.CreatedAt, &att.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetAttendanceByID retrieves attendance by ID
+func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error) {
+	query := `
+		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
+		FROM driver_attendance WHERE id = $1
+	`
+	att := &models.DriverAttendance{}
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&att.ID, &att.DriverID, &att.OrgID, &att.AttendanceDate, &att.Status, &att.CheckInTime, &att.CheckOutTime, &att.Remarks, &att.CreatedAt, &att.UpdatedAt,
+	)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return att, nil
+}
+
+// GetAttendanceByDriver retrieves attendance records for a driver within a date range
+func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+	query := `
+		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
+		FROM driver_attendance
+		WHERE driver_id = $1 AND org_id = $2 AND attendance_date >= $3 AND attendance_date <= $4
+		ORDER BY attendance_date DESC
+	`
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, driverID, orgID, from, to)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attendances []*models.DriverAttendance
+	for rows.Next() {
+		var att models.DriverAttendance
+		err := rows.Scan(
+			&att.ID, &att.DriverID, &att.OrgID, &att.AttendanceDate, &att.Status,
+			&att.CheckInTime, &att.CheckOutTime, &att.Remarks, &att.CreatedAt, &att.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		attendances = append(attendances, &att)
+	}
+	return attendances, nil
+}
+
+// UpdateCheckOut updates check-out time and remarks for an attendance record
+func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
+	query := `
+		UPDATE driver_attendance
+		SET check_out_time = $3, remarks = $4, updated_at = NOW()
+		WHERE id = $1 AND org_id = $2
+		RETURNING updated_at
+	`
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query, id, orgID, checkOut, remarks).Scan()
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// ==========================
+// Schedule methods
+// ==========================
+
+// CreateSchedule inserts a new driver schedule
+func (r *DriverRepository) CreateSchedule(ctx context.Context, sch *models.DriverSchedule) error {
+	query := `
+		INSERT INTO driver_schedules (
+			id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, created_at, updated_at
+	`
+	now := time.Now()
+	if sch.ID == uuid.Nil {
+		sch.ID = uuid.New()
+	}
+	if sch.CreatedAt.IsZero() {
+		sch.CreatedAt = now
+	}
+	sch.UpdatedAt = now
+
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
+		sch.ID, sch.DriverID, sch.OrgID, sch.DayOfWeek, sch.StartTime, sch.EndTime, sch.IsWorking, sch.CreatedAt, sch.UpdatedAt,
+	).Scan(&sch.ID, &sch.CreatedAt, &sch.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetScheduleByID retrieves a schedule by ID
+func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error) {
+	query := `
+		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		FROM driver_schedules WHERE id = $1
+	`
+	sch := &models.DriverSchedule{}
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&sch.ID, &sch.DriverID, &sch.OrgID, &sch.DayOfWeek, &sch.StartTime, &sch.EndTime, &sch.IsWorking, &sch.CreatedAt, &sch.UpdatedAt,
+	)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return sch, nil
+}
+
+// GetSchedulesByDriver retrieves all schedules for a driver
+func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+	query := `
+		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		FROM driver_schedules
+		WHERE driver_id = $1 AND org_id = $2
+		ORDER BY day_of_week ASC
+	`
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, driverID, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var schedules []*models.DriverSchedule
+	for rows.Next() {
+		var sch models.DriverSchedule
+		err := rows.Scan(
+			&sch.ID, &sch.DriverID, &sch.OrgID, &sch.DayOfWeek, &sch.StartTime, &sch.EndTime, &sch.IsWorking, &sch.CreatedAt, &sch.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, &sch)
+	}
+	return schedules, nil
+}
+
+// UpdateSchedule updates an existing schedule
+func (r *DriverRepository) UpdateSchedule(ctx context.Context, sch *models.DriverSchedule) error {
+	query := `
+		UPDATE driver_schedules SET
+			day_of_week = $3, start_time = $4, end_time = $5, is_working = $6, updated_at = NOW()
+		WHERE id = $1 AND org_id = $2
+		RETURNING updated_at
+	`
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
+		sch.ID, sch.OrgID, sch.DayOfWeek, sch.StartTime, sch.EndTime, sch.IsWorking,
+	).Scan()
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// DeleteSchedule removes a schedule
+func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
+	query := "DELETE FROM driver_schedules WHERE id = $1 AND org_id = $2"
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
 }

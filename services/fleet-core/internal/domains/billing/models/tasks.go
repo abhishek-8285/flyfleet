@@ -7,10 +7,10 @@ import (
 const (
 	// TypeGenerateInvoice defines the task type for monthly invoice generation
 	TypeGenerateInvoice = "billing:generate_invoice"
-	
+
 	// TypeProcessDunning defines the task type for payment retry and notifications
 	TypeProcessDunning = "billing:process_dunning"
-	
+
 	// TypeUsageSnapshot defines the task type for periodic usage aggregation
 	TypeUsageSnapshot = "billing:usage_snapshot"
 
@@ -25,8 +25,8 @@ type GenerateInvoicePayload struct {
 
 // ProcessDunningPayload represents the payload for TypeProcessDunning
 type ProcessDunningPayload struct {
-	InvoiceID uuid.UUID `json:"invoice_id"`
-	RetryCount int      `json:"retry_count"`
+	InvoiceID  uuid.UUID `json:"invoice_id"`
+	RetryCount int       `json:"retry_count"`
 }
 
 // RenderPDFPayload represents the payload for TypeRenderPDF

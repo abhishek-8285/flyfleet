@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -33,9 +34,11 @@ func (r *MobileSyncRepository) QueueItem(ctx context.Context, item *models.Mobil
 
 	payloadJSON, _ := json.Marshal(item.Payload)
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		item.ID, item.DriverID, item.ActionType, payloadJSON, item.Status, item.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -46,7 +49,9 @@ func (r *MobileSyncRepository) GetPendingItems(ctx context.Context, driverID str
 		WHERE driver_id = $1 AND status = 'PENDING'
 		ORDER BY created_at ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +73,8 @@ func (r *MobileSyncRepository) GetPendingItems(ctx context.Context, driverID str
 
 func (r *MobileSyncRepository) UpdateItemStatus(ctx context.Context, itemID string, status string) error {
 	query := `UPDATE driver_mobile_sync_queue SET status = $2 WHERE id = $1`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, itemID, status)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

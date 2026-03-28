@@ -24,7 +24,7 @@ func NewGovernanceDataAggregator(db *pgxpool.Pool, logger *zap.Logger) Governanc
 
 func (a *governanceDataAggregator) AggregateData(ctx context.Context, userID, orgID uuid.UUID) (*models.DSARData, error) {
 	data := &models.DSARData{}
-	
+
 	// 1. User Profile
 	var userProfile map[string]interface{}
 	err := a.db.QueryRow(ctx, "SELECT row_to_json(u) FROM (SELECT id, organization_id, email, first_name, last_name, phone_number, role, created_at FROM users WHERE id = $1 AND organization_id = $2) u", userID, orgID).Scan(&userProfile)

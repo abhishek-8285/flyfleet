@@ -105,26 +105,26 @@ type ApprovalAction struct {
 
 // ApprovalConfig defines the workflow for approvals
 type ApprovalConfig struct {
-	ID         string   `json:"id" db:"id"`
-	OrgID      string   `json:"org_id" db:"org_id"`
-	EntityType string   `json:"entity_type" db:"entity_type"`
-	MinAmount  float64  `json:"min_amount" db:"min_amount"`
-	Levels     []string `json:"levels" db:"levels"` // List of role names or user IDs
+	ID         string    `json:"id" db:"id"`
+	OrgID      string    `json:"org_id" db:"org_id"`
+	EntityType string    `json:"entity_type" db:"entity_type"`
+	MinAmount  float64   `json:"min_amount" db:"min_amount"`
+	Levels     []string  `json:"levels" db:"levels"` // List of role names or user IDs
 	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 }
 
 // Budget tracks spending against a limit
 type Budget struct {
-	ID             string    `json:"id" db:"id"`
-	OrgID          string    `json:"org_id" db:"org_id"`
-	Category       string    `json:"category" db:"category"`
-	Year           int       `json:"year" db:"year"`
-	Month          int       `json:"month" db:"month"`
-	LimitAmount    float64   `json:"limit_amount" db:"limit_amount"`
-	SpentAmount    float64   `json:"spent_amount" db:"spent_amount"`
+	ID                string    `json:"id" db:"id"`
+	OrgID             string    `json:"org_id" db:"org_id"`
+	Category          string    `json:"category" db:"category"`
+	Year              int       `json:"year" db:"year"`
+	Month             int       `json:"month" db:"month"`
+	LimitAmount       float64   `json:"limit_amount" db:"limit_amount"`
+	SpentAmount       float64   `json:"spent_amount" db:"spent_amount"`
 	Currency          string    `json:"currency" db:"currency"`
 	AlertThresholdPct int       `json:"alert_threshold_pct" db:"alert_threshold_pct"`
 	PeriodStart       time.Time `json:"period_start" db:"period_start"`
-	PeriodEnd      time.Time `json:"period_end" db:"period_end"`
-	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
+	PeriodEnd         time.Time `json:"period_end" db:"period_end"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at"`
 }

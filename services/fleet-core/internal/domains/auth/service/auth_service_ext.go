@@ -41,8 +41,8 @@ func (s *AuthService) GetAuditLogs(ctx context.Context, limit, offset int32) ([]
 
 func (s *AuthService) GetSecurityTelemetry(ctx context.Context) (map[string]any, error) {
 	return map[string]any{
-		"mfa_adoption_rate": 0.85,
-		"failed_login_trend": "stable",
+		"mfa_adoption_rate":      0.85,
+		"failed_login_trend":     "stable",
 		"suspicious_ips_blocked": 12,
 	}, nil
 }

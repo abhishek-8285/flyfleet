@@ -139,11 +139,11 @@ func (h *TrackingQueryHandler) GetNearby(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.jsonOK(w, map[string]any{
-		"lat":     lat,
-		"lng":     lng,
-		"radius":  radius,
-		"count":   len(locs),
-		"data":    locs,
+		"lat":    lat,
+		"lng":    lng,
+		"radius": radius,
+		"count":  len(locs),
+		"data":   locs,
 	})
 }
 

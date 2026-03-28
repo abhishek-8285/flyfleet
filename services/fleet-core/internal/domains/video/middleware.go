@@ -19,7 +19,8 @@ import (
 // Devices must include an HMAC-SHA256 signature in the X-Device-Token header.
 //
 // Header format:
-//   X-Device-Token: {device_id}:{timestamp}:{hmac_signature}
+//
+//	X-Device-Token: {device_id}:{timestamp}:{hmac_signature}
 //
 // Where signature = HMAC-SHA256("{device_id}:{timestamp}", deviceMasterSecret).
 // Timestamp must be within ±5 minutes to prevent replay attacks.
@@ -77,10 +78,10 @@ func DeviceAuthMiddleware(secret string, logger *zap.Logger) func(http.Handler) 
 // StreamRateLimiter limits concurrent video streaming sessions per tenant.
 // Prevents a single tenant from monopolizing bandwidth/CDN capacity.
 type StreamRateLimiter struct {
-	mu      sync.Mutex
-	counts  map[string]int // tenantID → active stream count
+	mu           sync.Mutex
+	counts       map[string]int // tenantID → active stream count
 	maxPerTenant int
-	logger  *zap.Logger
+	logger       *zap.Logger
 }
 
 func NewStreamRateLimiter(maxPerTenant int, logger *zap.Logger) *StreamRateLimiter {

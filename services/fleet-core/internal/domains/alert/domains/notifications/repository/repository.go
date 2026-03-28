@@ -44,7 +44,7 @@ func (r *NotificationRepository) ListLogs(ctx context.Context, page, limit int, 
 		limit = 20
 	}
 	offset := (page - 1) * limit
-	
+
 	query := `SELECT id, correlation_id, user_id, user_email, channel, type, subject, status, created_at, updated_at 
 	          FROM notification_logs WHERE 1=1`
 	args := []any{}
@@ -99,7 +99,7 @@ func (r *NotificationRepository) GetLog(ctx context.Context, id uuid.UUID) (*mod
 	var l models.NotificationLog
 	query := `SELECT id, correlation_id, user_id, user_email, channel, type, subject, body, status, provider, provider_response, retry_count, max_retries, metadata, created_at, updated_at 
 	          FROM notification_logs WHERE id = $1`
-	
+
 	err := r.db.QueryRow(ctx, query, id).Scan(&l.ID, &l.CorrelationID, &l.UserID, &l.UserEmail, &l.Channel, &l.Type, &l.Subject, &l.Body, &l.Status, &l.Provider, &l.ProviderResponse, &l.RetryCount, &l.MaxRetries, &l.Metadata, &l.CreatedAt, &l.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -155,7 +155,7 @@ func (r *NotificationRepository) UpdateSettings(ctx context.Context, s *models.N
 	          priority = EXCLUDED.priority, 
 	          retention_months = EXCLUDED.retention_months, 
 	          updated_at = EXCLUDED.updated_at`
-	
+
 	_, err := r.db.Exec(ctx, query, s.Channel, s.Enabled, s.MaxRetries, s.Priority, s.RetentionMonths)
 	return err
 }
@@ -164,7 +164,7 @@ func (r *NotificationRepository) CreateLog(ctx context.Context, l *models.Notifi
 	l.ID = uuid.New()
 	query := `INSERT INTO notification_logs (id, correlation_id, user_id, user_email, channel, type, subject, body, status, provider, max_retries, metadata, created_at, created_by, updated_at, updated_by) 
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, $13, CURRENT_TIMESTAMP, $14) RETURNING created_at, updated_at`
-	
+
 	return r.db.QueryRow(ctx, query, l.ID, l.CorrelationID, l.UserID, l.UserEmail, l.Channel, l.Type, l.Subject, l.Body, l.Status, l.Provider, l.MaxRetries, l.Metadata, l.CreatedBy, l.UpdatedBy).Scan(&l.CreatedAt, &l.UpdatedAt)
 }
 func (r *NotificationRepository) AddEvent(ctx context.Context, e *models.NotificationEvent) error {
@@ -229,7 +229,7 @@ func (r *NotificationRepository) GetUserPreference(ctx context.Context, userId u
 	          FROM user_notification_preferences p
 	          JOIN users u ON p.user_id = u.id
 	          WHERE p.user_id = $1`
-	
+
 	err := r.db.QueryRow(ctx, query, userId).Scan(&p.ID, &p.UserID, &p.UserName, &p.UserEmail, &p.EmailEnabled, &p.SmsEnabled, &p.PushEnabled, &p.InAppEnabled, &p.LastModifiedBy, &p.LastModifiedAt, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -269,7 +269,7 @@ func (r *NotificationRepository) UpdateUserPreference(ctx context.Context, p *mo
 	          last_modified_by = EXCLUDED.last_modified_by, 
 	          last_modified_at = EXCLUDED.last_modified_at, 
 	          updated_at = EXCLUDED.updated_at`
-	
+
 	_, err := r.db.Exec(ctx, query, p.UserID, p.EmailEnabled, p.SmsEnabled, p.PushEnabled, p.InAppEnabled, p.LastModifiedBy)
 	return err
 }
@@ -285,7 +285,7 @@ func (r *NotificationRepository) GetGlobalDefaults(ctx context.Context) (*models
 	var d models.GlobalNotificationDefault
 	query := `SELECT id, email_enabled, sms_enabled, push_enabled, in_app_enabled, updated_by, updated_at 
 	          FROM global_notification_defaults ORDER BY updated_at DESC LIMIT 1`
-	
+
 	err := r.db.QueryRow(ctx, query).Scan(&d.ID, &d.EmailEnabled, &d.SmsEnabled, &d.PushEnabled, &d.InAppEnabled, &d.UpdatedBy, &d.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -300,7 +300,7 @@ func (r *NotificationRepository) UpdateGlobalDefaults(ctx context.Context, d *mo
 	query := `UPDATE global_notification_defaults SET 
 	          email_enabled = $1, sms_enabled = $2, push_enabled = $3, in_app_enabled = $4, 
 	          updated_by = $5, updated_at = CURRENT_TIMESTAMP`
-	
+
 	_, err := r.db.Exec(ctx, query, d.EmailEnabled, d.SmsEnabled, d.PushEnabled, d.InAppEnabled, d.UpdatedBy)
 	return err
 }
@@ -308,7 +308,7 @@ func (r *NotificationRepository) UpdateGlobalDefaults(ctx context.Context, d *mo
 func (r *NotificationRepository) GetPreferenceAudit(ctx context.Context, userId uuid.UUID) ([]models.PreferenceAudit, error) {
 	query := `SELECT id, user_id, changed_by, old_values, new_values, change_reason, created_at 
 	          FROM notification_preference_audit WHERE user_id = $1 ORDER BY created_at DESC`
-	
+
 	rows, err := r.db.Query(ctx, query, userId)
 	if err != nil {
 		return nil, err

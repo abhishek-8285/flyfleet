@@ -135,7 +135,7 @@ func (c *InvoiceCache) GetStats() *CacheStats {
 	}
 
 	return &CacheStats{
-		EntryCount:   len(c.data),
+		EntryCount:     len(c.data),
 		TotalSizeBytes: totalSize,
 		TotalSizeMB:    float64(totalSize) / 1024 / 1024,
 		TotalHits:      totalHits,

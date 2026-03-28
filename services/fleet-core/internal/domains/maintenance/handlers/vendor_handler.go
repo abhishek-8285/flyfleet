@@ -59,7 +59,7 @@ func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	vendor.OrganizationID = orgID
+	vendor.OrgID = orgID
 
 	if err := h.repo.Create(r.Context(), &vendor); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -145,5 +145,8 @@ func (h *VendorHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure fallback to prevent unauthorized access
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }

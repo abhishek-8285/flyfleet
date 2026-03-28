@@ -13,7 +13,77 @@ import (
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/trip/service"
+	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
 )
+
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createTripRequestDTO struct {
+	VehicleID            string              `json:"vehicle_id" validate:"required,uuid4"`
+	DriverID             string              `json:"driver_id" validate:"required,uuid4"`
+	Title                string              `json:"title" validate:"required,max=100"`
+	Description          string              `json:"description" validate:"max=500"`
+	PlannedRoute         []models.Waypoint   `json:"planned_route" validate:"required,min=2"`
+	Waypoints            []models.Waypoint   `json:"waypoints" validate:"required,min=2"`
+	PlannedDistance      float64             `json:"planned_distance" validate:"required,gt=0"`
+	EstimatedDurationMin int                 `json:"estimated_duration_min" validate:"required,gt=0"`
+	CargoDetails         models.CargoDetails `json:"cargo_details" validate:"required"`
+	ScheduledStart       time.Time           `json:"scheduled_start" validate:"required"`
+	PlannedETA           *time.Time          `json:"planned_eta" validate:"omitempty"`
+	StartOdometer        *float64            `json:"start_odometer" validate:"omitempty,gte=0"`
+	FuelLevelSnapshot    *float64            `json:"fuel_level_snapshot" validate:"omitempty,gte=0,lte=100"`
+	CustomerName         string              `json:"customer_name" validate:"required"`
+	CustomerPhone        string              `json:"customer_phone" validate:"required,e164"`
+	CustomerEmail        string              `json:"customer_email" validate:"omitempty,email"`
+	PickupGeo            *models.Location    `json:"pickup_geo" validate:"omitempty"`
+	DropGeo              *models.Location    `json:"drop_geo" validate:"omitempty"`
+	EWayBillNo           string              `json:"eway_bill_no" validate:"omitempty"`
+	GSTClassification    string              `json:"gst_classification" validate:"omitempty"`
+}
+
+type updateTripRequestDTO struct {
+	Title                *string              `json:"title,omitempty" validate:"omitempty,max=100"`
+	Description          *string              `json:"description,omitempty" validate:"omitempty,max=500"`
+	PlannedRoute         *[]models.Waypoint   `json:"planned_route,omitempty" validate:"omitempty,min=2"`
+	Waypoints            *[]models.Waypoint   `json:"waypoints,omitempty" validate:"omitempty,min=2"`
+	PlannedDistance      *float64             `json:"planned_distance,omitempty" validate:"omitempty,gt=0"`
+	EstimatedDurationMin *int                 `json:"estimated_duration_min,omitempty" validate:"omitempty,gt=0"`
+	CargoDetails         *models.CargoDetails `json:"cargo_details,omitempty"`
+	ScheduledStart       *time.Time           `json:"scheduled_start,omitempty"`
+	CustomerName         *string              `json:"customer_name,omitempty"`
+	CustomerPhone        *string              `json:"customer_phone,omitempty" validate:"omitempty,e164"`
+	CustomerEmail        *string              `json:"customer_email,omitempty" validate:"omitempty,email"`
+}
+
+type startTripRequestDTO struct {
+	OdometerReading float64 `json:"odometer_reading" validate:"required,gt=0"`
+	FuelLevel       float64 `json:"fuel_level" validate:"required,gte=0,lte=100"`
+	Notes           string  `json:"notes" validate:"max=500"`
+}
+
+type completeTripRequestDTO struct {
+	OdometerReading   float64              `json:"odometer_reading" validate:"required,gt=0"`
+	FuelLevel         float64              `json:"fuel_level" validate:"required,gte=0,lte=100"`
+	TotalDistance     float64              `json:"total_distance" validate:"required,gt=0"`
+	FuelUsed          float64              `json:"fuel_used" validate:"required,gte=0"`
+	IdlingTimeMinutes int                  `json:"idling_time_minutes" validate:"gte=0"`
+	PODDocuments      []models.PODDocument `json:"pod_documents" validate:"required,min=1"`
+	Notes             string               `json:"notes" validate:"max=500"`
+}
+
+type addEventRequestDTO struct {
+	Type        string          `json:"type" validate:"required,oneof=arrival departure delivery_attempt delivery_success delivery_failed delay breakdown accident"`
+	Location    models.Location `json:"location" validate:"required"`
+	Description string          `json:"description" validate:"required,max=500"`
+	Photos      []string        `json:"photos" validate:"max=10"`
+}
+
+type submitPODRequestDTO struct {
+	Type        string           `json:"type" validate:"required,oneof=signature photo invoice receipt"`
+	URL         string           `json:"url" validate:"required,url"`
+	Recipient   models.Recipient `json:"recipient" validate:"required"`
+	OTPVerified bool             `json:"otp_verified"`
+	Signature   string           `json:"signature"` // base64 encoded
+}
 
 type TripHandler struct {
 	service  service.TripServiceInterface
@@ -58,6 +128,7 @@ func (h *TripHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/optimize-route", h.OptimizeRoute)
 	})
 }
+
 // GetTrip godoc
 func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
@@ -72,22 +143,47 @@ func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": trip})
 }
 
-
 func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
-	tenantID := h.getTenantID(r)
-	if tenantID == "" {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	var reqData models.CreateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&reqData); err != nil {
+	var dto createTripRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	trip, err := h.service.Create(r.Context(), tenantID, &reqData)
+	// Validate request (if validator is used; the original code didn't validate, but we can add)
+	// Note: Original didn't call validate.Struct; but we could. However to preserve behavior, I won't add extra validation unless present before.
+	// Map DTO to model
+	req := &models.CreateTripRequest{
+		VehicleID:            dto.VehicleID,
+		DriverID:             dto.DriverID,
+		Title:                dto.Title,
+		Description:          dto.Description,
+		PlannedRoute:         dto.PlannedRoute,
+		Waypoints:            dto.Waypoints,
+		PlannedDistance:      dto.PlannedDistance,
+		EstimatedDurationMin: dto.EstimatedDurationMin,
+		CargoDetails:         dto.CargoDetails,
+		ScheduledStart:       dto.ScheduledStart,
+		PlannedETA:           dto.PlannedETA,
+		StartOdometer:        dto.StartOdometer,
+		FuelLevelSnapshot:    dto.FuelLevelSnapshot,
+		CustomerName:         dto.CustomerName,
+		CustomerPhone:        dto.CustomerPhone,
+		CustomerEmail:        dto.CustomerEmail,
+		PickupGeo:            dto.PickupGeo,
+		DropGeo:              dto.DropGeo,
+		EWayBillNo:           dto.EWayBillNo,
+		GSTClassification:    dto.GSTClassification,
+	}
+
+	trip, err := h.service.Create(r.Context(), orgID, req)
 	if err != nil {
 		h.logger.Error("failed to create trip", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -99,15 +195,15 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 
 // ListTrips godoc
 func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
-	tenantID := h.getTenantID(r)
-	if tenantID == "" {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.TripListFilter{
-		TenantID:  tenantID,
+		OrgID:     orgID,
 		Status:    query.Get("status"),
 		VehicleID: query.Get("vehicle_id"),
 		DriverID:  query.Get("driver_id"),
@@ -150,15 +246,30 @@ func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
 // UpdateTrip godoc
 func (h *TripHandler) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	var req models.UpdateTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	var dto updateTripRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
-	trip, err := h.service.Update(r.Context(), id, &req)
+	// Map DTO to model
+	req := &models.UpdateTripRequest{
+		Title:                dto.Title,
+		Description:          dto.Description,
+		PlannedRoute:         dto.PlannedRoute,
+		Waypoints:            dto.Waypoints,
+		PlannedDistance:      dto.PlannedDistance,
+		EstimatedDurationMin: dto.EstimatedDurationMin,
+		CargoDetails:         dto.CargoDetails,
+		ScheduledStart:       dto.ScheduledStart,
+		CustomerName:         dto.CustomerName,
+		CustomerPhone:        dto.CustomerPhone,
+		CustomerEmail:        dto.CustomerEmail,
+	}
+
+	trip, err := h.service.Update(r.Context(), id, req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
@@ -174,7 +285,7 @@ func (h *TripHandler) UpdateTrip(w http.ResponseWriter, r *http.Request) {
 // DeleteTrip godoc
 func (h *TripHandler) DeleteTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
+
 	if err := h.service.Delete(r.Context(), id); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
@@ -206,9 +317,9 @@ func (h *TripHandler) ApproveTrip(w http.ResponseWriter, r *http.Request) {
 // StartTrip godoc
 func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	var req models.StartTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	var dto startTripRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -220,7 +331,14 @@ func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trip, err := h.service.Start(r.Context(), id, driverID, &req)
+	// Map DTO to model
+	req := &models.StartTripRequest{
+		OdometerReading: dto.OdometerReading,
+		FuelLevel:       dto.FuelLevel,
+		Notes:           dto.Notes,
+	}
+
+	trip, err := h.service.Start(r.Context(), id, driverID, req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
@@ -236,7 +354,7 @@ func (h *TripHandler) StartTrip(w http.ResponseWriter, r *http.Request) {
 // PauseTrip godoc
 func (h *TripHandler) PauseTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
+
 	driverID := h.getDriverID(r)
 	if driverID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
@@ -259,7 +377,7 @@ func (h *TripHandler) PauseTrip(w http.ResponseWriter, r *http.Request) {
 // ResumeTrip godoc
 func (h *TripHandler) ResumeTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
+
 	driverID := h.getDriverID(r)
 	if driverID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Driver context missing", nil)
@@ -282,9 +400,9 @@ func (h *TripHandler) ResumeTrip(w http.ResponseWriter, r *http.Request) {
 // CompleteTrip godoc
 func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	var req models.CompleteTripRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	var dto completeTripRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -296,7 +414,18 @@ func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trip, err := h.service.Complete(r.Context(), id, driverID, &req)
+	// Map DTO to model
+	req := &models.CompleteTripRequest{
+		OdometerReading:   dto.OdometerReading,
+		FuelLevel:         dto.FuelLevel,
+		TotalDistance:     dto.TotalDistance,
+		FuelUsed:          dto.FuelUsed,
+		IdlingTimeMinutes: dto.IdlingTimeMinutes,
+		PODDocuments:      dto.PODDocuments,
+		Notes:             dto.Notes,
+	}
+
+	trip, err := h.service.Complete(r.Context(), id, driverID, req)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
@@ -306,6 +435,9 @@ func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Record business metric
+	metrics.RecordTripCompleted()
+
 	h.writeJSONResponse(w, http.StatusOK, trip)
 }
 
@@ -313,7 +445,7 @@ func (h *TripHandler) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 func (h *TripHandler) CancelTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	reason := r.URL.Query().Get("reason")
-	
+
 	if reason == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "reason is required", nil)
 		return
@@ -335,7 +467,7 @@ func (h *TripHandler) CancelTrip(w http.ResponseWriter, r *http.Request) {
 func (h *TripHandler) FailTrip(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	reason := r.URL.Query().Get("reason")
-	
+
 	if reason == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "reason is required", nil)
 		return
@@ -356,9 +488,9 @@ func (h *TripHandler) FailTrip(w http.ResponseWriter, r *http.Request) {
 // AddEvent godoc
 func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	var req models.AddEventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	var dto addEventRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -370,7 +502,15 @@ func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.AddEvent(r.Context(), id, driverID, &req); err != nil {
+	// Map DTO to model
+	req := &models.AddEventRequest{
+		Type:        dto.Type,
+		Location:    dto.Location,
+		Description: dto.Description,
+		Photos:      dto.Photos,
+	}
+
+	if err := h.service.AddEvent(r.Context(), id, driverID, req); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
@@ -385,9 +525,9 @@ func (h *TripHandler) AddEvent(w http.ResponseWriter, r *http.Request) {
 // SubmitPOD godoc
 func (h *TripHandler) SubmitPOD(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	
-	var req models.SubmitPODRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	var dto submitPODRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.logger.Error("invalid request body", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
@@ -399,7 +539,16 @@ func (h *TripHandler) SubmitPOD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.SubmitPOD(r.Context(), id, driverID, &req); err != nil {
+	// Map DTO to model
+	req := &models.SubmitPODRequest{
+		Type:        dto.Type,
+		URL:         dto.URL,
+		Recipient:   dto.Recipient,
+		OTPVerified: dto.OTPVerified,
+		Signature:   dto.Signature,
+	}
+
+	if err := h.service.SubmitPOD(r.Context(), id, driverID, req); err != nil {
 		status := http.StatusInternalServerError
 		if err.Error() == "trip not found" {
 			status = http.StatusNotFound
@@ -437,23 +586,23 @@ func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
 
 // GetTripSummary godoc
 func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
-	tenantID := h.getTenantID(r)
-	if tenantID == "" {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
 	startStr := r.URL.Query().Get("start")
 	endStr := r.URL.Query().Get("end")
-	
+
 	start, _ := time.Parse(time.RFC3339, startStr)
 	end, _ := time.Parse(time.RFC3339, endStr)
-	
+
 	if end.IsZero() {
 		end = time.Now()
 	}
 
-	summary, err := h.service.GetTripSummary(r.Context(), tenantID, start, end)
+	summary, err := h.service.GetTripSummary(r.Context(), orgID, start, end)
 	if err != nil {
 		h.logger.Error("failed to get trip summary", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -465,13 +614,13 @@ func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
 
 // GetDriverStats godoc
 func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
-	tenantID := h.getTenantID(r)
-	if tenantID == "" {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetDriverStats(r.Context(), tenantID)
+	stats, err := h.service.GetDriverStats(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("failed to get driver stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -483,13 +632,13 @@ func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
 
 // GetTripStats godoc
 func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
-	tenantID := h.getTenantID(r)
-	if tenantID == "" {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetTripStats(r.Context(), tenantID)
+	stats, err := h.service.GetTripStats(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("failed to get trip stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -501,6 +650,23 @@ func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
 
 // GetStats godoc
 func (h *TripHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+	// SECURITY FIX: Restrict platform-wide statistics to admin roles only (CWE-200)
+	roleVal := r.Context().Value(ctxkeys.RoleKey)
+	if roleVal == nil {
+		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
+		return
+	}
+	role, ok := roleVal.(string)
+	if !ok {
+		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
+		return
+	}
+	// Only allow super_admin, admin, support, org_admin to view platform stats
+	if role != "super_admin" && role != "admin" && role != "support" && role != "org_admin" {
+		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
+		return
+	}
+
 	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
 		h.logger.Error("failed to get general stats", zap.Error(err))
@@ -544,10 +710,10 @@ func (h *TripHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *TripHandler) getTenantID(r *http.Request) string {
-	if val := r.Context().Value(ctxkeys.TenantIDKey); val != nil {
-		if tenantIDStr, ok := val.(string); ok {
-			return tenantIDStr
+func (h *TripHandler) getOrgID(r *http.Request) string {
+	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
+		if orgIDStr, ok := val.(string); ok {
+			return orgIDStr
 		}
 	}
 	return ""

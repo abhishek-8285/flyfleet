@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
 	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
+	"go.uber.org/zap"
 )
 
 type SLOService struct {
@@ -70,11 +70,11 @@ func (s *SLOService) processSLO(ctx context.Context, slo *models.ServiceSLO) err
 		// Create new budget if not exists
 		allowedDowntime := int(float64(slo.PeriodDays*24*60) * (1 - slo.AvailabilityTarget/100.0))
 		budget = &models.ErrorBudget{
-			ServiceName:           slo.ServiceName,
+			ServiceName:            slo.ServiceName,
 			AllowedDowntimeMinutes: allowedDowntime,
 			ConsumedMinutes:        downCount, // Simplified
-			PeriodStart:           startTime,
-			PeriodEnd:             endTime,
+			PeriodStart:            startTime,
+			PeriodEnd:              endTime,
 		}
 	} else {
 		budget.ConsumedMinutes = downCount // Simplified
@@ -88,10 +88,10 @@ func (s *SLOService) processSLO(ctx context.Context, slo *models.ServiceSLO) err
 	// 4. Trigger alert if burn rate is high
 	burnRate := float64(budget.ConsumedMinutes) / float64(budget.AllowedDowntimeMinutes)
 	if burnRate > 0.9 {
-		s.logger.Warn("SLO Error Budget Burn Rate Critical", 
+		s.logger.Warn("SLO Error Budget Burn Rate Critical",
 			zap.String("service", slo.ServiceName),
 			zap.Float64("burn_rate", burnRate))
-		
+
 		// Create SRE alert group/incident
 		groupKey := fmt.Sprintf("%s:slo:critical", slo.ServiceName)
 		_, _ = s.repo.GetOrCreateAlertGroup(ctx, groupKey, slo.ServiceName, "slo_availability", "CRITICAL")

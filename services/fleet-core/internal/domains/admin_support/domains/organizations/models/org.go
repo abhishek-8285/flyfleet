@@ -7,29 +7,29 @@ import (
 )
 
 type Organization struct {
-	ID             string    `json:"id" db:"id"`
-	Name           string    `json:"name" db:"name"`
-	Domain         string    `json:"domain" db:"domain"`
-	Status         string    `json:"status" db:"status"`
-	Plan           string    `json:"plan" db:"plan"`
-	ContactEmail   string    `json:"contactEmail" db:"contact_email"`
-	DefaultTheme   string    `json:"defaultTheme" db:"default_theme"`
-	RenewalDate    time.Time `json:"renewalDate" db:"renewal_date"`
-	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
-	CreatedBy      uuid.UUID `json:"createdBy" db:"created_by"`
-	UpdatedAt      time.Time `json:"updatedAt" db:"updated_at"`
-	UpdatedBy      uuid.UUID `json:"updatedBy" db:"updated_by"`
+	ID           string    `json:"id" db:"id"`
+	Name         string    `json:"name" db:"name"`
+	Domain       string    `json:"domain" db:"domain"`
+	Status       string    `json:"status" db:"status"`
+	Plan         string    `json:"plan" db:"plan"`
+	ContactEmail string    `json:"contactEmail" db:"contact_email"`
+	DefaultTheme string    `json:"defaultTheme" db:"default_theme"`
+	RenewalDate  time.Time `json:"renewalDate" db:"renewal_date"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	CreatedBy    uuid.UUID `json:"createdBy" db:"created_by"`
+	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	UpdatedBy    uuid.UUID `json:"updatedBy" db:"updated_by"`
 }
 
 type OrganizationStats struct {
-	TotalOrgs      int `json:"total_orgs"`
-	ActiveOrgs     int `json:"active_orgs"`
-	PendingOrgs    int `json:"pending_orgs"`
-	InactiveOrgs   int `json:"inactive_orgs"`
-	TotalUsers     int `json:"total_users"`
-	TotalVehicles  int `json:"total_vehicles"`
-	TotalDevices   int `json:"total_devices"`
-	ActiveAlerts   int `json:"active_alerts"`
+	TotalOrgs     int `json:"total_orgs"`
+	ActiveOrgs    int `json:"active_orgs"`
+	PendingOrgs   int `json:"pending_orgs"`
+	InactiveOrgs  int `json:"inactive_orgs"`
+	TotalUsers    int `json:"total_users"`
+	TotalVehicles int `json:"total_vehicles"`
+	TotalDevices  int `json:"total_devices"`
+	ActiveAlerts  int `json:"active_alerts"`
 }
 
 type DashboardStats struct {
@@ -43,10 +43,10 @@ type DashboardStats struct {
 }
 
 type CreateOrganizationRequest struct {
-	Name            string `json:"name" binding:"required"`
-	Domain          string `json:"domain"`
-	DefaultTheme    string `json:"default_theme"`
-	ContactEmail    string `json:"contact_email"`
+	Name             string `json:"name" binding:"required"`
+	Domain           string `json:"domain"`
+	DefaultTheme     string `json:"default_theme"`
+	ContactEmail     string `json:"contact_email"`
 	SubscriptionTier string `json:"subscription_tier"`
 }
 

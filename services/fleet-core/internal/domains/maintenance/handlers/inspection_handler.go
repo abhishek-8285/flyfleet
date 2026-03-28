@@ -63,7 +63,7 @@ func (h *InspectionHandler) CreateTemplate(w http.ResponseWriter, r *http.Reques
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	template.OrganizationID = orgID
+	template.OrgID = orgID
 
 	if err := h.repo.CreateTemplate(r.Context(), &template); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -104,7 +104,7 @@ func (h *InspectionHandler) CreateInspection(w http.ResponseWriter, r *http.Requ
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	inspection.OrganizationID = orgID
+	inspection.OrgID = orgID
 	inspection.InspectorID = userID
 
 	if err := h.repo.CreateInspection(r.Context(), &inspection); err != nil {
@@ -170,7 +170,10 @@ func (h *InspectionHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure fallback to prevent unauthorized access
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }
 
 func (h *InspectionHandler) getUserID(r *http.Request) uuid.UUID {
@@ -181,5 +184,7 @@ func (h *InspectionHandler) getUserID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure default - user ID must come from validated JWT context
+	h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }

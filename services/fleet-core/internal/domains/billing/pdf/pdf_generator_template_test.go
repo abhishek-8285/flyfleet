@@ -39,7 +39,7 @@ func TestPDFGenerator_GenerateFromTemplate(t *testing.T) {
 
 	// This validates that the Go Template execution works correctly
 	pdfData, err := generator.GenerateFromTemplate(ctx, htmlTemplate, invoice, pdf.DefaultA4Portrait())
-	
+
 	// Since we don't have Headless Chrome in this environment, we expect a potential error
 	// but we can check if the HTML rendering phase (internal) works if we had access to it.
 	// For now, we just ensure the call doesn't panic and the logic is sound.

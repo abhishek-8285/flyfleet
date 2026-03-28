@@ -70,10 +70,10 @@ func ValidateDiscount(subtotal float64, discountType DiscountType, discountValue
 type DiscountError string
 
 const (
-	ErrInvalidDiscountType       DiscountError = "invalid discount type"
-	ErrNegativeDiscount          DiscountError = "discount cannot be negative"
+	ErrInvalidDiscountType          DiscountError = "invalid discount type"
+	ErrNegativeDiscount             DiscountError = "discount cannot be negative"
 	ErrDiscountPercentageExceeds100 DiscountError = "percentage discount cannot exceed 100%"
-	ErrDiscountExceedsSubtotal   DiscountError = "fixed discount cannot exceed subtotal"
+	ErrDiscountExceedsSubtotal      DiscountError = "fixed discount cannot exceed subtotal"
 )
 
 func (e DiscountError) Error() string {

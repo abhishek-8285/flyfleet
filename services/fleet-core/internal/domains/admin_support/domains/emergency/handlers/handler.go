@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -13,6 +12,12 @@ import (
 
 // Global rate limiter: 3 halt commands per 5 minutes per issuer
 var haltRateLimiter = NewRateLimiter(3, 5*time.Minute)
+
+// DTO for emergency halt request
+type emergencyHaltRequestDTO struct {
+	Reason       string `json:"reason" binding:"required"`
+	AuthorizedBy string `json:"authorized_by"`
+}
 
 type EmergencyHandler struct {
 	svc    service.EmergencyService
@@ -30,19 +35,19 @@ func (h *EmergencyHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *EmergencyHandler) GlobalHalt(w http.ResponseWriter, r *http.Request) {
-	var req models.EmergencyHaltRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto emergencyHaltRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	if req.Reason == "" {
+	if dto.Reason == "" {
 		h.errorJSON(w, "reason is required", http.StatusBadRequest)
 		return
 	}
 
 	// In a real system, issuedBy would come from JWT context
-	issuedBy := req.AuthorizedBy
+	issuedBy := dto.AuthorizedBy
 	if issuedBy == "" {
 		issuedBy = "Administrator"
 	}
@@ -54,7 +59,7 @@ func (h *EmergencyHandler) GlobalHalt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	command, err := h.svc.GlobalHalt(r.Context(), req.Reason, issuedBy)
+	command, err := h.svc.GlobalHalt(r.Context(), dto.Reason, issuedBy)
 	if err != nil {
 		h.logger.Error("Failed to issue global halt", zap.Error(err))
 		h.errorJSON(w, "Internal server error", http.StatusInternalServerError)

@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,10 +36,12 @@ func (r *settingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 		WHERE organization_id = $1
 	`
 	var s models.FuelSettings
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
 		&s.OrganizationID, &s.DefaultCurrency, &s.AllowedFuelTypes,
 		&s.ValidationRules, &s.AutoSyncEnabled, &s.CreatedAt, &s.UpdatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -60,10 +64,12 @@ func (r *settingsRepository) Upsert(ctx context.Context, s *models.FuelSettings)
 			auto_sync_enabled = EXCLUDED.auto_sync_enabled,
 			updated_at = NOW()
 	`
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		s.OrganizationID, s.DefaultCurrency, s.AllowedFuelTypes,
 		s.ValidationRules, s.AutoSyncEnabled,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to upsert fuel settings: %w", err)
 	}

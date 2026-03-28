@@ -8,18 +8,28 @@ for port in {8080..8090} {50051..50061}; do
   lsof -i :$port -t | xargs -r kill -9 || true
 done
 
-# Shared Env
-export DATABASE_URL="postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"
-export JWT_SECRET="runtime-integration-secret"
+# Shared Env - require database credentials
+: "${DATABASE_URL:?ERROR: DATABASE_URL environment variable is required. Copy .env.example to .env and set your database credentials.}"
+export DATABASE_URL="${DATABASE_URL}"
+export JWT_SECRET="${JWT_SECRET:-change-me-to-strong-random-secret-$(openssl rand -hex 32 2>/dev/null || echo 'RANDOM_SECRET')}"
 export NATS_URL="nats://localhost:4222"
 export REDIS_ADDR="localhost:6379"
 
-# Billing Service Specifics
-export DB_HOST="localhost"
-export DB_PORT=5432
-export DB_USER="fleet_user"
-export DB_PASS="fleet_password"
-export DB_NAME="fleet_db"
+# Billing Service Specifics - derive from DATABASE_URL or require explicit vars
+export DB_HOST="${DB_HOST:-localhost}"
+export DB_PORT="${DB_PORT:-5432}"
+export DB_USER="${DB_USER:-fleet_user}"
+# If DB_PASS not set, try to extract from DATABASE_URL (not ideal but supports existing patterns)
+if [ -z "${DB_PASS}" ]; then
+  # Extract password from DATABASE_URL format: postgres://user:password@host:port/db
+  DB_PASS=$(echo "${DATABASE_URL}" | sed -n 's|postgres://[^:]*:\([^@]*\)@.*|\1|p')
+  if [ -z "${DB_PASS}" ]; then
+    echo "ERROR: DB_PASS must be set or DATABASE_URL must contain password"
+    exit 1
+  fi
+fi
+export DB_PASS
+export DB_NAME="${DB_NAME:-fleet_db}"
 export SSL_MODE="disable"
 
 # Logs

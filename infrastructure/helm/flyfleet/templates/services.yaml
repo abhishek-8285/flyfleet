@@ -1,0 +1,184 @@
+{{- /*
+services.yaml creates ServiceAccount, Deployment, Service, and HPA
+for each enabled microservice in values.yaml
+*/ -}}
+
+{{- $global := .Values.global -}}
+{{- $services := slice -}}
+
+{{- /* Build list of enabled services */ -}}
+{{- range $key, $value := .Values -}}
+{{-   if and (kindIs "map" $value) (hasKey $value "enabled") (eq $value.enabled true) -}}
+{{-     $services = $services | append $key -}}
+{{-   end -}}
+{{- end -}}
+
+{{- range $service := $services -}}
+{{-   $svc := index $.Values $service -}}
+{{-   $saName := printf "sa-%s" $service -}}
+{{-   $fullname := printf "%s-%s" $.Release.Name $service -}}
+
+---
+# Service Account for {{ $service }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $saName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "flyfleet.selectorLabels" (dict "Release" . "ServiceName" $service) | nindent 4 }}
+  {{- if $.Values.iam.annotations }}
+  annotations:
+    {{- range $key, $value := $.Values.iam.annotations }}
+    {{ $key }}: "{{ $value }}"
+    {{- end -}}
+  {{- end }}
+---
+
+{{- /*
+Determine if this service needs a worker deployment (EXECUTION_MODE=WORKERS)
+*/ -}}
+{{- $executionMode := get $svc "executionMode" -}}
+{{- $isWorker := eq $executionMode "WORKERS" -}}
+{{- $deploymentName := $fullname -}}
+{{- if $isWorker -}}
+{{-   $deploymentName = printf "%s-workers" $fullname -}}
+{{- end -}}
+
+# Deployment for {{ $service }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $deploymentName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "flyfleet.labels" (dict "Release" . "ServiceName" $service) | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default (hasKey $svc "replicas") | ternary $svc.replicas 3 }}
+  selector:
+    matchLabels:
+      {{- include "flyfleet.selectorLabels" (dict "Release" . "ServiceName" $service) | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "flyfleet.selectorLabels" (dict "Release" . "ServiceName" $service) | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ $svc.service.port }}"
+    spec:
+      serviceAccountName: {{ $saName }}
+      containers:
+        - name: {{ $service }}
+          {{- include "flyfleet.image" (dict "image" $svc.image) | nindent 10 }}
+          ports:
+            - containerPort: {{ $svc.service.port }}
+              name: http
+          env:
+            {{- if $svc.env }}
+            {{- range $key, $value := $svc.env }}
+            - name: {{ $key }}
+              value: "{{ $value }}"
+            {{- end -}}
+            {{- end -}}
+            {{- if not $svc.env }}
+            - name: PORT
+              value: "{{ $svc.service.port }}"
+            {{- end -}}
+            {{- if $isWorker }}
+            - name: EXECUTION_MODE
+              value: "WORKERS"
+            {{- end -}}
+            {{- if and $svc.databaseUrl $global.postgres }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.database.secretName | default "flyfleet-secrets" }}
+                  key: database-url
+            {{- end -}}
+            {{- if and $svc.redisUrl $global.redis }}
+            - name: REDIS_URL
+              value: "{{ $global.redis.host }}:{{ $global.redis.port }}"
+            {{- end -}}
+            {{- if and $svc.natsUrl $global.nats }}
+            - name: NATS_URL
+              value: "{{ $global.nats.url }}"
+            {{- end -}}
+          {{- $resources := $svc.resources -}}
+          {{- if not $resources -}}
+          {{-   $resources = $.Values.defaultResources -}}
+          {{- end -}}
+          {{- include "flyfleet.resources" (dict "resources" $resources) | nindent 10 }}
+          {{- $liveness := merge $.Values.defaultProbes.liveness $svc.livenessProbe -}}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.service.port }}
+            initialDelaySeconds: {{ $liveness.initialDelaySeconds }}
+            periodSeconds: {{ $liveness.periodSeconds }}
+            timeoutSeconds: {{ $liveness.timeoutSeconds }}
+            failureThreshold: {{ $liveness.failureThreshold }}
+          {{- $readiness := merge $.Values.defaultProbes.readiness $svc.readinessProbe -}}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.service.port }}
+            initialDelaySeconds: {{ $readiness.initialDelaySeconds }}
+            periodSeconds: {{ $readiness.periodSeconds }}
+            timeoutSeconds: {{ $readiness.timeoutSeconds }}
+            failureThreshold: {{ $readiness.failureThreshold }}
+---
+# Service for {{ $service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $service }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "flyfleet.labels" (dict "Release" . "ServiceName" $service) | nindent 4 }}
+spec:
+  selector:
+    {{- include "flyfleet.selectorLabels" (dict "Release" . "ServiceName" $service) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $svc.service.port }}
+      targetPort: {{ $svc.service.port }}
+  type: {{ $svc.service.type | default "ClusterIP" }}
+---
+{{- if and (hasKey $svc "autoscaling") (get $svc.autoscaling "enabled" true) -}}
+# HorizontalPodAutoscaler for {{ $service }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "flyfleet.labels" (dict "Release" . "ServiceName" $service) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $deploymentName }}
+  {{- $autoscaling := merge $.Values.defaultAutoscaling $svc.autoscaling -}}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $autoscaling.targetCPU }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $autoscaling.targetMemory }}
+---
+{{- end -}}
+{{- end -}}

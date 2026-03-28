@@ -19,14 +19,14 @@ func NewBinaryTelemetryCodec() *BinaryTelemetryCodec {
 
 // GPSPacket represents the decoded bit-packed data
 type GPSPacket struct {
-	PacketType     uint8   // 1 byte
-	DeviceID       uint64  // 8 bytes
-	RelativeTime   uint32  // 4 bytes (seconds since epoch)
-	LatitudeFixed  int32   // 4 bytes (decimal * 1e6)
-	LongitudeFixed int32   // 4 bytes (decimal * 1e6)
-	Battery        uint8   // 1 byte
-	Signal         uint8   // 1 byte
-	Checksum       uint16  // 2 bytes
+	PacketType     uint8  // 1 byte
+	DeviceID       uint64 // 8 bytes
+	RelativeTime   uint32 // 4 bytes (seconds since epoch)
+	LatitudeFixed  int32  // 4 bytes (decimal * 1e6)
+	LongitudeFixed int32  // 4 bytes (decimal * 1e6)
+	Battery        uint8  // 1 byte
+	Signal         uint8  // 1 byte
+	Checksum       uint16 // 2 bytes
 }
 
 // DecodeGPS decodes a 25-byte bit-packed GPS packet

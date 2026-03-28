@@ -185,4 +185,4 @@ func (n *noopBus) Publish(_ context.Context, _ string, _ integrations_v1.EventEn
 	return nil
 }
 func (n *noopBus) Subscribe(_ string, _ integrations_v1.EventHandler) {}
-func (n *noopBus) Close() error                                    { return nil }
+func (n *noopBus) Close() error                                       { return nil }

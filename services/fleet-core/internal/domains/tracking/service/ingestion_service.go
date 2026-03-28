@@ -9,10 +9,12 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/messaging"
 	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
+	trackingmetrics "github.com/flyfleet/fleet-core-service/internal/domains/tracking"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
 	"github.com/google/uuid"
@@ -44,16 +46,17 @@ func DefaultIngestionConfig() IngestionConfig {
 // IngestionService validates, deduplicates, and persists inbound telemetry.
 // It also updates the Redis live-cache and hands events to the anomaly engine.
 type IngestionService struct {
-	db            *pgxpool.Pool
-	mb            messaging.MessageBroker
-	telemRepo     repository.TelemetryRepository
-	devRegRepo    repository.DeviceRegistryRepository
-	outboxRepo    repository.OutboxRepository
-	liveCache     repository.LiveCacheRepository   // may be nil
-	anomalyEngine *AnomalyEngine
-	analytics     analytics.AnalyticsService // optional
-	cfg           IngestionConfig
-	logger        *zap.Logger
+	db              *pgxpool.Pool
+	mb              messaging.MessageBroker
+	telemRepo       repository.TelemetryRepository
+	devRegRepo      repository.DeviceRegistryRepository
+	outboxRepo      repository.OutboxRepository
+	liveCache       repository.LiveCacheRepository // may be nil
+	anomalyEngine   *AnomalyEngine
+	analytics       analytics.AnalyticsService // optional
+	cfg             IngestionConfig
+	logger          *zap.Logger
+	trackingMetrics *trackingmetrics.Metrics
 }
 
 // NewIngestionService creates a new IngestionService.
@@ -70,16 +73,17 @@ func NewIngestionService(
 	logger *zap.Logger,
 ) *IngestionService {
 	return &IngestionService{
-		db:            db,
-		mb:            mb,
-		telemRepo:     telemRepo,
-		devRegRepo:    devRegRepo,
-		outboxRepo:    outboxRepo,
-		liveCache:     liveCache,
-		anomalyEngine: anomalyEngine,
-		analytics:     analytics,
-		cfg:           cfg,
-		logger:        logger,
+		db:              db,
+		mb:              mb,
+		telemRepo:       telemRepo,
+		devRegRepo:      devRegRepo,
+		outboxRepo:      outboxRepo,
+		liveCache:       liveCache,
+		anomalyEngine:   anomalyEngine,
+		analytics:       analytics,
+		cfg:             cfg,
+		logger:          logger,
+		trackingMetrics: trackingmetrics.NewMetrics(),
 	}
 }
 
@@ -138,7 +142,17 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 	// 7 ── Stamp received_at
 	event.ReceivedAt = time.Now().UTC()
 
-	// 8 ── Persist to DB or Buffer via NATS
+	// 8 ── Record telemetry ingestion metrics
+	latency := event.ReceivedAt.Sub(event.RecordedAt)
+	s.trackingMetrics.EventsReceivedTotal.WithLabelValues("received", event.TenantID.String()).Inc()
+	// Normalize event type label to lowercase for consistent metric labeling
+	eventTypeLabel := strings.ToLower(event.EventType)
+	if eventTypeLabel == "" {
+		eventTypeLabel = "unknown"
+	}
+	s.trackingMetrics.IngestionLatency.WithLabelValues(eventTypeLabel).Observe(latency.Seconds())
+
+	// 9 ── Persist to DB or Buffer via NATS
 	if s.cfg.BufferEnabled && s.mb != nil {
 		// Asynchronous Path: Buffer to NATS for high-throughput resilience.
 		// Partition key is implicit in the payload; JetStream handle provides ordering.

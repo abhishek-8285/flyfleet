@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
@@ -35,7 +36,7 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 	p.bulkRepo.UpdateJobStatus(ctx, jobID, "processing", 0, 0)
 
 	csvReader := csv.NewReader(reader)
-	
+
 	// Read header
 	header, err := csvReader.Read()
 	if err != nil {
@@ -68,14 +69,23 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 		// Parse vehicle data
 		vehicleReq := &models.CreateVehicleRequest{}
 		recordData := make(map[string]interface{})
-		
+
 		var rowErr error
 
-		// Helper to get value
+		// Helper to get value with SECURITY FIX: sanitize spreadsheet formula injection
 		getVal := func(col string) string {
 			if idx, ok := headerMap[col]; ok && idx < len(record) {
 				val := record[idx]
 				recordData[col] = val
+				// SECURITY FIX: Prevent spreadsheet formula injection (CWE-1236)
+				// If the value starts with =, +, -, @, or tab, prefix with a single quote
+				// to prevent Excel/Sheets from treating it as a formula
+				if len(val) > 0 {
+					first := strings.ToUpper(val)[0]
+					if first == '=' || first == '+' || first == '-' || first == '@' || val[0] == '\t' {
+						val = "'" + val
+					}
+				}
 				return val
 			}
 			return ""
@@ -161,7 +171,6 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 			}
 		}
 
-
 		if rowErr != nil {
 			status = "failed"
 			errMsg = rowErr.Error()
@@ -171,14 +180,14 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 		}
 
 		// Log Record
-		// Only log errors or every Nth success to save space? 
+		// Only log errors or every Nth success to save space?
 		// For now log all as per prototype requirement (needs Detail View)
-		
-		// Optimization: Batch inserts for records? 
+
+		// Optimization: Batch inserts for records?
 		// For MVP, single insert.
-		
+
 		recordDataJSON, _ := json.Marshal(recordData)
-		
+
 		jobRecord := &models.BulkJobRecord{
 			ID:           uuid.New(),
 			JobID:        jobID,
@@ -188,8 +197,8 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 			ErrorMessage: errMsg,
 			CreatedAt:    time.Now(),
 		}
-		
-		// We might want to fire and forget or batch this. 
+
+		// We might want to fire and forget or batch this.
 		// Doing it synchronously here for simplicity.
 		p.bulkRepo.AddJobRecord(ctx, jobRecord)
 	}
@@ -203,9 +212,9 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 			finalStatus = "failed"
 		}
 	} else if successCount == 0 && failedCount == 0 {
-        // Empty file?
-        finalStatus = "completed"
-    }
+		// Empty file?
+		finalStatus = "completed"
+	}
 
 	p.bulkRepo.UpdateJobStatus(ctx, jobID, finalStatus, successCount, failedCount)
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
+	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/repository"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
@@ -16,12 +18,14 @@ type AutoIncidentService struct {
 	emergencySvc *EmergencyService
 	nc           *nats.Conn
 	log          *zap.Logger
+	vehicleRepo  *repository.VehicleRepository // SECURITY: For org ownership validation
 }
 
-func NewAutoIncidentService(emergencySvc *EmergencyService, nc *nats.Conn, log *zap.Logger) *AutoIncidentService {
+func NewAutoIncidentService(emergencySvc *EmergencyService, nc *nats.Conn, vehicleRepo *repository.VehicleRepository, log *zap.Logger) *AutoIncidentService {
 	return &AutoIncidentService{
 		emergencySvc: emergencySvc,
 		nc:           nc,
+		vehicleRepo:  vehicleRepo,
 		log:          log,
 	}
 }
@@ -60,7 +64,7 @@ func (s *AutoIncidentService) Start(ctx context.Context) error {
 func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"org_id"`
+		OrgID     string  `json:"org_id"` // Present but should NOT be trusted
 		GForce    float64 `json:"g_force"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
@@ -73,8 +77,42 @@ func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 
 	// Threshold for crash: > 4.0G
 	if event.GForce > 4.0 {
-		s.log.Warn("High impact detected! Triggering incident", zap.String("vehicle_id", event.VehicleID), zap.Float64("g_force", event.GForce))
-		s.triggerAutoIncident(event.VehicleID, event.OrgID, models.TypeVehicleAccident, event.Lat, event.Lng, "Automated crash detection (High G-Force)")
+		s.log.Warn("High impact detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID), zap.Float64("g_force", event.GForce))
+
+		// SECURITY FIX: Validate org_id by querying the vehicle's actual organization
+		vehicleID, err := uuid.Parse(event.VehicleID)
+		if err != nil {
+			s.log.Error("Invalid vehicle_id in impact event", zap.String("raw_vehicle_id", event.VehicleID))
+			return
+		}
+
+		// Use background context with timeout for database query
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		vehicle, err := s.vehicleRepo.GetByID(ctx, vehicleID)
+		if err != nil {
+			s.log.Error("Failed to validate vehicle ownership", zap.String("vehicle_id", event.VehicleID), zap.Error(err))
+			return
+		}
+
+		parsedOrgID, err := uuid.Parse(event.OrgID)
+		if err != nil {
+			s.log.Error("Invalid org_id in impact event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+			return
+		}
+
+		// CRITICAL SECURITY CHECK: Ensure the org_id from message matches vehicle's actual org
+		if vehicle.TenantID != parsedOrgID {
+			s.log.Error("Cross-tenant message injection attempt detected!",
+				zap.String("vehicle_id", event.VehicleID),
+				zap.String("msg_org", event.OrgID),
+				zap.String("actual_org", vehicle.TenantID.String()),
+				zap.Float64("g_force", event.GForce))
+			return // Reject - possible spoofing attack
+		}
+
+		s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated crash detection (High G-Force)")
 	}
 }
 
@@ -91,8 +129,41 @@ func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 		return
 	}
 
-	s.log.Warn("Vehicle rollover detected! Triggering incident", zap.String("vehicle_id", event.VehicleID))
-	s.triggerAutoIncident(event.VehicleID, event.OrgID, models.TypeVehicleAccident, event.Lat, event.Lng, "Automated rollover detection")
+	s.log.Warn("Vehicle rollover detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID))
+
+	// SECURITY FIX: Validate org_id by querying vehicle
+	vehicleID, err := uuid.Parse(event.VehicleID)
+	if err != nil {
+		s.log.Error("Invalid vehicle_id in rollover event", zap.String("raw_vehicle_id", event.VehicleID))
+		return
+	}
+
+	// Use background context with timeout for database query
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	vehicle, err := s.vehicleRepo.GetByID(ctx, vehicleID)
+	if err != nil {
+		s.log.Error("Failed to validate vehicle ownership", zap.String("vehicle_id", event.VehicleID), zap.Error(err))
+		return
+	}
+
+	parsedOrgID, err := uuid.Parse(event.OrgID)
+	if err != nil {
+		s.log.Error("Invalid org_id in rollover event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		return
+	}
+
+	// CRITICAL SECURITY CHECK: Ensure org ownership
+	if vehicle.TenantID != parsedOrgID {
+		s.log.Error("Cross-tenant message injection attempt detected!",
+			zap.String("vehicle_id", event.VehicleID),
+			zap.String("msg_org", event.OrgID),
+			zap.String("actual_org", vehicle.TenantID.String()))
+		return
+	}
+
+	s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated rollover detection")
 }
 
 func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
@@ -108,13 +179,46 @@ func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 		return
 	}
 
-	s.log.Error("Engine fire detected! Triggering incident", zap.String("vehicle_id", event.VehicleID))
-	s.triggerAutoIncident(event.VehicleID, event.OrgID, models.TypeFireAlert, event.Lat, event.Lng, "Automated engine fire detection")
+	s.log.Error("Engine fire detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID))
+
+	// SECURITY FIX: Validate org_id by querying vehicle
+	vehicleID, err := uuid.Parse(event.VehicleID)
+	if err != nil {
+		s.log.Error("Invalid vehicle_id in fire event", zap.String("raw_vehicle_id", event.VehicleID))
+		return
+	}
+
+	// Use background context with timeout for database query
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	vehicle, err := s.vehicleRepo.GetByID(ctx, vehicleID)
+	if err != nil {
+		s.log.Error("Failed to validate vehicle ownership", zap.String("vehicle_id", event.VehicleID), zap.Error(err))
+		return
+	}
+
+	parsedOrgID, err := uuid.Parse(event.OrgID)
+	if err != nil {
+		s.log.Error("Invalid org_id in fire event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		return
+	}
+
+	// CRITICAL SECURITY CHECK: Ensure org ownership
+	if vehicle.TenantID != parsedOrgID {
+		s.log.Error("Cross-tenant message injection attempt detected!",
+			zap.String("vehicle_id", event.VehicleID),
+			zap.String("msg_org", event.OrgID),
+			zap.String("actual_org", vehicle.TenantID.String()))
+		return
+	}
+
+	s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeFireAlert, event.Lat, event.Lng, "Automated engine fire detection")
 }
 
 func (s *AutoIncidentService) triggerAutoIncident(vehicleID, orgID string, incidentType models.IncidentType, lat, lng float64, notes string) {
 	parsedOrgID, _ := uuid.Parse(orgID)
-	
+
 	req := models.CreateSOSRequest{
 		VehicleID:       vehicleID,
 		OrgID:           parsedOrgID,

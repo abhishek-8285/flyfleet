@@ -35,7 +35,7 @@ func (h *MonitoringHandlers) GetSLAMetrics(w http.ResponseWriter, r *http.Reques
 
 func (h *MonitoringHandlers) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	health := h.pulse.CheckHealth(r.Context())
-	
+
 	resp := map[string]interface{}{
 		"status":    "healthy",
 		"services":  health,

@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
 	"github.com/google/uuid"
-	"github.com/fleet-platform/shared/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -70,12 +70,12 @@ func (s *documentService) RunExpiryCheck(ctx context.Context) ([]models.Document
 
 	for _, alert := range alerts {
 		if alert.IsExpired {
-			s.logger.Error("DOCUMENT EXPIRED", 
+			s.logger.Error("DOCUMENT EXPIRED",
 				zap.String("vehicle_id", alert.VehicleID.String()),
 				zap.String("type", string(alert.DocumentType)),
 			)
 		} else {
-			s.logger.Warn("DOCUMENT EXPIRING SOON", 
+			s.logger.Warn("DOCUMENT EXPIRING SOON",
 				zap.String("vehicle_id", alert.VehicleID.String()),
 				zap.String("type", string(alert.DocumentType)),
 				zap.Int("days", alert.DaysToExpiry),
@@ -98,9 +98,9 @@ func (s *documentService) VerifyDocument(ctx context.Context, docID uuid.UUID, v
 
 	// Update record (Need to add UpdateVehicleDocumentStatus to repo if not there, or generic Update)
 	// For now, let's assume we update the document status.
-	
+
 	s.logger.Info("document verification processed", zap.String("id", docID.String()), zap.String("status", status))
-	
+
 	// Audit Log
 	audit := &models.ComplianceAuditLog{
 		ID:         uuid.New(),

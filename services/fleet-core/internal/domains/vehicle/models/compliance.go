@@ -47,9 +47,9 @@ type ComplianceExpiryAlert struct {
 
 // ComplianceStatus describes the derived compliance health of a vehicle.
 type ComplianceStatus struct {
-	IsCompliant         bool     `json:"is_compliant"`
-	ExpiredDocuments    []string `json:"expired_documents"`
-	ExpiringDocuments   []string `json:"expiring_documents"` // within 30 days
-	IsBlacklisted       bool     `json:"is_blacklisted"`
-	LegalHold           bool     `json:"legal_hold"`
+	IsCompliant       bool     `json:"is_compliant"`
+	ExpiredDocuments  []string `json:"expired_documents"`
+	ExpiringDocuments []string `json:"expiring_documents"` // within 30 days
+	IsBlacklisted     bool     `json:"is_blacklisted"`
+	LegalHold         bool     `json:"legal_hold"`
 }

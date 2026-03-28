@@ -4,17 +4,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
 	"github.com/fleet-platform/shared/pkg/messaging"
+	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
 	"go.uber.org/zap"
 )
 
 // OutboxRelay constants
 const (
-	RelayLockKey      = 1001 // Postgres advisory lock key
-	DefaultBatchSize  = 100
-	CleanupInterval   = 1 * time.Hour
-	RetentionPeriodH  = 48
+	RelayLockKey     = 1001 // Postgres advisory lock key
+	DefaultBatchSize = 100
+	CleanupInterval  = 1 * time.Hour
+	RetentionPeriodH = 48
 )
 
 // OutboxRelay polls the telemetry_outbox and publishes to NATS JetStream.

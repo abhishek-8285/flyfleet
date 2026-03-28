@@ -1,0 +1,235 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - '**/go.mod'
+      - '**/go.sum'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '.github/workflows/security-scanning.yml'
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - '**/go.mod'
+      - '**/go.sum'
+      - '**/package.json'
+      - '**/package-lock.json'
+      - '.github/workflows/security-scanning.yml'
+  schedule:
+    # Run daily at 2 AM UTC to catch newly discovered vulnerabilities
+    - cron: '0 2 * * *'
+
+jobs:
+  go-vulnerability-scan:
+    name: Go Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+          cache-dependency-path: services/fleet-core/go.mod
+
+      - name: Install govulncheck
+        run: |
+          echo "🔧 Installing govulncheck..."
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          echo "✅ govulncheck installed"
+
+      - name: Run vulnerability scan on fleet-core
+        working-directory: services/fleet-core
+        run: |
+          echo "🔍 Scanning fleet-core for vulnerabilities..."
+          govulncheck ./... || true  # Don't fail on vulns yet, just report
+          echo "✅ Scan complete"
+
+      - name: Upload govulncheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: govulncheck-report-fleet-core
+          path: services/fleet-core/govulncheck-report.html
+          retention-days: 30
+
+      - name: Check for critical vulnerabilities
+        working-directory: services/fleet-core
+        run: |
+          echo "🔍 Checking for critical vulnerabilities..."
+          # Run govulncheck with JSON output and check for any findings
+          RESULT=$(govulncheck ./... 2>&1 || true)
+          echo "$RESULT"
+
+          # If there are any vulnerabilities with score >= 9.0, fail the build
+          if echo "$RESULT" | grep -i "high\|critical\|vulnerability" > /dev/null; then
+            echo ""
+            echo "❌ VULNERABILITIES DETECTED!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Go dependencies contain known vulnerabilities."
+            echo ""
+            echo "To fix:"
+            echo "  1. Run: go get -u ./..."
+            echo "  2. Test thoroughly for compatibility"
+            echo "  3. Commit updated go.mod and go.sum"
+            echo "  4. See govulncheck report artifact for details"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 18
+          fi
+          echo "✅ No critical or high vulnerabilities found"
+
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            apps/dashboard-web/package-lock.json
+            apps/landing-page/package-lock.json
+            apps/mobile/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run npm audit on root
+        run: |
+          echo "🔍 Running npm audit on root package.json..."
+          npm audit --audit-level=moderate || true
+        continue-on-error: true
+
+      - name: Run npm audit on dashboard-web
+        working-directory: apps/dashboard-web
+        run: |
+          echo "🔍 Running npm audit on dashboard-web..."
+          npm ci
+          npm audit --audit-level=moderate || true
+        continue-on-error: true
+
+      - name: Check for severe vulnerabilities
+        run: |
+          echo "🔍 Checking for critical/high npm vulnerabilities..."
+          # Check root and dashboard-web for high/critical
+          ROOT_ISSUES=$(npm audit --json | jq -r '.vulnerabilities | to_entries[] | select(.value.severity | test("critical|high")) | .name' 2>/dev/null | wc -l)
+          DASH_ISSUES=0
+          if [ -f "apps/dashboard-web/package-lock.json" ]; then
+            (cd apps/dashboard-web && npm ci > /dev/null 2>&1)
+            DASH_ISSUES=$(npm audit --json | jq -r '.vulnerabilities | to_entries[] | select(.value.severity | test("critical|high")) | .name' 2>/dev/null | wc -l)
+          fi
+
+          TOTAL=$((ROOT_ISSUES + DASH_ISSUES))
+          if [ $TOTAL -gt 0 ]; then
+            echo ""
+            echo "❌ NPM VULNERABILITIES DETECTED!"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Found $TOTAL high/critical vulnerabilities in dependencies."
+            echo ""
+            echo "To fix:"
+            echo "  1. Run: npm update --workspaces"
+            echo "  2. Or manually update affected packages in package.json"
+            echo "  3. Review npm audit output for details"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 18
+          fi
+          echo "✅ No critical or high npm vulnerabilities found"
+
+  container-scanning:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'  # Only scan on push, not PRs (to avoid leaking registry info)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'container-scanning'
+
+  sarif-summary:
+    name: Generate SARIF Summary
+    runs-on: ubuntu-latest
+    needs: [go-vulnerability-scan, npm-audit]
+    if: always()
+    steps:
+      - name: Generate Summary Report
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Vulnerability Scan | $(if [ '${{ needs.go-vulnerability-scan.outcome }}' == 'success' ]; then echo '✅ Passed'; else echo '❌ Failed'; fi) | [Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ needs.go-vulnerability-scan.outputs.artifact-url }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| NPM Audit | $(if [ '${{ needs.npm-audit.outcome }}' == 'success' ]; then echo '✅ Passed'; else echo '❌ Failed'; fi) | NPM dependencies checked |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Scanning | Skipped on PR | Runs on push to main |" >> $GITHUB_STEP_SUMMARY
+
+  notify-security:
+    name: Notify on Security Issues
+    runs-on: ubuntu-latest
+    needs: [go-vulnerability-scan, npm-audit]
+    if: failure()
+    steps:
+      - name: Create security issue comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pull } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+
+            const failingJobs = [];
+            for (const job of ['go-vulnerability-scan', 'npm-audit']) {
+              if (context.payload.workflow_run?.status === 'completed' && context.payload.workflow_run?.conclusion === 'failure') {
+                failingJobs.push(job);
+              }
+            }
+
+            let comment = `## 🔴 Security Scan Failed\n\n`;
+            comment += `This PR contains **security issues** that must be addressed before merging.\n\n`;
+            comment += `### Failing Checks:\n`;
+            failingJobs.forEach(job => {
+              comment += `- ❌ ${job}\n`;
+            });
+            comment += `\n### Required Actions:\n`;
+            comment += `1. Review the failing job logs in the [Actions tab](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions)\n`;
+            comment += `2. Update vulnerable dependencies:\n`;
+            comment += `   - Go: \`go get -u ./... && go mod tidy\`\n`;
+            comment += `   - NPM: \`npm update --workspaces\`\n`;
+            comment += `3. Test thoroughly for compatibility issues\n`;
+            comment += `4. Push the fixes and re-run the checks\n\n`;
+            comment += `---\n`;
+            comment += `*Security scans protect against known vulnerabilities.*`;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });

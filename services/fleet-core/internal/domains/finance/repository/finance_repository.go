@@ -322,7 +322,7 @@ func (r *FinanceRepository) GetUnreconciledFuelCardTransactions(ctx context.Cont
 	query := `SELECT id, card_number, vendor, amount, currency, transaction_time, location, status
 	          FROM fuel_card_transactions 
 	          WHERE org_id = $1 AND id NOT IN (SELECT card_transaction_id FROM fuel_card_reconciliation WHERE card_transaction_id IS NOT NULL)`
-	
+
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
 		return nil, err

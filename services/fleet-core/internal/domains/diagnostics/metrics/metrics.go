@@ -10,7 +10,7 @@ var (
 		Name: "diagnostics_devices_total",
 		Help: "The total number of registered devices",
 	})
-	
+
 	DiagnosticsDevicesOnline = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "diagnostics_devices_online",
 		Help: "The total number of online devices",
@@ -27,8 +27,8 @@ var (
 	})
 
 	DiagnosticsTelemetryRate = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name: "diagnostics_telemetry_rate",
-		Help: "Histogram of telemetry arrival rate tracking",
+		Name:    "diagnostics_telemetry_rate",
+		Help:    "Histogram of telemetry arrival rate tracking",
 		Buckets: prometheus.LinearBuckets(1, 1, 10),
 	})
 )

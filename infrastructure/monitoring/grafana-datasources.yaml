@@ -1,0 +1,41 @@
+# Grafana datasource configuration for FlyFleet
+# This ConfigMap provides datasources for Grafana
+
+apiVersion: 1
+
+datasources:
+  # Prometheus datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus-operated.monitoring.svc.cluster.local:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+      sigV4Auth: false
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: 10m
+    version: 1
+
+  # Loki for logs (if deployed)
+  # - name: Loki
+  #   type: loki
+  #   access: proxy
+  #   url: http://loki.monitoring.svc.cluster.local:3100
+  #   editable: true
+  #   jsonData:
+  #     maxLines: 1000
+  #     timeout: 60
+
+  # Tempo for traces (if deployed)
+  # - name: Tempo
+  #   type: tempo
+  #   access: proxy
+  #   url: http://tempo.monitoring.svc.cluster.local:3200
+  #   editable: true
+  #   jsonData:
+  #     httpMethod: GET
+  #     serviceMap: {}

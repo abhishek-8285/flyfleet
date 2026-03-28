@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -30,10 +31,12 @@ func (r *OnboardingRepository) CreateStep(ctx context.Context, step *models.Onbo
 		step.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		step.ID, step.DriverID, step.Step, step.Status,
 		step.Remarks, step.CompletedAt, step.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -43,7 +46,9 @@ func (r *OnboardingRepository) UpdateStep(ctx context.Context, step *models.Onbo
 		SET status = $2, remarks = $3, completed_at = $4
 		WHERE id = $1`
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, step.ID, step.Status, step.Remarks, step.CompletedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -54,7 +59,9 @@ func (r *OnboardingRepository) GetStepsByDriverID(ctx context.Context, driverID 
 		WHERE driver_id = $1
 		ORDER BY created_at ASC`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}

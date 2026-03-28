@@ -13,8 +13,8 @@ type VehicleRepositoryInterface interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error)
 	GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error)
 	Update(ctx context.Context, vehicle *models.Vehicle) error
-	Delete(ctx context.Context, id uuid.UUID) error
-	AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) error
+	Delete(ctx context.Context, id, orgID uuid.UUID) error
+	AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error
 	GetStats(ctx context.Context) (*models.VehicleStats, error)
 
 	// Enterprise extensions

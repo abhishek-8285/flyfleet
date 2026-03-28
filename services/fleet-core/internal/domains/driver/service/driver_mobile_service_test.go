@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
@@ -23,17 +23,23 @@ func (m *MockDriverRepository) Create(ctx context.Context, driver *models.Driver
 }
 func (m *MockDriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	args := m.Called(ctx, id)
-	if args.Get(0) == nil { return nil, args.Error(1) }
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.Driver), args.Error(1)
 }
 func (m *MockDriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
 	args := m.Called(ctx, email)
-	if args.Get(0) == nil { return nil, args.Error(1) }
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.Driver), args.Error(1)
 }
 func (m *MockDriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
 	args := m.Called(ctx, licenseNumber)
-	if args.Get(0) == nil { return nil, args.Error(1) }
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.Driver), args.Error(1)
 }
 func (m *MockDriverRepository) List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error) {
@@ -66,7 +72,9 @@ func (m *MockDriverRepository) IncrementStats(ctx context.Context, driverID stri
 }
 func (m *MockDriverRepository) GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error) {
 	args := m.Called(ctx, driverID)
-	if args.Get(0) == nil { return nil, args.Error(1) }
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.DriverAnalytics), args.Error(1)
 }
 func (m *MockDriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
@@ -79,7 +87,9 @@ func (m *MockDriverRepository) CreateDutyStatusLog(ctx context.Context, log *mod
 }
 func (m *MockDriverRepository) GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error) {
 	args := m.Called(ctx, driverID)
-	if args.Get(0) == nil { return nil, args.Error(1) }
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*models.DutyStatusLog), args.Error(1)
 }
 func (m *MockDriverRepository) CreateMessage(ctx context.Context, msg *models.DriverMessage) error {
@@ -134,6 +144,58 @@ func (m *MockDriverRepository) GetDutyStatusLogs(ctx context.Context, driverID s
 	return args.Get(0).([]*models.DutyStatusLog), args.Error(1)
 }
 
+// Attendance & Schedule Methods
+func (m *MockDriverRepository) CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error {
+	args := m.Called(ctx, attendance)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DriverAttendance), args.Error(1)
+}
+
+func (m *MockDriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+	args := m.Called(ctx, driverID, orgID, from, to)
+	return args.Get(0).([]*models.DriverAttendance), args.Error(1)
+}
+
+func (m *MockDriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
+	args := m.Called(ctx, id, orgID, checkOut, remarks)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) CreateSchedule(ctx context.Context, schedule *models.DriverSchedule) error {
+	args := m.Called(ctx, schedule)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.DriverSchedule), args.Error(1)
+}
+
+func (m *MockDriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+	args := m.Called(ctx, driverID, orgID)
+	return args.Get(0).([]*models.DriverSchedule), args.Error(1)
+}
+
+func (m *MockDriverRepository) UpdateSchedule(ctx context.Context, schedule *models.DriverSchedule) error {
+	args := m.Called(ctx, schedule)
+	return args.Error(0)
+}
+
+func (m *MockDriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
+	args := m.Called(ctx, id, orgID)
+	return args.Error(0)
+}
+
 func TestUpdateDutyStatus(t *testing.T) {
 	mockRepo := new(MockDriverRepository)
 	logger := zap.NewNop()
@@ -143,7 +205,7 @@ func TestUpdateDutyStatus(t *testing.T) {
 	driverID := uuid.New().String()
 	orgID := uuid.New()
 	req := &models.DutyStatusLog{
-		Status: "ON_DUTY",
+		Status:   "ON_DUTY",
 		Location: &models.Location{Latitude: 28.6, Longitude: 77.2},
 	}
 
@@ -167,7 +229,7 @@ func TestSendMessage(t *testing.T) {
 	ctx := context.Background()
 	driverID := "driver-123"
 	orgID := "org-123"
-	
+
 	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, OrgID: orgID}, nil)
 	mockRepo.On("CreateMessage", ctx, mock.AnythingOfType("*models.DriverMessage")).Return(nil)
 

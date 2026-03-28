@@ -86,7 +86,6 @@ func (h *IngestHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusAccepted)
 }
 
-
 // ── Shared JSON helpers ────────────────────────────────────────────────────────
 
 func jsonOK(w http.ResponseWriter, data any, status int) {

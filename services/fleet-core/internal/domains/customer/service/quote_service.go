@@ -27,20 +27,20 @@ func (s *QuoteService) GenerateQuote(ctx context.Context, booking *models.Bookin
 	s.logger.Info("Generating quote for booking", zap.String("booking_id", booking.ID.String()))
 
 	// Mock pricing logic
-	var baseRate float64 = 5000.0 // Fixed base rate
-	var perKmRate float64 = 20.0  // Rate per km
+	var baseRate float64 = 5000.0      // Fixed base rate
+	var perKmRate float64 = 20.0       // Rate per km
 	var mockDistanceKm float64 = 150.0 // Mock distance for quote calculation
 
 	// Calculate cost
 	distanceCost := mockDistanceKm * perKmRate
-	
+
 	weightCost := 0.0
 	if booking.Weight != nil {
 		weightCost = *booking.Weight * 2.5 // $2.5 per kg
 	}
 
 	fuelSurcharge := (baseRate + distanceCost + weightCost) * 0.15 // 15% fuel surcharge
-	
+
 	totalAmount := baseRate + distanceCost + weightCost + fuelSurcharge
 
 	// Create quote record

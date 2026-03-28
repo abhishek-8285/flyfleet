@@ -28,15 +28,15 @@ type AIS140Device struct {
 }
 
 type DeviceHealthLog struct {
-	ID             uuid.UUID  `json:"id" db:"id"`
-	DeviceID       uuid.UUID  `json:"device_id" db:"device_id"`
-	Timestamp      time.Time  `json:"timestamp" db:"timestamp"`
-	BatteryVoltage float64    `json:"battery_voltage" db:"battery_voltage"`
-	GPSSignal      string     `json:"gps_signal" db:"gps_signal"`
-	NetworkSignal  string     `json:"network_signal" db:"network_signal"`
-	Temperature    float64    `json:"temperature" db:"temperature"`
-	Status         string     `json:"status" db:"status"`
-	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	DeviceID       uuid.UUID `json:"device_id" db:"device_id"`
+	Timestamp      time.Time `json:"timestamp" db:"timestamp"`
+	BatteryVoltage float64   `json:"battery_voltage" db:"battery_voltage"`
+	GPSSignal      string    `json:"gps_signal" db:"gps_signal"`
+	NetworkSignal  string    `json:"network_signal" db:"network_signal"`
+	Temperature    float64   `json:"temperature" db:"temperature"`
+	Status         string    `json:"status" db:"status"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }
 
 type PanicAlertStatus string

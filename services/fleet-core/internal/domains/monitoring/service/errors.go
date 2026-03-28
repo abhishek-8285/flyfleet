@@ -5,29 +5,29 @@ import "errors"
 // Monitoring service errors
 var (
 	// Health check errors
-	ErrHealthCheckFailed     = errors.New("health check failed")
-	ErrDatabaseHealthFailed  = errors.New("database health check failed")
-	ErrRedisHealthFailed     = errors.New("redis health check failed")
-	ErrNATSHealthFailed      = errors.New("NATS health check failed")
-	
+	ErrHealthCheckFailed    = errors.New("health check failed")
+	ErrDatabaseHealthFailed = errors.New("database health check failed")
+	ErrRedisHealthFailed    = errors.New("redis health check failed")
+	ErrNATSHealthFailed     = errors.New("NATS health check failed")
+
 	// SLA errors
-	ErrSLACalculationFailed  = errors.New("SLA calculation failed")
-	ErrInvalidTimeRange      = errors.New("invalid time range")
-	ErrMetricsNotFound       = errors.New("metrics not found")
-	
+	ErrSLACalculationFailed = errors.New("SLA calculation failed")
+	ErrInvalidTimeRange     = errors.New("invalid time range")
+	ErrMetricsNotFound      = errors.New("metrics not found")
+
 	// Metrics errors
 	ErrMetricsCollectionFailed = errors.New("metrics collection failed")
-	ErrInvalidMetricName     = errors.New("invalid metric name")
-	ErrInvalidMetricValue    = errors.New("invalid metric value")
-	
+	ErrInvalidMetricName       = errors.New("invalid metric name")
+	ErrInvalidMetricValue      = errors.New("invalid metric value")
+
 	// Alert errors
 	ErrAlertCreationFailed   = errors.New("alert creation failed")
 	ErrAlertDeliveryFailed   = errors.New("alert delivery failed")
 	ErrInvalidAlertThreshold = errors.New("invalid alert threshold")
-	
+
 	// History errors
-	ErrHistoryNotFound       = errors.New("health history not found")
-	ErrHistoryInsertFailed   = errors.New("failed to insert health history")
+	ErrHistoryNotFound     = errors.New("health history not found")
+	ErrHistoryInsertFailed = errors.New("failed to insert health history")
 )
 
 // MonitoringError represents a monitoring domain error

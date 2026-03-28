@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 )
 
 type DatabasePools struct {
@@ -98,22 +98,19 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		if !ok {
 			orgIDStr = ""
 		}
-		
+
 		userIDStr, ok := ctx.Value(ctxkeys.UserIDKey).(string)
 		if !ok {
 			userIDStr = ""
 		}
-		
+
 		roleStr, ok := ctx.Value(ctxkeys.RoleKey).(string)
 		if !ok {
 			roleStr = ""
 		}
 
-		lastOrgID, _ := connState.Load(conn)
-		// We could cache user/role in connState, but for now we set them every time to ensure strict RLS
-		if lastOrgID == orgIDStr && userIDStr == "" && roleStr == "" {
-			return true // State is already correct, bypass network roundtrip!
-		}
+		// SECURITY: Never bypass RLS setup - always enforce session variables
+		// We always set session variables based on the current context, regardless of previous state
 
 		// Note: The original code had a single `err` variable.
 		// The new code uses `:=` for `err` in the inner blocks, making them local.
@@ -122,23 +119,23 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		var err error
 		// Note: PostgreSQL `SET` command does not support `$1` binding. We MUST use `set_config`
 		// to securely pass parameterized inputs, otherwise pgxpool panics.
-		// The `false` flag makes this session-wide, which is cleared explicitly 
+		// The `false` flag makes this session-wide, which is cleared explicitly
 		// during AfterRelease.
 		if orgIDStr == "" {
 			_, err = conn.Exec(ctx, "SELECT set_config('app.current_org_id', '', false)")
 		} else {
 			_, err = conn.Exec(ctx, "SELECT set_config('app.current_org_id', $1, false)", orgIDStr)
 		}
-		if err != nil { 
+		if err != nil {
 			log.Printf("Failed to set org ID in connection: %v\n", err)
-			return true 
+			return true
 		}
 
 		if userIDStr != "" {
 			_, err := conn.Exec(ctx, "SELECT set_config('flyfleet.current_user_id', $1, false)", userIDStr)
 			if err != nil {
 				log.Printf("Failed to set user ID in connection: %v\n", err)
-				return true 
+				return true
 			}
 		} else {
 			_, err := conn.Exec(ctx, "SELECT set_config('flyfleet.current_user_id', '', false)")
@@ -147,7 +144,7 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 				return true
 			}
 		}
-		
+
 		if roleStr != "" {
 			_, err := conn.Exec(ctx, "SELECT set_config('flyfleet.current_role', $1, false)", roleStr)
 			if err != nil {
@@ -176,9 +173,9 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('app.current_org_id', '', false)")
 		_, errUser := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_user_id', '', false)")
 		_, errRole := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_role', '', false)")
-		
+
 		connState.Delete(conn)
-		
+
 		// If the reset fails, the connection is poisoned. Return false to destroy it.
 		if errOrg != nil || errUser != nil || errRole != nil {
 			log.Printf("level=FATAL event=connection_poisoned msg=\"[SECURITY] Connection poisoned during reset. Destroying physical socket to prevent cross-tenant data leak.\" errOrg=\"%v\" errUser=\"%v\" errRole=\"%v\"", errOrg, errUser, errRole)

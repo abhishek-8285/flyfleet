@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	maxRetries          = 3
-	transcodeTimeout    = 10 * time.Minute
-	aiAnalysisTimeout   = 2 * time.Minute
+	maxRetries        = 3
+	transcodeTimeout  = 10 * time.Minute
+	aiAnalysisTimeout = 2 * time.Minute
 )
 
 // retryBackoffDuration maps retry attempt number (1-indexed) to backoff delay.

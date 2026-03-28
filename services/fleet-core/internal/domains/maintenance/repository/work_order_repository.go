@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,25 +28,28 @@ func NewWorkOrderRepository(db *pgxpool.Pool) *WorkOrderRepository {
 func (r *WorkOrderRepository) Create(ctx context.Context, wo *models.WorkOrder) error {
 	query := `
 		INSERT INTO work_orders (
-			organization_id, vehicle_id, title, description,
+			org_id, vehicle_id, title, description,
 			maintenance_type, priority, status, assigned_to,
 			scheduled_date, estimated_cost, created_by,
 			vendor_id, approval_status, cost_breakdown, inspection_id
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
-	return r.db.QueryRow(ctx, query,
-		wo.OrganizationID, wo.VehicleID, wo.Title, wo.Description,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
+		wo.OrgID, wo.VehicleID, wo.Title, wo.Description,
 		wo.MaintenanceType, wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.EstimatedCost, wo.CreatedBy,
 		wo.VendorID, wo.ApprovalStatus, wo.CostBreakdown, wo.InspectionID,
 	).Scan(&wo.ID, &wo.CreatedAt, &wo.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
 }
 
 // GetByID retrieves a work order by ID
 func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.WorkOrder, error) {
 	query := `
-		SELECT id, organization_id, vehicle_id, title, description,
+		SELECT id, org_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
 			   created_by, created_at, updated_at,
@@ -53,13 +57,15 @@ func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 		FROM work_orders WHERE id = $1
 	`
 	wo := &models.WorkOrder{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&wo.ID, &wo.OrganizationID, &wo.VehicleID, &wo.Title, &wo.Description,
+		&wo.ID, &wo.OrgID, &wo.VehicleID, &wo.Title, &wo.Description,
 		&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 		&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 		&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
 		&wo.VendorID, &wo.ApprovalStatus, &wo.CostBreakdown, &wo.InspectionID,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -78,18 +84,24 @@ func (r *WorkOrderRepository) Update(ctx context.Context, wo *models.WorkOrder) 
 		WHERE id = $1
 		RETURNING updated_at
 	`
-	return r.db.QueryRow(ctx, query,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
 		wo.ID, wo.Title, wo.Description, wo.MaintenanceType,
 		wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.CompletedDate,
 		wo.EstimatedCost, wo.ActualCost,
 		wo.VendorID, wo.ApprovalStatus, wo.CostBreakdown,
 	).Scan(&wo.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
 }
 
 // Delete deletes a work order
 func (r *WorkOrderRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM work_orders WHERE id = $1", id)
+	query := "DELETE FROM work_orders WHERE id = $1"
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -99,8 +111,8 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	var args []interface{}
 	argIdx := 1
 
-	conditions = append(conditions, fmt.Sprintf("organization_id = $%d", argIdx))
-	args = append(args, filter.OrganizationID)
+	conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIdx))
+	args = append(args, filter.OrgID)
 	argIdx++
 
 	if filter.VehicleID != nil {
@@ -166,7 +178,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, organization_id, vehicle_id, title, description,
+		SELECT id, org_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
 			   created_by, created_at, updated_at,
@@ -187,7 +199,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	for rows.Next() {
 		var wo models.WorkOrder
 		if err := rows.Scan(
-			&wo.ID, &wo.OrganizationID, &wo.VehicleID, &wo.Title, &wo.Description,
+			&wo.ID, &wo.OrgID, &wo.VehicleID, &wo.Title, &wo.Description,
 			&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 			&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 			&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
@@ -237,7 +249,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Active work orders (not completed)
 	err := r.db.QueryRow(ctx,
-		"SELECT COUNT(*) FROM work_orders WHERE organization_id = $1 AND status != 'COMPLETED'",
+		"SELECT COUNT(*) FROM work_orders WHERE org_id = $1 AND status != 'COMPLETED'",
 		orgID,
 	).Scan(&stats.ActiveWorkOrders)
 	if err != nil {
@@ -246,7 +258,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Status breakdown
 	rows, err := r.db.Query(ctx,
-		"SELECT status, COUNT(*) FROM work_orders WHERE organization_id = $1 GROUP BY status",
+		"SELECT status, COUNT(*) FROM work_orders WHERE org_id = $1 GROUP BY status",
 		orgID,
 	)
 	if err != nil {
@@ -264,7 +276,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Priority breakdown
 	rows, err = r.db.Query(ctx,
-		"SELECT priority, COUNT(*) FROM work_orders WHERE organization_id = $1 AND status != 'COMPLETED' GROUP BY priority",
+		"SELECT priority, COUNT(*) FROM work_orders WHERE org_id = $1 AND status != 'COMPLETED' GROUP BY priority",
 		orgID,
 	)
 	if err != nil {

@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -94,5 +95,16 @@ export default defineConfig({
     'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || '/api/v1'),
     'process.env.REACT_APP_PUBLIC_POSTHOG_KEY': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || ''),
     'process.env.REACT_APP_PUBLIC_POSTHOG_HOST': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'),
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    environmentOptions: {
+      url: 'http://localhost/',
+    },
+    setupFiles: './src/setupTests.ts',
+    css: true,
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['node_modules', 'dist', 'tests'],
   },
 });

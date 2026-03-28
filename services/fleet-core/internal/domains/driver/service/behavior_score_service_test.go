@@ -20,7 +20,7 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 	ctx := context.Background()
 	driverID := uuid.New().String()
 	orgID := uuid.New()
-	
+
 	driver := &models.Driver{
 		ID:            driverID,
 		OrgID:         orgID.String(),
@@ -40,19 +40,19 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 		mockRepo.On("GetByID", ctx, driverID).Return(driver, nil).Once()
 		// 2. UpdateBehaviorScore calls GetByID again
 		mockRepo.On("GetByID", ctx, driverID).Return(driver, nil).Once()
-		
+
 		mockRepo.On("UpdateBehaviorScore", ctx, driverID, -models.PenaltySpeeding).Return(nil).Once()
-		mockRepo.On("LogBehaviorScoreChange", ctx, 
-			uuid.MustParse(driverID), 
-			orgID, 
-			85, 
-			85-models.PenaltySpeeding, 
-			fmt.Sprintf("Automated penalty for %s", event.EventType), 
-			"speeding", 
-			uuid.Nil, 
+		mockRepo.On("LogBehaviorScoreChange", ctx,
+			uuid.MustParse(driverID),
+			orgID,
+			85,
+			85-models.PenaltySpeeding,
+			fmt.Sprintf("Automated penalty for %s", event.EventType),
+			"speeding",
+			uuid.Nil,
 			"system").Return(nil).Once()
 		mockRepo.On("CreateBehaviorScoreUpdate", ctx, mock.Anything).Return(nil).Once()
-		
+
 		// 3. UpdateBehaviorScore calls GetByID at the end
 		mockRepo.On("GetByID", ctx, driverID).Return(&updatedDriver, nil).Once()
 
@@ -74,19 +74,19 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 		mockRepo.On("GetByID", ctx, driverID).Return(driver, nil).Once()
 		// 2. UpdateBehaviorScore calls GetByID
 		mockRepo.On("GetByID", ctx, driverID).Return(driver, nil).Once()
-		
+
 		mockRepo.On("UpdateBehaviorScore", ctx, driverID, -models.PenaltyHarshBrake).Return(nil).Once()
-		mockRepo.On("LogBehaviorScoreChange", ctx, 
-			uuid.MustParse(driverID), 
-			orgID, 
-			85, 
-			85-models.PenaltyHarshBrake, 
-			fmt.Sprintf("Automated penalty for %s", event.EventType), 
-			"harsh_braking", 
-			uuid.Nil, 
+		mockRepo.On("LogBehaviorScoreChange", ctx,
+			uuid.MustParse(driverID),
+			orgID,
+			85,
+			85-models.PenaltyHarshBrake,
+			fmt.Sprintf("Automated penalty for %s", event.EventType),
+			"harsh_braking",
+			uuid.Nil,
 			"system").Return(nil).Once()
 		mockRepo.On("CreateBehaviorScoreUpdate", ctx, mock.Anything).Return(nil).Once()
-		
+
 		// 3. UpdateBehaviorScore calls GetByID at the end
 		mockRepo.On("GetByID", ctx, driverID).Return(&harshUpdatedDriver, nil).Once()
 

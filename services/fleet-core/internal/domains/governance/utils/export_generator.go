@@ -27,7 +27,7 @@ func NewExportFileGenerator() ExportFileGenerator {
 
 func (g *exportFileGenerator) GenerateJSON(data *models.DSARData, targetPath string) (int64, string, error) {
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
-	
+
 	f, err := os.Create(targetPath)
 	if err != nil {
 		return 0, "", err
@@ -37,7 +37,7 @@ func (g *exportFileGenerator) GenerateJSON(data *models.DSARData, targetPath str
 	if err := json.NewEncoder(f).Encode(data); err != nil {
 		return 0, "", err
 	}
-	
+
 	fi, _ := f.Stat()
 	checksum, _ := g.calculateChecksum(targetPath)
 	return fi.Size(), checksum, nil
@@ -58,11 +58,11 @@ func (g *exportFileGenerator) GenerateCSV(data *models.DSARData, targetPath stri
 	// Generic CSV export - flatten the data structure
 	// This is complex for nested DSARData, typically we'd create one CSV per section
 	// For this task, we'll prefix each row with section name
-	
+
 	w.Write([]string{"Section", "Data"})
 
 	w.Write([]string{"UserProfile", fmt.Sprintf("%v", data.UserProfile)})
-	
+
 	// Helper to write slices
 	writeSlice := func(name string, slice interface{}) {
 		if s, ok := slice.([]interface{}); ok {
@@ -89,9 +89,9 @@ func (g *exportFileGenerator) GeneratePDF(data *models.DSARData, targetPath stri
 	os.MkdirAll(filepath.Dir(targetPath), 0755)
 
 	// Since we are in a monolith-like environment, we can use chromedp if available.
-	// For this upgrade, we'll generate a high-quality HTML and use a PDF generator stub 
+	// For this upgrade, we'll generate a high-quality HTML and use a PDF generator stub
 	// that outputs the HTML with a PDF header (or use an actual library if safe).
-	
+
 	html := fmt.Sprintf(`
 		<html>
 		<head><style>
@@ -131,11 +131,11 @@ func (g *exportFileGenerator) GeneratePDF(data *models.DSARData, targetPath stri
 	`, time.Now().Format(time.RFC1123), data.UserProfile, data.Vehicles, data.TripHistory, data.FuelLogs)
 
 	// Stub: Write HTML as PDF (In real production, wrap with chromedp/wkhtmltopdf)
-	// For the "hardened" requirement, we'll at least produce a valid PDF-ish file 
-	// or properly call a library if we have one. 
-	// Since I can't easily add new dependencies or ensure chrome is installed, 
+	// For the "hardened" requirement, we'll at least produce a valid PDF-ish file
+	// or properly call a library if we have one.
+	// Since I can't easily add new dependencies or ensure chrome is installed,
 	// I'll stick to a valid file with a comment.
-	
+
 	err := os.WriteFile(targetPath, []byte(html), 0644)
 	if err != nil {
 		return 0, "", err

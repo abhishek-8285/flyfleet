@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"go.uber.org/zap"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type ProcurementService struct {
@@ -42,10 +42,10 @@ func (s *ProcurementService) AutoCreatePOIfLowStock(ctx context.Context, orgID u
 	if part.QuantityAvailable <= part.ReorderLevel {
 		// Create Draft PO
 		po := &models.PurchaseOrder{
-			OrganizationID: orgID,
-			OrderNumber:    fmt.Sprintf("AUTO-PO-%d", time.Now().Unix()),
-			Status:         models.POStatusDraft,
-			TotalCost:      float64(part.ReorderLevel*2) * part.UnitCost, // Simple heuristic for order quantity
+			OrgID:       orgID,
+			OrderNumber: fmt.Sprintf("AUTO-PO-%d", time.Now().Unix()),
+			Status:      models.POStatusDraft,
+			TotalCost:   float64(part.ReorderLevel*2) * part.UnitCost, // Simple heuristic for order quantity
 			Items: []models.PurchaseOrderItem{
 				{
 					PartID:    &part.ID,

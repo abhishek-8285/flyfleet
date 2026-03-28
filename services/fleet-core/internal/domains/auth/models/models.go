@@ -1,58 +1,58 @@
 package models
 
 import (
-	"time"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 type User struct {
-	ID                 uuid.UUID `json:"id"`
-	OrgID              uuid.UUID `json:"org_id"`
-	Email              string    `json:"email"`
-	Role               string    `json:"role"`
-	PasswordHash       string    `json:"-"`
-	CreatedAt          time.Time `json:"created_at"`
-	CreatedBy          uuid.UUID `json:"created_by"`
-	UpdatedAt          time.Time `json:"updated_at"`
-	UpdatedBy          uuid.UUID `json:"updated_by"`
-	MfaEnabled         bool      `json:"mfa_enabled"`
-	MfaMethods         []string  `json:"mfa_methods"`
-	MfaSecret          sql.NullString `json:"-"`
-	LastPasswordChange time.Time      `json:"last_password_change"`
-	FailedLoginAttempts sql.NullInt64 `json:"-"`
-	LockedUntil         *time.Time `json:"-"`
-	Permissions         []string   `json:"permissions,omitempty"`
-	PermissionMask      uint64     `json:"permission_mask"`
+	ID                  uuid.UUID      `json:"id"`
+	OrgID               uuid.UUID      `json:"org_id"`
+	Email               string         `json:"email"`
+	Role                string         `json:"role"`
+	PasswordHash        string         `json:"-"`
+	CreatedAt           time.Time      `json:"created_at"`
+	CreatedBy           uuid.UUID      `json:"created_by"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+	UpdatedBy           uuid.UUID      `json:"updated_by"`
+	MfaEnabled          bool           `json:"mfa_enabled"`
+	MfaMethods          []string       `json:"mfa_methods"`
+	MfaSecret           sql.NullString `json:"-"`
+	LastPasswordChange  time.Time      `json:"last_password_change"`
+	FailedLoginAttempts sql.NullInt64  `json:"-"`
+	LockedUntil         *time.Time     `json:"-"`
+	Permissions         []string       `json:"permissions,omitempty"`
+	PermissionMask      uint64         `json:"permission_mask"`
 }
 
 type Permission struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Category    string    `json:"category"`
-	Description string    `json:"description"`
-	IsGlobal    bool      `json:"is_global"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Category    string     `json:"category"`
+	Description string     `json:"description"`
+	IsGlobal    bool       `json:"is_global"`
 	OrgID       *uuid.UUID `json:"org_id,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 type Role struct {
-	ID             uuid.UUID `json:"id"`
-	Name           string    `json:"name"`
-	OrgID          *uuid.UUID `json:"org_id,omitempty"`
-	Description    string    `json:"description"`
-	IsSystem       bool      `json:"is_system"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	Permissions    []Permission `json:"permissions,omitempty"`
+	ID          uuid.UUID    `json:"id"`
+	Name        string       `json:"name"`
+	OrgID       *uuid.UUID   `json:"org_id,omitempty"`
+	Description string       `json:"description"`
+	IsSystem    bool         `json:"is_system"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+	Permissions []Permission `json:"permissions,omitempty"`
 }
 
 type UserRole struct {
-	UserID         uuid.UUID `json:"user_id"`
-	RoleID         uuid.UUID `json:"role_id"`
-	OrgID          uuid.UUID `json:"org_id"`
-	GrantedAt      time.Time `json:"granted_at"`
+	UserID    uuid.UUID `json:"user_id"`
+	RoleID    uuid.UUID `json:"role_id"`
+	OrgID     uuid.UUID `json:"org_id"`
+	GrantedAt time.Time `json:"granted_at"`
 }
 
 type SecurityEvent struct {
@@ -85,10 +85,10 @@ type LoginHistory struct {
 }
 
 type AuthResponse struct {
-	AccessToken      string `json:"access_token,omitempty"`
-	RefreshToken     string `json:"refresh_token,omitempty"`
-	TokenType        string `json:"token_type,omitempty"`
-	ExpiresIn        int64  `json:"expires_in,omitempty"`
+	AccessToken      string   `json:"access_token,omitempty"`
+	RefreshToken     string   `json:"refresh_token,omitempty"`
+	TokenType        string   `json:"token_type,omitempty"`
+	ExpiresIn        int64    `json:"expires_in,omitempty"`
 	User             *User    `json:"user,omitempty"`
 	MfaRequired      bool     `json:"mfa_required,omitempty"`
 	MfaSetupRequired bool     `json:"mfa_setup_required,omitempty"`
@@ -112,10 +112,10 @@ type RefreshToken struct {
 }
 
 type TokenClaims struct {
-	UserID      string   `json:"user_id"`
-	OrgID       string   `json:"org_id"`
-	Role        string   `json:"role"`
-	TenantType  string   `json:"tenant_type,omitempty"`
+	UserID         string   `json:"user_id"`
+	OrgID          string   `json:"org_id"`
+	Role           string   `json:"role"`
+	TenantType     string   `json:"tenant_type,omitempty"`
 	Type           string   `json:"type"` // "access" or "refresh"
 	Permissions    []string `json:"permissions,omitempty"`
 	PermissionMask uint64   `json:"permission_mask,omitempty"`
@@ -152,13 +152,13 @@ type OidcProvider struct {
 }
 
 type UserOidcLink struct {
-	ID             uuid.UUID `json:"id"`
-	UserID         uuid.UUID `json:"user_id"`
-	ProviderID     uuid.UUID `json:"provider_id"`
-	ProviderUserID string    `json:"provider_user_id"`
-	Email          string    `json:"email"`
+	ID             uuid.UUID  `json:"id"`
+	UserID         uuid.UUID  `json:"user_id"`
+	ProviderID     uuid.UUID  `json:"provider_id"`
+	ProviderUserID string     `json:"provider_user_id"`
+	Email          string     `json:"email"`
 	LastLoginAt    *time.Time `json:"last_login_at"`
-	CreatedAt      time.Time `json:"created_at"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type SigningKey struct {
@@ -173,31 +173,31 @@ type SigningKey struct {
 }
 
 type APIKey struct {
-	ID           uuid.UUID `json:"id"`
-	OrgID        uuid.UUID `json:"org_id"`
-	UserID       uuid.UUID `json:"user_id"`
-	Name         string    `json:"name"`
-	Prefix       string    `json:"prefix"`
-	SecretHash   string    `json:"-"`
-	Permissions  []string  `json:"permissions"`
-	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
-	ExpiresAt    *time.Time `json:"expires_at,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	Revoked      bool      `json:"revoked"`
+	ID          uuid.UUID  `json:"id"`
+	OrgID       uuid.UUID  `json:"org_id"`
+	UserID      uuid.UUID  `json:"user_id"`
+	Name        string     `json:"name"`
+	Prefix      string     `json:"prefix"`
+	SecretHash  string     `json:"-"`
+	Permissions []string   `json:"permissions"`
+	LastUsedAt  *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	Revoked     bool       `json:"revoked"`
 }
 
 type Organization struct {
-	ID                uuid.UUID `json:"id"`
-	Name              string    `json:"name"`
-	Type              string    `json:"type"` // fleet_owner, government_body, etc.
-	LogoURL           string    `json:"logo_url,omitempty"`
-	Domain            string    `json:"domain"`
-	DefaultTheme      string    `json:"default_theme"`
-	Status            string    `json:"status"` // trial, active, suspended, billing_hold, deleted
-	MaxUsersLimit     int       `json:"max_users_limit"`
-	MaxApiKeysLimit   int       `json:"max_api_keys_limit"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	ID              uuid.UUID `json:"id"`
+	Name            string    `json:"name"`
+	Type            string    `json:"type"` // fleet_owner, government_body, etc.
+	LogoURL         string    `json:"logo_url,omitempty"`
+	Domain          string    `json:"domain"`
+	DefaultTheme    string    `json:"default_theme"`
+	Status          string    `json:"status"` // trial, active, suspended, billing_hold, deleted
+	MaxUsersLimit   int       `json:"max_users_limit"`
+	MaxApiKeysLimit int       `json:"max_api_keys_limit"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type OrganizationMembership struct {

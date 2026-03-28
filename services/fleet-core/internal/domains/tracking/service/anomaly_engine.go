@@ -9,12 +9,12 @@ import (
 
 // AnomalyConfig holds thresholds for anomaly detection.
 type AnomalyConfig struct {
-	OverspeedThresholdKmh    float64 // default 120
-	HarshAccelG            float64 // default 0.3G (roughly 10.6 km/h per sec)
-	HarshBrakingG          float64 // default 0.4G
-	TeleportDistanceM        float64 // default 500 m
-	TeleportTimeWindowSec    float64 // default 5 s
-	FuelDropThresholdPct     float64 // default 10%
+	OverspeedThresholdKmh float64 // default 120
+	HarshAccelG           float64 // default 0.3G (roughly 10.6 km/h per sec)
+	HarshBrakingG         float64 // default 0.4G
+	TeleportDistanceM     float64 // default 500 m
+	TeleportTimeWindowSec float64 // default 5 s
+	FuelDropThresholdPct  float64 // default 10%
 }
 
 // DefaultAnomalyConfig returns production-default thresholds.

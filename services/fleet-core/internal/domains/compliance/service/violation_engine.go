@@ -32,15 +32,15 @@ func (e *violationEngineImpl) EvaluateMoRTHRules(ctx context.Context, driverID u
 	// 1. Max 8 hours continuous driving
 	// 2. Max 12 hours duty in 24 hours
 	// 3. Mandatory 30m break after 5h driving
-	
+
 	now := time.Now()
 	startOf24h := now.Add(-24 * time.Hour)
-	
+
 	logs, err := e.repo.GetDutyLogsByDriver(ctx, driverID, startOf24h, now)
 	if err != nil {
 		return err
 	}
-	
+
 	var totalDriving time.Duration
 	var totalDuty time.Duration
 	var continuousDriving time.Duration
@@ -73,7 +73,7 @@ func (e *violationEngineImpl) EvaluateMoRTHRules(ctx context.Context, driverID u
 	if totalDuty.Hours() > 12.0 {
 		e.createViolation(ctx, driverID, models.ViolationDutyLimitExceeded, models.SeverityMedium, "Exceeded 12 hours standard duty limit")
 	}
-	
+
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (e *violationEngineImpl) createViolation(ctx context.Context, driverID uuid
 		Severity:      severity,
 		Metadata:      []byte(`{"reason":"` + metadata + `"}`),
 	}
-	
+
 	if err := e.repo.RecordViolation(ctx, violation); err != nil {
 		e.logger.Error("failed to record violation", zap.Error(err))
 	}

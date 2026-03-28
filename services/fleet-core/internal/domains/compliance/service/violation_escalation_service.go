@@ -52,7 +52,7 @@ func (s *violationEscalationServiceImpl) CheckAndEscalate(ctx context.Context, d
 			EntityID:       driverID,
 			Severity:       models.AlertSeverityHigh,
 		}
-		
+
 		if err := s.alertDispatcher.Dispatch(ctx, alert); err != nil {
 			s.logger.Error("failed to dispatch violation escalation alert", zap.Error(err))
 		}
@@ -73,7 +73,7 @@ func (s *violationEscalationServiceImpl) CheckAndEscalate(ctx context.Context, d
 			EntityID:       driverID,
 			Severity:       models.AlertSeverityCritical,
 		}
-		
+
 		if err := s.alertDispatcher.Dispatch(ctx, alert); err != nil {
 			s.logger.Error("failed to dispatch critical violation alert", zap.Error(err))
 		}

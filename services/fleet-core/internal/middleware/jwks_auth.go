@@ -38,12 +38,12 @@ type JWKS struct {
 
 // JWKSAuthGate handles JWKS-based JWT validation
 type JWKSAuthGate struct {
-	jwksURL string
-	logger  *zap.Logger
-	keys    map[string]*rsa.PublicKey
-	issuer  string
+	jwksURL  string
+	logger   *zap.Logger
+	keys     map[string]*rsa.PublicKey
+	issuer   string
 	audience string
-	mu      sync.RWMutex
+	mu       sync.RWMutex
 }
 
 // NewJWKSAuthGate creates a new JWKSAuthGate
@@ -174,7 +174,7 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 			if !ok {
 				return nil, fmt.Errorf("unknown kid after refresh: %s", kid)
 			}
-			
+
 			return pubKey, nil
 		}, jwt.WithIssuer(g.issuer), jwt.WithAudience(g.audience))
 
