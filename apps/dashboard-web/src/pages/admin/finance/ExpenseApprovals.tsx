@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import apiClient from "../../../services/apiClient";
+import { useAuth } from "../../../context/AuthProvider";
 
 interface ExpenseReport {
   id: string;
@@ -17,6 +18,7 @@ const ExpenseApprovals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { uiStrings } = useUIStrings("finance");
+  const { user } = useAuth();
 
   const loadReports = async () => {
     setLoading(true);
@@ -49,9 +51,11 @@ const ExpenseApprovals: React.FC = () => {
     action: "approve" | "reject",
   ) => {
     try {
-      const approverId =
-        localStorage.getItem("user_id") ||
-        "00000000-0000-0000-0000-000000000001";
+      // Get authenticated user ID from auth context
+      const approverId = user?.user_id || user?.id;
+      if (!approverId) {
+        throw new Error("User not authenticated");
+      }
       await apiClient.post(
         `/admin/finance/expenses/reports/${reportId}/${action}`,
         {

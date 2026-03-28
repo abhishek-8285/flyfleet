@@ -242,11 +242,11 @@ const AuthenticateStep: React.FC = () => {
       }
       
       const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
-      if (role.includes("driver") || role === "c57c4ec8-5190-4776-9267-06c3da35bc3e") {
+      if (role.includes("driver") || role === "staff") {
         window.location.href = "/dashboard";
       } else if (role.includes("customer") || role.includes("portal") || role === "user") {
         window.location.href = "/portal";
-      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher" || role === "00000000-0000-0000-0000-000000000001" || role === "00000000-0000-0000-0000-000000000002" || role === "38857329-fa25-4536-aa8d-832587f97735") {
+      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
         window.location.href = "/admin";
       } else {
         // Fallback for unrecognized roles (default to portal to prevent unauthorized dashboard access)

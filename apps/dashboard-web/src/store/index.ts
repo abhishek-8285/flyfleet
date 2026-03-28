@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import alertsReducer from "./alertsSlice";
 import analyticsReducer from "./analyticsSlice";
 import authReducer from "./authSlice";
+import customerAuthReducer from "./customerAuthSlice";
 import dashboardReducer from "./dashboardSlice";
 import geofencesReducer from "./geofencesSlice";
 import telemetryReducer from "./telemetrySlice";
@@ -12,6 +13,7 @@ import vehiclesReducer from "./vehiclesSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    customerAuth: customerAuthReducer,
     vehicles: vehiclesReducer,
     telemetry: telemetryReducer,
     trips: tripsReducer,

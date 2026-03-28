@@ -16,7 +16,7 @@ export interface TelemetryPayload {
 export const getWsUrl = (): string => {
   let wsUrl = process.env.REACT_APP_WS_URL || "";
   if (!wsUrl) {
-    const apiUrl = process.env.REACT_APP_API_URL || "/api/v1";
+    const apiUrl = import.meta.env.VITE_API_URL || "/api/v1";
     if (apiUrl.startsWith("http")) {
       wsUrl = apiUrl.replace(/^http/, "ws") + "/ws";
     } else {

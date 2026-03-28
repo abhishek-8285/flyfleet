@@ -12,7 +12,7 @@ const AuditCenter: React.FC = () => {
       try {
         const [resTabs, resConfig] = await Promise.all([
           fetch(
-            `${process.env.REACT_APP_API_URL || "/api/v1"}/audit/auditcenter`,
+            `${import.meta.env.VITE_API_URL || "/api/v1"}/audit/auditcenter`,
           ),
           fetch("/api/v1/ui/global_config"),
         ]);

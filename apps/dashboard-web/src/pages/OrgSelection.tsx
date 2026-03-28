@@ -27,7 +27,7 @@ const OrgSelection: React.FC = () => {
     const fetchOrgs = async () => {
       try {
         const res = await fetch(
-          `{process.env.REACT_APP_API_URL || '/api/v1'}/api/v1/generic`,
+          `{import.meta.env.VITE_API_URL || '/api/v1'}/api/v1/generic`,
         );
         const payload = await res.json();
         setOrgs(payload.data || payload || []);

@@ -4,8 +4,9 @@ import {
     REQUEST_ID_HEADER,
     TRACE_ID_HEADER,
 } from "../utils/trace";
+import { store } from "../store";
 
-const API_URL = process.env.REACT_APP_API_URL || "/api/v1";
+const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 const BFF_URL = process.env.REACT_APP_BFF_URL || "/";
 
 class ApiService {
@@ -19,6 +20,7 @@ class ApiService {
       headers: {
         "Content-Type": "application/json",
       },
+      withCredentials: true, // Send refresh cookie automatically
     });
 
     this.bffClient = axios.create({
@@ -27,12 +29,15 @@ class ApiService {
       headers: {
         "Content-Type": "application/json",
       },
+      withCredentials: true,
     });
 
     const setupInterceptors = (instance: AxiosInstance) => {
       instance.interceptors.request.use(
         (config) => {
-          const token = localStorage.getItem("access_token");
+          // SECURITY: Get token from Redux store (memory only), not localStorage
+          const state = store.getState();
+          const token = state.auth.token;
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
           }
@@ -48,7 +53,9 @@ class ApiService {
         (response) => response.data,
         (error: AxiosError) => {
           if (error.response?.status === 401) {
-            localStorage.removeItem("token");
+            // Token invalid, clear state and redirect
+            store.dispatch({ type: 'auth/setToken', payload: null });
+            store.dispatch({ type: 'auth/setUser', payload: null });
             window.location.href = "/login";
           }
           return Promise.reject(error);
@@ -87,8 +94,8 @@ class ApiService {
   }
 
   async logout() {
-    await this.client.post("/auth/logout");
-    localStorage.removeItem("token");
+    await this.client.post("/auth/logout", {}, { withCredentials: true });
+    // No localStorage cleanup needed
   }
 
   // Auth Extensions

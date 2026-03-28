@@ -66,6 +66,15 @@ const OperationDetail: React.FC = () => {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const [steps, setSteps] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v1/ui/misc/steps")
+      .then((res) => res.json())
+      .then((data) => setSteps(data))
+      .catch((err) => console.error(err));
+  }, []);
+
   if (loading || uiLoading)
     return (
       <div className="p-8 text-white">
@@ -79,14 +88,6 @@ const OperationDetail: React.FC = () => {
         {uiStrings?.msg_restore_not_found || "Restore operation not found"}
       </div>
     );
-
-  const [steps, setSteps] = useState<any[]>([]);
-  useEffect(() => {
-    fetch("/api/v1/ui/misc/steps")
-      .then((res) => res.json())
-      .then((data) => setSteps(data))
-      .catch((err) => console.error(err));
-  }, []);
 
   return (
     <div className="flex flex-col h-full w-full bg-background-dark text-white font-display overflow-hidden">

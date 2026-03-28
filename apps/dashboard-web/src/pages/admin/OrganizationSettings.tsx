@@ -14,7 +14,7 @@ export const OrganizationSettings: React.FC = () => {
       try {
         // Fetch dynamic sections for the current organization
         const res = await fetch(
-          `${process.env.REACT_APP_API_URL || "/api/v1"}/organization/${id}/settings/sections`,
+          `${import.meta.env.VITE_API_URL || "/api/v1"}/organization/${id}/settings/sections`,
         );
         if (res.ok) {
           const data = await res.json();

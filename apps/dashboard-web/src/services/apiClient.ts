@@ -1,22 +1,26 @@
 import axios from 'axios';
 import { createTraceId, REQUEST_ID_HEADER, TRACE_ID_HEADER } from '../utils/trace';
+import { store } from '../store';
+import { setToken, setUser } from '../store/authSlice';
 
 // Environment-aware base URL
-const API_URL = process.env.REACT_APP_API_URL || '/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // For cookie-based sessions if applicable
+  withCredentials: true, // Send refresh cookie automatically
 });
 
 // Request Interceptor: Attach Auth Token and Org ID
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
-    const orgId = localStorage.getItem('org_id');
+    // SECURITY: Token from Redux store (in-memory only), not localStorage
+    const state = store.getState();
+    const token = state.auth.token;
+    const orgId = localStorage.getItem('org_id'); // Non-security preference, kept in localStorage
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -32,8 +36,8 @@ apiClient.interceptors.request.use(
     // Financial Shield: Idempotency keys on all mutations
     if (config.method && ['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
         if (!config.headers['X-Request-ID']) {
-            config.headers['X-Request-ID'] = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-                ? crypto.randomUUID() 
+            config.headers['X-Request-ID'] = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
                 : Math.random().toString(36).substring(2) + Date.now().toString(36);
         }
     } else {
@@ -90,41 +94,48 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          // Send request directly via axios to avoid interceptor loops
-          const res = await axios.post(`${API_URL}/auth/refresh`, { refresh_token: refreshToken });
-          
-          const newToken = res.data?.token || res.data?.access_token;
-          const newRefreshToken = res.data?.refresh_token || refreshToken;
-          
-          if (newToken) {
-            localStorage.setItem('access_token', newToken);
-            localStorage.setItem('refresh_token', newRefreshToken);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            processQueue(null, newToken);
-            isRefreshing = false;
-            return apiClient(originalRequest);
+      try {
+        // Refresh using cookie-based flow (no token in body needed)
+        // Use direct axios with credentials to send refresh cookie
+        const res = await axios.post(
+          `${API_URL}/auth/refresh`,
+          {}, // empty body
+          { withCredentials: true }
+        );
+
+        const newToken = res.data?.token || res.data?.access_token;
+
+        if (newToken) {
+          // SECURITY: Store token in Redux (memory only), NOT localStorage
+          store.dispatch(setToken(newToken));
+
+          // Update user data if returned
+          if (res.data?.user) {
+            store.dispatch(setUser(res.data.user));
           }
-        } catch (refreshError) {
-          processQueue(refreshError, null);
+
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          processQueue(null, newToken);
           isRefreshing = false;
-          if (window.location.pathname !== '/login') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-          }
-          return Promise.reject(refreshError);
+          return apiClient(originalRequest);
+        } else {
+          throw new Error('No token received');
         }
-      }
-      
-      isRefreshing = false;
-      // If no refresh token or it failed, fallback to standard logout
-      if (window.location.pathname !== '/login') {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        if (window.location.pathname !== '/login') {
+          store.dispatch(setToken(null));
+          store.dispatch(setUser(null));
+          // Clear cookie on refresh failure
+          try {
+            await axios.post(`${API_URL}/auth/logout`, {}, { withCredentials: true });
+          } catch (e) {
+            // Ignore logout errors
+          }
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        }
+        return Promise.reject(refreshError);
       }
     }
 
@@ -137,7 +148,7 @@ apiClient.interceptors.response.use(
 
     // 2. Handle Forbidden (RBAC)
     if (status === 403) {
-      console.error('Permission Denied:', data?.message);
+      console.error('Permission Denied'); // Don't log server message which may contain sensitive info
       // Trigger global toast or redirect to 403 page
     }
 

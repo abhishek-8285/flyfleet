@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { z } from "zod";
+import { AppDispatch, RootState } from "../store";
+import { setToken, setUser } from "../store/authSlice";
 
 enum RegisterStep {
   BASIC_INFO,
@@ -9,6 +12,8 @@ enum RegisterStep {
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [step, setStep] = useState<RegisterStep>(RegisterStep.BASIC_INFO);
   
   // Basic Info Form
@@ -150,12 +155,12 @@ const RegisterPage: React.FC = () => {
         throw new Error(data.error || "Registration failed");
       }
 
-      // Automatically store tokens
-      localStorage.setItem("token", data.access_token);
-      localStorage.setItem("refreshToken", data.refresh_token);
-      
+      // Store tokens in Redux (memory only) - SECURE
+      dispatch(setToken(data.access_token || data.token));
+      dispatch(setUser(data.user));
+
       const user = data.user;
-      
+
       // Redirect Logic Enforcement
       if (user.role === "org_admin") {
         navigate("/admin");

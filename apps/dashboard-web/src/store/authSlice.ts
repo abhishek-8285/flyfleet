@@ -4,8 +4,8 @@ import { AuthState, User } from '../types';
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem('access_token'),
-  isAuthenticated: !!localStorage.getItem('access_token'),
+  token: null, // SECURITY: No localStorage - token stored in memory only
+  isAuthenticated: false,
   loading: false,
   error: null,
 };
@@ -15,7 +15,7 @@ export const login = createAsyncThunk(
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
       const response = await api.login(email, password);
-      localStorage.setItem('token', response.token);
+      // No localStorage - token returned in response, stored in Redux state
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
@@ -25,16 +25,15 @@ export const login = createAsyncThunk(
 
 export const logout = createAsyncThunk('auth/logout', async () => {
   await api.logout();
-  localStorage.removeItem('token');
+  // No localStorage cleanup needed
 });
 
 export const refreshToken = createAsyncThunk('auth/refresh', async (_, { rejectWithValue }) => {
   try {
     const response = await api.refreshToken();
-    localStorage.setItem('token', response.token);
+    // No localStorage - token stored in Redux state
     return response;
   } catch (error: any) {
-    localStorage.removeItem('token');
     return rejectWithValue(error.response?.data?.message || 'Token refresh failed');
   }
 });
@@ -43,6 +42,13 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    setToken: (state, action: PayloadAction<string | null>) => {
+      state.token = action.payload;
+      state.isAuthenticated = !!action.payload;
+    },
+    setUser: (state, action: PayloadAction<User | null>) => {
+      state.user = action.payload;
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -54,10 +60,10 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action: PayloadAction<{ token: string; user: User }>) => {
+      .addCase(login.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
         state.isAuthenticated = true;
-        state.token = action.payload.token;
+        state.token = action.payload.access_token || action.payload.token;
         state.user = action.payload.user;
       })
       .addCase(login.rejected, (state, action) => {
@@ -71,8 +77,8 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
       })
       // Refresh token
-      .addCase(refreshToken.fulfilled, (state, action: PayloadAction<{ token: string; user: User }>) => {
-        state.token = action.payload.token;
+      .addCase(refreshToken.fulfilled, (state, action: PayloadAction<any>) => {
+        state.token = action.payload.access_token || action.payload.token;
         state.user = action.payload.user;
         state.isAuthenticated = true;
       })
@@ -84,5 +90,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, setToken, setUser } = authSlice.actions;
 export default authSlice.reducer;

@@ -3,11 +3,11 @@ import maplibregl from "maplibre-gl";
 import { useMapStore } from "./store";
 import MapEngine from "./MapEngine";
 
-const API_BASE_WS = process.env.REACT_APP_API_URL?.replace("http", "ws") || "ws://localhost:8084/api/v1";
+const API_BASE_WS = import.meta.env.VITE_API_URL?.replace("http", "ws") || "ws://localhost:8084/api/v1";
 
 const LiveMap: React.FC = () => {
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const { pulse, initializeWorker, destroyWorker } = useMapStore();
+  const { pulse, initializeWorker, destroyWorker, getCurrentGeoJSON } = useMapStore();
   const rAFRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -31,7 +31,8 @@ const LiveMap: React.FC = () => {
     };
   }, [initializeWorker, destroyWorker]);
 
-  // The Hardware-Accelerated Bridge 
+  // The Hardware-Accelerated Bridge
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!mapRef.current || pulse === 0) return;
     
@@ -45,10 +46,10 @@ const LiveMap: React.FC = () => {
       const source = map.getSource("vehicles") as maplibregl.GeoJSONSource;
       if (source) {
         // Direct read from non-reactive state store to bypass all React overhead
-        const geoJSON = useMapStore.getState().currentGeoJSON;
-        
+        const geoJSON = getCurrentGeoJSON();
+
         // Camera-Based Throttling / Viewport Cull
-        // MapLibre's `setData` natively handles bounding box clipping, 
+        // MapLibre's `setData` natively handles bounding box clipping,
         // but we ensure we are literally just tossing the reference into the GL engine.
         source.setData(geoJSON);
       }

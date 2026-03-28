@@ -139,7 +139,16 @@ setInterval(() => {
     const longitude = view.getFloat64(16);
 
     const idLen = view.getUint8(32);
-    const id = new TextDecoder().decode(raw.subarray(33, 33 + idLen));
+    // SECURITY FIX: Validate idLength to prevent out-of-bounds read (CWE-125)
+    const idStart = 33;
+    const maxIDLength = raw.byteLength - idStart;
+    // Enforce reasonable maximum (UUID is 36 chars max) to limit memory allocation
+    const MAX_VEHICLE_ID_LENGTH = 256;
+    if (idLen > maxIDLength || idLen > MAX_VEHICLE_ID_LENGTH) {
+      console.error('[TelemetryWorker] Invalid vehicle ID length, skipping record:', idLen);
+      continue; // Skip this malformed record
+    }
+    const id = new TextDecoder().decode(raw.subarray(idStart, idStart + idLen));
 
     const update: TelemetryUpdate = {
       id,

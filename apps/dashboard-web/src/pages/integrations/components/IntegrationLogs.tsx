@@ -18,7 +18,7 @@ const IntegrationLogs: React.FC = () => {
     const fetchLogs = async () => {
       try {
         const res = await fetch(
-          `{process.env.REACT_APP_API_URL || '/api/v1'}/api/v1/integrations/integrationlogs`,
+          `{import.meta.env.VITE_API_URL || '/api/v1'}/api/v1/integrations/integrationlogs`,
         );
         const payload = await res.json();
         setLogs(payload.data || payload || []);

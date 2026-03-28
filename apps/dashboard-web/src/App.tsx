@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { Provider } from "react-redux";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/common/Layout";
@@ -60,31 +60,13 @@ import NewBooking from "./pages/portal/NewBooking";
 import PortalDashboard from "./pages/portal/PortalDashboard";
 import ShipmentsList from "./pages/portal/ShipmentsList";
 import ShipmentTracking from "./pages/portal/ShipmentTracking";
-// RouteOptimization import moved to consolidated block
 import SessionTimeoutWarning from "./components/auth/SessionTimeoutWarning";
 import LiveMap from "./components/LiveMap";
 import ScenarioSwitcher from "./components/ScenarioSwitcher";
 import ControlTower from "./modules/control-tower/ControlTower";
 import Alerts from "./modules/dashboard/pages/Alerts";
-import Analytics from "./modules/dashboard/pages/Analytics";
-import Dashboard from "./modules/dashboard/pages/Dashboard";
-import TimelinePage from "./modules/dashboard/pages/TimelinePage";
 import AccessDenied from "./pages/AccessDenied";
 import AccountLocked from "./pages/AccountLocked";
-import AnalyticsJobsPage from "./pages/admin/analytics/AnalyticsJobsPage";
-import DriverBehaviorPage from "./pages/admin/analytics/DriverBehaviorPage";
-import FleetAnalyticsPage from "./pages/admin/analytics/FleetAnalyticsPage";
-import PredictiveMaintenancePage from "./pages/admin/analytics/PredictiveMaintenancePage";
-import PredictiveModelsPage from "./pages/admin/analytics/PredictiveModelsPage";
-import DispatchCenter from "./pages/admin/DispatchCenter";
-import EmergencyDashboard from "./pages/admin/emergency/EmergencyDashboard";
-import ExpenseApprovals from "./pages/admin/finance/ExpenseApprovals";
-import FuelDashboard from "./pages/admin/finance/FuelDashboard";
-import PolicySettings from "./pages/admin/finance/PolicySettings";
-import IntegrationHub from "./pages/admin/integrations/IntegrationHub";
-import WorkOrderManagement from "./pages/admin/maintenance/WorkOrderManagement";
-import ForecastingDashboard from "./pages/admin/revenue/ForecastingDashboard";
-import RouteOptimization from "./pages/admin/RouteOptimization";
 import AccessReview from "./pages/admin/security/AccessReview";
 import ActiveSessions from "./pages/admin/security/ActiveSessions";
 import AuthStats from "./pages/admin/security/AuthStats";
@@ -109,16 +91,6 @@ import {
     TripTelemetry,
 } from "./pages/admin/Trips";
 import { Users } from "./pages/admin/Users";
-import VideoTelematics from "./pages/admin/VideoTelematics";
-import AuditCenter from "./pages/audit/AuditCenter";
-import AuthError from "./pages/AuthError";
-import DeviceApproval from "./pages/DeviceApproval";
-import DeviceDashboard from "./pages/devices/DeviceDashboard";
-import DeviceDiagnostics from "./pages/devices/DeviceDiagnostics";
-import DeviceTelemetry from "./pages/devices/DeviceTelemetry";
-import DeviceTwins from "./pages/devices/DeviceTwins";
-import FirmwareManager from "./pages/devices/FirmwareManager";
-import RemoteCommands from "./pages/devices/RemoteCommands";
 import Drivers from "./pages/Drivers";
 import ErrorScreen from "./pages/ErrorScreen";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -129,12 +101,6 @@ import RequestDetail from "./pages/governance/RequestDetail";
 import RequestList from "./pages/governance/RequestList";
 import History from "./pages/History";
 import Insights from "./pages/Insights";
-import IntegrationsCenter from "./pages/integrations/IntegrationsCenter";
-import Landing from "./pages/Landing";
-import Login from "./pages/LoginPage";
-import Register from "./pages/RegisterPage";
-import Maintenance from "./pages/Maintenance";
-import SystemMaintenance from "./pages/SystemMaintenance";
 import {
     AddWorkOrder,
     InspectionForm,
@@ -145,17 +111,6 @@ import {
     WorkOrderDetail,
     WorkOrderList,
 } from "./pages/maintenance";
-import MFAExceptions from "./pages/MFAExceptions";
-import MFAOverrides from "./pages/MFAOverrides";
-import MFAPolicyEditor from "./pages/MFAPolicyEditor";
-import MFASetup from "./pages/MFASetup";
-import MFAVerify from "./pages/MFAVerify";
-import MonitoringLayout from "./pages/monitoring/layout/MonitoringLayout";
-import LogViewer from "./pages/monitoring/LogViewer";
-import MetricsHub from "./pages/monitoring/MetricsHub";
-import QueueMonitor from "./pages/monitoring/QueueMonitor";
-import SLAReport from "./pages/monitoring/SLAReport";
-import SystemHealth from "./pages/monitoring/SystemHealth";
 import OrgSelection from "./pages/OrgSelection";
 import Reports from "./pages/Reports";
 import ResetPassword from "./pages/ResetPassword";
@@ -181,6 +136,54 @@ import TrustedDevices from "./pages/TrustedDevices";
 import VehicleDetails from "./pages/VehicleDetails";
 import VerifyEmail from "./pages/VerifyEmail";
 import { store } from "./store";
+import { LoadingSpinner } from "./components/common/LoadingSpinner";
+
+// Lazy loaded routes for code splitting
+const Analytics = lazy(() => import("./modules/dashboard/pages/Analytics"));
+const Dashboard = lazy(() => import("./modules/dashboard/pages/Dashboard"));
+const TimelinePage = lazy(() => import("./modules/dashboard/pages/TimelinePage"));
+const AnalyticsJobsPage = lazy(() => import("./pages/admin/analytics/AnalyticsJobsPage"));
+const DriverBehaviorPage = lazy(() => import("./pages/admin/analytics/DriverBehaviorPage"));
+const FleetAnalyticsPage = lazy(() => import("./pages/admin/analytics/FleetAnalyticsPage"));
+const PredictiveMaintenancePage = lazy(() => import("./pages/admin/analytics/PredictiveMaintenancePage"));
+const PredictiveModelsPage = lazy(() => import("./pages/admin/analytics/PredictiveModelsPage"));
+const DispatchCenter = lazy(() => import("./pages/admin/DispatchCenter"));
+const EmergencyDashboard = lazy(() => import("./pages/admin/emergency/EmergencyDashboard"));
+const ExpenseApprovals = lazy(() => import("./pages/admin/finance/ExpenseApprovals"));
+const FuelDashboard = lazy(() => import("./pages/admin/finance/FuelDashboard"));
+const PolicySettings = lazy(() => import("./pages/admin/finance/PolicySettings"));
+const IntegrationHub = lazy(() => import("./pages/admin/integrations/IntegrationHub"));
+const WorkOrderManagement = lazy(() => import("./pages/admin/maintenance/WorkOrderManagement"));
+const ForecastingDashboard = lazy(() => import("./pages/admin/revenue/ForecastingDashboard"));
+const RouteOptimization = lazy(() => import("./pages/admin/RouteOptimization"));
+const VideoTelematics = lazy(() => import("./pages/admin/VideoTelematics"));
+const AuditCenter = lazy(() => import("./pages/audit/AuditCenter"));
+const DeviceApproval = lazy(() => import("./pages/DeviceApproval"));
+const DeviceDashboard = lazy(() => import("./pages/devices/DeviceDashboard"));
+const DeviceDiagnostics = lazy(() => import("./pages/devices/DeviceDiagnostics"));
+const DeviceTelemetry = lazy(() => import("./pages/devices/DeviceTelemetry"));
+const DeviceTwins = lazy(() => import("./pages/devices/DeviceTwins"));
+const FirmwareManager = lazy(() => import("./pages/devices/FirmwareManager"));
+const RemoteCommands = lazy(() => import("./pages/devices/RemoteCommands"));
+const IntegrationsCenter = lazy(() => import("./pages/integrations/IntegrationsCenter"));
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/LoginPage"));
+const Register = lazy(() => import("./pages/RegisterPage"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const SystemMaintenance = lazy(() => import("./pages/SystemMaintenance"));
+const MFAExceptions = lazy(() => import("./pages/MFAExceptions"));
+const MFAOverrides = lazy(() => import("./pages/MFAOverrides"));
+const MFAPolicyEditor = lazy(() => import("./pages/MFAPolicyEditor"));
+const MFASetup = lazy(() => import("./pages/MFASetup"));
+const MFAVerify = lazy(() => import("./pages/MFAVerify"));
+const MonitoringLayout = lazy(() => import("./pages/monitoring/layout/MonitoringLayout"));
+const LogViewer = lazy(() => import("./pages/monitoring/LogViewer"));
+const MetricsHub = lazy(() => import("./pages/monitoring/MetricsHub"));
+const QueueMonitor = lazy(() => import("./pages/monitoring/QueueMonitor"));
+const SLAReport = lazy(() => import("./pages/monitoring/SLAReport"));
+const SystemHealth = lazy(() => import("./pages/monitoring/SystemHealth"));
+const AuthError = lazy(() => import("./pages/AuthError"));
+
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -191,11 +194,11 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
 const DynamicAdminLayout: React.FC = () => {
   const { user } = useAuth();
   const role = (user?.role_id || user?.role || "").toLowerCase();
-  
-  if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "00000000-0000-0000-0000-000000000001" || role === "00000000-0000-0000-0000-000000000002" || role === "38857329-fa25-4536-aa8d-832587f97735") {
+
+  if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager") {
     return <GlobalAdminLayout />;
   }
-  
+
   // Standard Users (driver, staff) MUST NOT access /admin
   return <Navigate to="/dashboard" replace />;
 };
@@ -211,11 +214,27 @@ function App() {
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Landing />
+                </Suspense>
+              } />
+              <Route path="/login" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Login />
+                </Suspense>
+              } />
+              <Route path="/register" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Register />
+                </Suspense>
+              } />
               <Route path="/signup" element={<Signup />} />
-              <Route path="/public/designer" element={<TemplateDesignerPage />} />
+              <Route path="/public/designer" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <TemplateDesignerPage />
+                </Suspense>
+              } />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -248,7 +267,11 @@ function App() {
               />
               <Route path="/device-approval" element={<DeviceApproval />} />
               <Route path="/auth/callback" element={<SSOCallback />} />
-              <Route path="/auth/error" element={<AuthError />} />
+              <Route path="/auth/error" element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <AuthError />
+                </Suspense>
+              } />
               <Route path="/403" element={<AccessDenied />} />
 
               {/* Customer Portal Public Routes */}
@@ -271,12 +294,28 @@ function App() {
                   </PrivateRoute>
                 }
               >
-                <Route index element={<Dashboard />} />
-                <Route path="kpi" element={<Analytics />} />
-                <Route path="activity" element={<TimelinePage />} />
+                <Route index element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Dashboard />
+                  </Suspense>
+                } />
+                <Route path="kpi" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Analytics />
+                  </Suspense>
+                } />
+                <Route path="activity" element={<Alerts />} />
                 <Route path="alerts" element={<Alerts />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="map" element={<LiveMap />} />
+                <Route path="analytics" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Analytics />
+                  </Suspense>
+                } />
+                <Route path="map" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <LiveMap />
+                  </Suspense>
+                } />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
                 <Route path="trips" element={<Trips />} />
@@ -284,23 +323,47 @@ function App() {
                 <Route path="insights" element={<Insights />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="search" element={<SearchPage />} />
-                <Route path="timeline" element={<TimelinePage />} />
+                <Route path="timeline" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <TimelinePage />
+                  </Suspense>
+                } />
                 <Route
                   path="analytics/models"
-                  element={<PredictiveModelsPage />}
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <PredictiveModelsPage />
+                    </Suspense>
+                  }
                 />
-                <Route path="analytics/jobs" element={<AnalyticsJobsPage />} />
+                <Route path="analytics/jobs" element={
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AnalyticsJobsPage />
+                  </Suspense>
+                } />
                 <Route
                   path="analytics/fleet"
-                  element={<FleetAnalyticsPage />}
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <FleetAnalyticsPage />
+                    </Suspense>
+                  }
                 />
                 <Route
                   path="analytics/drivers"
-                  element={<DriverBehaviorPage />}
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <DriverBehaviorPage />
+                    </Suspense>
+                  }
                 />
                 <Route
                   path="analytics/maintenance"
-                  element={<PredictiveMaintenancePage />}
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <PredictiveMaintenancePage />
+                    </Suspense>
+                  }
                 />
                 <Route path="maintenance" element={<Maintenance />} />
                 <Route path="drivers" element={<Drivers />} />
