@@ -75,7 +75,7 @@ func (w *NotificationWorker) processNotification(ctx context.Context, log *model
 
 	// 2. Attempt Delivery
 	w.logger.Debug("Attempting delivery", zap.String("id", log.ID.String()), zap.String("channel", string(log.Channel)))
-	
+
 	resp, err := provider.Send(ctx, log)
 	log.Provider = provider.Name()
 	log.ProviderResponse = resp

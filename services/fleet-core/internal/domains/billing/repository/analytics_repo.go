@@ -108,7 +108,7 @@ func (r *AnalyticsRepository) GetChurnMetrics(ctx context.Context) (float64, err
 		SELECT COUNT(*) FROM billing_subscriptions 
 		WHERE status = 'ACTIVE' OR (status = 'CANCELLED' AND updated_at >= CURRENT_DATE - INTERVAL '30 days')
 	`).Scan(&totalActiveAtStart)
-	
+
 	if totalActiveAtStart == 0 {
 		return 0, nil
 	}

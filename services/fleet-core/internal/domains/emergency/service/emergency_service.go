@@ -25,12 +25,12 @@ const (
 )
 
 type EmergencyService struct {
-	repo          repository.EmergencyRepository
-	trackingRepo  trackingRepo.LiveCacheRepository
-	nc            *nats.Conn
-	redis         *redis.Client
-	log           *zap.Logger
-	retry         *NotificationRetryService
+	repo           repository.EmergencyRepository
+	trackingRepo   trackingRepo.LiveCacheRepository
+	nc             *nats.Conn
+	redis          *redis.Client
+	log            *zap.Logger
+	retry          *NotificationRetryService
 	geo            *EmergencyGeoService
 	authority      *EmergencyAuthorityService
 	severityEngine *EmergencySeverityEngine
@@ -56,7 +56,7 @@ func (s *EmergencyService) ValidateConfig() error {
 
 func (s *EmergencyService) CheckHealth(ctx context.Context) (map[string]string, error) {
 	health := make(map[string]string)
-	
+
 	// Providers
 	if s.fallback != nil {
 		providerHealth := s.fallback.CheckProvidersHealth(ctx)
@@ -177,10 +177,10 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 	// Auto-calculate severity for standardization
 	// 1.3 Determine severity automatically (Phase 3)
 	collisionDetected := false // Check if req.Metadata indicates collision
-	panicButtonPressed := true 
+	panicButtonPressed := true
 	driverHealthSignal := true
 	severity := s.severityEngine.Classify(float64(req.Speed), collisionDetected, panicButtonPressed, driverHealthSignal)
-	
+
 	// Record severity metric
 	emergency.IncidentSeverityTotal.WithLabelValues(string(severity)).Inc()
 

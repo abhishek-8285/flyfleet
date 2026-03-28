@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/fleet-platform/shared/pkg/api"
@@ -14,10 +15,44 @@ import (
 	"go.uber.org/zap"
 )
 
+// Security: Check if user has permission to access target user
+func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid.UUID) (bool, error) {
+	// Get authenticated user from context
+	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserIDStr == "" {
+		return false, errors.New("unauthorized")
+	}
+	authUserID, _ := uuid.Parse(authUserIDStr)
+
+	// Allow users to access their own data
+	if authUserID == targetUserID {
+		return true, nil
+	}
+
+	// Check if the authenticated user has admin or super_admin role
+	role, ok := r.Context().Value(ctxkeys.RoleKey).(string)
+	if ok && (role == "admin" || role == "super_admin") {
+		// Admins can access any user in the same org (TODO: verify org membership when orgSvc is available)
+		// For now, allow admin access
+		h.logger.Debug("Admin access granted to user data",
+			zap.String("auth_user_id", authUserIDStr),
+			zap.String("target_user_id", targetUserID.String()),
+			zap.String("role", role))
+		return true, nil
+	}
+
+	// Access denied - user is not self and not admin
+	h.logger.Warn("Access denied: user lacks permission to access target user",
+		zap.String("auth_user_id", authUserIDStr),
+		zap.String("target_user_id", targetUserID.String()),
+		zap.String("role", role))
+	return false, nil
+}
+
 type SupportCompatHandlers struct {
-	logger     *zap.Logger
-	authSvc    *authservice.AuthService
-	orgSvc     orgservice.OrganizationService
+	logger      *zap.Logger
+	authSvc     *authservice.AuthService
+	orgSvc      orgservice.OrganizationService
 	supportRepo repository.SupportRepository
 }
 
@@ -66,6 +101,32 @@ func (h *SupportCompatHandlers) GetUserProfile(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// Get authenticated user from context (set by auth middleware)
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	// Allow users to access their own profile
+	if authUserUUID == userId {
+		goto fetchUser
+	}
+
+	// SECURITY FIX: Prevent cross-tenant access
+	// For now, reject admin cross-tenant access until proper RBAC is implemented
+	// In a full implementation, we would check:
+	// 1. If authenticated user has admin role
+	// 2. If target user belongs to same organization as admin
+	//     via org membership check using authUser's org_id from context
+	h.logger.Warn("Cross-tenant access attempt blocked",
+		zap.String("auth_user", authUserID),
+		zap.String("target_user", userIdStr))
+	http.Error(w, "Access denied", http.StatusForbidden)
+	return
+
+fetchUser:
 	user, err := h.authSvc.GetUserByID(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
@@ -94,6 +155,22 @@ func (h *SupportCompatHandlers) GetUserSecurity(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// SECURITY FIX: Prevent cross-tenant access - only self-access allowed
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant security data access blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	user, err := h.authSvc.GetUserByID(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
@@ -118,6 +195,22 @@ func (h *SupportCompatHandlers) GetUserSessions(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// SECURITY FIX: Prevent cross-tenant access
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant sessions access blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	sessions, err := h.supportRepo.GetUserSessions(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "Failed to get sessions", http.StatusInternalServerError)
@@ -136,6 +229,22 @@ func (h *SupportCompatHandlers) GetUserLoginHistory(w http.ResponseWriter, r *ht
 		return
 	}
 
+	// SECURITY FIX: Prevent cross-tenant access
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant login history access blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	history, err := h.supportRepo.GetLoginHistory(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "Failed to get history", http.StatusInternalServerError)
@@ -148,11 +257,36 @@ func (h *SupportCompatHandlers) GetUserLoginHistory(w http.ResponseWriter, r *ht
 
 func (h *SupportCompatHandlers) GetUserRoles(w http.ResponseWriter, r *http.Request) {
 	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant access
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant roles access blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	user, err := h.authSvc.GetUserByID(r.Context(), userId)
-	
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
 	roles := []string{"User"}
-	if err == nil && user != nil {
+	if user != nil {
 		roles = []string{user.Role}
 	}
 
@@ -178,6 +312,22 @@ func (h *SupportCompatHandlers) GetUserNotes(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// SECURITY FIX: Prevent cross-tenant access
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant notes access blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	notes, err := h.supportRepo.GetUserNotes(r.Context(), userId)
 	if err != nil {
 		http.Error(w, "Failed to get notes", http.StatusInternalServerError)
@@ -193,6 +343,22 @@ func (h *SupportCompatHandlers) AddUserNote(w http.ResponseWriter, r *http.Reque
 	userId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant access
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant add note blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
@@ -215,7 +381,7 @@ func (h *SupportCompatHandlers) AddUserNote(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// 3. Log Audit
+	// Log Audit
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -243,15 +409,38 @@ func (h *SupportCompatHandlers) RevokeSession(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// SECURITY FIX: Validate user can only revoke their own sessions
+	userIdStr := chi.URLParam(r, "id")
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant session revocation blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	err = h.supportRepo.RevokeSession(r.Context(), sessionID)
 	if err != nil {
 		http.Error(w, "Failed to revoke session", http.StatusInternalServerError)
 		return
 	}
 
-	// 3. Log Audit
-	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
+	// Log Audit
+	userIdStr = chi.URLParam(r, "id")
+	userId, _ = uuid.Parse(userIdStr)
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -273,8 +462,28 @@ func (h *SupportCompatHandlers) RevokeSession(w http.ResponseWriter, r *http.Req
 
 func (h *SupportCompatHandlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
-	
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant password reset
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant password reset blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -294,8 +503,28 @@ func (h *SupportCompatHandlers) ResetPassword(w http.ResponseWriter, r *http.Req
 
 func (h *SupportCompatHandlers) UnlockAccount(w http.ResponseWriter, r *http.Request) {
 	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
-	
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant account unlock
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant account unlock blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -315,8 +544,28 @@ func (h *SupportCompatHandlers) UnlockAccount(w http.ResponseWriter, r *http.Req
 
 func (h *SupportCompatHandlers) ResetMFA(w http.ResponseWriter, r *http.Request) {
 	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
-	
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant MFA reset
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant MFA reset blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -329,15 +578,35 @@ func (h *SupportCompatHandlers) ResetMFA(w http.ResponseWriter, r *http.Request)
 		TargetUserID:   &userId,
 		IPAddress:      r.RemoteAddr,
 		UserAgent:      r.UserAgent(),
-		Status:       "SUCCESS",
+		Status:         "SUCCESS",
 	})
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *SupportCompatHandlers) ForceLogout(w http.ResponseWriter, r *http.Request) {
 	userIdStr := chi.URLParam(r, "id")
-	userId, _ := uuid.Parse(userIdStr)
-	
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	// SECURITY FIX: Prevent cross-tenant force logout
+	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
+	if !ok || authUserID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	if authUserUUID != userId {
+		h.logger.Warn("Cross-tenant force logout blocked",
+			zap.String("auth_user", authUserID),
+			zap.String("target_user", userIdStr))
+		http.Error(w, "Access denied", http.StatusForbidden)
+		return
+	}
+
 	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
 	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	agentUID, _ := uuid.Parse(agentID)
@@ -359,13 +628,13 @@ func (h *SupportCompatHandlers) GetIncidents(w http.ResponseWriter, r *http.Requ
 	// For compat, we use a default org ID if not provided, or fetch from context
 	orgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	orgID, _ := uuid.Parse(orgIDStr)
-	
+
 	tickets, err := h.supportRepo.GetTickets(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("Failed to fetch tickets", zap.Error(err))
 		tickets = []*repository.SupportTicket{} // Fallback to empty for UI stability
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"items": tickets,
@@ -422,7 +691,7 @@ func (h *SupportCompatHandlers) GetIncidentFeed(w http.ResponseWriter, r *http.R
 	orgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
 	orgID, _ := uuid.Parse(orgIDStr)
 	tickets, _ := h.supportRepo.GetTickets(r.Context(), orgID)
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"items": tickets,
@@ -434,8 +703,7 @@ type UIHandlers struct{}
 func (h *UIHandlers) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 	config := map[string]interface{}{
 		"system_metadata": map[string]interface{}{
-			"environment": "production-consolidated",
-			"version":     "2.0.0-monolith",
+
 			"ui_strings": map[string]interface{}{
 				"portal": map[string]string{
 					"dashboard_title": "B2B Customer Dashboard",
@@ -443,13 +711,13 @@ func (h *UIHandlers) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 					"new_booking_btn": "Book Shipment",
 				},
 				"portal_shipments": map[string]string{
-					"title": "Your Active Shipments",
-					"th_tracking": "Tracking ID",
-					"th_status": "Status",
+					"title":        "Your Active Shipments",
+					"th_tracking":  "Tracking ID",
+					"th_status":    "Status",
 					"action_track": "Real-time Tracking",
 				},
 				"portal_booking": map[string]string{
-					"title": "New Booking Request",
+					"title":      "New Booking Request",
 					"btn_submit": "Notify Logistics Team",
 				},
 				"portal_invoices": map[string]string{
@@ -461,10 +729,9 @@ func (h *UIHandlers) GetGlobalConfig(w http.ResponseWriter, r *http.Request) {
 			"avg_resolution_time": "1h 15m",
 			"critical_load":       "25%",
 			"high_priority_load":  "40%",
-			"in_progress_status": "Active",
+			"in_progress_status":  "Active",
 			"sla_attainment":      "99.8%",
 			"system_protocol":     "Operational",
-			"version":             "v1.4.2",
 		},
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -479,13 +746,13 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 
 	if menuId == "menuItems" {
 		items := []map[string]interface{}{}
-		
+
 		if role == "user" {
 			json.NewEncoder(w).Encode(items)
 			return
 		}
-		
-		if role == "driver" || role == "staff" || role == "c57c4ec8-5190-4776-9267-06c3da35bc3e" {
+
+		if role == "driver" || role == "staff" {
 			items = []map[string]interface{}{
 				{"label": "Dashboard", "path": "/dashboard", "icon": "dashboard", "resource": "dashboard", "action": "view"},
 				{"label": "My Trips", "path": "/dashboard/trips", "icon": "map", "resource": "trip", "action": "view"},
@@ -494,16 +761,16 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(items)
 			return
 		}
-		
+
 		// Super Admin / Org Admin / Fleet Manager
 		items = append(items, map[string]interface{}{"label": "Dashboard", "title": "Dashboard", "icon": "dashboard", "path": "/admin/dashboard", "items": []any{}})
-		
-		if role == "super_admin" || role == "org_admin" || role == "a2046939-4bbe-4c0b-a47e-f12d5dd39714" {
+
+		if role == "super_admin" || role == "org_admin" || role == "fleet_manager" {
 			items = append(items, map[string]interface{}{"label": "Organizations", "title": "Organizations", "icon": "business", "path": "/admin/organizations", "items": []any{}})
 			items = append(items, map[string]interface{}{"label": "Users & Roles", "title": "Users & Roles", "icon": "people", "path": "/admin/users", "items": []any{}})
 			items = append(items, map[string]interface{}{"label": "Billing", "title": "Billing", "icon": "payments", "path": "/admin/billing", "items": []any{}})
 		}
-		
+
 		items = append(items, map[string]interface{}{"label": "Control Tower", "title": "Control Tower", "icon": "radar", "path": "/admin/control-tower", "items": []any{}})
 		items = append(items, map[string]interface{}{"label": "Fleet Command", "title": "Fleet Command", "icon": "local_shipping", "path": "/admin/vehicles", "items": []any{}})
 		items = append(items, map[string]interface{}{"label": "Dispatch", "title": "Dispatch", "icon": "route", "path": "/admin/dispatch", "items": []any{}})
@@ -511,7 +778,7 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(items)
 		return
 	}
-	
+
 	if menuId == "analyticsItems" {
 		items := []map[string]interface{}{}
 		if role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager" {
@@ -523,7 +790,7 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(items)
 		return
 	}
-	
+
 	if menuId == "securityItems" {
 		items := []map[string]interface{}{}
 		if role == "super_admin" || role == "admin" || role == "org_admin" {
@@ -567,4 +834,3 @@ func (h *UIHandlers) GetLegalDocs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"data": data})
 }
-

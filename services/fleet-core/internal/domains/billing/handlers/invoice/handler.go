@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 
-
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/domain/invoice"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/middleware"
 	"github.com/go-chi/chi/v5"

@@ -1,0 +1,27 @@
+# FlyFleet Terraform Configuration
+# Copy this file to terraform.tfvars and fill in the values
+
+# AWS Configuration
+aws_region      = "us-east-1"
+environment     = "production"  # or "staging", "development"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# VPC Configuration
+vpc_cidr        = "10.0.0.0/16"
+admin_cidr      = "203.0.113.0/24"  # Your admin IP range
+
+# Database Configuration
+db_username     = "fleet_user"
+db_password     = "REPLACE-WITH-SECURE-PASSWORD"
+db_instance_class = "db.t3.medium"  # Adjust based on load
+
+# Kubernetes Configuration
+kubernetes_version = "1.28"
+
+# Tags
+tags = {
+  Project     = "FlyFleet"
+  Environment = "production"
+  ManagedBy   = "Terraform"
+  Owner       = "platform-team"
+}

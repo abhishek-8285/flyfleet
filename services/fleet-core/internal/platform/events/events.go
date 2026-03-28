@@ -23,7 +23,7 @@ type EventBus interface {
 	Subscribe(subject string, handler func(event *Event)) (*nats.Subscription, error)
 }
 
-// context_dummy is just a placeholder to keep the interface Go-ish if needed, 
+// context_dummy is just a placeholder to keep the interface Go-ish if needed,
 // though NATS Publish doesn't strictly require it.
 type context_dummy interface{}
 

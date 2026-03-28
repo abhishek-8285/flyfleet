@@ -55,10 +55,44 @@ func (w *FinanceBackupWorker) runBackup(ctx context.Context) {
 	target := filepath.Join(backupDir, fileName)
 
 	// Snapshot financial tables; includes schema and data for portability.
-	cmd := exec.CommandContext(ctx, "bash", "-lc",
-		fmt.Sprintf("pg_dump '%s' --format=plain --no-owner --no-privileges | gzip > '%s'", dbURL, target))
-	if output, err := cmd.CombinedOutput(); err != nil {
-		w.logger.Error("FinanceBackupWorker: pg_dump failed", zap.Error(err), zap.ByteString("output", output))
+	// SECURITY FIX: Avoid shell injection by not using bash -lc. Use exec.Command with proper argument separation.
+	// Create gzip file directly
+	targetFile, err := os.Create(target)
+	if err != nil {
+		w.logger.Error("FinanceBackupWorker: failed to create backup file", zap.Error(err))
+		return
+	}
+	defer targetFile.Close()
+
+	// Start pg_dump
+	pgDumpCmd := exec.CommandContext(ctx, "pg_dump", dbURL, "--format=plain", "--no-owner", "--no-privileges")
+	stdout, err := pgDumpCmd.StdoutPipe()
+	if err != nil {
+		w.logger.Error("FinanceBackupWorker: failed to get pg_dump stdout", zap.Error(err))
+		return
+	}
+
+	// Start gzip subprocess
+	gzipCmd := exec.CommandContext(ctx, "gzip")
+	gzipCmd.Stdin = stdout
+	gzipCmd.Stdout = targetFile
+
+	// Start pg_dump
+	if err := pgDumpCmd.Start(); err != nil {
+		w.logger.Error("FinanceBackupWorker: pg_dump start failed", zap.Error(err))
+		return
+	}
+
+	// Wait for gzip to complete
+	if err := gzipCmd.Wait(); err != nil {
+		w.logger.Error("FinanceBackupWorker: gzip failed", zap.Error(err))
+		pgDumpCmd.Process.Kill()
+		return
+	}
+
+	// Wait for pg_dump to complete
+	if err := pgDumpCmd.Wait(); err != nil {
+		w.logger.Error("FinanceBackupWorker: pg_dump failed", zap.Error(err))
 		return
 	}
 

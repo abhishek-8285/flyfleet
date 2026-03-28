@@ -24,10 +24,10 @@ type CompatibilityResponse struct {
 
 // DashboardStatsResponse represents dashboard statistics response
 type DashboardStatsResponse struct {
-	Status      string                 `json:"status"`
-	Mode        string                 `json:"mode"`
-	Data        DashboardStatsData     `json:"data"`
-	LastUpdated time.Time              `json:"last_updated"`
+	Status      string             `json:"status"`
+	Mode        string             `json:"mode"`
+	Data        DashboardStatsData `json:"data"`
+	LastUpdated time.Time          `json:"last_updated"`
 }
 
 // DashboardStatsData represents dashboard statistics data
@@ -40,10 +40,10 @@ type DashboardStatsData struct {
 
 // AdminDashboardResponse represents admin dashboard data response
 type AdminDashboardResponse struct {
-	Status       string                  `json:"status"`
-	Mode         string                  `json:"mode"`
-	Data         AdminDashboardData      `json:"data"`
-	LastUpdated  time.Time               `json:"last_updated"`
+	Status      string             `json:"status"`
+	Mode        string             `json:"mode"`
+	Data        AdminDashboardData `json:"data"`
+	LastUpdated time.Time          `json:"last_updated"`
 }
 
 // AdminDashboardData represents admin dashboard data
@@ -55,12 +55,12 @@ type AdminDashboardData struct {
 
 // ComplianceHOSRequest represents HOS compliance request
 type ComplianceHOSRequest struct {
-	DriverID    string    `json:"driver_id"`
-	DutyStatus  string    `json:"duty_status"`
-	Timestamp   time.Time `json:"timestamp"`
-	Location    Location  `json:"location"`
-	VehicleID   string    `json:"vehicle_id"`
-	Odometer    int       `json:"odometer"`
+	DriverID   string    `json:"driver_id"`
+	DutyStatus string    `json:"duty_status"`
+	Timestamp  time.Time `json:"timestamp"`
+	Location   Location  `json:"location"`
+	VehicleID  string    `json:"vehicle_id"`
+	Odometer   int       `json:"odometer"`
 }
 
 // ComplianceHOSResponse represents HOS compliance response
@@ -119,22 +119,22 @@ type MLPricingRequest struct {
 
 // MLPricingResponse represents ML pricing suggestion response
 type MLPricingResponse struct {
-	RouteID             string  `json:"route_id"`
-	Date                string  `json:"date"`
-	SuggestedMultiplier string  `json:"suggested_multiplier"`
+	RouteID             string `json:"route_id"`
+	Date                string `json:"date"`
+	SuggestedMultiplier string `json:"suggested_multiplier"`
 }
 
 // MLTrainingRequest represents ML training job request
 type MLTrainingRequest struct {
-	ModelType   string                 `json:"model_type"`
-	Parameters  map[string]interface{} `json:"parameters"`
-	TrainingData TrainingData          `json:"training_data"`
+	ModelType    string                 `json:"model_type"`
+	Parameters   map[string]interface{} `json:"parameters"`
+	TrainingData TrainingData           `json:"training_data"`
 }
 
 // TrainingData represents training data for ML
 type TrainingData struct {
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
 	Features  []string `json:"features"`
 }
 
@@ -163,8 +163,8 @@ type RouteOptimizationResponse struct {
 
 // GetOptimizedRouteResponse represents get optimized route response
 type GetOptimizedRouteResponse struct {
-	ID     string `json:"id"`
-	Status string `json:"status"`
+	ID     string   `json:"id"`
+	Status string   `json:"status"`
 	Route  []string `json:"route,omitempty"`
 }
 

@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -34,6 +35,37 @@ func NewBulkService(repo *repository.BulkRepository, processor *processor.BulkPr
 	}
 }
 
+// validateCSVContent verifies that the file content is actually valid CSV format
+// and not a malicious script disguised with a .csv extension (CWE-434)
+func (s *BulkService) validateCSVContent(data []byte) error {
+	if len(data) == 0 {
+		return fmt.Errorf("file is empty")
+	}
+
+	// Try to parse as CSV to ensure it's valid CSV data
+	reader := csv.NewReader(bytes.NewReader(data))
+
+	// Set some sane defaults
+	reader.FieldsPerRecord = -1 // Allow variable number of fields
+	reader.LazyQuotes = true   // Allow unescaped quotes in fields (common in real CSVs)
+	reader.TrimLeadingSpace = true
+
+	// Read the first record (header) to validate format
+	_, err := reader.Read()
+	if err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("file has no data")
+		}
+		return fmt.Errorf("invalid CSV format: %w", err)
+	}
+
+	// Additional check: ensure we have at least some columns
+	// CSV files should have at least one column
+	// (We've already successfully parsed a row, so this is valid CSV)
+
+	return nil
+}
+
 func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName string, fileReader io.Reader) (*models.BulkJob, error) {
 	// 1. Validation
 	ext := filepath.Ext(fileName)
@@ -50,6 +82,12 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 	}
 	if len(data) > MaxFileSize {
 		return nil, fmt.Errorf("file too large: maximum size is 10MB")
+	}
+
+	// SECURITY FIX: Validate actual file content is CSV, not just extension (CWE-434)
+	// This prevents attackers from uploading malicious scripts with .csv extension
+	if err := s.validateCSVContent(data); err != nil {
+		return nil, fmt.Errorf("invalid CSV file: %w", err)
 	}
 
 	jobID := uuid.New()

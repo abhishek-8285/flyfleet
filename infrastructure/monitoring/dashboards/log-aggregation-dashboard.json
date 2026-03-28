@@ -1,0 +1,211 @@
+{
+  "dashboard": {
+    "title": "FlyFleet Log Analytics",
+    "uid": "flyfleet-log-analytics",
+    "version": 1,
+    "schemaVersion": 38,
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "tags": ["flyfleet", "logs", "loki"],
+    "editable": true,
+    "graphTooltip": 1,
+    "panels": [
+      {
+        "id": 1,
+        "title": "Log Volume by Level",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (level) (rate({app=\"fleet-core\"} |= \"\" [1m]))",
+            "legendFormat": "{{level}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "logs/s", "label": "Rate" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Log Volume by Domain",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (domain) (rate({app=\"fleet-core\"} |= \"\" [1m]))",
+            "legendFormat": "{{domain}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "logs/s", "label": "Rate" },
+          { "format": "short" }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate (ERROR/FATAL logs)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate({app=\"fleet-core\", level=~\"ERROR|FATAL\"} [1m])) / sum(rate({app=\"fleet-core\"} [1m]))",
+            "legendFormat": "Error Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "percentunit", "min": 0, "max": 0.1 },
+          { "format": "short" }
+        ],
+        "alert": {
+          "conditions": [
+            { "evaluator": { "params": [0.01], "type": "gt" }, "operator": { "type": "and" }, "query": { "params": ["A", "5m", "now"] }, "reducer": { "params": [], "type": "avg" }}
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "title": "Top Error Messages (Last 15m)",
+        "type": "table",
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "top(10, sum by (message) (count_over_time({app=\"fleet-core\", level=\"ERROR\"} [15m])))",
+            "format": "table",
+            "refId": "A"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Slow Operations (>100ms)",
+        "type": "log",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "{app=\"fleet-core\"} |= \"duration\" |~ \"(100|1000|5000)ms\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "Authentication Events",
+        "type": "log",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "{app=\"fleet-core\", domain=\"auth\"} |~ \"(login|logout|token|mfa|permission)\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": true
+        }
+      },
+      {
+        "id": 7,
+        "title": "Emergency Incident Logs",
+        "type": "log",
+        "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "{app=\"fleet-core\", domain=\"emergency\"} |~ \"(SOS|incident|alert|escalate|notification)\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true
+        }
+      },
+      {
+        "id": 8,
+        "title": "Recent Exceptions Stack Traces",
+        "type": "log",
+        "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "{app=\"fleet-core\"} |= \"panic\" OR |= \"exception\" OR |= \"stack trace\"",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "wrapLogMessage": true
+        }
+      },
+      {
+        "id": 9,
+        "title": "Log Volume Heatmap (Hourly Pattern)",
+        "type": "heatmap",
+        "gridPos": { "x": 0, "y": 32, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (hour) (count_over_time({app=\"fleet-core\"}[1h]))",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "spectrum",
+              "spectrumConfig": {
+                "colorScheme": "interpolateSpectral",
+                "max": 100000,
+                "min": 0
+              }
+            }
+          }
+        },
+        "options": {
+          "legend": { "displayMode": "none" }
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "app",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(app)",
+          "includeAll": true
+        },
+        {
+          "name": "domain",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(domain)",
+          "includeAll": true
+        },
+        {
+          "name": "level",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(level)",
+          "includeAll": true
+        },
+        {
+          "name": "org_id",
+          "type": "query",
+          "datasource": "Loki",
+          "query": "label_values(org_id)",
+          "includeAll": true
+        }
+      ]
+    }
+  }
+}

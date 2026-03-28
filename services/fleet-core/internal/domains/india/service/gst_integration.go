@@ -33,17 +33,17 @@ func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, orgID uuid.
 
 	// Mock GST Portal API Call
 	compliance := &models.GSTCompliance{
-		ID:                  uuid.New().String(),
-		OrganizationID:      orgID,
-		GSTIN:               gstin,
-		Status:              "active",
-		LegalName:           "Mock Legal Name",
-		Address:             "Mock Address",
-		DateOfRegistration:  time.Now().Add(-365 * 24 * time.Hour),
-		LastUpdated:         time.Now(),
-		ReturnFilingStatus:  "compliant",
-		PaymentStatus:       "compliant",
-		CreatedAt:           time.Now(),
+		ID:                 uuid.New().String(),
+		OrganizationID:     orgID,
+		GSTIN:              gstin,
+		Status:             "active",
+		LegalName:          "Mock Legal Name",
+		Address:            "Mock Address",
+		DateOfRegistration: time.Now().Add(-365 * 24 * time.Hour),
+		LastUpdated:        time.Now(),
+		ReturnFilingStatus: "compliant",
+		PaymentStatus:      "compliant",
+		CreatedAt:          time.Now(),
 	}
 
 	log := &models.IntegrationLog{

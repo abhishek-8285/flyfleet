@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	SystemStatusKey     = "flyfleet:system:status"
-	PoolSheddingKey     = "pool:shedding:low_priority"
-	StatusMaintenance   = "MAINTENANCE"
-	StatusReadOnly      = "READ_ONLY"
-	StatusNormal        = "NORMAL"
+	SystemStatusKey   = "flyfleet:system:status"
+	PoolSheddingKey   = "pool:shedding:low_priority"
+	StatusMaintenance = "MAINTENANCE"
+	StatusReadOnly    = "READ_ONLY"
+	StatusNormal      = "NORMAL"
 )
 
 // systemGuardCache holds the cached system status to avoid Redis roundtrips on every request
@@ -46,7 +46,7 @@ func NewSystemGuard(redisClient *redis.Client) *SystemGuard {
 // getStatus retrieves the status from cache or Redis if the cache is expired
 func (g *SystemGuard) getStatus(ctx context.Context) (string, bool) {
 	now := time.Now()
-	
+
 	g.cache.mu.RLock()
 	if now.Before(g.cache.expiresAt) {
 		status := g.cache.status
@@ -103,7 +103,7 @@ func (g *SystemGuard) Middleware(next http.Handler) http.Handler {
 		}
 
 		isMutation := r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch || r.Method == http.MethodDelete
-		
+
 		if status == StatusMaintenance {
 			// Maintenance blocks mutations (and optionally gets, but prompt says block mutations)
 			// Let's rely on the block below to catch mutations.
@@ -145,7 +145,7 @@ func (g *SystemGuard) LowPriorityShedder(next http.Handler) http.Handler {
 				})
 				return
 			}
-			
+
 			// For everyone else, just a general note or block if it's very low priority
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusTooManyRequests)

@@ -80,12 +80,12 @@ type CreateGovernanceRequest struct {
 }
 
 type GovernanceRequestFilter struct {
-	OrganizationID uuid.UUID               `json:"organization_id"`
-	Type           *GovernanceRequestType  `json:"type"`
+	OrganizationID uuid.UUID                 `json:"organization_id"`
+	Type           *GovernanceRequestType    `json:"type"`
 	Status         []GovernanceRequestStatus `json:"status"`
-	Search         string                  `json:"search"`
-	Page           int                     `json:"page"`
-	PageSize       int                     `json:"page_size"`
+	Search         string                    `json:"search"`
+	Page           int                       `json:"page"`
+	PageSize       int                       `json:"page_size"`
 }
 
 type GovernanceRequestListResponse struct {

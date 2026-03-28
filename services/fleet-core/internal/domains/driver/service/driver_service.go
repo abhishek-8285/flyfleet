@@ -30,7 +30,7 @@ type Repository interface {
 	IncrementStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error
 	GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error)
 	GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error)
-	
+
 	// Mobile App Methods
 	CreateDutyStatusLog(ctx context.Context, log *models.DutyStatusLog) error
 	GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error)
@@ -49,19 +49,31 @@ type Repository interface {
 	// Duty Status Methods
 	EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error
 	GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error)
+
+	// Attendance & Schedule Methods
+	CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error
+	GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error)
+	GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error)
+	UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error
+
+	CreateSchedule(ctx context.Context, schedule *models.DriverSchedule) error
+	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error)
+	GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error)
+	UpdateSchedule(ctx context.Context, schedule *models.DriverSchedule) error
+	DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error
 }
 
 type DriverService struct {
-	repo        Repository
-	logger      *zap.Logger
-	nc          *nats.Conn
-	dutyStatus  *DutyStatusService
+	repo       Repository
+	logger     *zap.Logger
+	nc         *nats.Conn
+	dutyStatus *DutyStatusService
 }
 
 func NewDriverService(repo Repository, logger *zap.Logger, opts ...func(*DriverService)) *DriverService {
 	s := &DriverService{
-		repo:   repo, 
-		logger: logger,
+		repo:       repo,
+		logger:     logger,
 		dutyStatus: NewDutyStatusService(repo, logger),
 	}
 	for _, opt := range opts {
@@ -115,35 +127,35 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 	}
 
 	driver := &models.Driver{
-		ID:                uuid.New().String(),
-		OrgID:             orgID,
-		FirstName:         req.FirstName,
-		LastName:          req.LastName,
-		Email:             req.Email,
-		Phone:             req.Phone,
-		LicenseNumber:     req.LicenseNumber,
-		LicenseType:       &req.LicenseType,
-		LicenseIssueDate:  req.LicenseIssueDate,
-		LicenseExpiry:     req.LicenseExpiry,
-		LicenseAuthority:  req.LicenseAuthority,
-		EmployeeCode:      req.EmployeeCode,
-		AadhaarNumber:     req.AadhaarNumber,
-		PanNumber:         req.PanNumber,
-		DateOfBirth:       req.DateOfBirth,
-		Address:           req.Address,
-		EmergencyContact:  req.EmergencyContact,
-		Status:            "active",
-		EmploymentType:    req.EmploymentType,
-		JoiningDate:       time.Now(),
-		ExperienceYears:   req.ExperienceYears,
-		Rating:            0.0,
-		TotalTrips:        0,
-		TotalDistanceKm:   0.0,
-		TotalHoursDriven:  0.0,
-		BehaviorScore:     100, // Start with perfect score
-		Metadata:          req.Metadata,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		ID:               uuid.New().String(),
+		OrgID:            orgID,
+		FirstName:        req.FirstName,
+		LastName:         req.LastName,
+		Email:            req.Email,
+		Phone:            req.Phone,
+		LicenseNumber:    req.LicenseNumber,
+		LicenseType:      &req.LicenseType,
+		LicenseIssueDate: req.LicenseIssueDate,
+		LicenseExpiry:    req.LicenseExpiry,
+		LicenseAuthority: req.LicenseAuthority,
+		EmployeeCode:     req.EmployeeCode,
+		AadhaarNumber:    req.AadhaarNumber,
+		PanNumber:        req.PanNumber,
+		DateOfBirth:      req.DateOfBirth,
+		Address:          req.Address,
+		EmergencyContact: req.EmergencyContact,
+		Status:           "active",
+		EmploymentType:   req.EmploymentType,
+		JoiningDate:      time.Now(),
+		ExperienceYears:  req.ExperienceYears,
+		Rating:           0.0,
+		TotalTrips:       0,
+		TotalDistanceKm:  0.0,
+		TotalHoursDriven: 0.0,
+		BehaviorScore:    100, // Start with perfect score
+		Metadata:         req.Metadata,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
 	}
 
 	if err := s.repo.Create(ctx, driver); err != nil {
@@ -185,7 +197,7 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 	}
 
 	updates := make(map[string]interface{})
-	
+
 	if req.FirstName != nil {
 		updates["first_name"] = *req.FirstName
 	}
@@ -251,7 +263,7 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()
-		
+
 		if err := s.repo.Update(ctx, id, updates); err != nil {
 			s.logger.Error("failed to update driver", zap.String("driver_id", id), zap.Error(err))
 			return nil, fmt.Errorf("failed to update driver: %w", err)
@@ -315,15 +327,15 @@ func (s *DriverService) AssignVehicle(ctx context.Context, driverID, vehicleID s
 	}
 
 	if err := s.repo.AssignVehicle(ctx, driverID, vehicleID); err != nil {
-		s.logger.Error("failed to assign vehicle to driver", 
-			zap.String("driver_id", driverID), 
-			zap.String("vehicle_id", vehicleID), 
+		s.logger.Error("failed to assign vehicle to driver",
+			zap.String("driver_id", driverID),
+			zap.String("vehicle_id", vehicleID),
 			zap.Error(err))
 		return fmt.Errorf("failed to assign vehicle: %w", err)
 	}
 
-	s.logger.Info("vehicle assigned to driver", 
-		zap.String("driver_id", driverID), 
+	s.logger.Info("vehicle assigned to driver",
+		zap.String("driver_id", driverID),
 		zap.String("vehicle_id", vehicleID))
 	return nil
 }
@@ -342,8 +354,8 @@ func (s *DriverService) UnassignVehicle(ctx context.Context, driverID string) er
 	}
 
 	if err := s.repo.UnassignVehicle(ctx, driverID); err != nil {
-		s.logger.Error("failed to unassign vehicle from driver", 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to unassign vehicle from driver",
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return fmt.Errorf("failed to unassign vehicle: %w", err)
 	}
@@ -384,15 +396,15 @@ func (s *DriverService) UpdateStatus(ctx context.Context, driverID string, statu
 	}
 
 	if err := s.repo.Update(ctx, driverID, updates); err != nil {
-		s.logger.Error("failed to update driver status", 
-			zap.String("driver_id", driverID), 
-			zap.String("status", status), 
+		s.logger.Error("failed to update driver status",
+			zap.String("driver_id", driverID),
+			zap.String("status", status),
 			zap.Error(err))
 		return fmt.Errorf("failed to update driver status: %w", err)
 	}
 
-	s.logger.Info("driver status updated", 
-		zap.String("driver_id", driverID), 
+	s.logger.Info("driver status updated",
+		zap.String("driver_id", driverID),
 		zap.String("status", status))
 	return nil
 }
@@ -411,7 +423,7 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 	}
 
 	newScore := driver.BehaviorScore + scoreChange
-	
+
 	// Ensure score stays within bounds
 	if newScore < 0 {
 		newScore = 0
@@ -420,23 +432,23 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 	}
 
 	scoreChangeActual := newScore - driver.BehaviorScore
-	
+
 	if err := s.repo.UpdateBehaviorScore(ctx, driverID, scoreChangeActual); err != nil {
-		s.logger.Error("failed to update behavior score", 
-			zap.String("driver_id", driverID), 
-			zap.Int("score_change", scoreChange), 
-			zap.String("reason", reason), 
+		s.logger.Error("failed to update behavior score",
+			zap.String("driver_id", driverID),
+			zap.Int("score_change", scoreChange),
+			zap.String("reason", reason),
 			zap.Error(err))
 		return fmt.Errorf("failed to update behavior score: %w", err)
 	}
 
-	s.logger.Info("driver behavior score updated", 
-		zap.String("driver_id", driverID), 
+	s.logger.Info("driver behavior score updated",
+		zap.String("driver_id", driverID),
 		zap.Int("old_score", driver.BehaviorScore),
 		zap.Int("new_score", newScore),
 		zap.Int("score_change", scoreChangeActual),
 		zap.String("reason", reason))
-	
+
 	s.publishEvent("driver.behavior_updated", map[string]interface{}{
 		"driver_id":    driverID,
 		"old_score":    driver.BehaviorScore,
@@ -445,7 +457,7 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 		"reason":       reason,
 		"timestamp":    time.Now(),
 	})
-	
+
 	return nil
 }
 
@@ -462,8 +474,8 @@ func (s *DriverService) GetBehaviorScore(ctx context.Context, driverID string) (
 func (s *DriverService) GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error) {
 	analytics, err := s.repo.GetDriverAnalytics(ctx, driverID)
 	if err != nil {
-		s.logger.Error("failed to get driver analytics", 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to get driver analytics",
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to get driver analytics: %w", err)
 	}
@@ -473,8 +485,8 @@ func (s *DriverService) GetDriverAnalytics(ctx context.Context, driverID string)
 // IncrementDriverStats increments driver statistics after trip completion
 func (s *DriverService) IncrementDriverStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error {
 	if err := s.repo.IncrementStats(ctx, driverID, distanceKm, hoursDriven); err != nil {
-		s.logger.Error("failed to increment driver stats", 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to increment driver stats",
+			zap.String("driver_id", driverID),
 			zap.Float64("distance_km", distanceKm),
 			zap.Float64("hours_driven", hoursDriven),
 			zap.Error(err))
@@ -499,6 +511,7 @@ func (s *DriverService) GetByLicenseNumber(ctx context.Context, licenseNumber st
 func (s *DriverService) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
 	return s.repo.GetActiveDriversForVehicle(ctx, vehicleID)
 }
+
 // Publish satisfies the EventPublisher interface for workers
 func (s *DriverService) Publish(ctx context.Context, topic string, payload interface{}) error {
 	s.publishEvent(topic, payload)
@@ -568,4 +581,167 @@ func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverI
 	}
 
 	return summary, nil
+}
+
+// ============================================================================
+// Attendance & Schedule Methods
+// ============================================================================
+
+// MarkAttendance marks attendance for a driver
+func (s *DriverService) MarkAttendance(ctx context.Context, driverID, orgID uuid.UUID, date time.Time, status string, checkIn, checkOut *time.Time, remarks string) error {
+	// Verify driver belongs to org
+	driver, err := s.repo.GetByID(ctx, driverID.String())
+	if err != nil {
+		return fmt.Errorf("failed to verify driver: %w", err)
+	}
+	if driver == nil || driver.OrgID != orgID.String() {
+		return fmt.Errorf("driver not found or unauthorized")
+	}
+
+	att := &models.DriverAttendance{
+		ID:             uuid.New(),
+		DriverID:       driverID,
+		OrgID:          orgID.String(),
+		AttendanceDate: date,
+		Status:         status,
+		CheckInTime:    checkIn,
+		CheckOutTime:   checkOut,
+		Remarks:        remarks,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+
+	if err := s.repo.CreateAttendance(ctx, att); err != nil {
+		return fmt.Errorf("failed to mark attendance: %w", err)
+	}
+
+	// Publish event for attendance marking
+	s.publishEvent("driver.attendance.marked", map[string]interface{}{
+		"driver_id": driverID,
+		"org_id":    orgID,
+		"date":      date.Format("2006-01-02"),
+		"status":    status,
+	})
+
+	return nil
+}
+
+// GetAttendance retrieves attendance records for a driver
+func (s *DriverService) GetAttendance(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+	// Verify driver belongs to org
+	driver, err := s.repo.GetByID(ctx, driverID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify driver: %w", err)
+	}
+	if driver == nil || driver.OrgID != orgID.String() {
+		return nil, fmt.Errorf("driver not found or unauthorized")
+	}
+
+	attendance, err := s.repo.GetAttendanceByDriver(ctx, driverID, orgID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get attendance: %w", err)
+	}
+
+	return attendance, nil
+}
+
+// SetSchedule sets or updates a driver's weekly schedule
+func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UUID, dayOfWeek int, startTime, endTime string, isWorking bool) error {
+	// Verify driver belongs to org
+	driver, err := s.repo.GetByID(ctx, driverID.String())
+	if err != nil {
+		return fmt.Errorf("failed to verify driver: %w", err)
+	}
+	if driver == nil || driver.OrgID != orgID.String() {
+		return fmt.Errorf("driver not found or unauthorized")
+	}
+
+	// Check if schedule already exists for this day
+	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, orgID)
+	if err != nil {
+		return fmt.Errorf("failed to check existing schedule: %w", err)
+	}
+
+	// Find existing schedule for this day
+	for _, sch := range schedules {
+		if sch.DayOfWeek == dayOfWeek {
+			// Update existing
+			sch.DayOfWeek = dayOfWeek
+			sch.StartTime = startTime
+			sch.EndTime = endTime
+			sch.IsWorking = isWorking
+			sch.UpdatedAt = time.Now()
+
+			if err := s.repo.UpdateSchedule(ctx, sch); err != nil {
+				return fmt.Errorf("failed to update schedule: %w", err)
+			}
+			return nil
+		}
+	}
+
+	// Create new schedule
+	sch := &models.DriverSchedule{
+		ID:        uuid.New(),
+		DriverID:  driverID,
+		OrgID:     orgID.String(),
+		DayOfWeek: dayOfWeek,
+		StartTime: startTime,
+		EndTime:   endTime,
+		IsWorking: isWorking,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := s.repo.CreateSchedule(ctx, sch); err != nil {
+		return fmt.Errorf("failed to create schedule: %w", err)
+	}
+
+	// Publish event for schedule update
+	s.publishEvent("driver.schedule.updated", map[string]interface{}{
+		"driver_id":  driverID,
+		"org_id":     orgID,
+		"day":        dayOfWeek,
+		"start_time": startTime,
+		"end_time":   endTime,
+		"is_working": isWorking,
+	})
+
+	return nil
+}
+
+// GetSchedule retrieves all schedules for a driver
+func (s *DriverService) GetSchedule(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+	// Verify driver belongs to org
+	driver, err := s.repo.GetByID(ctx, driverID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify driver: %w", err)
+	}
+	if driver == nil || driver.OrgID != orgID.String() {
+		return nil, fmt.Errorf("driver not found or unauthorized")
+	}
+
+	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schedules: %w", err)
+	}
+
+	return schedules, nil
+}
+
+// DeleteSchedule deletes a driver's schedule entry
+func (s *DriverService) DeleteSchedule(ctx context.Context, driverID, orgID, scheduleID uuid.UUID) error {
+	// Verify driver belongs to org
+	driver, err := s.repo.GetByID(ctx, driverID.String())
+	if err != nil {
+		return fmt.Errorf("failed to verify driver: %w", err)
+	}
+	if driver == nil || driver.OrgID != orgID.String() {
+		return fmt.Errorf("driver not found or unauthorized")
+	}
+
+	if err := s.repo.DeleteSchedule(ctx, scheduleID, orgID); err != nil {
+		return fmt.Errorf("failed to delete schedule: %w", err)
+	}
+
+	return nil
 }

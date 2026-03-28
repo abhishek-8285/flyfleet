@@ -66,15 +66,15 @@ func TestWorker_ProcessNotification_Success(t *testing.T) {
 			},
 		},
 	}
-	
+
 	mockEmail := providers.NewMockProvider("mock-email")
 	factory := providers.NewProviderFactory(nil, mockEmail, nil, nil)
-	
+
 	w := NewNotificationWorker(repo, factory, logger)
-	
+
 	ctx := context.Background()
 	w.processNotification(ctx, &repo.logs[0])
-	
+
 	if repo.logs[0].Status != models.StatusSent {
 		t.Errorf("Expected status SENT, got %s", repo.logs[0].Status)
 	}
@@ -94,16 +94,16 @@ func TestWorker_ProcessNotification_Retry(t *testing.T) {
 			},
 		},
 	}
-	
+
 	// Provider that always fails
 	failProvider := &failingProvider{name: "fail-sms"}
 	factory := providers.NewProviderFactory(failProvider, nil, nil, nil)
-	
+
 	w := NewNotificationWorker(repo, factory, logger)
-	
+
 	ctx := context.Background()
 	w.processNotification(ctx, &repo.logs[0])
-	
+
 	if repo.logs[0].Status != models.StatusQueued {
 		t.Errorf("Expected status QUEUED for retry, got %s", repo.logs[0].Status)
 	}
@@ -115,6 +115,7 @@ func TestWorker_ProcessNotification_Retry(t *testing.T) {
 type failingProvider struct {
 	name string
 }
+
 func (p *failingProvider) Name() string { return p.name }
 func (p *failingProvider) Send(ctx context.Context, log *models.NotificationLog) (map[string]any, error) {
 	return nil, fmt.Errorf("hard failure")

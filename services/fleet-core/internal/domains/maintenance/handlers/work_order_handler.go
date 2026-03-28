@@ -50,13 +50,17 @@ func (h *WorkOrderHandler) RegisterRoutes(r chi.Router) {
 // ListWorkOrders godoc
 func (h *WorkOrderHandler) ListWorkOrders(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
 
 	query := r.URL.Query()
 	filter := models.WorkOrderFilter{
-		OrganizationID: orgID,
-		Search:         query.Get("search"),
-		SortBy:         query.Get("sort_by"),
-		SortDir:        query.Get("sort_dir"),
+		OrgID:   orgID,
+		Search:  query.Get("search"),
+		SortBy:  query.Get("sort_by"),
+		SortDir: query.Get("sort_dir"),
 	}
 	if filter.SortBy == "" {
 		filter.SortBy = "created_at"
@@ -104,7 +108,16 @@ func (h *WorkOrderHandler) ListWorkOrders(w http.ResponseWriter, r *http.Request
 // CreateWorkOrder godoc
 func (h *WorkOrderHandler) CreateWorkOrder(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "user ID required", nil)
+		return
+	}
 
 	var req models.CreateWorkOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -130,7 +143,13 @@ func (h *WorkOrderHandler) GetWorkOrder(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	wo, err := h.service.GetWorkOrder(r.Context(), id)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
+	wo, err := h.service.GetWorkOrder(r.Context(), id, orgID)
 	if err != nil {
 		h.logger.Error("failed to get work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -152,13 +171,19 @@ func (h *WorkOrderHandler) UpdateWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	var req models.UpdateWorkOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	wo, err := h.service.UpdateWorkOrder(r.Context(), id, &req)
+	wo, err := h.service.UpdateWorkOrder(r.Context(), id, orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to update work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
@@ -180,13 +205,19 @@ func (h *WorkOrderHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	var req models.ChangeStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	if err := h.service.ChangeStatus(r.Context(), id, req.Status); err != nil {
+	if err := h.service.ChangeStatus(r.Context(), id, orgID, req.Status); err != nil {
 		h.logger.Error("failed to change status", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -194,6 +225,7 @@ func (h *WorkOrderHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) 
 
 	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "status updated"})
 }
+
 // CloseWorkOrder handles closing a work order
 func (h *WorkOrderHandler) CloseWorkOrder(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -202,7 +234,13 @@ func (h *WorkOrderHandler) CloseWorkOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := h.service.CloseWorkOrder(r.Context(), id); err != nil {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
+	if err := h.service.CloseWorkOrder(r.Context(), id, orgID); err != nil {
 		h.logger.Error("failed to close work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -219,10 +257,21 @@ func (h *WorkOrderHandler) ApproveWorkOrder(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "user ID required", nil)
+		return
+	}
+
 	role := h.getUserRole(r)
 
-	if err := h.service.ApproveWorkOrder(r.Context(), id, userID, role); err != nil {
+	if err := h.service.ApproveWorkOrder(r.Context(), id, orgID, userID, role); err != nil {
 		h.logger.Error("failed to approve work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -239,8 +288,18 @@ func (h *WorkOrderHandler) RejectWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	userID := h.getUserID(r)
-	
+	if userID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "user ID required", nil)
+		return
+	}
+
 	var req struct {
 		Reason string `json:"reason"`
 	}
@@ -249,7 +308,7 @@ func (h *WorkOrderHandler) RejectWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.service.RejectWorkOrder(r.Context(), id, userID, req.Reason); err != nil {
+	if err := h.service.RejectWorkOrder(r.Context(), id, orgID, userID, req.Reason); err != nil {
 		h.logger.Error("failed to reject work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -266,7 +325,13 @@ func (h *WorkOrderHandler) GetWorkOrderParts(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	wo, err := h.service.GetWorkOrder(r.Context(), id)
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
+	wo, err := h.service.GetWorkOrder(r.Context(), id, orgID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -287,13 +352,19 @@ func (h *WorkOrderHandler) AssignPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	var req models.AssignPartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
-	part, err := h.service.AssignPart(r.Context(), id, &req)
+	part, err := h.service.AssignPart(r.Context(), id, orgID, &req)
 	if err != nil {
 		h.logger.Error("failed to assign part", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
@@ -311,13 +382,19 @@ func (h *WorkOrderHandler) RemovePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	partID, err := uuid.Parse(chi.URLParam(r, "partId"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid part ID", nil)
 		return
 	}
 
-	if err := h.service.RemovePart(r.Context(), id, partID); err != nil {
+	if err := h.service.RemovePart(r.Context(), id, orgID, partID); err != nil {
 		h.logger.Error("failed to remove part", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -329,6 +406,10 @@ func (h *WorkOrderHandler) RemovePart(w http.ResponseWriter, r *http.Request) {
 // GetStats godoc
 func (h *WorkOrderHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
 
 	stats, err := h.service.GetStats(r.Context(), orgID)
 	if err != nil {
@@ -368,8 +449,10 @@ func (h *WorkOrderHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	// Default for development
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure fallback to prevent unauthorized access
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }
 
 func (h *WorkOrderHandler) getUserID(r *http.Request) uuid.UUID {
@@ -380,8 +463,9 @@ func (h *WorkOrderHandler) getUserID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	// Default for development
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure default - user ID must come from validated JWT context
+	h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }
 
 func (h *WorkOrderHandler) getUserRole(r *http.Request) string {
@@ -390,6 +474,7 @@ func (h *WorkOrderHandler) getUserRole(r *http.Request) string {
 			return role
 		}
 	}
-	// Default for development
-	return "admin"
+	// SECURITY FIX: Removed insecure default - role must come from validated JWT context
+	h.logger.Warn("Missing role in context - request likely bypassed authentication middleware")
+	return ""
 }

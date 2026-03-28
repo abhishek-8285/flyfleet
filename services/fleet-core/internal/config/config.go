@@ -11,35 +11,35 @@ import (
 )
 
 type Config struct {
-	Port                    string
-	DatabaseURL             string
-	NatsURL                 string
-	RedisURL                string
-	LogLevel                string
-	JWTSecret               string
-	AuthServiceURL          string
-	AlertServiceURL         string
-	AdminSupportServiceURL  string
-	BillingServiceURL       string
-	TrackingServiceURL      string
-	ReportsServiceURL       string
-	SettingsServiceURL      string
-	GovernanceServiceURL    string
-	AnalyticsServiceURL     string
-	IntegrationsServiceURL  string
-	ComplianceServiceURL    string
-	VehicleServiceURL       string
-	TripServiceURL          string
-	MaintenanceServiceURL   string
-	MLServiceURL            string
-	JWKSURL                 string
-	BillingStorageType      string // "local" or "s3"
-	BillingEngine           string // "premium" or "high_speed"
-	S3Endpoint              string
-	S3Bucket                string
-	S3AccessKey             string
-	S3SecretKey             string
-	S3UseSSL                bool
+	Port                   string
+	DatabaseURL            string
+	NatsURL                string
+	RedisURL               string
+	LogLevel               string
+	JWTSecret              string
+	AuthServiceURL         string
+	AlertServiceURL        string
+	AdminSupportServiceURL string
+	BillingServiceURL      string
+	TrackingServiceURL     string
+	ReportsServiceURL      string
+	SettingsServiceURL     string
+	GovernanceServiceURL   string
+	AnalyticsServiceURL    string
+	IntegrationsServiceURL string
+	ComplianceServiceURL   string
+	VehicleServiceURL      string
+	TripServiceURL         string
+	MaintenanceServiceURL  string
+	MLServiceURL           string
+	JWKSURL                string
+	BillingStorageType     string // "local" or "s3"
+	BillingEngine          string // "premium" or "high_speed"
+	S3Endpoint             string
+	S3Bucket               string
+	S3AccessKey            string
+	S3SecretKey            string
+	S3UseSSL               bool
 }
 
 // Validate checks configuration completeness and returns error if any required field is missing.
@@ -91,7 +91,8 @@ func Load() *Config {
 	v.SetDefault("nats.url", "nats://localhost:4222")
 	v.SetDefault("redis.url", "localhost:6380")
 	v.SetDefault("server.log_level", "info")
-	v.SetDefault("security.jwt_secret", "")
+	// SECURITY FIX: Do NOT set a default for JWT secret - it MUST be provided via env var
+	// v.SetDefault("security.jwt_secret", "") // REMOVED: Insecure default
 	v.SetDefault("services.auth_url", "")
 	v.SetDefault("services.alert_url", "")
 	v.SetDefault("services.admin_support_url", "")

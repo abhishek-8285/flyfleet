@@ -12,6 +12,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// DTO for create organization request (separate from models to prevent mass assignment)
+type createOrganizationRequestDTO struct {
+	Name             string `json:"name" validate:"required"`
+	Domain           string `json:"domain"`
+	DefaultTheme     string `json:"default_theme"`
+	ContactEmail     string `json:"contact_email"`
+	SubscriptionTier string `json:"subscription_tier"`
+}
+
 type OrganizationHandlers struct {
 	service service.OrganizationService
 	logger  *zap.Logger
@@ -31,7 +40,7 @@ func (h *OrganizationHandlers) RegisterRoutes(r chi.Router) {
 		r.Post("/", h.CreateOrganization)
 		r.Delete("/{id}", h.DeleteOrganization)
 	})
-	
+
 	r.Get("/dashboard/stats", h.GetDashboardStats)
 }
 
@@ -46,14 +55,14 @@ func (h *OrganizationHandlers) ListOrganizations(w http.ResponseWriter, r *http.
 		limit = 10
 	}
 	search := query.Get("search")
-	
+
 	orgs, total, err := h.service.GetOrganizations(r.Context(), page, limit, search)
 	if err != nil {
 		h.logger.Error("Failed to list organizations", zap.Error(err))
 		h.errorJSON(w, "Failed to fetch organizations", http.StatusInternalServerError)
 		return
 	}
-	
+
 	h.json(w, map[string]interface{}{
 		"data": orgs,
 		"meta": map[string]interface{}{
@@ -71,7 +80,7 @@ func (h *OrganizationHandlers) GetOrganizationStats(w http.ResponseWriter, r *ht
 		h.errorJSON(w, "Failed to fetch stats", http.StatusInternalServerError)
 		return
 	}
-	
+
 	h.json(w, map[string]interface{}{"data": stats}, http.StatusOK)
 }
 
@@ -87,13 +96,22 @@ func (h *OrganizationHandlers) GetDashboardStats(w http.ResponseWriter, r *http.
 }
 
 func (h *OrganizationHandlers) CreateOrganization(w http.ResponseWriter, r *http.Request) {
-	var req models.CreateOrganizationRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var dto createOrganizationRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.errorJSON(w, "Invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	resp, err := h.service.CreateOrganization(r.Context(), req)
+	// Map DTO to model
+	req := &models.CreateOrganizationRequest{
+		Name:             dto.Name,
+		Domain:           dto.Domain,
+		DefaultTheme:     dto.DefaultTheme,
+		ContactEmail:     dto.ContactEmail,
+		SubscriptionTier: dto.SubscriptionTier,
+	}
+
+	resp, err := h.service.CreateOrganization(r.Context(), *req)
 	if err != nil {
 		h.logger.Error("Failed to create organization", zap.Error(err))
 		h.errorJSON(w, "Failed to create organization", http.StatusInternalServerError)

@@ -331,20 +331,20 @@ const InvoiceTemplate = `<!DOCTYPE html>
 
 // InvoiceTemplateData represents the data for invoice template
 type InvoiceTemplateData struct {
-	InvoiceNumber string
-	CustomerName  string
+	InvoiceNumber   string
+	CustomerName    string
 	CustomerAddress string
-	InvoiceDate   string
-	DueDate       string
-	Status        string
-	StatusClass   string
-	Currency      string
-	Subtotal      string
-	TaxAmount     string
-	AmountPaid    string
-	BalanceDue    string
-	Notes         string
-	ItemsRows     string
+	InvoiceDate     string
+	DueDate         string
+	Status          string
+	StatusClass     string
+	Currency        string
+	Subtotal        string
+	TaxAmount       string
+	AmountPaid      string
+	BalanceDue      string
+	Notes           string
+	ItemsRows       string
 }
 
 // InvoiceService provides PDF generation for invoices

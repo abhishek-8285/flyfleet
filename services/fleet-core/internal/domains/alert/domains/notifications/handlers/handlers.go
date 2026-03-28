@@ -33,15 +33,15 @@ func (h *NotificationHandlers) RegisterRoutes(r chi.Router) {
 		r.Get("/logs/{id}", h.GetLogDetail)
 		r.Post("/send", h.SendNotification)
 		r.Post("/resend/{id}", h.Resend)
-		
+
 		r.Get("/settings", h.GetSettings)
 		r.Put("/settings", h.UpdateSettings)
-		
+
 		r.Get("/preferences", h.ListPreferences)
 		r.Get("/preferences/{id}", h.GetUserPreference)
 		r.Put("/preferences/{id}", h.UpdateUserPreference)
 		r.Get("/preferences/{id}/audit", h.GetPreferenceAudit)
-		
+
 		r.Get("/defaults", h.GetGlobalDefaults)
 		r.Put("/defaults", h.UpdateGlobalDefaults)
 	})
@@ -247,7 +247,7 @@ func (h *NotificationHandlers) UpdateUserPreference(w http.ResponseWriter, r *ht
 
 	// In a real system, we'd get the admin ID from JWT context
 	adminID := uuid.Nil // Placeholder
-	
+
 	if err := h.service.UpdateUserPreference(r.Context(), userId, req, adminID); err != nil {
 		h.logger.Error("Failed to update user preference", zap.Error(err), zap.String("userId", idStr))
 		h.errorJSON(w, "failed to update user preference", http.StatusInternalServerError)

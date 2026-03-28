@@ -70,8 +70,8 @@ func (m *MockTripRepository) GetActiveTripsForVehicle(ctx context.Context, vehic
 	return args.Get(0).([]*models.Trip), args.Error(1)
 }
 
-func (m *MockTripRepository) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
-	args := m.Called(ctx, tenantID, startDate, endDate)
+func (m *MockTripRepository) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+	args := m.Called(ctx, orgID, startDate, endDate)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -86,16 +86,16 @@ func (m *MockTripRepository) GetStats(ctx context.Context) (*models.TripStats, e
 	return args.Get(0).(*models.TripStats), args.Error(1)
 }
 
-func (m *MockTripRepository) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
-	args := m.Called(ctx, tenantID)
+func (m *MockTripRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
+	args := m.Called(ctx, orgID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]models.DriverPerformance), args.Error(1)
 }
 
-func (m *MockTripRepository) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
-	args := m.Called(ctx, tenantID)
+func (m *MockTripRepository) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
+	args := m.Called(ctx, orgID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -203,7 +203,7 @@ func setupTestService(t *testing.T) (*TripService, *MockTripRepository) {
 func TestTripService_Create_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
-	tenantID := "tenant-123"
+	orgID := "tenant-123"
 
 	req := &models.CreateTripRequest{
 		VehicleID:            "vehicle-123",
@@ -224,12 +224,12 @@ func TestTripService_Create_Success(t *testing.T) {
 	mockRepo.On("Create", ctx, mock.Anything).Return(nil)
 	mockRepo.On("CheckOverlappingTrips", ctx, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(false, nil)
 
-	trip, err := service.Create(ctx, tenantID, req)
+	trip, err := service.Create(ctx, orgID, req)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, trip)
 	assert.Equal(t, models.TripStatusCreated, trip.Status)
-	assert.Equal(t, tenantID, trip.TenantID)
+	assert.Equal(t, orgID, trip.OrgID)
 	assert.Equal(t, req.Title, trip.Title)
 	mockRepo.AssertExpectations(t)
 }
@@ -278,9 +278,9 @@ func TestTripService_Start_Success(t *testing.T) {
 	driverID := "driver-123"
 
 	existingTrip := &models.Trip{
-		ID:       tripID,
-		DriverID: &driverID,
-		Status:   models.TripStatusScheduled,
+		ID:             tripID,
+		DriverID:       &driverID,
+		Status:         models.TripStatusScheduled,
 		PermitVerified: true, // Required for starting trip
 		PlannedRoute: []models.Waypoint{
 			{Location: models.Location{Latitude: 37.7749, Longitude: -122.4194}},
@@ -432,12 +432,12 @@ func TestTripService_Complete_Success(t *testing.T) {
 	mockRepo.On("GetByID", ctx, tripID).Return(existingTrip, nil)
 
 	req := &models.CompleteTripRequest{
-		OdometerReading:    10100,
-		FuelLevel:          50.0,
-		TotalDistance:      105.5,
-		FuelUsed:           12.5,
-		IdlingTimeMinutes:  30,
-		PODDocuments:       []models.PODDocument{{Type: "signature", URL: "http://example.com/pod.png"}},
+		OdometerReading:   10100,
+		FuelLevel:         50.0,
+		TotalDistance:     105.5,
+		FuelUsed:          12.5,
+		IdlingTimeMinutes: 30,
+		PODDocuments:      []models.PODDocument{{Type: "signature", URL: "http://example.com/pod.png"}},
 	}
 
 	trip, err := service.Complete(ctx, tripID, driverID, req)
@@ -607,7 +607,7 @@ func TestTripService_GetDriverOffers_Success(t *testing.T) {
 func TestTripService_GetTripSummary_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
-	tenantID := "tenant-123"
+	orgID := "tenant-123"
 	startDate := time.Now().Add(-30 * 24 * time.Hour)
 	endDate := time.Now()
 
@@ -616,9 +616,9 @@ func TestTripService_GetTripSummary_Success(t *testing.T) {
 		CompletedTrips: 90,
 	}
 
-	mockRepo.On("GetTripSummary", ctx, tenantID, startDate, endDate).Return(expectedSummary, nil)
+	mockRepo.On("GetTripSummary", ctx, orgID, startDate, endDate).Return(expectedSummary, nil)
 
-	summary, err := service.GetTripSummary(ctx, tenantID, startDate, endDate)
+	summary, err := service.GetTripSummary(ctx, orgID, startDate, endDate)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, summary)

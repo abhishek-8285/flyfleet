@@ -88,19 +88,22 @@ const LiveMap: React.FC<LiveMapProps> = ({
   const { uiStrings } = useUIStrings("comp_map");
   const [center, setCenter] = useState<[number, number]>([20.5937, 78.9629]); // India center
 
+  // Extract first vehicle location for dependency tracking
+  const firstVehicleLocation = vehicles[0]?.current_location;
+
   useEffect(() => {
     if (trips.length > 0 && trips[0].start_location) {
       setCenter([
         trips[0].start_location.latitude,
         trips[0].start_location.longitude,
       ]);
-    } else if (vehicles.length > 0 && vehicles[0].current_location) {
+    } else if (firstVehicleLocation) {
       setCenter([
-        vehicles[0].current_location.latitude,
-        vehicles[0].current_location.longitude,
+        firstVehicleLocation.latitude,
+        firstVehicleLocation.longitude,
       ]);
     }
-  }, [trips, vehicles.length === 0]); // Re-center only if initializing
+  }, [trips, firstVehicleLocation]); // Re-center only if initializing or first vehicle location changes
 
   return (
     <MapContainer

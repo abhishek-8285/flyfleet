@@ -33,11 +33,11 @@ func (w *FinanceArchiveWorker) Start(ctx context.Context) {
 
 func (w *FinanceArchiveWorker) runRetentionCleanup(ctx context.Context) {
 	w.logger.Info("Starting finance data retention cleanup")
-	
+
 	// 1. Get all retention policies (Mock/Stub for now as we'd need a repository method)
 	// 2. For each org, calculate cutoff dates
 	// 3. Delete or Move to archive table old fuel_logs and expense_reports
-	
+
 	// Example query logic for repository:
 	// DELETE FROM fuel_logs WHERE organization_id = $1 AND transaction_date < $2
 }

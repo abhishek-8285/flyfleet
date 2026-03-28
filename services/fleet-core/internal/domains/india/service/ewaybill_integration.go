@@ -82,7 +82,7 @@ func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, org
 
 func (s *EWayBillIntegrationServiceImpl) FetchEWayBillStatus(ctx context.Context, orgID uuid.UUID, number string) (*models.EWayBill, error) {
 	s.logger.Info("fetching e-way bill status", zap.String("number", number))
-	
+
 	// Mock status fetch
 	bill, err := s.repo.GetEWayBillByNumber(ctx, number)
 	if err != nil {

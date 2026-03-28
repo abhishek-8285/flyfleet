@@ -62,7 +62,6 @@ func (m *MockExchangeRepo) CreateRefreshToken(ctx context.Context, token *models
 	return nil
 }
 
-
 func TestSwitchContextAuthorization(t *testing.T) {
 	logger := zap.NewNop()
 	repo := NewMockExchangeRepo()
@@ -100,14 +99,14 @@ func TestSwitchContextAuthorization(t *testing.T) {
 	// Setup explicitly linked accounts
 	repo.links[parentID] = append(repo.links[parentID], targetID)
 
-	// Since we can't fully mock generateAccessToken (needs real RSA keys), 
-	// we will intercept it at the authorization logic level. 
-	// To do this strictly, we extract the SwitchContext authorization block into a testable unit, 
-	// but here we can just test if the auth check allows it through and panics at issueTokens, 
-	// or we mock the RSA key securely. 
-	
+	// Since we can't fully mock generateAccessToken (needs real RSA keys),
+	// we will intercept it at the authorization logic level.
+	// To do this strictly, we extract the SwitchContext authorization block into a testable unit,
+	// but here we can just test if the auth check allows it through and panics at issueTokens,
+	// or we mock the RSA key securely.
+
 	// Better yet, we can test just the Auth rules directly.
-	
+
 	// Scenario A: Super Admin shadowing (Allowed)
 	isSuperAdmin := adminUser.Role == "super_admin"
 	isLinkedAdmin := repo.IsAccountLinked(context.Background(), adminID, targetID)
@@ -141,7 +140,7 @@ func TestSwitchContextAuthorization(t *testing.T) {
 	if len(repo.events) == 0 {
 		t.Fatalf("Expected SecurityEvent to be logged")
 	}
-	
+
 	lastEvent := repo.events[len(repo.events)-1]
 	if lastEvent.ActorID == nil || *lastEvent.ActorID != parentID {
 		t.Fatalf("Expected event ActorID to be %v, got %v", parentID, lastEvent.ActorID)
@@ -150,7 +149,7 @@ func TestSwitchContextAuthorization(t *testing.T) {
 	if lastEvent.OnBehalfOf == nil || *lastEvent.OnBehalfOf != targetID {
 		t.Fatalf("Expected event OnBehalfOf to be %v, got %v", targetID, lastEvent.OnBehalfOf)
 	}
-	
+
 	// Test passed!
 	logger.Info("Authorization logic for Token Exchange passed")
 }

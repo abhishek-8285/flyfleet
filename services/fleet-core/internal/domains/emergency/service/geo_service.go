@@ -20,14 +20,14 @@ type NearbyResource struct {
 func (s *EmergencyGeoService) EnrichWithNearbyResources(ctx context.Context, lat, lon float64) map[string]interface{} {
 	// In a real production system, this would query a spatial DB (PostGIS) or external Maps API
 	// For this module validation, we simulate finding the nearest resources.
-	
+
 	resources := map[string]interface{}{
 		"nearest_police_station": s.getNearest(lat, lon, "POLICE"),
 		"nearest_hospital":       s.getNearest(lat, lon, "HOSPITAL"),
 		"nearest_fire_station":   s.getNearest(lat, lon, "FIRE_STATION"),
 		"geo_context_enriched":   true,
 	}
-	
+
 	return resources
 }
 

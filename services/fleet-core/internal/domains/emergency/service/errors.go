@@ -9,29 +9,29 @@ var (
 	ErrInvalidIncidentStatus = errors.New("invalid incident status")
 	ErrDuplicateSOS          = errors.New("duplicate SOS - incident already triggered recently")
 	ErrInvalidSeverity       = errors.New("invalid severity level")
-	
+
 	// Status transition errors
-	ErrInvalidStatusTransition = errors.New("invalid status transition")
+	ErrInvalidStatusTransition     = errors.New("invalid status transition")
 	ErrIncidentAlreadyAcknowledged = errors.New("incident already acknowledged")
-	ErrIncidentAlreadyResolved = errors.New("incident already resolved")
-	
+	ErrIncidentAlreadyResolved     = errors.New("incident already resolved")
+
 	// Emergency contact errors
 	ErrNoEmergencyContacts = errors.New("no emergency contacts configured")
 	ErrContactNotFound     = errors.New("emergency contact not found")
 	ErrContactInactive     = errors.New("emergency contact is inactive")
-	
+
 	// Validation errors
-	ErrInvalidCoordinates   = errors.New("invalid GPS coordinates")
-	ErrInvalidLatitude      = errors.New("latitude must be between -90 and 90")
-	ErrInvalidLongitude     = errors.New("longitude must be between -180 and 180")
-	ErrMissingVehicleID     = errors.New("vehicle ID is required")
-	ErrMissingLocation      = errors.New("location is required")
-	
+	ErrInvalidCoordinates = errors.New("invalid GPS coordinates")
+	ErrInvalidLatitude    = errors.New("latitude must be between -90 and 90")
+	ErrInvalidLongitude   = errors.New("longitude must be between -180 and 180")
+	ErrMissingVehicleID   = errors.New("vehicle ID is required")
+	ErrMissingLocation    = errors.New("location is required")
+
 	// Escalation errors
-	ErrEscalationFailed    = errors.New("failed to escalate incident")
-	ErrNotificationFailed  = errors.New("failed to send notification")
-	ErrUnauthorized        = errors.New("unauthorized access to emergency incident")
-	ErrAllProvidersFailed  = errors.New("all notification providers failed")
+	ErrEscalationFailed   = errors.New("failed to escalate incident")
+	ErrNotificationFailed = errors.New("failed to send notification")
+	ErrUnauthorized       = errors.New("unauthorized access to emergency incident")
+	ErrAllProvidersFailed = errors.New("all notification providers failed")
 
 	// Drill errors
 	ErrDrillAlreadyActive = errors.New("a drill is already in progress")

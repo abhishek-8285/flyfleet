@@ -30,7 +30,7 @@ func (s *ReportService) CreateReport(ctx context.Context, report *models.Schedul
 	report.ID = uuid.New()
 	report.Status = "ACTIVE"
 	report.CreatedAt = time.Now()
-	
+
 	userID := s.getUserID(ctx)
 	report.CreatedBy = userID
 	report.UpdatedBy = userID
@@ -63,7 +63,6 @@ func (s *ReportService) ResumeReport(ctx context.Context, id uuid.UUID) error {
 	return s.repo.ResumeReport(ctx, id)
 }
 
-
 // Execution Logic (Simplified for Prototype)
 
 func (s *ReportService) ExecuteReport(ctx context.Context, reportID uuid.UUID) (uuid.UUID, error) {
@@ -95,13 +94,13 @@ func (s *ReportService) ExecuteReport(ctx context.Context, reportID uuid.UUID) (
 	// 3. Enqueue Job
 	if err := s.queue.EnqueueReportGeneration(execID, reportID, userID); err != nil {
 		s.logger.Error("Failed to enqueue report generation task", zap.Error(err))
-		
+
 		// Fail the execution record
 		errMsg := err.Error()
 		if updateErr := s.repo.UpdateExecutionStatus(ctx, execID, "FAILED", &errMsg, nil, userID); updateErr != nil {
 			s.logger.Error("Failed to update execution status to FAILED", zap.Error(updateErr))
 		}
-		
+
 		return uuid.Nil, err
 	}
 

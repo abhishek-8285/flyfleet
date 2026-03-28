@@ -1,0 +1,86 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-verification
+  namespace: flyfleet
+  labels:
+    app: flyfleet
+    component: backup-verification
+spec:
+  # Run daily at 3:00 AM (after backup completes at 2:00 AM)
+  schedule: "0 3 * * *"
+  concurrencyPolicy: "Forbid"  # Don't run concurrent jobs
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  suspend: false  # Set to true to temporarily disable
+
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: flyfleet
+            component: backup-verification
+        spec:
+          restartPolicy: "Never"
+          serviceAccountName: "flyfleet-backup-verifier"
+
+          containers:
+          - name: backup-verifier
+            image: postgres:15-alpine
+            imagePullPolicy: IfNotPresent
+
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Install dependencies
+              apk add --no-cache aws-cli
+
+              # Run verification script
+              /scripts/verify-backup.sh
+
+            env:
+            - name: NAMESPACE
+              value: "flyfleet"
+            - name: POSTGRES_POD
+              value: "fleet-postgres"
+            - name: BACKUP_DIR
+              value: "/backup"
+            - name: S3_BUCKET
+              value: "flyfleet-backups-${AWS_ACCOUNT_ID}"
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            # AWS credentials via IAM role (IRSA)
+
+            volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: backup-volume
+              mountPath: /backup
+              readOnly: true
+
+          volumes:
+          - name: scripts
+            configMap:
+              name: backup-verification-scripts
+              defaultMode: 0755
+          - name: backup-volume
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+
+---
+# Service Account with IAM role attached
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flyfleet-backup-verifier
+  namespace: flyfleet
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::${AWS_ACCOUNT_ID}:role/flyfleet-backup-verifier-${ENVIRONMENT}"
+
+---
+# IAM Role for Backup Verifier (Terraform)
+# See infrastructure/terraform/modules/iam/backup-verifier-policy.tf

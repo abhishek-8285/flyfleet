@@ -54,10 +54,10 @@ func TestMaintenanceTypeConstants(t *testing.T) {
 
 func TestWorkOrderModel_Creation(t *testing.T) {
 	wo := &models.WorkOrder{
-		ID:              uuid.New(),
-		Title:           "Oil Change",
-		Status:          models.WorkOrderStatusOpen,
-		EstimatedCost:   150.00,
+		ID:            uuid.New(),
+		Title:         "Oil Change",
+		Status:        models.WorkOrderStatusOpen,
+		EstimatedCost: 150.00,
 	}
 
 	assert.NotEqual(t, uuid.Nil, wo.ID)
@@ -153,8 +153,8 @@ func TestUpdateWorkOrderRequest_OptionalFields(t *testing.T) {
 	newPriority := models.WorkOrderPriorityHigh
 
 	req := &models.UpdateWorkOrderRequest{
-		Title:         &newTitle,
-		Priority:      &newPriority,
+		Title:    &newTitle,
+		Priority: &newPriority,
 	}
 
 	assert.NotNil(t, req.Title)
@@ -189,9 +189,9 @@ func TestChangeStatusRequest(t *testing.T) {
 
 func TestWorkOrderPartModel(t *testing.T) {
 	part := &models.WorkOrderPart{
-		ID:          uuid.New(),
-		Quantity:    3,
-		TotalCost:   75.00,
+		ID:        uuid.New(),
+		Quantity:  3,
+		TotalCost: 75.00,
 	}
 
 	assert.NotEqual(t, uuid.Nil, part.ID)
@@ -319,9 +319,9 @@ func TestStockRestorationLogic(t *testing.T) {
 
 func TestWorkOrderFilter(t *testing.T) {
 	filter := models.WorkOrderFilter{
-		Status:         []models.WorkOrderStatus{models.WorkOrderStatusOpen, models.WorkOrderStatusInProgress},
-		Priority:       []models.WorkOrderPriority{models.WorkOrderPriorityHigh},
-		Search:         "oil change",
+		Status:   []models.WorkOrderStatus{models.WorkOrderStatusOpen, models.WorkOrderStatusInProgress},
+		Priority: []models.WorkOrderPriority{models.WorkOrderPriorityHigh},
+		Search:   "oil change",
 	}
 
 	assert.Equal(t, 2, len(filter.Status))
@@ -379,10 +379,10 @@ func TestWorkOrderStats(t *testing.T) {
 
 func TestMaintenanceSettings(t *testing.T) {
 	settings := &models.MaintenanceSettings{
-		SLAP1Hours:          4,
-		SLAP2Hours:          24,
-		ApprovalThreshold:   1000.00,
-		AutoAssignEnabled:   true,
+		SLAP1Hours:        4,
+		SLAP2Hours:        24,
+		ApprovalThreshold: 1000.00,
+		AutoAssignEnabled: true,
 	}
 
 	assert.Equal(t, 4, settings.SLAP1Hours)
@@ -397,8 +397,8 @@ func TestMaintenanceSettings(t *testing.T) {
 
 func TestWorkOrderListResponse(t *testing.T) {
 	response := &models.WorkOrderListResponse{
-		Total:    100,
-		Page:     2,
+		Total: 100,
+		Page:  2,
 		WorkOrders: []models.WorkOrder{
 			{ID: uuid.New(), Title: "WO 1"},
 			{ID: uuid.New(), Title: "WO 2"},
@@ -412,7 +412,7 @@ func TestWorkOrderListResponse(t *testing.T) {
 
 func TestInventoryListResponse(t *testing.T) {
 	response := &models.InventoryListResponse{
-		Total:    50,
+		Total: 50,
 		Parts: []models.InventoryPart{
 			{ID: uuid.New(), Name: "Part 1"},
 		},

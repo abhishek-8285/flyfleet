@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
 	"github.com/google/uuid"
-	"github.com/fleet-platform/shared/pkg/logger"
 )
 
 type TripSheetService interface {

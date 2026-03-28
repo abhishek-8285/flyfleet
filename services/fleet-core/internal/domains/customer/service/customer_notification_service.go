@@ -22,7 +22,7 @@ func NewCustomerNotificationService(repo repository.CustomerV2Repository, logger
 
 // NotifyShipmentEvent triggers user notifications (SMS, Email, WhatsApp, Push) based on shipment lifecycle events
 func (s *CustomerNotificationService) NotifyShipmentEvent(ctx context.Context, shipment *models.Shipment, eventType string) error {
-	s.logger.Info("Dispatching notification for shipment event", 
+	s.logger.Info("Dispatching notification for shipment event",
 		zap.String("shipment_id", shipment.ID.String()),
 		zap.String("event_type", eventType),
 	)
@@ -54,7 +54,7 @@ func (s *CustomerNotificationService) NotifyShipmentEvent(ctx context.Context, s
 	// Stub: Send via multiple channels
 	s.dispatchEmail(customer.ContactEmail, message)
 	s.dispatchSMS(customer.ContactPhone, message)
-	
+
 	return nil
 }
 

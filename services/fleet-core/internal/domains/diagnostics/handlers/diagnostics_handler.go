@@ -96,7 +96,7 @@ func (h *DiagnosticsHandler) listRollouts(w http.ResponseWriter, r *http.Request
 
 func (h *DiagnosticsHandler) getDashboardStats(w http.ResponseWriter, r *http.Request) {
 	log.Println("Fetching dashboard stats")
-	
+
 	// Mock response for compilation and endpoint fulfillment
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-
 	"github.com/fleet-platform/shared/pkg/middleware"
-	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -28,7 +27,17 @@ func NewAccountingHandler(accServ *service.AccountingService, logger *zap.Logger
 // ExportLedger handles POST /api/v1/billing/accounting/export/ledger
 func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: user context required", http.StatusUnauthorized)
+		return
+	}
 	system := models.ExternalSystem(r.URL.Query().Get("system"))
 	if system == "" {
 		system = models.SystemQuickBooks
@@ -36,7 +45,13 @@ func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request)
 
 	export, err := h.accountingServ.ExportLedger(r.Context(), orgID, system, userID)
 	if err != nil {
-		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)
+		// SECURITY FIX: Log detailed error but return generic message to client
+		h.logger.Error("ExportLedger failed",
+			zap.Error(err),
+			zap.String("org_id", orgID.String()),
+			zap.String("user_id", userID.String()),
+			zap.String("system", string(system)))
+		h.errorJSON(w, r, "Failed to export ledger", http.StatusInternalServerError)
 		return
 	}
 
@@ -46,7 +61,17 @@ func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request)
 // ExportInvoices handles POST /api/v1/billing/accounting/export/invoices
 func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	userID := h.getUserID(r)
+	if userID == uuid.Nil {
+		h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: user context required", http.StatusUnauthorized)
+		return
+	}
 	system := models.ExternalSystem(r.URL.Query().Get("system"))
 	if system == "" {
 		system = models.SystemQuickBooks
@@ -54,7 +79,13 @@ func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Reques
 
 	export, err := h.accountingServ.ExportInvoices(r.Context(), orgID, system, userID)
 	if err != nil {
-		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)
+		// SECURITY FIX: Log detailed error but return generic message
+		h.logger.Error("ExportInvoices failed",
+			zap.Error(err),
+			zap.String("org_id", orgID.String()),
+			zap.String("user_id", userID.String()),
+			zap.String("system", string(system)))
+		h.errorJSON(w, r, "Failed to export invoices", http.StatusInternalServerError)
 		return
 	}
 
@@ -64,9 +95,18 @@ func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Reques
 // GetExportHistory handles GET /api/v1/billing/accounting/history
 func (h *AccountingHandler) GetExportHistory(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	history, err := h.accountingServ.GetExportHistory(r.Context(), orgID)
 	if err != nil {
-		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)
+		// SECURITY FIX: Log detailed error but return generic message
+		h.logger.Error("GetExportHistory failed",
+			zap.Error(err),
+			zap.String("org_id", orgID.String()))
+		h.errorJSON(w, r, "Failed to get export history", http.StatusInternalServerError)
 		return
 	}
 

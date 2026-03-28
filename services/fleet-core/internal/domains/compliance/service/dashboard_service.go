@@ -42,17 +42,17 @@ func (s *dashboardServiceImpl) GetDashboardMetrics(ctx context.Context, orgID uu
 func (s *dashboardServiceImpl) RefreshMetrics(ctx context.Context, orgID uuid.UUID) error {
 	// Aggregate metrics from various tables
 	// (In real implementation, these would be separate repository counts)
-	
+
 	metrics := &models.ComplianceDashboardMetrics{
 		OrganizationID: orgID,
 		UpdatedAt:      time.Now(),
 	}
-	
-	// Placeholder: 
+
+	// Placeholder:
 	// s.repo.GetActiveDriverCount(ctx, orgID)
 	// s.repo.GetExpiredDocCount(ctx, orgID)
 	// etc.
-	
+
 	metrics.DriversActive = 15
 	metrics.DriversOverLimit = 2
 	metrics.VehiclesWithExpiredDocs = 5

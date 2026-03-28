@@ -41,17 +41,21 @@ func (h *InventoryHandler) RegisterRoutes(r chi.Router) {
 // ListInventory godoc
 func (h *InventoryHandler) ListInventory(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
 
 	query := r.URL.Query()
 	filter := models.InventoryFilter{
-		OrganizationID: orgID,
-		Search:         query.Get("search"),
-		StockLocation:  query.Get("stock_location"),
+		OrgID:         orgID,
+		Search:        query.Get("search"),
+		StockLocation: query.Get("stock_location"),
 	}
 
 	filter.LowStockOnly, _ = strconv.ParseBool(query.Get("low_stock_only"))
 	filter.AvailableOnly, _ = strconv.ParseBool(query.Get("available_only"))
-	
+
 	if page := query.Get("page"); page != "" {
 		filter.Page, _ = strconv.Atoi(page)
 	} else {
@@ -88,6 +92,10 @@ func (h *InventoryHandler) ListInventory(w http.ResponseWriter, r *http.Request)
 // CreatePart godoc
 func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
 
 	var req models.CreateInventoryPartRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,7 +104,7 @@ func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	part := &models.InventoryPart{
-		OrganizationID:    orgID,
+		OrgID:             orgID,
 		PartNumber:        req.PartNumber,
 		Name:              req.Name,
 		Description:       &req.Description,
@@ -123,6 +131,12 @@ func (h *InventoryHandler) GetPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	part, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		h.logger.Error("failed to get part", zap.Error(err))
@@ -142,6 +156,12 @@ func (h *InventoryHandler) UpdatePart(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid part ID", nil)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
@@ -201,6 +221,12 @@ func (h *InventoryHandler) DeletePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return
+	}
+
 	if err := h.repo.Delete(r.Context(), id); err != nil {
 		h.logger.Error("failed to delete part", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -238,6 +264,8 @@ func (h *InventoryHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	// Default for development
-	return uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	// SECURITY FIX: Removed insecure fallback to prevent unauthorized access
+	// The org ID must come from validated JWT context only
+	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	return uuid.Nil
 }

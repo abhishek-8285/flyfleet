@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"github.com/flyfleet/fleet-core-service/internal/pkg/vectorengine"
+	"os"
 )
 
 func main() {
@@ -12,17 +12,17 @@ func main() {
 	white := []int{255, 255, 255}
 
 	data := map[string]interface{}{
-		"Number": "FF-2026-001",
-		"Date": "21-Mar-2026",
-		"Company": "FLYFLEET TECHNOLOGIES",
+		"Number":      "FF-2026-001",
+		"Date":        "21-Mar-2026",
+		"Company":     "FLYFLEET TECHNOLOGIES",
 		"Transporter": "FlyFleet Logistics",
-		"VehicleNo": "DL-01-LH-8783",
-		"LRNo": "LR-998271",
-		"EWayBill": "751590248946",
-		"POS": "Haryana (06)",
-		"Customer": "Ishvar International Textiles",
-		"Total": "1,47,500.00",
-		"Words": "One Lakh Forty-Seven Thousand Five Hundred Only",
+		"VehicleNo":   "DL-01-LH-8783",
+		"LRNo":        "LR-998271",
+		"EWayBill":    "751590248946",
+		"POS":         "Haryana (06)",
+		"Customer":    "Ishvar International Textiles",
+		"Total":       "1,47,500.00",
+		"Words":       "One Lakh Forty-Seven Thousand Five Hundred Only",
 	}
 
 	layout := vectorengine.Layout{
@@ -32,7 +32,7 @@ func main() {
 			{Type: "image", X: 15, Y: 10, W: 20, H: 20, Text: "../../logo1.jpg"},
 			{Type: "text", X: 40, Y: 15, Text: "{{.Company}}", Font: "Arial", Style: "B", Size: 22, Color: white},
 			{Type: "text", X: 40, Y: 25, Text: "Industrial Logistics & Fleet Management", Font: "Arial", Size: 9, Color: white},
-			
+
 			// 2. Verification QR (Top Right)
 			{Type: "rect", X: 175, Y: 8, W: 25, H: 25, FillColor: white},
 			{Type: "qrcode", X: 177, Y: 10, W: 21, Text: "https://verify.flyfleet.com/inv/001"},
@@ -48,7 +48,7 @@ func main() {
 			{Type: "text", X: 10, Y: 70, Text: "CONSIGNEE (SHIP TO)", Font: "Arial", Style: "B", Size: 7, Color: []int{100, 100, 100}},
 			{Type: "rect", X: 10, Y: 73, W: 90, H: 25},
 			{Type: "text", X: 15, Y: 80, Text: "{{.Customer}}", Font: "Arial", Style: "B", Size: 10},
-			
+
 			{Type: "text", X: 110, Y: 70, Text: "BUYER (BILL TO)", Font: "Arial", Style: "B", Size: 7, Color: []int{100, 100, 100}},
 			{Type: "rect", X: 110, Y: 73, W: 90, H: 25},
 			{Type: "text", X: 115, Y: 80, Text: "{{.Customer}}", Font: "Arial", Style: "B", Size: 10},

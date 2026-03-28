@@ -5,48 +5,48 @@ import "errors"
 // Reports V2 service errors
 var (
 	// General errors
-	ErrReportNotFound       = errors.New("report not found")
-	ErrInvalidReport        = errors.New("invalid report")
-	ErrInvalidReportType    = errors.New("invalid report type")
-	ErrInvalidReportStatus  = errors.New("invalid report status")
-	
+	ErrReportNotFound      = errors.New("report not found")
+	ErrInvalidReport       = errors.New("invalid report")
+	ErrInvalidReportType   = errors.New("invalid report type")
+	ErrInvalidReportStatus = errors.New("invalid report status")
+
 	// Report generation errors
 	ErrReportGenerationFailed = errors.New("report generation failed")
 	ErrReportProcessingFailed = errors.New("report processing failed")
 	ErrReportExportFailed     = errors.New("report export failed")
-	
+
 	// Schedule errors
-	ErrScheduleNotFound     = errors.New("schedule not found")
-	ErrInvalidSchedule      = errors.New("invalid schedule")
-	ErrInvalidFrequency     = errors.New("invalid frequency")
+	ErrScheduleNotFound      = errors.New("schedule not found")
+	ErrInvalidSchedule       = errors.New("invalid schedule")
+	ErrInvalidFrequency      = errors.New("invalid frequency")
 	ErrInvalidCronExpression = errors.New("invalid cron expression")
 	ErrScheduleAlreadyActive = errors.New("schedule is already active")
 	ErrScheduleAlreadyPaused = errors.New("schedule is already paused")
-	
+
 	// Execution errors
-	ErrExecutionNotFound    = errors.New("execution not found")
-	ErrExecutionFailed      = errors.New("execution failed")
-	ErrExecutionTimeout     = errors.New("execution timeout")
+	ErrExecutionNotFound       = errors.New("execution not found")
+	ErrExecutionFailed         = errors.New("execution failed")
+	ErrExecutionTimeout        = errors.New("execution timeout")
 	ErrExecutionAlreadyRunning = errors.New("execution already running")
-	
+
 	// Export errors
 	ErrInvalidFormat        = errors.New("invalid export format")
 	ErrFileNotFound         = errors.New("file not found")
 	ErrFileGenerationFailed = errors.New("file generation failed")
-	
+
 	// Queue errors
 	ErrQueueConnectionFailed = errors.New("queue connection failed")
 	ErrQueueEnqueueFailed    = errors.New("failed to enqueue job")
 	ErrQueueDequeueFailed    = errors.New("failed to dequeue job")
-	
+
 	// Settings errors
-	ErrSettingsNotFound     = errors.New("settings not found")
-	ErrInvalidSettings      = errors.New("invalid settings")
-	
+	ErrSettingsNotFound = errors.New("settings not found")
+	ErrInvalidSettings  = errors.New("invalid settings")
+
 	// Validation errors
-	ErrRequiredField        = errors.New("required field is missing")
-	ErrInvalidValue         = errors.New("invalid value")
-	ErrInvalidDateRange     = errors.New("end date must be after start date")
+	ErrRequiredField    = errors.New("required field is missing")
+	ErrInvalidValue     = errors.New("invalid value")
+	ErrInvalidDateRange = errors.New("end date must be after start date")
 )
 
 // ReportsError represents a reports domain error

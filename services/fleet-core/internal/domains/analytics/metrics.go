@@ -7,15 +7,15 @@ import (
 
 // Metrics holds the prometheus metrics for the Analytics Module.
 type Metrics struct {
-	QueryTotal           *prometheus.CounterVec
-	QueryDurationSeconds *prometheus.HistogramVec
-	CacheHitsTotal       *prometheus.CounterVec
-	CacheMissesTotal     *prometheus.CounterVec
-	ActiveJobsGauge      *prometheus.GaugeVec
+	QueryTotal              *prometheus.CounterVec
+	QueryDurationSeconds    *prometheus.HistogramVec
+	CacheHitsTotal          *prometheus.CounterVec
+	CacheMissesTotal        *prometheus.CounterVec
+	ActiveJobsGauge         *prometheus.GaugeVec
 	JobCompletionCounter    *prometheus.CounterVec
 	CrossTenantAccessTotal  *prometheus.CounterVec
 	CacheInvalidationsTotal *prometheus.CounterVec
-	
+
 	// Phase 8 & 9 ML Metrics
 	PredictiveAnalyticCounter *prometheus.CounterVec
 	ModelAccuracyGauge        *prometheus.GaugeVec

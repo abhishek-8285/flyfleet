@@ -77,7 +77,7 @@ func (w *PartitionManager) createPartitionIfMissing(ctx context.Context, t time.
 	year := t.Year()
 	month := int(t.Month())
 	tableName := fmt.Sprintf("telemetry_points_y%04dm%02d", year, month)
-	
+
 	start := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	end := start.AddDate(0, 1, 0)
 
@@ -100,7 +100,7 @@ func (w *PartitionManager) createPartitionIfMissing(ctx context.Context, t time.
 	// 2. Ensure indexes on partition (PostGIS GIST and BRIN)
 	idxGist := fmt.Sprintf("idx_%s_geo", tableName)
 	qGist := fmt.Sprintf(`CREATE INDEX IF NOT EXISTS %s ON %s USING GIST (geo)`, idxGist, tableName)
-	
+
 	idxBrin := fmt.Sprintf("idx_%s_recorded_at_brin", tableName)
 	qBrin := fmt.Sprintf(`CREATE INDEX IF NOT EXISTS %s ON %s USING BRIN (recorded_at)`, idxBrin, tableName)
 

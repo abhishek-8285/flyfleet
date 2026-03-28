@@ -3,6 +3,7 @@ package pdf_test
 import (
 	"bytes"
 	"context"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -12,6 +13,12 @@ import (
 )
 
 func TestPDFGenerator_BinaryValidation(t *testing.T) {
+	// Check if chromium is available
+	_, err := exec.LookPath("chromium")
+	if err != nil {
+		t.Skip("Chromium browser not found - skipping PDF generation test")
+	}
+
 	// Skip in short mode if chromedp takes too long, but we want this to run
 	generator := pdf.NewPDFGenerator(15 * time.Second)
 

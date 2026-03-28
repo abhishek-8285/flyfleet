@@ -73,11 +73,11 @@ func (s *FirmwareRolloutService) EvaluateRolloutSafety(ctx context.Context, roll
 			rate := float64(failureCount) / float64(totalAttempted) * 100.0
 			if rate > float64(*rollout.FailureThreshold) {
 				s.PauseRollout(ctx, rollout.ID)
-				
+
 				if rollout.RollbackEnabled != nil && *rollout.RollbackEnabled {
 					s.TriggerRollback(ctx, rollout.ID)
 				}
-				
+
 				return fmt.Errorf("rollout halted: failure rate %.2f%% exceeded threshold %d%%", rate, *rollout.FailureThreshold)
 			}
 		}

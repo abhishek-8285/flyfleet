@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
@@ -87,24 +88,28 @@ func (r *CreditNoteRepository) Create(ctx context.Context, cn *models.CreditNote
 		return fmt.Errorf("failed to create credit note: %w", err)
 	}
 
-	// Insert items
-	for i := range items {
-		item := &items[i]
-		item.ID = uuid.New()
-		item.CreditNoteID = cn.ID
-		item.CreatedAt = time.Now()
+	// Batch insert items to avoid N+1 queries
+	if len(items) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, item := range items {
+			item.ID = uuid.New()
+			item.CreditNoteID = cn.ID
+			item.CreatedAt = time.Now()
 
-		itemQuery := `
-			INSERT INTO credit_note_items (
-				id, credit_note_id, original_invoice_item_id, description, hsn_code,
-				quantity, unit_price, tax_percent, tax_amount, total_amount
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-
-		_, err = tx.Exec(ctx, itemQuery,
-			item.ID, item.CreditNoteID, item.OriginalInvoiceItemID, item.Description, item.HSNCode,
-			item.Quantity, item.UnitPrice, item.TaxPercent, item.TaxAmount, item.TotalAmount)
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*10+1, i*10+2, i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9, i*10+10))
+			args = append(args,
+				item.ID, item.CreditNoteID, item.OriginalInvoiceItemID, item.Description, item.HSNCode,
+				item.Quantity, item.UnitPrice, item.TaxPercent, item.TaxAmount, item.TotalAmount)
+		}
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO credit_note_items (id, credit_note_id, original_invoice_item_id, description, hsn_code, "+
+				"quantity, unit_price, tax_percent, tax_amount, total_amount) VALUES %s",
+			strings.Join(placeholders, ", "),
+		)
+		_, err = tx.Exec(ctx, batchQuery, args...)
 		if err != nil {
-			return fmt.Errorf("failed to create credit note item: %w", err)
+			return fmt.Errorf("failed to batch insert credit note items: %w", err)
 		}
 	}
 

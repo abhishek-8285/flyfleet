@@ -55,13 +55,13 @@ func (m *MockVehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, re
 	return args.Get(0).(*models.Vehicle), args.Error(1)
 }
 
-func (m *MockVehicleService) DeleteVehicle(ctx context.Context, id uuid.UUID) error {
-	args := m.Called(ctx, id)
+func (m *MockVehicleService) DeleteVehicle(ctx context.Context, id, orgID uuid.UUID) error {
+	args := m.Called(ctx, id, orgID)
 	return args.Error(0)
 }
 
-func (m *MockVehicleService) AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) (*models.Vehicle, error) {
-	args := m.Called(ctx, vehicleID, driverID)
+func (m *MockVehicleService) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) (*models.Vehicle, error) {
+	args := m.Called(ctx, vehicleID, orgID, driverID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -283,9 +283,11 @@ func TestVehicleHandlers_DeleteVehicle_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
 	vehicleID := uuid.New()
-	mockService.On("DeleteVehicle", mock.Anything, vehicleID).Return(nil)
+	orgID := uuid.New()
+	mockService.On("DeleteVehicle", mock.Anything, vehicleID, orgID).Return(nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/vehicles/"+vehicleID.String(), nil)
+	req = req.WithContext(context.WithValue(req.Context(), middleware.OrgIDKey, orgID.String()))
 	rr := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -302,6 +304,7 @@ func TestVehicleHandlers_AssignDriver_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
 	vehicleID := uuid.New()
+	orgID := uuid.New()
 	driverID := uuid.New()
 	reqBody := &models.AssignDriverRequest{
 		DriverID: driverID,
@@ -312,10 +315,11 @@ func TestVehicleHandlers_AssignDriver_Success(t *testing.T) {
 		Status: models.StatusActive,
 	}
 
-	mockService.On("AssignDriver", mock.Anything, vehicleID, driverID).Return(expectedVehicle, nil)
+	mockService.On("AssignDriver", mock.Anything, vehicleID, orgID, driverID).Return(expectedVehicle, nil)
 
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/vehicles/"+vehicleID.String()+"/assign-driver", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.OrgIDKey, orgID.String()))
 	rr := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()

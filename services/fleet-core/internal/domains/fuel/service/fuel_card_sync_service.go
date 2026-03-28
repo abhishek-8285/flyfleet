@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-
 type FuelCardSyncService struct {
 	repo   repository.FuelLogRepository
 	logger *zap.Logger
@@ -23,13 +22,13 @@ func NewFuelCardSyncService(repo repository.FuelLogRepository, logger *zap.Logge
 }
 
 func (s *FuelCardSyncService) SyncTransactions(ctx context.Context, provider models.FuelCardProvider, cardID string) error {
-	s.logger.Info("Syncing fuel card transactions", 
+	s.logger.Info("Syncing fuel card transactions",
 		zap.String("provider", string(provider)),
 		zap.String("card_id", cardID))
 
 	// Mocking integration logic for IndianOil, HPCL, BPCL
 	// In a real system, this would call external APIs or ingest files.
-	
+
 	switch provider {
 	case models.FuelCardProviderIOCL:
 		return s.syncIOCL(ctx, cardID)

@@ -39,22 +39,22 @@ func NewAlertService(
 func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *models.CreateRuleRequest) (*models.AlertRule, error) {
 	// Validate rule type
 	validTypes := map[string]bool{
-		models.AlertTypeOverspeed:          true,
-		models.AlertTypeGeofenceEntry:      true,
-		models.AlertTypeGeofenceExit:       true,
-		models.AlertTypeHarshAcceleration:  true,
-		models.AlertTypeHarshBraking:       true,
-		models.AlertTypeHarshCornering:     true,
-		models.AlertTypeIdleTime:           true,
-		models.AlertTypeFuelTheft:          true,
-		models.AlertTypeLowBattery:         true,
+		models.AlertTypeOverspeed:            true,
+		models.AlertTypeGeofenceEntry:        true,
+		models.AlertTypeGeofenceExit:         true,
+		models.AlertTypeHarshAcceleration:    true,
+		models.AlertTypeHarshBraking:         true,
+		models.AlertTypeHarshCornering:       true,
+		models.AlertTypeIdleTime:             true,
+		models.AlertTypeFuelTheft:            true,
+		models.AlertTypeLowBattery:           true,
 		models.AlertTypeTemperatureExcursion: true,
-		models.AlertTypeAccidentDetected:   true,
-		models.AlertTypeMaintenanceDue:     true,
-		models.AlertTypeDocumentExpiry:     true,
-		models.AlertTypeDriverFatigue:      true,
-		models.AlertTypeADASEvent:          true,
-		models.AlertTypeVehicleOffline:     true,
+		models.AlertTypeAccidentDetected:     true,
+		models.AlertTypeMaintenanceDue:       true,
+		models.AlertTypeDocumentExpiry:       true,
+		models.AlertTypeDriverFatigue:        true,
+		models.AlertTypeADASEvent:            true,
+		models.AlertTypeVehicleOffline:       true,
 	}
 
 	if !validTypes[req.Type] {
@@ -185,11 +185,12 @@ func (s *AlertService) UpdateRule(ctx context.Context, id string, req *models.Up
 		updates["enabled"] = *req.Enabled
 	}
 
-		if len(updates) > 0 {
-			updates["updated_at"] = time.Now()
-			updates["updated_by"] = s.getUserID(ctx)
-	
-			if err := s.repo.UpdateRule(ctx, id, updates); err != nil {			s.logger.Error("failed to update alert rule", zap.String("rule_id", id), zap.Error(err))
+	if len(updates) > 0 {
+		updates["updated_at"] = time.Now()
+		updates["updated_by"] = s.getUserID(ctx)
+
+		if err := s.repo.UpdateRule(ctx, id, updates); err != nil {
+			s.logger.Error("failed to update alert rule", zap.String("rule_id", id), zap.Error(err))
 			return nil, fmt.Errorf("failed to update alert rule: %w", err)
 		}
 	}
@@ -515,7 +516,7 @@ func (s *AlertService) sendAlertNotifications(alert *models.Alert) error {
 func (s *AlertService) formatAlertMessage(alert *models.Alert, templateName string) string {
 	// This would retrieve the template from database and format it
 	// For now, return a basic formatted message
-	return fmt.Sprintf("Alert: %s - Severity: %s - Time: %s", 
+	return fmt.Sprintf("Alert: %s - Severity: %s - Time: %s",
 		alert.Type, alert.Severity, alert.Timestamp.Format("2006-01-02 15:04:05"))
 }
 

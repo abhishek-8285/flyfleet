@@ -53,7 +53,7 @@ func (s *ShipmentAssignmentService) AssignShipment(ctx context.Context, bookingI
 
 	// Update booking status
 	booking.Status = "CONFIRMED"
-	// _ = s.repo.UpdateBooking(ctx, booking) 
+	// _ = s.repo.UpdateBooking(ctx, booking)
 
 	// Publish event logic (e.g., NATS/Kafka)
 	// s.eventBus.Publish("shipment.assigned", shipment)

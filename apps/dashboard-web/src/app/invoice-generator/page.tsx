@@ -29,7 +29,6 @@ interface InvoiceData {
 export default function InvoiceGeneratorPage() {
   const [jsonFile, setJsonFile] = useState<File | null>(null);
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
-  const [preview, setPreview] = useState<string>('');
   const [generating, setGenerating] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [itemCount, setItemCount] = useState(0);

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -45,6 +46,7 @@ func (r *PostgresTelemetryRepository) IngestEvent(ctx context.Context, tx pgx.Tx
 			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
 		) ON CONFLICT DO NOTHING`
 
+	start := time.Now()
 	var err error
 	if tx != nil {
 		_, err = tx.Exec(ctx, q,
@@ -61,6 +63,7 @@ func (r *PostgresTelemetryRepository) IngestEvent(ctx context.Context, tx pgx.Tx
 			event.RecordedAt, event.ReceivedAt,
 		)
 	}
+	metrics.RecordDBQuery(q, time.Since(start))
 	if err != nil {
 		r.logger.Error("failed to ingest telemetry event",
 			zap.String("event_id", event.EventID),
@@ -72,8 +75,10 @@ func (r *PostgresTelemetryRepository) IngestEvent(ctx context.Context, tx pgx.Tx
 
 func (r *PostgresTelemetryRepository) IsDuplicate(ctx context.Context, eventID, deviceID string) (bool, error) {
 	const q = `SELECT 1 FROM telemetry_points WHERE event_id = $1 AND device_id = $2 LIMIT 1`
+	start := time.Now()
 	var dummy int
 	err := r.db.QueryRow(ctx, q, eventID, deviceID).Scan(&dummy)
+	metrics.RecordDBQuery(q, time.Since(start))
 	if err == pgx.ErrNoRows {
 		return false, nil
 	}
@@ -101,9 +106,11 @@ func (r *PostgresTelemetryRepository) GetHistory(ctx context.Context, tenantID u
 		ORDER BY recorded_at DESC
 		LIMIT $5 OFFSET $6`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query,
 		q.VehicleID, tenantID, q.From, q.To, q.PageSize, offset,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +151,9 @@ func (r *PostgresTelemetryRepository) GetNearby(ctx context.Context, tenantID uu
 		ORDER BY vehicle_id, recorded_at DESC`
 
 	since := time.Now().Add(-10 * time.Minute)
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, since, tenantID, q.Lat, q.Lng, q.RadiusM)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +182,7 @@ func (r *PostgresTelemetryRepository) GetLatestByVehicle(ctx context.Context, te
 		ORDER BY recorded_at DESC
 		LIMIT 1`
 
+	start := time.Now()
 	var e models.TelemetryEvent
 	err := r.db.QueryRow(ctx, query, vehicleID, tenantID).Scan(
 		&e.EventID, &e.VehicleID, &e.DeviceID, &e.TenantID,
@@ -180,6 +190,7 @@ func (r *PostgresTelemetryRepository) GetLatestByVehicle(ctx context.Context, te
 		&e.FuelLevel, &e.Odometer, &e.EventType, &e.SequenceNo,
 		&e.RecordedAt, &e.ReceivedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -205,6 +216,7 @@ func (r *PostgresTelemetryRepository) BulkIngest(ctx context.Context, events []m
 		}
 	}
 
+	start := time.Now()
 	_, err := r.db.CopyFrom(ctx,
 		pgx.Identifier{"telemetry_points"},
 		[]string{
@@ -215,6 +227,8 @@ func (r *PostgresTelemetryRepository) BulkIngest(ctx context.Context, events []m
 		},
 		pgx.CopyFromRows(rows),
 	)
+	metrics.RecordDBQuery("COPY", time.Since(start)) // We could pass table name as second arg
+	// Since CopyFrom doesn't have a single SQL string, we manually record with generic label
 
 	if err != nil {
 		r.logger.Error("failed bulk ingestion", zap.Int("count", len(events)), zap.Error(err))

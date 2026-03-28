@@ -32,7 +32,7 @@ func NewDashboardService(repo *repository.DiagnosticsRepository, redisCache *cac
 func (s *DashboardService) GetDashboardMetrics(ctx context.Context) (*DashboardMetrics, error) {
 	// In a full implementation, this queries the views `device_health_summary` and `devices` directly.
 	// For compilation completeness, returning a constructed struct representing standard values.
-	
+
 	metrics := &DashboardMetrics{
 		TotalDevices:    1500,
 		OnlineDevices:   1350,
@@ -41,11 +41,11 @@ func (s *DashboardService) GetDashboardMetrics(ctx context.Context) (*DashboardM
 		CriticalDevices: 15,
 		ActiveRollouts:  2,
 		FirmwareDistro: map[string]int{
-			"v1.0.0": 500,
-			"v1.1.2": 950,
+			"v1.0.0":      500,
+			"v1.1.2":      950,
 			"v2.0.0-beta": 50,
 		},
 	}
-	
+
 	return metrics, nil
 }

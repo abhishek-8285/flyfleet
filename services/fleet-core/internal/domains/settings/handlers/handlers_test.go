@@ -12,9 +12,18 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
 	"github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+// testAdminRoleMiddleware injects an admin role into the request context for tests.
+func testAdminRoleMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), ctxkeys.RoleKey, "admin")
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 // Mock Repo duplication for handlers test
 type MockRepo struct {
@@ -130,7 +139,7 @@ func TestUpdatePlatformSettings_Integration(t *testing.T) {
 	// Router with Middleware
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/platform", h.UpdatePlatformSettings)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	// User ID
 	userID := uuid.New()
@@ -188,7 +197,7 @@ func TestGetSettingsExport_ReturnsSnapshot(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/export", h.GetSettingsExport)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	req := httptest.NewRequest(http.MethodGet, "/settings/export", nil)
 	rr := httptest.NewRecorder()
@@ -218,7 +227,7 @@ func TestImportSettings_ReturnsResult(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/import", h.ImportSettings)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	payload := map[string]any{
 		"platform_settings": map[string]any{
@@ -263,7 +272,7 @@ func TestGetAuditLogs_ReturnsFilteredList(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/audit", h.GetAuditLogs)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	req := httptest.NewRequest(http.MethodGet, "/settings/audit?entity_type=settings_import&limit=20&offset=0", nil)
 	rr := httptest.NewRecorder()
@@ -294,7 +303,7 @@ func TestUpdatePlatformSettings_InvalidPayloadReturnsBadRequest(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/platform", h.UpdatePlatformSettings)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	payload := map[string]string{
 		"system_name":      "Invalid Email System",
@@ -321,7 +330,7 @@ func TestUpdateSystemLimits_NegativeRateLimitReturnsBadRequest(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/limits", h.UpdateSystemLimits)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	payload := map[string]any{
 		"api_rate_limit": -1,
@@ -347,7 +356,7 @@ func TestImportSettings_InvalidPayloadReturnsBadRequest(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/import", h.ImportSettings)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	req := httptest.NewRequest(http.MethodPost, "/settings/import", bytes.NewBufferString(`{invalid`))
 	req.Header.Set("Content-Type", "application/json")
@@ -368,7 +377,7 @@ func TestImportSettings_DuplicateFeatureFlagKeyReturnsBadRequest(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/import", h.ImportSettings)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	payload := map[string]any{
 		"feature_flags": []map[string]any{
@@ -396,7 +405,7 @@ func TestGetAuditLogs_InvalidLimitReturnsBadRequest(t *testing.T) {
 
 	router := http.NewServeMux()
 	router.HandleFunc("/settings/audit", h.GetAuditLogs)
-	handler := middleware.UserContextMiddleware(router)
+	handler := testAdminRoleMiddleware(middleware.UserContextMiddleware(router))
 
 	req := httptest.NewRequest(http.MethodGet, "/settings/audit?limit=abc", nil)
 	rr := httptest.NewRecorder()

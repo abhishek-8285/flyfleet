@@ -42,15 +42,15 @@ type RouteOptimizationServiceImpl struct {
 // NewRouteOptimizationService creates a new instance of RouteOptimizationService
 func NewRouteOptimizationService(repo repository.RouteOptimizationRepository, osrmURL string) *RouteOptimizationServiceImpl {
 	distanceProvider := &OSRMDistanceProvider{
-		BaseURL: osrmURL,
+		BaseURL:  osrmURL,
 		Fallback: &HaversineDistanceProvider{},
 	}
-	
+
 	s := &RouteOptimizationServiceImpl{
 		repo:             repo,
 		distanceProvider: distanceProvider,
 	}
-	
+
 	// Upgrade to ClarkeWrightSolver for better savings-based routing
 	s.solver = &ClarkeWrightSolver{Service: s}
 	s.validationEngine = &DefaultValidationEngine{Service: s}
@@ -402,7 +402,7 @@ func (s *RouteOptimizationServiceImpl) performNearestNeighborOptimization(ctx co
 				// PHASE 2 & 3: Check road restrictions for the destination at arrivalTime
 				// For the greedy search, we use a preliminary arrivalTime check
 				// We'll calculate the accurate arrivalTime after choosing the best stop.
-				
+
 				dist, travelTime, _ := s.distanceProvider.GetDistanceAndTime(ctx, vLoc, stopLoc, &request.Vehicles[vIdx])
 				if dist < minDist {
 					minDist = dist
@@ -566,7 +566,7 @@ func (s *RouteOptimizationServiceImpl) isVehicleAllowedOnRoad(ctx context.Contex
 					return false
 				}
 			}
-			
+
 			if rst.RestrictionType == models.RestrictionNoEntry {
 				return false
 			}
@@ -671,11 +671,11 @@ func (s *RouteOptimizationServiceImpl) clusterStops(stops []models.Stop, k int) 
 	}
 
 	clusters := make(map[int][]models.Stop)
-	
+
 	// Limited iterations for performance
 	for iter := 0; iter < 10; iter++ {
 		newClusters := make(map[int][]models.Stop)
-		
+
 		// 2. Assign stops to nearest centroid
 		for _, stop := range stops {
 			minDist := math.MaxFloat64
@@ -776,7 +776,7 @@ func (s *RouteOptimizationServiceImpl) RecalculateRoute(ctx context.Context, res
 		},
 		Stops: uncompletedStops,
 	}
-	
+
 	// Copy vehicle profile details if found in original request
 	for _, v := range request.Vehicles {
 		if v.ID == vehicleID {

@@ -247,18 +247,19 @@ func (r *RouteOptimizationRepositoryImpl) CreateOptimizationResult(ctx context.C
 // GetOptimizationResult retrieves an optimization result by ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationResult(ctx context.Context, id string) (*models.RouteOptimizationResult, error) {
 	query := `
-		SELECT id, request_id, optimization_time, total_distance, total_time,
-		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
-		       created_at
-		FROM route_optimization_results
-		WHERE id = $1
+		SELECT r.id, r.request_id, req.organization_id, r.optimization_time, r.total_distance, r.total_time,
+		       r.total_cost, r.total_vehicles_used, r.total_stops, r.routes, r.performance_metrics,
+		       r.created_at
+		FROM route_optimization_results r
+		JOIN route_optimization_requests req ON r.request_id = req.id
+		WHERE r.id = $1
 	`
 
 	var result models.RouteOptimizationResult
 	var routesJSON, metricsJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&result.ID, &result.RequestID, &result.OptimizationTime,
+		&result.ID, &result.RequestID, &result.OrganizationID, &result.OptimizationTime,
 		&result.TotalDistance, &result.TotalTime, &result.TotalCost,
 		&result.TotalVehiclesUsed, &result.TotalStops, &routesJSON, &metricsJSON,
 		&result.CreatedAt,
@@ -284,12 +285,13 @@ func (r *RouteOptimizationRepositoryImpl) GetOptimizationResult(ctx context.Cont
 // GetOptimizationResultByRequestID retrieves an optimization result by request ID
 func (r *RouteOptimizationRepositoryImpl) GetOptimizationResultByRequestID(ctx context.Context, requestID string) (*models.RouteOptimizationResult, error) {
 	query := `
-		SELECT id, request_id, optimization_time, total_distance, total_time,
-		       total_cost, total_vehicles_used, total_stops, routes, performance_metrics,
-		       created_at
-		FROM route_optimization_results
-		WHERE request_id = $1
-		ORDER BY created_at DESC
+		SELECT r.id, r.request_id, req.organization_id, r.optimization_time, r.total_distance, r.total_time,
+		       r.total_cost, r.total_vehicles_used, r.total_stops, r.routes, r.performance_metrics,
+		       r.created_at
+		FROM route_optimization_results r
+		JOIN route_optimization_requests req ON r.request_id = req.id
+		WHERE r.request_id = $1
+		ORDER BY r.created_at DESC
 		LIMIT 1
 	`
 
@@ -297,7 +299,7 @@ func (r *RouteOptimizationRepositoryImpl) GetOptimizationResultByRequestID(ctx c
 	var routesJSON, metricsJSON []byte
 
 	err := r.db.QueryRow(ctx, query, requestID).Scan(
-		&result.ID, &result.RequestID, &result.OptimizationTime,
+		&result.ID, &result.RequestID, &result.OrganizationID, &result.OptimizationTime,
 		&result.TotalDistance, &result.TotalTime, &result.TotalCost,
 		&result.TotalVehiclesUsed, &result.TotalStops, &routesJSON, &metricsJSON,
 		&result.CreatedAt,

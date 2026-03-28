@@ -22,12 +22,12 @@ type UniversalRenderData struct {
 	CustomerEmail   string `json:"customer_email"`
 
 	// Invoice Metadata
-	InvoiceNumber string    `json:"invoice_number"`
-	InvoiceDate   string    `json:"invoice_date"`
-	DueDate       string    `json:"due_date"`
-	Status        string    `json:"status"`
-	Currency      string    `json:"currency"`
-	PlaceOfSupply string    `json:"place_of_supply"`
+	InvoiceNumber string `json:"invoice_number"`
+	InvoiceDate   string `json:"invoice_date"`
+	DueDate       string `json:"due_date"`
+	Status        string `json:"status"`
+	Currency      string `json:"currency"`
+	PlaceOfSupply string `json:"place_of_supply"`
 
 	// Line Items
 	Items []RenderItem `json:"items"`

@@ -32,13 +32,13 @@ func (s *ProviderHealthService) RecordFailure(ctx context.Context, providerName 
 func (s *ProviderHealthService) recordAttempt(ctx context.Context, providerName string, success bool) {
 	key := fmt.Sprintf("emergency:provider_health:%s", providerName)
 	pipe := s.redis.Pipeline()
-	
+
 	if success {
 		pipe.Incr(ctx, key+":success")
 	} else {
 		pipe.Incr(ctx, key+":failure")
 	}
-	
+
 	// Keep a list of last 20 attempts for rolling failure rate
 	listKey := key + ":history"
 	outcome := "1"
@@ -48,7 +48,7 @@ func (s *ProviderHealthService) recordAttempt(ctx context.Context, providerName 
 	pipe.LPush(ctx, listKey, outcome)
 	pipe.LTrim(ctx, listKey, 0, 19)
 	pipe.Set(ctx, key+":last_attempt", time.Now().Format(time.RFC3339), 0)
-	
+
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		s.logger.Error("Failed to record provider attempt in Redis", zap.String("provider", providerName), zap.Error(err))
@@ -71,8 +71,8 @@ func (s *ProviderHealthService) IsHealthy(ctx context.Context, providerName stri
 
 	failureRate := float64(failures) / float64(len(history))
 	if failureRate >= 0.5 {
-		s.logger.Warn("Provider marked UNHEALTHY due to high failure rate", 
-			zap.String("provider", providerName), 
+		s.logger.Warn("Provider marked UNHEALTHY due to high failure rate",
+			zap.String("provider", providerName),
 			zap.Float64("failure_rate", failureRate))
 		return false
 	}

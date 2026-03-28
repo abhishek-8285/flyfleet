@@ -76,12 +76,12 @@ func TestExportService_ProcessExportRequest_Compliance(t *testing.T) {
 	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, orgID, models.RequestStatusCompleted, mock.Anything, mock.Anything).Return(nil)
 	mockRepo.On("GetSettings", mock.Anything, orgID).Return(&models.GovernanceSettings{MaskingRules: json.RawMessage("{}")}, nil)
 	mockRepo.On("CreateExport", mock.Anything, mock.Anything).Return(nil)
-	
+
 	// Phase 5 & 6 expectations
 	mockRepo.On("SaveExportLineage", mock.Anything, mock.MatchedBy(func(l *models.ExportLineage) bool {
 		return l.RequestID == requestID && l.TableName == "aggregated_data"
 	})).Return(nil)
-	
+
 	mockRepo.On("SaveComplianceReport", mock.Anything, mock.MatchedBy(func(r *models.ComplianceReport) bool {
 		return r.RequestID == requestID && r.ExportChecksum == "sha256:test"
 	})).Return(nil)

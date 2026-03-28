@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,7 +23,9 @@ func (r *TrainingRepository) CreateModule(ctx context.Context, module *models.Tr
 	if module.ID == "" {
 		module.ID = uuid.New().String()
 	}
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query, module.ID, module.Name, module.Description)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -39,10 +42,12 @@ func (r *TrainingRepository) CreateRecord(ctx context.Context, record *models.Tr
 		record.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		record.ID, record.DriverID, record.ModuleID,
 		record.CompletedAt, record.CertificateURL, record.CreatedAt,
 	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -52,7 +57,9 @@ func (r *TrainingRepository) GetRecordsByDriverID(ctx context.Context, driverID 
 		FROM driver_training_records
 		WHERE driver_id = $1`
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}

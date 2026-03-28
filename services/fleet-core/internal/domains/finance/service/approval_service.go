@@ -29,7 +29,7 @@ func (s *ApprovalService) InitiateApproval(ctx context.Context, entityID, entity
 	}
 
 	if config == nil {
-		s.logger.Info("No specific approval config found, falling back to basic approval", 
+		s.logger.Info("No specific approval config found, falling back to basic approval",
 			zap.String("entity_type", entityType), zap.Float64("amount", amount))
 		return nil
 	}

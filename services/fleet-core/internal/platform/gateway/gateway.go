@@ -41,7 +41,7 @@ func (g *Gateway) LoggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rw, r)
-		
+
 		g.logger.Info("request processed",
 			zap.String("request_id", r.Header.Get("X-Request-ID")),
 			zap.String("method", r.Method),

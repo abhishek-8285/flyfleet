@@ -16,18 +16,18 @@ import (
 )
 
 type EmergencyHandlers struct {
-	service        *service.EmergencyService
+	service          *service.EmergencyService
 	analyticsService *service.EmergencyAnalyticsService
-	logger         *zap.Logger
-	validator      *validator.Validate
+	logger           *zap.Logger
+	validator        *validator.Validate
 }
 
 func NewEmergencyHandlers(s *service.EmergencyService, sa *service.EmergencyAnalyticsService, logger *zap.Logger) *EmergencyHandlers {
 	return &EmergencyHandlers{
-		service:        s,
+		service:          s,
 		analyticsService: sa,
-		logger:         logger,
-		validator:      validator.New(),
+		logger:           logger,
+		validator:        validator.New(),
 	}
 }
 
@@ -43,18 +43,19 @@ func (h *EmergencyHandlers) RegisterRoutes(r chi.Router) {
 	r.Post("/incidents/{id}/media", h.UploadMedia)
 	r.Post("/incidents/{id}/feedback", h.SubmitDriverFeedback)
 	r.Get("/incidents/{id}/timeline", h.GetIncidentTimeline)
-	
+
 	// Analytics
 	r.Get("/analytics", h.GetIncidentAnalytics)
 	r.Get("/analytics/dashboard", h.GetSafetyDashboard)
-	
+
 	// Search & Export
 	r.Get("/incidents/search", h.SearchIncidents)
 	r.Get("/incidents/export", h.ExportIncidents)
-	
+
 	// Administrative commands
 	r.Group(func(r chi.Router) {
-		// r.Use(auth.RequireAdmin) // Placeholder for Admin middleware
+		// Require admin or super_admin role for fleet-wide administrative actions
+		r.Use(middleware.RequireRole(h.logger, "admin", "super_admin"))
 		r.Post("/fleet-halt", h.FleetHalt)
 		r.Post("/fleet-resume", h.FleetResume)
 		r.Post("/contacts", h.CreateContact)
@@ -130,7 +131,7 @@ func (h *EmergencyHandlers) Export(w http.ResponseWriter, r *http.Request) {
 	if format == "csv" {
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=incidents_export_%s.csv", time.Now().Format("20060102")))
-		
+
 		fmt.Fprintf(w, "ID,VehicleID,Timestamp,Status,Severity,Type,Latitude,Longitude,Address\n")
 		for _, inc := range incidents {
 			addr := ""
@@ -187,8 +188,13 @@ func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Requ
 
 	// Convert to CreateSOSRequest
 	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	h.logger.Info("Triggering AIS140 SOS", zap.String("org_id", orgID.String()))
-	
+
 	createReq := models.CreateSOSRequest{
 		DeviceID:     req.DeviceID,
 		VehicleID:    req.VehicleID,
@@ -230,11 +236,9 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				orgID = id
-			}
-		}
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
 	}
 	incident, err := h.service.TriggerSOS(r.Context(), req)
 	if err != nil {
@@ -252,6 +256,11 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmergencyHandlers) ListActiveIncidents(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	incidents, err := h.service.ListActiveIncidents(r.Context(), orgID)
 	if err != nil {
 		h.logger.Error("Failed to list incidents", zap.Error(err))
@@ -279,21 +288,7 @@ func (h *EmergencyHandlers) AcknowledgeIncident(w http.ResponseWriter, r *http.R
 	}
 
 	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
-		if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				orgID = id
-			}
-		}
-	}
 	userID := middleware.GetUserID(r.Context())
-	if userID == uuid.Nil {
-		if headerID := r.Header.Get("X-User-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				userID = id
-			}
-		}
-	}
 	h.logger.Info("Context info for acknowledge", zap.String("org_id", orgID.String()), zap.String("user_id", userID.String()))
 
 	if err := h.service.AcknowledgeIncident(r.Context(), id, orgID, userID, req.Notes); err != nil {
@@ -323,21 +318,7 @@ func (h *EmergencyHandlers) ResolveIncident(w http.ResponseWriter, r *http.Reque
 	}
 
 	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
-		if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				orgID = id
-			}
-		}
-	}
 	userID := middleware.GetUserID(r.Context())
-	if userID == uuid.Nil {
-		if headerID := r.Header.Get("X-User-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				userID = id
-			}
-		}
-	}
 	status := models.SOSStatus(req.Status)
 	h.logger.Info("Context info for resolve", zap.String("org_id", orgID.String()), zap.String("user_id", userID.String()), zap.String("status", string(status)))
 
@@ -359,6 +340,11 @@ func (h *EmergencyHandlers) GetIncident(w http.ResponseWriter, r *http.Request) 
 	}
 
 	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	incident, err := h.service.GetIncident(r.Context(), id, orgID)
 	if err != nil {
 		h.logger.Error("Failed to get incident", zap.Error(err))
@@ -387,7 +373,17 @@ func (h *EmergencyHandlers) MarkAsFalseAlarm(w http.ResponseWriter, r *http.Requ
 	json.NewDecoder(r.Body).Decode(&req)
 
 	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
+	}
 	userID := middleware.GetUserID(r.Context())
+	if userID == uuid.Nil {
+		h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: user context required", http.StatusUnauthorized)
+		return
+	}
 	if err := h.service.ResolveIncident(r.Context(), id, orgID, userID, req.Notes, models.StatusFalseAlarm); err != nil {
 		h.logger.Error("Failed to mark as false alarm", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -444,13 +440,6 @@ func (h *EmergencyHandlers) GetSafetyDashboard(w http.ResponseWriter, r *http.Re
 
 func (h *EmergencyHandlers) GetIncidentAnalytics(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
-		if headerID := r.Header.Get("X-Organization-ID"); headerID != "" {
-			if id, err := uuid.Parse(headerID); err == nil {
-				orgID = id
-			}
-		}
-	}
 
 	analytics, err := h.analyticsService.GetIncidentAnalytics(r.Context(), orgID)
 	if err != nil {
@@ -470,7 +459,9 @@ func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Reque
 func (h *EmergencyHandlers) ExportIncidents(w http.ResponseWriter, r *http.Request) {
 	// Dummy export for now
 	format := r.URL.Query().Get("format")
-	if format == "" { format = "CSV" }
+	if format == "" {
+		format = "CSV"
+	}
 	writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Export " + format + " initiated", "status": "PENDING"})
 }
 
@@ -594,22 +585,21 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// SECURITY: Require org_id from authenticated context ONLY (prevent spoofing)
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		if id, err := uuid.Parse(req.OrgID); err == nil {
-			orgID = id
-		} else {
-			http.Error(w, "Organization ID required", http.StatusBadRequest)
-			return
-		}
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		return
 	}
 
+	// SECURITY FIX: Do NOT accept org_id from request body - force use of authenticated org
 	sosReq := models.CreateSOSRequest{
-		OrgID:        orgID,
-		VehicleID:    req.VehicleID,
-		Latitude:     req.Latitude,
-		Longitude:    req.Longitude,
-		IncidentType: models.IncidentType(req.IncidentType),
+		OrgID:          orgID,
+		VehicleID:      req.VehicleID,
+		Latitude:       req.Latitude,
+		Longitude:      req.Longitude,
+		IncidentType:   models.IncidentType(req.IncidentType),
 		SimulationMode: true,
 	}
 
@@ -623,9 +613,10 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 	h.logger.Info("Drill simulation completed", zap.String("incident_id", incident.ID.String()),
 		zap.String("org_id", orgID.String()))
 	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
-		"status":     "drill_triggered",
-		"incident_id": incident.ID,
-		"simulation": true,
+		"status":       "drill_triggered",
+		"incident_id":  incident.ID,
+		"simulation":   true,
+		"organization": orgID.String(),
 	})
 }
 
@@ -637,10 +628,10 @@ func (h *EmergencyHandlers) GetIncidentTimeline(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	orgIDStr := r.Header.Get("X-Organization-ID")
-	orgID, err := uuid.Parse(orgIDStr)
-	if err != nil {
-		h.respondWithError(w, http.StatusUnauthorized, "Missing or invalid organization ID")
+	orgID := middleware.GetOrgID(r.Context())
+	if orgID == uuid.Nil {
+		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.respondWithError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
 

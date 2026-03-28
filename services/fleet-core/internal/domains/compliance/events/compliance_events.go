@@ -23,20 +23,20 @@ func NewTripEventRouter(repo repository.ComplianceRepository) TripEventRouter {
 }
 
 func (e *tripEventRouterImpl) SecureTripEvent(ctx context.Context, event *models.TripEvent) error {
-	// Chain integrity: Generate checksum based on Indian Trip Events 
+	// Chain integrity: Generate checksum based on Indian Trip Events
 	// (MoRTH requirement for non-repudiation)
-	
+
 	prevChecksum := "0000000000000000000000000000000000000000000000000000000000000000" // Default
-	
-	currentData := fmt.Sprintf("%s:%s:%s:%s", 
+
+	currentData := fmt.Sprintf("%s:%s:%s:%s",
 		event.TripID, event.EventType, event.Location, event.Timestamp.Format("2006-01-02T15:04:05Z07:00"))
-	
+
 	hash := sha256.New()
 	hash.Write([]byte(prevChecksum + currentData))
-	
+
 	// Storing hash within metadata field for now
 	metadataStr := fmt.Sprintf(`{"secure_hash": "%s"}`, hex.EncodeToString(hash.Sum(nil)))
 	event.Metadata = []byte(metadataStr)
-	
+
 	return e.repo.RecordTripEvent(ctx, event)
 }

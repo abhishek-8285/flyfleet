@@ -122,6 +122,14 @@ func (f *fakeFuelRepo) CreateAuditLog(_ context.Context, _ *models.FuelAuditLog)
 	return nil
 }
 
+// CreateWithLimitValidation is a test double that calls Create
+// It implements theFuelLogRepository interface extension for atomic limit validation
+func (f *fakeFuelRepo) CreateWithLimitValidation(_ context.Context, log *models.FuelLog, _quantity, _amount float64) error {
+	// For testing, just create the log without actual limit enforcement
+	// Tests that need to validate limit behavior should use a specialized mock
+	return f.Create(context.Background(), log)
+}
+
 type fakeSettingsRepo struct{}
 
 var _ repository.SettingsRepository = (*fakeSettingsRepo)(nil)

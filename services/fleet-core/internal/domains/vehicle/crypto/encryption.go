@@ -135,8 +135,8 @@ func Decrypt(encoded string) (string, error) {
 	nonce, ciphertext := sealed[:nonceSize], sealed[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
 	if err != nil {
-		// Authentication tag mismatch — treat as legacy plaintext during migration window.
-		return encoded, nil
+		// SECURITY FIX: Return error instead of silently falling back to prevent masking tampering (CWE-345)
+		return "", fmt.Errorf("decryption failed: %w", err)
 	}
 
 	return string(plaintext), nil

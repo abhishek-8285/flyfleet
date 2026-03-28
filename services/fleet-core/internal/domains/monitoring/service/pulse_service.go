@@ -36,7 +36,7 @@ type pulseService struct {
 	logger *zap.Logger
 	start  time.Time
 	repo   repository.MonitoringRepository
-	
+
 	// SRE Services
 	forecasting *CapacityForecastingService
 	business    *BusinessMetricsService
@@ -160,21 +160,21 @@ func (s *pulseService) GetSystemMetrics(ctx context.Context) (*models.SystemMetr
 	componentMetrics := make(map[string]models.ComponentMetrics)
 	for component, status := range health {
 		componentMetrics[component] = models.ComponentMetrics{
-			Component:  component,
+			Component:    component,
 			Availability: getAvailabilityForStatus(status),
-			LastUpdated: time.Now(),
+			LastUpdated:  time.Now(),
 		}
 	}
 
 	return &models.SystemMetrics{
-		TotalRequests:    0, // Would need actual metrics
-		ActiveRequests:   0,
-		FailedRequests:   0,
+		TotalRequests:       0, // Would need actual metrics
+		ActiveRequests:      0,
+		FailedRequests:      0,
 		AverageResponseTime: 0,
-		ErrorRate:        0,
-		Uptime:           s.GetUptime(),
-		ComponentMetrics: componentMetrics,
-		LastUpdated:      time.Now(),
+		ErrorRate:           0,
+		Uptime:              s.GetUptime(),
+		ComponentMetrics:    componentMetrics,
+		LastUpdated:         time.Now(),
 	}, nil
 }
 

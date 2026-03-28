@@ -39,7 +39,7 @@ func (s *BookingApprovalService) ApproveBooking(ctx context.Context, bookingID u
 	// Update booking status
 	oldStatus := booking.Status
 	booking.Status = "APPROVED" // Simplistic: jumps straight to approved
-	
+
 	// Stub: update booking in DB
 	// _ = s.repo.UpdateBookingRequest(ctx, booking)
 

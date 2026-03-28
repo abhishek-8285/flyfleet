@@ -39,7 +39,7 @@ func (c *QueueClient) EnqueueReportGeneration(executionID, reportID, userID uuid
 		return err
 	}
 	task := asynq.NewTask(TypeReportGenerate, payload)
-	
+
 	// MaxRetry: 3, Timeout: 30 minutes (reports can be slow)
 	_, err = c.client.Enqueue(task, asynq.MaxRetry(3), asynq.Timeout(30*time.Minute))
 	return err

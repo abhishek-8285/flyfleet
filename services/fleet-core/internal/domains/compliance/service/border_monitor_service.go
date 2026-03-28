@@ -12,12 +12,12 @@ type BorderMonitorService interface {
 }
 
 type borderMonitorServiceImpl struct {
-	repo   repository.ComplianceRepository
+	repo repository.ComplianceRepository
 }
 
 func NewBorderMonitorService(repo repository.ComplianceRepository) BorderMonitorService {
 	return &borderMonitorServiceImpl{
-		repo:   repo,
+		repo: repo,
 	}
 }
 
@@ -43,7 +43,7 @@ func (s *borderMonitorServiceImpl) ProcessPosition(ctx context.Context, vehicleI
 	// 	}
 	// 	return s.repo.RecordBorderCrossing(ctx, crossing)
 	// }
-	
+
 	_ = currentState // Prevent unused variable error
 
 	return nil

@@ -15,17 +15,17 @@ const (
 )
 
 type Technician struct {
-	ID                uuid.UUID        `json:"id" db:"id"`
-	OrganizationID    uuid.UUID        `json:"organization_id" db:"organization_id"`
-	UserID            *uuid.UUID       `json:"user_id,omitempty" db:"user_id"`
-	Name              string           `json:"name" db:"name"`
-	Specialization    string           `json:"specialization" db:"specialization"`
-	Certifications    []string         `json:"certifications" db:"certifications"`
-	HourlyRate        float64          `json:"hourly_rate" db:"hourly_rate"`
+	ID                 uuid.UUID        `json:"id" db:"id"`
+	OrgID              uuid.UUID        `json:"org_id" db:"org_id"`
+	UserID             *uuid.UUID       `json:"user_id,omitempty" db:"user_id"`
+	Name               string           `json:"name" db:"name"`
+	Specialization     string           `json:"specialization" db:"specialization"`
+	Certifications     []string         `json:"certifications" db:"certifications"`
+	HourlyRate         float64          `json:"hourly_rate" db:"hourly_rate"`
 	AvailabilityStatus TechnicianStatus `json:"availability_status" db:"availability_status"`
 	CurrentWorkload    int              `json:"current_workload" db:"current_workload"`
-	CreatedAt         time.Time        `json:"created_at" db:"created_at"`
-	UpdatedAt         time.Time        `json:"updated_at" db:"updated_at"`
+	CreatedAt          time.Time        `json:"created_at" db:"created_at"`
+	UpdatedAt          time.Time        `json:"updated_at" db:"updated_at"`
 
 	Skills []TechnicianSkill `json:"skills,omitempty"`
 }

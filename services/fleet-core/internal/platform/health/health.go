@@ -26,7 +26,7 @@ func (h *HealthChecker) Status(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	status := make(map[string]string)
-	
+
 	// Database Check
 	if h.db != nil {
 		if err := h.db.Ping(ctx); err != nil {

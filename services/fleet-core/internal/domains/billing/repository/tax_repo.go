@@ -46,7 +46,7 @@ func (r *TaxRepository) GetRegionByCountry(ctx context.Context, countryCode stri
 	var region models.TaxRegion
 	query := `SELECT id, name, country_code, state_code, is_active, created_at FROM billing_tax_regions WHERE country_code = $1`
 	args := []interface{}{countryCode}
-	
+
 	if stateCode != nil {
 		query += " AND state_code = $2"
 		args = append(args, *stateCode)
@@ -79,7 +79,7 @@ func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uui
 
 	var prefix, suffix string
 	var nextValue int64
-	
+
 	// Lock the sequence row for this organization
 	err = tx.QueryRow(ctx, `
 		SELECT prefix, next_value, suffix FROM billing_invoice_sequences 

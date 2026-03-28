@@ -15,8 +15,9 @@ type idempotencyEntry struct {
 
 // idempotencyStore is an in-memory store for idempotency keys.
 // In production, replace with Redis:
-//   GET idempotency:<key>  → return cached response
-//   SET idempotency:<key> EX 86400 → store for 24h
+//
+//	GET idempotency:<key>  → return cached response
+//	SET idempotency:<key> EX 86400 → store for 24h
 type idempotencyStore struct {
 	mu      sync.RWMutex
 	entries map[string]*idempotencyEntry

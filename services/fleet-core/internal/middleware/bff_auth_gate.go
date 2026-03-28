@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
-	"fmt"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
@@ -56,8 +56,9 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 			return nil, false
 		}
 		if jwtSecret == "" {
-			// If secret is unavailable, keep gate as presence-check with empty claims for MVP.
-			return jwt.MapClaims{}, true
+			// SECURITY FIX: Reject tokens if JWT secret is not configured
+			// Previously this allowed bypass with empty secret - critical vulnerability
+			return nil, false
 		}
 
 		claims := jwt.MapClaims{}

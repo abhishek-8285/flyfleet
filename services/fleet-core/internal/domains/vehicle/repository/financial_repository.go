@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,16 +43,23 @@ func (r *FinancialRepository) Upsert(ctx context.Context, f *models.VehicleFinan
 			updated_at             = NOW()
 		RETURNING created_at, updated_at`
 
-	return r.db.QueryRow(ctx, query,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
 		f.VehicleID, f.AcquisitionCost, f.DepreciationMethod, f.DepreciationRate,
 		f.ResidualValue, f.EMIAmount, f.LeaseEndDate, f.InsurancePremium,
 		f.TotalMaintenanceCost, f.TotalFuelCost, f.TotalTollCost,
 		f.TCOCached, f.TCOCalculatedAt,
 	).Scan(&f.CreatedAt, &f.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return fmt.Errorf("failed to upsert vehicle financials: %w", err)
+	}
+	return nil
 }
 
 func (r *FinancialRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleFinancials, error) {
 	f := &models.VehicleFinancials{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx, `
 		SELECT vehicle_id, acquisition_cost, depreciation_method, depreciation_rate,
 		       residual_value, emi_amount, lease_end_date, insurance_premium,
@@ -63,6 +72,11 @@ func (r *FinancialRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*mo
 		&f.TotalMaintenanceCost, &f.TotalFuelCost, &f.TotalTollCost,
 		&f.TCOCached, &f.TCOCalculatedAt, &f.CreatedAt, &f.UpdatedAt,
 	)
+	metrics.RecordDBQuery(`SELECT vehicle_id, acquisition_cost, depreciation_method, depreciation_rate,
+		       residual_value, emi_amount, lease_end_date, insurance_premium,
+		       total_maintenance_cost, total_fuel_cost, total_toll_cost,
+		       tco_cached, tco_calculated_at, created_at, updated_at
+		FROM vehicle_financials WHERE vehicle_id = $1`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil

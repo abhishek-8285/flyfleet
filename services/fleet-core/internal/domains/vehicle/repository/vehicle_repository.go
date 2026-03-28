@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -37,7 +39,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 			NOW(), NOW(), 1
 		) RETURNING id, created_at, updated_at, version`
 
-	return r.db.QueryRow(ctx, query,
+	start := time.Now()
+	err := r.db.QueryRow(ctx, query,
 		vehicle.ID, vehicle.TenantID, vehicle.RegistrationNumber,
 		vehicle.ChassisNumber, vehicle.EngineNumber, vehicle.VINNumber,
 		vehicle.VehicleType, vehicle.CapacityTonnage, vehicle.FuelType,
@@ -46,6 +49,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.GPSDeviceID, vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant,
 		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color,
 	).Scan(&vehicle.ID, &vehicle.CreatedAt, &vehicle.UpdatedAt, &vehicle.Version)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
 }
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
@@ -59,6 +64,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		FROM vehicles WHERE id = $1 AND deleted_at IS NULL`
 
 	v := &models.Vehicle{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
 		&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
@@ -67,6 +73,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&v.Make, &v.Model, &v.Year, &v.Color,
 		&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, fmt.Errorf("vehicle not found")
@@ -79,9 +86,12 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 
 func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error) {
 	var total int64
+	start := time.Now()
 	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL`, orgID).Scan(&total); err != nil {
+		metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
+	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 
 	query := `
 		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
@@ -93,7 +103,9 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 		FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
@@ -146,6 +158,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		WHERE id = $21 AND deleted_at IS NULL AND version = $22
 		RETURNING updated_at, version`
 
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
 		vehicle.RegistrationNumber, vehicle.ChassisNumber, vehicle.EngineNumber, vehicle.VINNumber,
 		vehicle.VehicleType, vehicle.CapacityTonnage, vehicle.FuelType, vehicle.FuelTankCapacity,
@@ -154,6 +167,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color,
 		vehicle.ID, vehicle.Version,
 	).Scan(&vehicle.UpdatedAt, &vehicle.Version)
+	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
 		if err.Error() == "no rows in result set" {
@@ -166,9 +180,11 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 }
 
 // Delete performs a soft delete.
-func (r *VehicleRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	result, err := r.db.Exec(ctx,
-		`UPDATE vehicles SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
+func (r *VehicleRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
+	query := `UPDATE vehicles SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	start := time.Now()
+	result, err := r.db.Exec(ctx, query, id, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
@@ -178,9 +194,11 @@ func (r *VehicleRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) error {
-	result, err := r.db.Exec(ctx,
-		`UPDATE vehicles SET updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, vehicleID)
+func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error {
+	query := `UPDATE vehicles SET updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	start := time.Now()
+	result, err := r.db.Exec(ctx, query, vehicleID, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
@@ -193,7 +211,9 @@ func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, driverI
 func (r *VehicleRepository) GetStats(ctx context.Context) (*models.VehicleStats, error) {
 	stats := &models.VehicleStats{}
 
+	start := time.Now()
 	rows, err := r.db.Query(ctx, `SELECT status, COUNT(*) FROM vehicles WHERE deleted_at IS NULL GROUP BY status`)
+	metrics.RecordDBQuery(`SELECT status, COUNT(*) FROM vehicles WHERE deleted_at IS NULL GROUP BY status`, time.Since(start))
 	if err != nil {
 		r.logger.Error("failed to query vehicle counts", zap.Error(err))
 	} else {
@@ -216,21 +236,25 @@ func (r *VehicleRepository) GetStats(ctx context.Context) (*models.VehicleStats,
 	}
 
 	// Distance and fuel from trips
+	start = time.Now()
 	_ = r.db.QueryRow(ctx,
 		`SELECT COALESCE(SUM(actual_distance_km),0), COALESCE(SUM(fuel_consumed_liters),0)
 		 FROM trips WHERE is_deleted = FALSE`).
 		Scan(&stats.TotalDistance, &stats.TotalFuel)
+	metrics.RecordDBQuery(`SELECT COALESCE(SUM(actual_distance_km),0), COALESCE(SUM(fuel_consumed_liters),0) FROM trips WHERE is_deleted = FALSE`, time.Since(start))
 
 	return stats, nil
 }
 
 func (r *VehicleRepository) GetByRegistrationNumber(ctx context.Context, tenantID uuid.UUID, regNo string) (*models.Vehicle, error) {
 	v := &models.Vehicle{}
+	start := time.Now()
 	err := r.db.QueryRow(ctx,
 		`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at
 		 FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`,
 		tenantID, regNo,
 	).Scan(&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Status, &v.Version, &v.CreatedAt, &v.UpdatedAt)
+	metrics.RecordDBQuery(`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil // not found (nil, nil) = caller checks
@@ -277,9 +301,12 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	}
 
 	var total int64
+	start := time.Now()
 	if err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE "+where, args...).Scan(&total); err != nil {
+		metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE "+where, time.Since(start))
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
+	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE "+where, time.Since(start))
 
 	offset := (params.Page - 1) * params.Limit
 	args = append(args, params.Limit, offset)
@@ -292,7 +319,9 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 		FROM vehicles WHERE %s
 		ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, where, argN, argN+1)
 
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, args...)
+	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}

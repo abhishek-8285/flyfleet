@@ -21,7 +21,7 @@ type IndiaIntegrationService interface {
 	UpdateFASTagTransaction(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteFASTagTransaction(ctx context.Context, id string) error
 	ListFASTagTransactions(ctx context.Context, vehicleID *uuid.UUID, tagNumber *string, startDate, endDate *time.Time, limit, offset int) ([]*models.FASTagTransaction, int, error)
-	
+
 	// E-Way Bill operations
 	CreateEWayBill(ctx context.Context, bill *models.EWayBill) error
 	GetEWayBill(ctx context.Context, id string) (*models.EWayBill, error)
@@ -29,7 +29,7 @@ type IndiaIntegrationService interface {
 	UpdateEWayBill(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteEWayBill(ctx context.Context, id string) error
 	ListEWayBills(ctx context.Context, vehicleNumber *string, transporterID *string, startDate, endDate *time.Time, limit, offset int) ([]*models.EWayBill, int, error)
-	
+
 	// Vehicle Verification operations
 	CreateVehicleVerification(ctx context.Context, verification *models.VehicleVerification) error
 	GetVehicleVerification(ctx context.Context, id string) (*models.VehicleVerification, error)
@@ -37,7 +37,7 @@ type IndiaIntegrationService interface {
 	UpdateVehicleVerification(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteVehicleVerification(ctx context.Context, id string) error
 	ListVehicleVerifications(ctx context.Context, regNumber *string, status *string, limit, offset int) ([]*models.VehicleVerification, int, error)
-	
+
 	// Driver Verification operations
 	CreateDriverVerification(ctx context.Context, verification *models.DriverVerification) error
 	GetDriverVerification(ctx context.Context, id string) (*models.DriverVerification, error)
@@ -45,7 +45,7 @@ type IndiaIntegrationService interface {
 	UpdateDriverVerification(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteDriverVerification(ctx context.Context, id string) error
 	ListDriverVerifications(ctx context.Context, licenseNumber *string, status *string, limit, offset int) ([]*models.DriverVerification, int, error)
-	
+
 	// Local Permit operations
 	CreateLocalPermit(ctx context.Context, permit *models.LocalPermit) error
 	GetLocalPermit(ctx context.Context, id string) (*models.LocalPermit, error)
@@ -53,7 +53,7 @@ type IndiaIntegrationService interface {
 	UpdateLocalPermit(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteLocalPermit(ctx context.Context, id string) error
 	ListLocalPermits(ctx context.Context, vehicleID *uuid.UUID, permitType *string, status *string, limit, offset int) ([]*models.LocalPermit, int, error)
-	
+
 	// GST Compliance operations
 	CreateGSTCompliance(ctx context.Context, compliance *models.GSTCompliance) error
 	GetGSTCompliance(ctx context.Context, id string) (*models.GSTCompliance, error)
@@ -61,7 +61,7 @@ type IndiaIntegrationService interface {
 	UpdateGSTCompliance(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteGSTCompliance(ctx context.Context, id string) error
 	ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error)
-	
+
 	// Integration Config operations
 	CreateIntegrationConfig(ctx context.Context, config *models.IntegrationConfig) error
 	GetIntegrationConfig(ctx context.Context, id string) (*models.IntegrationConfig, error)
@@ -69,7 +69,7 @@ type IndiaIntegrationService interface {
 	UpdateIntegrationConfig(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteIntegrationConfig(ctx context.Context, id string) error
 	ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
-	
+
 	HealthCheck(ctx context.Context) error
 }
 
@@ -801,11 +801,11 @@ func (s *IndiaIntegrationServiceImpl) getUserID(ctx context.Context) uuid.UUID {
 // HealthCheck performs a health check on the service and its dependencies
 func (s *IndiaIntegrationServiceImpl) HealthCheck(ctx context.Context) error {
 	log.Println("Performing health check for India Integration Service")
-	
+
 	// Check repository/database health
 	if err := s.repo.HealthCheck(ctx); err != nil {
 		return fmt.Errorf("repository health check failed: %w", err)
 	}
-	
+
 	return nil
 }

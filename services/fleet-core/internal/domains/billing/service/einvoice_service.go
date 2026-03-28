@@ -45,31 +45,31 @@ func (s *EInvoiceService) CheckEInvoiceMandatory(amount float64, config *models.
 func (s *EInvoiceService) GenerateIRN(ctx context.Context, invoiceID uuid.UUID, invoiceNo string, amount float64, gstin string) (*models.EInvoiceIRN, error) {
 	// Generate financial year
 	finYear := s.getFinancialYear(time.Now())
-	
+
 	// Generate IRN hash
 	irn := s.GenerateIRNHash(invoiceNo, finYear, gstin, "INV", amount)
-	
+
 	// Create IRN record
 	irnRecord := &models.EInvoiceIRN{
-		ID:         uuid.New(),
-		InvoiceID:  invoiceID,
-		IRN:        irn,
-		IRNStatus:  string(models.IRNStatusGenerated),
-		CreatedAt:  time.Now(),
+		ID:        uuid.New(),
+		InvoiceID: invoiceID,
+		IRN:       irn,
+		IRNStatus: string(models.IRNStatusGenerated),
+		CreatedAt: time.Now(),
 	}
-	
+
 	s.logger.Info("IRN generated",
 		zap.String("invoice_id", invoiceID.String()),
 		zap.String("irn", irn),
 		zap.String("invoice_no", invoiceNo),
 	)
-	
+
 	// In production, this would call NIC API:
 	// 1. Prepare JSON as per NIC schema
 	// 2. Sign with app key
 	// 3. Call NIC API endpoint
 	// 4. Store signed response and QR code
-	
+
 	return irnRecord, nil
 }
 
@@ -77,12 +77,12 @@ func (s *EInvoiceService) GenerateIRN(ctx context.Context, invoiceID uuid.UUID, 
 func (s *EInvoiceService) CancelIRN(ctx context.Context, irnID uuid.UUID, reason string) error {
 	// In production, this would call NIC API to cancel IRN
 	// Cancellation is only allowed within 24 hours of generation
-	
+
 	s.logger.Info("IRN cancelled",
 		zap.String("irn_id", irnID.String()),
 		zap.String("reason", reason),
 	)
-	
+
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (s *EInvoiceService) CancelIRN(ctx context.Context, irnID uuid.UUID, reason
 func (s *EInvoiceService) getFinancialYear(date time.Time) string {
 	year := date.Year()
 	month := date.Month()
-	
+
 	// Financial year starts April 1 in India
 	if month >= 4 {
 		return fmt.Sprintf("%d-%d", year, year+1)
@@ -103,13 +103,13 @@ func (s *EInvoiceService) ValidateHSNCode(hsnCode string) error {
 	if hsnCode == "" {
 		return errors.New("HSN code is required")
 	}
-	
+
 	// HSN code should be 4, 6, or 8 digits
 	length := len(hsnCode)
 	if length != 4 && length != 6 && length != 8 {
 		return errors.New("HSN code must be 4, 6, or 8 digits")
 	}
-	
+
 	return nil
 }
 
@@ -121,7 +121,7 @@ func (s *EInvoiceService) PrepareEInvoiceJSON(invoice interface{}) (map[string]i
 	// - Party details (GSTIN, name, address)
 	// - Item details (HSN, quantity, rate, tax)
 	// - Tax breakdown (CGST, SGST, IGST)
-	
+
 	return map[string]interface{}{
 		"Version": "1.0",
 		"TranDtls": map[string]interface{}{
@@ -135,14 +135,14 @@ func (s *EInvoiceService) GetEInvoiceComplianceStatus(amount float64, hasIRN boo
 	if !config.IsEnabled || !config.IsActive {
 		return "Not Required"
 	}
-	
+
 	if amount <= config.MandatoryAbove {
 		return "Not Required"
 	}
-	
+
 	if hasIRN {
 		return "Compliant"
 	}
-	
+
 	return "Non-Compliant"
 }

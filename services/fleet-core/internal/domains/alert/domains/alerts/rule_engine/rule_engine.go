@@ -21,58 +21,58 @@ type RuleEngine struct {
 
 // TelemetryEvent represents incoming telemetry data
 type TelemetryEvent struct {
-	VehicleID uuid.UUID          `json:"vehicle_id"`
-	DriverID  *uuid.UUID         `json:"driver_id"`
-	Timestamp time.Time          `json:"timestamp"`
+	VehicleID uuid.UUID              `json:"vehicle_id"`
+	DriverID  *uuid.UUID             `json:"driver_id"`
+	Timestamp time.Time              `json:"timestamp"`
 	Data      map[string]interface{} `json:"data"`
 }
 
 // GPSEvent represents GPS telemetry data
 type GPSEvent struct {
-	VehicleID   uuid.UUID `json:"vehicle_id"`
-	DriverID    *uuid.UUID `json:"driver_id"`
-	Latitude    float64   `json:"latitude"`
-	Longitude   float64   `json:"longitude"`
-	Speed       float64   `json:"speed"`
-	Heading     float64   `json:"heading"`
-	Accuracy    float64   `json:"accuracy"`
-	Ignition    bool      `json:"ignition"`
-	BatteryLevel float64  `json:"battery_level"`
-	Satellites  int       `json:"satellites"`
-	Timestamp   time.Time `json:"timestamp"`
+	VehicleID    uuid.UUID  `json:"vehicle_id"`
+	DriverID     *uuid.UUID `json:"driver_id"`
+	Latitude     float64    `json:"latitude"`
+	Longitude    float64    `json:"longitude"`
+	Speed        float64    `json:"speed"`
+	Heading      float64    `json:"heading"`
+	Accuracy     float64    `json:"accuracy"`
+	Ignition     bool       `json:"ignition"`
+	BatteryLevel float64    `json:"battery_level"`
+	Satellites   int        `json:"satellites"`
+	Timestamp    time.Time  `json:"timestamp"`
 }
 
 // OBDEvent represents OBD telemetry data
 type OBDEvent struct {
-	VehicleID     uuid.UUID `json:"vehicle_id"`
-	DriverID      *uuid.UUID `json:"driver_id"`
-	RPM           int       `json:"rpm"`
-	Speed         float64   `json:"speed"`
-	FuelLevel     float64   `json:"fuel_level"`
-	EngineTemp    float64   `json:"engine_temp"`
-	IntakeTemp    float64   `json:"intake_temp"`
-	ThrottlePos   float64   `json:"throttle_position"`
-	EngineLoad    float64   `json:"engine_load"`
-	Timestamp     time.Time `json:"timestamp"`
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	DriverID    *uuid.UUID `json:"driver_id"`
+	RPM         int        `json:"rpm"`
+	Speed       float64    `json:"speed"`
+	FuelLevel   float64    `json:"fuel_level"`
+	EngineTemp  float64    `json:"engine_temp"`
+	IntakeTemp  float64    `json:"intake_temp"`
+	ThrottlePos float64    `json:"throttle_position"`
+	EngineLoad  float64    `json:"engine_load"`
+	Timestamp   time.Time  `json:"timestamp"`
 }
 
 // FuelEvent represents fuel telemetry data
 type FuelEvent struct {
-	VehicleID     uuid.UUID `json:"vehicle_id"`
-	DriverID      *uuid.UUID `json:"driver_id"`
-	FuelLevel     float64   `json:"fuel_level"`
-	FuelConsumed  float64   `json:"fuel_consumed"`
-	Timestamp     time.Time `json:"timestamp"`
+	VehicleID    uuid.UUID  `json:"vehicle_id"`
+	DriverID     *uuid.UUID `json:"driver_id"`
+	FuelLevel    float64    `json:"fuel_level"`
+	FuelConsumed float64    `json:"fuel_consumed"`
+	Timestamp    time.Time  `json:"timestamp"`
 }
 
 // DriverEvent represents driver behavior data
 type DriverEvent struct {
-	VehicleID     uuid.UUID `json:"vehicle_id"`
-	DriverID      uuid.UUID `json:"driver_id"`
-	EventType     string    `json:"event_type"` // harsh_acceleration, harsh_braking, harsh_cornering, phone_usage, fatigue
-	Severity      string    `json:"severity"`   // low, medium, high, critical
-	Value         float64   `json:"value"`      // acceleration g-force, speed, etc.
-	Timestamp     time.Time `json:"timestamp"`
+	VehicleID uuid.UUID `json:"vehicle_id"`
+	DriverID  uuid.UUID `json:"driver_id"`
+	EventType string    `json:"event_type"` // harsh_acceleration, harsh_braking, harsh_cornering, phone_usage, fatigue
+	Severity  string    `json:"severity"`   // low, medium, high, critical
+	Value     float64   `json:"value"`      // acceleration g-force, speed, etc.
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // NewRuleEngine creates a new rule engine
@@ -100,8 +100,8 @@ func (re *RuleEngine) ProcessGPSEvent(data []byte) error {
 	// Check each rule
 	for _, rule := range rules {
 		if err := re.evaluateGPSRule(rule, event); err != nil {
-			re.logger.Error("Failed to evaluate GPS rule", 
-				zap.String("rule_id", rule.ID), 
+			re.logger.Error("Failed to evaluate GPS rule",
+				zap.String("rule_id", rule.ID),
 				zap.Error(err))
 		}
 	}
@@ -126,8 +126,8 @@ func (re *RuleEngine) ProcessOBDEvent(data []byte) error {
 	// Check each rule
 	for _, rule := range rules {
 		if err := re.evaluateOBDRule(rule, event); err != nil {
-			re.logger.Error("Failed to evaluate OBD rule", 
-				zap.String("rule_id", rule.ID), 
+			re.logger.Error("Failed to evaluate OBD rule",
+				zap.String("rule_id", rule.ID),
 				zap.Error(err))
 		}
 	}
@@ -152,8 +152,8 @@ func (re *RuleEngine) ProcessFuelEvent(data []byte) error {
 	// Check each rule
 	for _, rule := range rules {
 		if err := re.evaluateFuelRule(rule, event); err != nil {
-			re.logger.Error("Failed to evaluate fuel rule", 
-				zap.String("rule_id", rule.ID), 
+			re.logger.Error("Failed to evaluate fuel rule",
+				zap.String("rule_id", rule.ID),
 				zap.Error(err))
 		}
 	}
@@ -178,8 +178,8 @@ func (re *RuleEngine) ProcessDriverEvent(data []byte) error {
 	// Check each rule
 	for _, rule := range rules {
 		if err := re.evaluateDriverRule(rule, event); err != nil {
-			re.logger.Error("Failed to evaluate driver rule", 
-				zap.String("rule_id", rule.ID), 
+			re.logger.Error("Failed to evaluate driver rule",
+				zap.String("rule_id", rule.ID),
 				zap.Error(err))
 		}
 	}
@@ -280,7 +280,7 @@ func (re *RuleEngine) checkOverspeedRule(rule *models.AlertRule, event GPSEvent)
 			return fmt.Errorf("failed to create overspeed alert: %w", err)
 		}
 
-		re.logger.Info("Overspeed alert created", 
+		re.logger.Info("Overspeed alert created",
 			zap.String("vehicle_id", event.VehicleID.String()),
 			zap.Float64("speed", event.Speed),
 			zap.Float64("limit", speedLimit))
@@ -327,8 +327,8 @@ func (re *RuleEngine) checkHarshAccelerationRule(rule *models.AlertRule, event O
 			Timestamp: event.Timestamp,
 			Details: map[string]interface{}{
 				"throttle_position": event.ThrottlePos,
-				"speed":            event.Speed,
-				"threshold":        threshold,
+				"speed":             event.Speed,
+				"threshold":         threshold,
 			},
 			Status: models.AlertStatusNew,
 		}
@@ -337,7 +337,7 @@ func (re *RuleEngine) checkHarshAccelerationRule(rule *models.AlertRule, event O
 			return fmt.Errorf("failed to create harsh acceleration alert: %w", err)
 		}
 
-		re.logger.Info("Harsh acceleration alert created", 
+		re.logger.Info("Harsh acceleration alert created",
 			zap.String("vehicle_id", event.VehicleID.String()))
 	}
 

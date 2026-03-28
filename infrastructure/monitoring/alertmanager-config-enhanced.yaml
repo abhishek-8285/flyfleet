@@ -1,0 +1,238 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'  # Replace with actual
+
+  smtp_from: 'alerts@flyfleet.com'
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_auth_username: 'alerts@flyfleet.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  # Default grouping: group by alertname, service, severity, and SLO
+  group_by: ['alertname', 'service', 'severity', 'slo']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-slack'
+
+  # Inhibit rules: suppress dependent alerts
+  inhibit_rules:
+    # Suppress warnings when a critical alert exists for the same service/SLO
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['service', 'slo']
+      # Example: When ApiAvailabilityBurnCritical fires, suppress ApiAvailabilityBurnWarning
+
+    # More specific alerts take precedence
+    - source_match:
+        alertname: 'PodCrashLoop'
+      target_match:
+        alertname: 'PodOOMKilling'
+      equal: ['pod', 'namespace']
+
+    # Service-wide critical suppresses component warnings
+    - source_match:
+        severity: 'critical'
+        service: 'fleet-core'
+      target_match:
+        severity: 'warning'
+      equal: ['service']
+
+  # Routing tree
+  routes:
+    # ==========================================================================
+    # Critical Path - Page immediately
+    # ==========================================================================
+    - match:
+        severity: 'critical'
+      receiver: 'critical-pagerduty'
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      continue: false  # Do not continue to other routes
+
+    # ==========================================================================
+    # SLO-based routing - different teams
+    # ==========================================================================
+    - match:
+        slo: 'api-availability'
+        severity: 'warning'
+      receiver: 'slack-sre-api'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 2h
+      continue: true
+
+    - match:
+        slo: 'api-latency'
+        severity: 'warning'
+      receiver: 'slack-sre-api'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 2h
+      continue: true
+
+    - match:
+        slo: 'command-reliability'
+      receiver: 'slack-device-team'
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 1h
+      continue: true
+
+    - match:
+        slo: 'telemetry-*'
+      receiver: 'slack-ingestion-team'
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 1h
+      continue: true
+
+    # ==========================================================================
+    # Infrastructure alerts - DevOps/SRE
+    # ==========================================================================
+    - match:
+        service: 'infrastructure'
+      receiver: 'slack-devops'
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 2h
+      continue: true
+
+    # ==========================================================================
+    # Business metrics - Product team
+    # ==========================================================================
+    - match:
+        slo: 'organizations-active'
+      receiver: 'slack-product'
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 12h
+      continue: true
+
+    # ==========================================================================
+    # Info/Notifications - General Slack channel
+    # ==========================================================================
+    - match:
+        severity: 'info'
+      receiver: 'slack-notifications'
+      group_wait: 5m
+      group_interval: 15m
+      repeat_interval: 12h
+      continue: true
+
+# ==============================================================================
+# Receivers
+# ==============================================================================
+
+receivers:
+  # Default receiver (fallback)
+  - name: 'default-slack'
+    slack_configs:
+      - channel: '#alerts-all'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.summary }}\n{{ .CommonAnnotations.description }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+
+  # Critical alerts - PagerDuty
+  - name: 'critical-pagerduty'
+    pagerduty_configs:
+      - service_key: '{{ secrets/pagerduty/flyfleet-critical }}'
+        severity: '{{ .CommonLabels.severity }}'
+        component: '{{ .CommonLabels.component }}'
+        custom_details:
+          alertname: '{{ .CommonLabels.alertname }}'
+          summary: '{{ .CommonAnnotations.summary }}'
+          description: '{{ .CommonAnnotations.description }}'
+          service: '{{ .CommonLabels.service }}'
+
+  # SRE API team
+  - name: 'slack-sre-api'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/SRE-API'
+        channel: '#sre-api-alerts'
+        title: '🚨 {{ .CommonLabels.alertname }}'
+        text: '**Service:** {{ .CommonLabels.service }}\n**SLO:**{{ .CommonLabels.slo }}\n**Summary:** {{ .CommonAnnotations.summary }}\n**Description:** {{ .CommonAnnotations.description }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+
+  # Device team
+  - name: 'slack-device-team'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/DEVICE'
+        channel: '#device-team-alerts'
+        title: '📱 {{ .CommonLabels.alertname }}'
+        text: '**Service:** {{ .CommonLabels.service }}\n**Summary:** {{ .CommonAnnotations.summary }}\n**Description:** {{ .CommonAnnotations.description }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  # Ingestion team
+  - name: 'slack-ingestion-team'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/INGESTION'
+        channel: '#ingestion-alerts'
+        title: '⚡ {{ .CommonLabels.alertname }}'
+        text: '**Service:** {{ .CommonLabels.service }}\n**Summary:** {{ .CommonAnnotations.summary }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  # DevOps/SRE Infrastructure
+  - name: 'slack-devops'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/DEVOPS'
+        channel: '#devops-alerts'
+        title: '🔧 {{ .CommonLabels.alertname }}'
+        text: '**Component:** {{ .CommonLabels.component }}\n**Summary:** {{ .CommonAnnotations.summary }}\n**Description:** {{ .CommonAnnotations.description }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: 'warning'
+
+  # Product team (info only)
+  - name: 'slack-product'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/PRODUCT'
+        channel: '#product-metrics'
+        title: '📊 {{ .CommonLabels.alertname }}'
+        text: '{{ .CommonAnnotations.summary }}\n<{{ .ExternalURL }}|View in Alertmanager>'
+        color: 'good'
+
+  # General notifications
+  - name: 'slack-notifications'
+    slack_configs:
+      - api_url: 'https://hooks.slack.com/services/SLACK/WEBHOOK/GENERAL'
+        channel: '#monitoring-notifications'
+        title: 'ℹ️ {{ .CommonLabels.alertname }}'
+        text: '{{ .CommonAnnotations.summary }}'
+        color: 'good'
+
+  # Email fallback
+  - name: 'email-sre'
+    email_configs:
+      - to: 'sre@flyfleet.com'
+        from: 'alertmanager@flyfleet.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'alertmanager@flyfleet.com'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          subject: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} for {{ .CommonLabels.service }}'
+        html: |
+          <html>
+          <body>
+            <h2>{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}</h2>
+            <p><strong>Service:</strong> {{ .CommonLabels.service }}</p>
+            <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+            <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+            <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+            <p><strong>Started:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</p>
+            <p><a href="{{ .ExternalURL }}">View in Alertmanager</a></p>
+          </body>
+          </html>
+
+# ==============================================================================
+# Inhibition rules are defined in 'route.inhibit_rules' above
+# ==============================================================================
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

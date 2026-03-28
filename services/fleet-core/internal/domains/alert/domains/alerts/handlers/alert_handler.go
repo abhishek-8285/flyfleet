@@ -14,6 +14,29 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/service"
 )
 
+// DTOs for request payloads (separate from models to prevent mass assignment)
+type createRuleRequestDTO struct {
+	Name        string                 `json:"name" validate:"required,max=100"`
+	Type        string                 `json:"type" validate:"required,oneof=overspeed geofence_entry geofence_exit harsh_acceleration harsh_braking harsh_cornering idle_time fuel_theft low_battery temperature_excursion accident_detected maintenance_due document_expiry driver_fatigue adas_event vehicle_offline"`
+	Description string                 `json:"description" validate:"max=500"`
+	Conditions  map[string]interface{} `json:"conditions" validate:"required"`
+	Severity    string                 `json:"severity" validate:"required,oneof=info warning critical"`
+	Actions     []models.AlertAction   `json:"actions" validate:"required,min=1"`
+	Vehicles    []uuid.UUID            `json:"vehicles"`
+	DriverIDs   []uuid.UUID            `json:"driver_ids"`
+}
+
+type updateRuleRequestDTO struct {
+	Name        *string                 `json:"name,omitempty" validate:"omitempty,max=100"`
+	Description *string                 `json:"description,omitempty" validate:"omitempty,max=500"`
+	Conditions  *map[string]interface{} `json:"conditions,omitempty"`
+	Severity    *string                 `json:"severity,omitempty" validate:"omitempty,oneof=info warning critical"`
+	Actions     *[]models.AlertAction   `json:"actions,omitempty" validate:"omitempty,min=1"`
+	Vehicles    *[]uuid.UUID            `json:"vehicles,omitempty"`
+	DriverIDs   *[]uuid.UUID            `json:"driver_ids,omitempty"`
+	Enabled     *bool                   `json:"enabled,omitempty"`
+}
+
 type AlertHandler struct {
 	service *service.AlertService
 	logger  *zap.Logger
@@ -48,7 +71,7 @@ func (h *AlertHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/stats/summary", h.GetAlertSummary)
 		r.Get("/stats/trends", h.GetAlertTrends)
 		r.Get("/stats/new", h.GetStats)
-		
+
 		// Templates
 		r.Post("/templates", h.CreateTemplate)
 		r.Get("/templates", h.ListTemplates)
@@ -80,8 +103,9 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	rule, err := h.service.CreateRule(r.Context(), orgID, &req)
 	if err != nil {
-		h.logger.Error("failed to create alert rule", zap.Error(err))
-		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
+		// SECURITY FIX: Log detailed error but return generic message to client
+		h.logger.Error("failed to create alert rule", zap.Error(err), zap.String("org_id", orgID.String()))
+		h.errorJSON(w, "Failed to create alert rule", http.StatusInternalServerError)
 		return
 	}
 
@@ -216,7 +240,7 @@ func (h *AlertHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
 
 func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	
+
 	orgIDStr := query.Get("org_id")
 	if orgIDStr == "" {
 		orgID := h.getOrgID(r)
@@ -421,8 +445,9 @@ func (h *AlertHandler) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 func (h *AlertHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.service.GetStats(r.Context())
 	if err != nil {
+		// SECURITY FIX: Log detailed error but return generic message
 		h.logger.Error("failed to get alert stats", zap.Error(err))
-		h.errorJSON(w, err.Error(), http.StatusInternalServerError)
+		h.errorJSON(w, "Failed to retrieve alert statistics", http.StatusInternalServerError)
 		return
 	}
 

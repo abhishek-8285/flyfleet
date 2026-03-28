@@ -25,26 +25,26 @@ type TicketService interface {
 }
 
 type ticketService struct {
-	repo            repository.TicketRepository
-	logger          *zap.Logger
-	notificationCh  chan<- NotificationEvent // Channel for sending notifications
+	repo           repository.TicketRepository
+	logger         *zap.Logger
+	notificationCh chan<- NotificationEvent // Channel for sending notifications
 }
 
 // NotificationEvent represents a notification to be sent
 type NotificationEvent struct {
-	Type       string    `json:"type"` // COMMENT_ADDED, STATUS_CHANGED, TICKET_ASSIGNED
-	TicketID   string    `json:"ticket_id"`
-	UserID     string    `json:"user_id"`
-	Message    string    `json:"message"`
-	Priority   string    `json:"priority"`
-	CreatedAt  time.Time `json:"created_at"`
+	Type      string    `json:"type"` // COMMENT_ADDED, STATUS_CHANGED, TICKET_ASSIGNED
+	TicketID  string    `json:"ticket_id"`
+	UserID    string    `json:"user_id"`
+	Message   string    `json:"message"`
+	Priority  string    `json:"priority"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func NewTicketService(repo repository.TicketRepository, logger *zap.Logger, notificationCh chan<- NotificationEvent) TicketService {
 	return &ticketService{
-		repo:            repo,
-		logger:          logger,
-		notificationCh:  notificationCh,
+		repo:           repo,
+		logger:         logger,
+		notificationCh: notificationCh,
 	}
 }
 
@@ -133,17 +133,17 @@ func (s *ticketService) ListTickets(ctx context.Context, filter models.TicketFil
 func (s *ticketService) UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID) error {
 	// Validate status
 	validStatuses := map[string]bool{
-		"OPEN": true, "IN_PROGRESS": true, "RESOLVED": true, 
+		"OPEN": true, "IN_PROGRESS": true, "RESOLVED": true,
 		"CLOSED": true, "ESCALATED": true,
 	}
-	
+
 	if !validStatuses[status] {
 		return fmt.Errorf("invalid status: %s", status)
 	}
 
 	err := s.repo.UpdateTicketStatus(ctx, id, status)
 	if err != nil {
-		s.logger.Error("Failed to update ticket status", zap.Error(err), 
+		s.logger.Error("Failed to update ticket status", zap.Error(err),
 			zap.String("ticket_id", id.String()), zap.String("status", status))
 		return fmt.Errorf("failed to update ticket status: %w", err)
 	}
@@ -154,7 +154,7 @@ func (s *ticketService) UpdateTicketStatus(ctx context.Context, id uuid.UUID, st
 func (s *ticketService) AssignTicket(ctx context.Context, id, assignedTo, userID uuid.UUID) error {
 	err := s.repo.AssignTicket(ctx, id, assignedTo)
 	if err != nil {
-		s.logger.Error("Failed to assign ticket", zap.Error(err), 
+		s.logger.Error("Failed to assign ticket", zap.Error(err),
 			zap.String("ticket_id", id.String()), zap.String("assigned_to", assignedTo.String()))
 		return fmt.Errorf("failed to assign ticket: %w", err)
 	}
@@ -227,7 +227,7 @@ func (s *ticketService) GetRecentActivity(ctx context.Context, orgID uuid.UUID, 
 	if limit <= 0 {
 		limit = 10
 	}
-	
+
 	tickets, err := s.repo.GetRecentActivity(ctx, orgID, limit)
 	if err != nil {
 		s.logger.Error("Failed to get recent activity", zap.Error(err))
@@ -250,11 +250,11 @@ func (s *ticketService) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*mo
 	if err != nil {
 		// Return default metrics if not found
 		return &models.OrgSupportMetrics{
-			OrgID:             orgID,
-			OpenTickets:       0,
-			ResolvedTickets:   0,
-			SLABreaches:       0,
-			CriticalIssues:    0,
+			OrgID:           orgID,
+			OpenTickets:     0,
+			ResolvedTickets: 0,
+			SLABreaches:     0,
+			CriticalIssues:  0,
 		}, nil
 	}
 	return metrics, nil

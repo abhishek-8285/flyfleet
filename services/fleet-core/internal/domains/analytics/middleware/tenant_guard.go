@@ -52,7 +52,7 @@ func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler 
 				if vid, err := uuid.Parse(vehicleIDStr); err == nil {
 					if !tg.verifyVehicleOwnership(r.Context(), vid, orgID) {
 						tg.metrics.CrossTenantAccessTotal.WithLabelValues(orgID.String(), "vehicle").Inc()
-						tg.logger.Warn("Cross-tenant vehicle access attempt blocked", 
+						tg.logger.Warn("Cross-tenant vehicle access attempt blocked",
 							zap.String("org_id", orgID.String()), zap.String("vehicle_id", vehicleIDStr))
 						http.Error(w, "Forbidden: Vehicle does not belong to this organization", http.StatusForbidden)
 						return
@@ -69,7 +69,7 @@ func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler 
 				if did, err := uuid.Parse(driverIDStr); err == nil {
 					if !tg.verifyDriverOwnership(r.Context(), did, orgID) {
 						tg.metrics.CrossTenantAccessTotal.WithLabelValues(orgID.String(), "driver").Inc()
-						tg.logger.Warn("Cross-tenant driver access attempt blocked", 
+						tg.logger.Warn("Cross-tenant driver access attempt blocked",
 							zap.String("org_id", orgID.String()), zap.String("driver_id", driverIDStr))
 						http.Error(w, "Forbidden: Driver does not belong to this organization", http.StatusForbidden)
 						return

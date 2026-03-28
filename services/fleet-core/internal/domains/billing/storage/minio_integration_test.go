@@ -1,3 +1,5 @@
+//go:build integration
+
 package storage_test
 
 import (
@@ -83,10 +85,10 @@ func TestS3Storage_SignedURLExpiration(t *testing.T) {
 	duration := 5 * time.Minute
 	urlStr, err := store.GetPresignedURL(ctx, inv, duration)
 	require.NoError(t, err)
-	
+
 	// Ensure X-Amz-Expires matches (5 min = 300 seconds)
 	assert.Contains(t, urlStr, "X-Amz-Expires=300")
-	
+
 	// Create another URL that expires immediately
 	// Minio/S3 requires min 1 second expiry
 	shortDuration := 1 * time.Second

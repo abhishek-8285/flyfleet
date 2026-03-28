@@ -77,8 +77,8 @@ type VideoMetrics struct {
 	transcodeCounts  []int64
 
 	// Per-stage duration histogram with label: transcode|thumbnail|ai|finalize
-	stageMu     sync.Mutex
-	stageData   map[string]*stageHistogram // key = stage name
+	stageMu   sync.Mutex
+	stageData map[string]*stageHistogram // key = stage name
 }
 
 type stageHistogram struct {
@@ -134,7 +134,7 @@ func (m *VideoMetrics) IncCameraOffline(tenant, cameraType string) {
 }
 
 func (m *VideoMetrics) SetQueueDepth(n int64) { m.processingQueued.Store(n) }
-func (m *VideoMetrics) SetDLQSize(n int64)     { m.dlqSize.Store(n) }
+func (m *VideoMetrics) SetDLQSize(n int64)    { m.dlqSize.Store(n) }
 
 func (m *VideoMetrics) RecordTranscodeDuration(seconds float64) {
 	m.transcodeMu.Lock()

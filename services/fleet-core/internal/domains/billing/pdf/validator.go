@@ -18,7 +18,12 @@ func NewTemplateValidator() *TemplateValidator {
 			"Organization": true,
 			"Settings":     true,
 			"Items":        true,
-			// Add specific safe fields if nested validation is needed
+			// Fields within Items that are safe to access in templates
+			"Description": true,
+			"PartNumber":  true,
+			"Quantity":    true,
+			"UnitCost":    true,
+			"TotalCost":   true,
 		},
 	}
 }
@@ -60,8 +65,8 @@ func (v *TemplateValidator) walk(node parse.Node) error {
 			root := n.Ident[0]
 			// Variables starting with $ are internal/local to template (like in range)
 			if root[0] != '$' && !v.allowedVariables[root] {
-				// We allow standard dot access if it's evaluated against the main dot
-				// But we want to be careful about explicit global variable access if any
+				// SECURITY FIX: Reject unauthorized variable access
+				return fmt.Errorf("template uses unauthorized variable: %s", root)
 			}
 		}
 	case *parse.FieldNode:
@@ -69,8 +74,8 @@ func (v *TemplateValidator) walk(node parse.Node) error {
 		if len(n.Ident) > 0 {
 			root := n.Ident[0]
 			if !v.allowedVariables[root] && root != "" {
-				// In a real system, we'd have a full schema of allowed fields
-				// For now, we log or warn if it looks suspicious
+				// SECURITY FIX: Reject unauthorized field access
+				return fmt.Errorf("template uses unauthorized field: %s", root)
 			}
 		}
 	case *parse.IfNode:

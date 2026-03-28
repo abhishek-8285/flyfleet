@@ -8,11 +8,11 @@ import (
 
 // Transaction types
 const (
-	TxTypeRefund         = "REFUND"
-	TxTypeManualCredit   = "MANUAL_CREDIT"
-	TxTypeDebitInvoice   = "DEBIT_FOR_INVOICE"
-	TxTypePromotional    = "PROMOTIONAL"
-	TxTypePrepaidTopup   = "PREPAID_TOPUP"
+	TxTypeRefund       = "REFUND"
+	TxTypeManualCredit = "MANUAL_CREDIT"
+	TxTypeDebitInvoice = "DEBIT_FOR_INVOICE"
+	TxTypePromotional  = "PROMOTIONAL"
+	TxTypePrepaidTopup = "PREPAID_TOPUP"
 )
 
 // Ledger entry types
@@ -64,7 +64,7 @@ type LedgerEntry struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
 	OrgID         uuid.UUID  `json:"org_id" db:"org_id"`
 	EntryType     string     `json:"entry_type" db:"entry_type"`
-	Amount        float64    `json:"amount" db:"amount"` 
+	Amount        float64    `json:"amount" db:"amount"`
 	Currency      string     `json:"currency" db:"currency"`
 	InvoiceID     *uuid.UUID `json:"invoice_id" db:"invoice_id"`
 	PaymentID     *uuid.UUID `json:"payment_id" db:"payment_id"`
@@ -76,15 +76,15 @@ type LedgerEntry struct {
 
 // RevenueSchedule tracks the amortization of upfront billed items (like Annual CRM plans).
 type RevenueSchedule struct {
-	ID                 uuid.UUID `json:"id" db:"id"`
-	OrgID              uuid.UUID `json:"org_id" db:"org_id"`
-	InvoiceLineItemID  uuid.UUID `json:"invoice_line_item_id" db:"invoice_line_item_id"`
-	TotalAmount        float64   `json:"total_amount" db:"total_amount"`
-	Currency           string    `json:"currency" db:"currency"`
-	StartDate          time.Time `json:"start_date" db:"start_date"`
-	EndDate            time.Time `json:"end_date" db:"end_date"`
-	Status             string    `json:"status" db:"status"` // PENDING, IN_PROGRESS, COMPLETED
-	CreatedAt          time.Time `json:"created_at" db:"created_at"`
+	ID                uuid.UUID `json:"id" db:"id"`
+	OrgID             uuid.UUID `json:"org_id" db:"org_id"`
+	InvoiceLineItemID uuid.UUID `json:"invoice_line_item_id" db:"invoice_line_item_id"`
+	TotalAmount       float64   `json:"total_amount" db:"total_amount"`
+	Currency          string    `json:"currency" db:"currency"`
+	StartDate         time.Time `json:"start_date" db:"start_date"`
+	EndDate           time.Time `json:"end_date" db:"end_date"`
+	Status            string    `json:"status" db:"status"` // PENDING, IN_PROGRESS, COMPLETED
+	CreatedAt         time.Time `json:"created_at" db:"created_at"`
 }
 
 // RecognizedRevenue is a single installment of recognized revenue against a RevenueSchedule.

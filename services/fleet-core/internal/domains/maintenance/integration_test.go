@@ -39,17 +39,17 @@ type MaintenanceIntegrationTestSuite struct {
 	postgresContainer *postgres.PostgresContainer
 	natsContainer     testcontainers.Container
 	natsConn          *nats.Conn
-	
+
 	// Services
-	woService       *service.WorkOrderService
+	woService          *service.WorkOrderService
 	maintenanceService *service.MaintenanceService
 	procurementService *service.ProcurementService
 	analyticsService   *service.AnalyticsService
 	downtimeService    *service.DowntimeService
-	
+
 	// Handlers
 	analyticsHandler *handlers.AnalyticsHandler
-	
+
 	// IDs
 	orgID uuid.UUID
 }
@@ -191,13 +191,13 @@ func (s *MaintenanceIntegrationTestSuite) SetupSuite() {
 	settingsRepo := repository.NewSettingsRepository(s.pool)
 	vendorRepo := repository.NewVendorRepository(s.pool)
 	inspectionRepo := repository.NewInspectionRepository(s.pool)
-	
+
 	s.woService = service.NewWorkOrderService(woRepo, partsRepo, inventoryRepo, settingsRepo, vendorRepo, inspectionRepo, repo, s.natsConn, logger)
 	s.maintenanceService = service.NewMaintenanceService(repo, logger)
 	s.procurementService = service.NewProcurementService(repo, inventoryRepo, logger)
 	s.analyticsService = service.NewAnalyticsService(repo, logger)
 	s.downtimeService = service.NewDowntimeService(repo, logger)
-	
+
 	s.analyticsHandler = handlers.NewAnalyticsHandler(s.analyticsService, s.downtimeService, logger)
 }
 
@@ -243,7 +243,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase1_TechnicianManagement() {
 			AvailabilityStatus: models.TechnicianStatusAvailable,
 		})
 		s.NoError(err)
-		
+
 		err = s.maintenanceService.AddTechnicianSkill(s.ctx, id, t.skill, 5)
 		s.NoError(err)
 		techIDs[t.skill] = id
@@ -260,17 +260,17 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase1_TechnicianManagement() {
 		MaintenanceType: models.WOMaintenanceTypeCorrective,
 		Priority:        models.WorkOrderPriorityHigh,
 	}
-	
+
 	wo, err := s.woService.CreateWorkOrder(s.ctx, s.orgID, uuid.New(), req)
 	s.NoError(err)
 	s.NotNil(wo)
 
 	err = s.woService.AutoAssignTechnician(s.ctx, wo)
 	s.NoError(err)
-	
+
 	updatedWO, _ := s.woService.GetWorkOrder(s.ctx, wo.ID)
 	s.Equal(techIDs["engine"], *updatedWO.AssignedTo)
-	
+
 	tech, _ := s.maintenanceService.GetTechnician(s.ctx, techIDs["engine"])
 	s.Equal(1, tech.CurrentWorkload)
 }
@@ -279,7 +279,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase1_TechnicianManagement() {
 func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 	vehicleID := uuid.New()
 	partNumber := "ENG-001"
-	
+
 	err := s.maintenanceService.CreateWarranty(s.ctx, &models.ComponentWarranty{
 		OrganizationID:   s.orgID,
 		VehicleID:        vehicleID,
@@ -298,7 +298,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 	alerts, err := s.maintenanceService.GetWarrantyExpiryAlerts(s.ctx, s.orgID, 30)
 	s.NoError(err)
 	s.Len(alerts, 0)
-	
+
 	err = s.maintenanceService.CreateWarranty(s.ctx, &models.ComponentWarranty{
 		OrganizationID: s.orgID,
 		VehicleID:      vehicleID,
@@ -306,7 +306,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 		WarrantyEnd:    time.Now().AddDate(0, 0, 5),
 	})
 	s.NoError(err)
-	
+
 	alerts, err = s.maintenanceService.GetWarrantyExpiryAlerts(s.ctx, s.orgID, 30)
 	s.NoError(err)
 	s.Len(alerts, 1)
@@ -315,7 +315,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 // Phase 3: Procurement Flow Tests
 func (s *MaintenanceIntegrationTestSuite) TestPhase3_ProcurementFlow() {
 	partID := uuid.New()
-	
+
 	err := s.pool.QueryRow(s.ctx, `
 		INSERT INTO inventory_parts (id, organization_id, part_number, name, quantity_available, reorder_level, unit_cost)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -361,9 +361,9 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase4_PredictiveMaintenance() {
 		s.woService,
 		zap.NewNop(),
 	)
-	
+
 	worker.RunEvaluation(s.ctx)
-	
+
 	var count int
 	err = s.pool.QueryRow(s.ctx, "SELECT COUNT(*) FROM work_orders WHERE vehicle_id = $1 AND title = 'PREDICTIVE PREVENTIVE MAINTENANCE'", vehicleID).Scan(&count)
 	s.NoError(err)
@@ -387,7 +387,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase5_DowntimeTracking() {
 
 	err = s.woService.UpdateWorkOrderStatus(s.ctx, wo.ID, models.WorkOrderStatusInProgress)
 	s.NoError(err)
-	
+
 	start := time.Now().Add(-2 * time.Hour)
 	end := time.Now()
 	err = s.downtimeService.RecordDowntime(s.ctx, &models.VehicleDowntime{
@@ -410,11 +410,11 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase6_AnalyticsEndpoints() {
 	vehicleID := uuid.New()
 	r := chi.NewRouter()
 	s.analyticsHandler.RegisterRoutes(r)
-	
+
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.orgID, "ANALYTIC-001")
 	s.NoError(err)
 	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_vendors (id, organization_id, name, status) VALUES ($1, $2, $3, $4)`, uuid.New(), s.orgID, "Main Vendor", "active")
-	
+
 	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, organization_id, vehicle_id, cost, total_cost, type, start_date) VALUES ($1, $2, $3, 500.0, 500.0, 'routine', NOW())`, uuid.New(), s.orgID, vehicleID)
 
 	req := httptest.NewRequest("GET", "/analytics/costs", nil)
@@ -433,15 +433,15 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase7_AssetLifecycle() {
 	vehicleID := uuid.New()
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.orgID, "LIFE-001")
 	s.NoError(err)
-	
+
 	for i := 0; i < 10; i++ {
 		_, err = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, organization_id, vehicle_id, cost, type, start_date) VALUES ($1, $2, $3, 15000.0, 'corrective', NOW())`, uuid.New(), s.orgID, vehicleID)
 		s.NoError(err)
 	}
-	
+
 	err = s.analyticsService.UpdateVehicleLifecycleMetrics(s.ctx, vehicleID)
 	s.NoError(err)
-	
+
 	var recommendation string
 	err = s.pool.QueryRow(s.ctx, "SELECT replacement_recommendation FROM vehicle_lifecycle_metrics WHERE vehicle_id = $1", vehicleID).Scan(&recommendation)
 	s.NoError(err)
@@ -456,13 +456,13 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase8_InventoryWOIntegration() {
 	vehicleID := uuid.New()
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.orgID, "INV-001")
 	s.NoError(err)
-	
+
 	_, _ = s.pool.Exec(s.ctx, "INSERT INTO work_orders (id, organization_id, vehicle_id, title, maintenance_type, priority, created_by) VALUES ($1, $2, $3, 'INV TEST', 'routine', 'LOW', $4)", woID, s.orgID, vehicleID, uuid.New())
 	_, _ = s.pool.Exec(s.ctx, "INSERT INTO inventory_parts (id, organization_id, part_number, name, quantity_available, unit_cost) VALUES ($1, $2, 'PART-INV-001', 'Inv Test Part', 10, 50.0)", partID, s.orgID)
 
 	_, err = s.woService.AssignPart(s.ctx, woID, &models.AssignPartRequest{PartID: partID, Quantity: 2})
 	s.NoError(err)
-	
+
 	var qty int
 	_ = s.pool.QueryRow(s.ctx, "SELECT quantity_available FROM inventory_parts WHERE id = $1", partID).Scan(&qty)
 	s.Equal(8, qty)
@@ -472,7 +472,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase8_InventoryWOIntegration() {
 func (s *MaintenanceIntegrationTestSuite) TestPhase9_EventBusValidation() {
 	var err error
 	sub, _ := s.natsConn.SubscribeSync("fleet.maintenance.work_order.created")
-	
+
 	vehicleID := uuid.New()
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.orgID, "EVENT-001")
 	s.NoError(err)
@@ -484,7 +484,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase9_EventBusValidation() {
 	}
 	_, err = s.woService.CreateWorkOrder(s.ctx, s.orgID, uuid.New(), req)
 	s.NoError(err)
-	
+
 	msg, err := sub.NextMsg(2 * time.Second)
 	s.NoError(err)
 	s.NotNil(msg)
@@ -494,7 +494,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase9_EventBusValidation() {
 func (s *MaintenanceIntegrationTestSuite) TestPhase10_LoadTest() {
 	count := 20
 	techCount := 5
-	
+
 	for i := 0; i < techCount; i++ {
 		_ = s.maintenanceService.CreateTechnician(s.ctx, &models.Technician{
 			OrganizationID:     s.orgID,
@@ -503,7 +503,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase10_LoadTest() {
 			AvailabilityStatus: models.TechnicianStatusAvailable,
 		})
 	}
-	
+
 	errs := make(chan error, count)
 	for i := 0; i < count; i++ {
 		go func(idx int) {
@@ -521,7 +521,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase10_LoadTest() {
 			errs <- s.woService.AutoAssignTechnician(s.ctx, wo)
 		}(i)
 	}
-	
+
 	for i := 0; i < count; i++ {
 		s.NoError(<-errs)
 	}

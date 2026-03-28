@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// ComplianceHandlers handles compliance-related endpoints.
 type ComplianceHandlers struct {
 	compSvc  *service.ComplianceService
 	logger   *zap.Logger
@@ -45,13 +44,19 @@ func (h *ComplianceHandlers) VerifyCompliance(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	orgID := h.getTenantID(r)
+	if orgID == uuid.Nil {
+		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		return
+	}
+
 	var req models.VerifyComplianceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	comp, status, err := h.compSvc.VerifyCompliance(r.Context(), vehicleID, &req)
+	comp, status, err := h.compSvc.VerifyCompliance(r.Context(), vehicleID, orgID, &req)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeError(w, http.StatusNotFound, "Vehicle not found")
@@ -76,7 +81,13 @@ func (h *ComplianceHandlers) GetCompliance(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	comp, status, err := h.compSvc.GetCompliance(r.Context(), vehicleID)
+	orgID := h.getTenantID(r)
+	if orgID == uuid.Nil {
+		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		return
+	}
+
+	comp, status, err := h.compSvc.GetCompliance(r.Context(), vehicleID, orgID)
 	if err != nil {
 		h.logger.Error("get compliance failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to get compliance")

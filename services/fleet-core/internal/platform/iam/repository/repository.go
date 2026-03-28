@@ -12,6 +12,7 @@ import (
 type IAMRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
 	GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]*models.Role, error)
 	AssignRole(ctx context.Context, userID, roleID uuid.UUID) error
 	GetPermissionsForUser(ctx context.Context, userID uuid.UUID) ([]*models.Permission, error)
@@ -60,6 +61,21 @@ func (r *iamRepository) GetUserByEmail(ctx context.Context, email string) (*mode
 		WHERE u.email = $1
 	`
 	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (r *iamRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+	user := &models.User{}
+	query := `
+		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.org_id
+		FROM users u
+		LEFT JOIN user_organizations uo ON u.id = uo.user_id
+		WHERE u.id = $1
+	`
+	err := r.db.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.OrganizationID)
 	if err != nil {
 		return nil, err
 	}

@@ -224,13 +224,13 @@ func (tp *TelemetryProcessor) flushGPS(batch []*models.GPSTelemetry) {
 				tp.logger.Error("Failed to store GPS data in batch", zap.Error(err))
 				return err
 			}
-			
+
 			for _, item := range items {
 				_ = tp.updateVehicleLocationTx(ctx, tx, item.VehicleID.String(), item.Latitude, item.Longitude)
-				
+
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "gps", item)
-				
+
 				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
@@ -254,7 +254,7 @@ func (tp *TelemetryProcessor) flushOBD(batch []*models.OBDTelemetry) {
 			for _, item := range items {
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "obd", item)
-				
+
 				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
@@ -275,7 +275,7 @@ func (tp *TelemetryProcessor) flushFuel(batch []*models.FuelTelemetry) {
 			for _, item := range items {
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "fuel", item)
-				
+
 				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
@@ -346,7 +346,7 @@ func (tp *TelemetryProcessor) storeFuelDataBatchTx(ctx context.Context, tx datab
 		} else {
 			wkt = ""
 		}
-		
+
 		var loc any = nil
 		if wkt != "" {
 			loc = wkt

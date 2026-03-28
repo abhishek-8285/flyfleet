@@ -9,10 +9,10 @@ import (
 
 // AnomalyDetectionConfig holds anomaly detection configuration
 type AnomalyDetectionConfig struct {
-	MaxPricePerLiter      float64 // Maximum expected price per liter
-	MinPricePerLiter      float64 // Minimum expected price per liter
-	MaxLitersPerFill      float64 // Maximum liters per fill-up
-	MaxDistancePerDay     float64 // Maximum expected distance per day
+	MaxPricePerLiter       float64 // Maximum expected price per liter
+	MinPricePerLiter       float64 // Minimum expected price per liter
+	MaxLitersPerFill       float64 // Maximum liters per fill-up
+	MaxDistancePerDay      float64 // Maximum expected distance per day
 	PriceVarianceThreshold float64 // Price variance threshold for anomaly
 }
 
@@ -46,10 +46,10 @@ func NewAnomalyDetectionService(config *AnomalyDetectionConfig, logger *zap.Logg
 
 // AnomalyResult represents the result of anomaly detection
 type AnomalyResult struct {
-	IsAnomaly      bool     `json:"is_anomaly"`
-	AnomalyType    string   `json:"anomaly_type,omitempty"`
-	AnomalyReason  string   `json:"anomaly_reason"`
-	Confidence     float64  `json:"confidence"` // 0-1 scale
+	IsAnomaly       bool    `json:"is_anomaly"`
+	AnomalyType     string  `json:"anomaly_type,omitempty"`
+	AnomalyReason   string  `json:"anomaly_reason"`
+	Confidence      float64 `json:"confidence"` // 0-1 scale
 	SuggestedAction string  `json:"suggested_action,omitempty"`
 }
 

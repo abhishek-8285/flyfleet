@@ -26,7 +26,7 @@ func setupPreferenceTest() (http.Handler, *mocks.MockNotificationRepository) {
 	logger := zap.NewNop()
 	svc := service.NewNotificationService(mockRepo, logger)
 	h := NewNotificationHandlers(svc, logger)
-	
+
 	r := chi.NewRouter()
 	r.Route("/api/v1/admin/notifications/preferences", func(r chi.Router) {
 		r.Get("/", h.ListPreferences)
@@ -57,7 +57,7 @@ func TestPreferenceHandlers_Validation(t *testing.T) {
 			Reason:       "", // Required and minLength: 5
 		}
 		jsonBody, _ := json.Marshal(body)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/preferences/"+userId.String(), bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
@@ -74,7 +74,7 @@ func TestPreferenceHandlers_Validation(t *testing.T) {
 			"unknown_field": "hacking_attempt",
 		}
 		jsonBody, _ := json.Marshal(body)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/preferences/"+userId.String(), bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
@@ -90,7 +90,7 @@ func TestPreferenceHandlers_Validation(t *testing.T) {
 			Reason:       "fix", // Too short
 		}
 		jsonBody, _ := json.Marshal(body)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/preferences/"+userId.String(), bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)
@@ -106,7 +106,7 @@ func TestPreferenceHandlers_Success(t *testing.T) {
 
 	t.Run("GetUserPreference_Found", func(t *testing.T) {
 		mockRepo.On("GetUserPreference", mock.Anything, userId).Return(&models.UserNotificationPreference{
-			UserID: userId,
+			UserID:   userId,
 			UserName: "Test User",
 		}, nil).Once()
 
@@ -121,10 +121,10 @@ func TestPreferenceHandlers_Success(t *testing.T) {
 	t.Run("UpdatePreference_Success", func(t *testing.T) {
 		// Seeding old values for audit
 		mockRepo.On("GetUserPreference", mock.Anything, userId).Return(&models.UserNotificationPreference{
-			UserID: userId,
+			UserID:       userId,
 			EmailEnabled: true,
 		}, nil).Once()
-		
+
 		mockRepo.On("UpdateUserPreference", mock.Anything, mock.AnythingOfType("*models.UserNotificationPreference")).Return(nil).Once()
 		mockRepo.On("AddPreferenceAudit", mock.Anything, mock.AnythingOfType("*models.PreferenceAudit")).Return(nil).Once()
 
@@ -133,7 +133,7 @@ func TestPreferenceHandlers_Success(t *testing.T) {
 			Reason:       "Security requirement",
 		}
 		jsonBody, _ := json.Marshal(body)
-		
+
 		req, _ := http.NewRequest("PUT", "/api/v1/admin/notifications/preferences/"+userId.String(), bytes.NewBuffer(jsonBody))
 		resp := httptest.NewRecorder()
 		r.ServeHTTP(resp, req)

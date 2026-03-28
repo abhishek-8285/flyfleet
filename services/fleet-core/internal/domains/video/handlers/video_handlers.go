@@ -10,27 +10,44 @@ import (
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+
+	"github.com/flyfleet/fleet-core-service/internal/security"
 )
 
 // VideoHandler handles HTTP requests for video operations
 type VideoHandler struct {
-	service service.VideoService
+	service   service.VideoService
+	logger    *zap.Logger
+	validator *security.TenantValidator
 }
 
 // NewVideoHandler creates a new instance of VideoHandler
-func NewVideoHandler(service service.VideoService) *VideoHandler {
+func NewVideoHandler(service service.VideoService, logger *zap.Logger) *VideoHandler {
 	return &VideoHandler{
-		service: service,
+		service:   service,
+		logger:    logger,
+		validator: security.NewTenantValidator(logger),
 	}
 }
 
 // CreateVideoStream handles POST /api/v1/video/streams
 func (h *VideoHandler) CreateVideoStream(w http.ResponseWriter, r *http.Request) {
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	var stream models.VideoStream
 	if err := json.NewDecoder(r.Body).Decode(&stream); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
+
+	// SECURITY: Force organization from authenticated context (prevent mass assignment)
+	stream.OrganizationID = tenantID
 
 	if err := h.service.CreateVideoStream(r.Context(), &stream); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video stream", err)
@@ -44,9 +61,26 @@ func (h *VideoHandler) CreateVideoStream(w http.ResponseWriter, r *http.Request)
 func (h *VideoHandler) GetVideoStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	stream, err := h.service.GetVideoStream(r.Context(), id)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", err)
+		return
+	}
+
+	// SECURITY: Verify stream belongs to tenant (CWE-639)
+	if stream.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video stream access",
+			zap.String("stream_id", id),
+			zap.String("stream_org", stream.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", nil)
 		return
 	}
 
@@ -56,6 +90,30 @@ func (h *VideoHandler) GetVideoStream(w http.ResponseWriter, r *http.Request) {
 // UpdateVideoStream handles PUT /api/v1/video/streams/:id
 func (h *VideoHandler) UpdateVideoStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// First, get existing stream to verify ownership
+	stream, err := h.service.GetVideoStream(r.Context(), id)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", err)
+		return
+	}
+
+	// SECURITY: Verify stream belongs to tenant
+	if stream.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video stream update attempt",
+			zap.String("stream_id", id),
+			zap.String("stream_org", stream.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", nil)
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
@@ -74,6 +132,24 @@ func (h *VideoHandler) UpdateVideoStream(w http.ResponseWriter, r *http.Request)
 // DeleteVideoStream handles DELETE /api/v1/video/streams/:id
 func (h *VideoHandler) DeleteVideoStream(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// Verify stream belongs to tenant before delete
+	stream, err := h.service.GetVideoStream(r.Context(), id)
+	if err == nil && stream.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video stream delete attempt",
+			zap.String("stream_id", id),
+			zap.String("stream_org", stream.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video stream not found", nil)
+		return
+	}
 
 	if err := h.service.DeleteVideoStream(r.Context(), id); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete video stream", err)
@@ -138,11 +214,21 @@ func (h *VideoHandler) ListVideoStreams(w http.ResponseWriter, r *http.Request) 
 
 // CreateVideoRecording handles POST /api/v1/video/recordings
 func (h *VideoHandler) CreateVideoRecording(w http.ResponseWriter, r *http.Request) {
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	var recording models.VideoRecording
 	if err := json.NewDecoder(r.Body).Decode(&recording); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
+
+	// SECURITY: Force organization from authenticated context (prevent mass assignment)
+	recording.OrganizationID = tenantID
 
 	if err := h.service.CreateVideoRecording(r.Context(), &recording); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create video recording", err)
@@ -156,9 +242,26 @@ func (h *VideoHandler) CreateVideoRecording(w http.ResponseWriter, r *http.Reque
 func (h *VideoHandler) GetVideoRecording(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	recording, err := h.service.GetVideoRecording(r.Context(), id)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", err)
+		return
+	}
+
+	// SECURITY: Verify recording belongs to tenant (CWE-639)
+	if recording.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video recording access",
+			zap.String("recording_id", id),
+			zap.String("recording_org", recording.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", nil)
 		return
 	}
 
@@ -168,6 +271,30 @@ func (h *VideoHandler) GetVideoRecording(w http.ResponseWriter, r *http.Request)
 // UpdateVideoRecording handles PUT /api/v1/video/recordings/:id
 func (h *VideoHandler) UpdateVideoRecording(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// First, get existing recording to verify ownership
+	recording, err := h.service.GetVideoRecording(r.Context(), id)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", err)
+		return
+	}
+
+	// SECURITY: Verify recording belongs to tenant
+	if recording.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video recording update attempt",
+			zap.String("recording_id", id),
+			zap.String("recording_org", recording.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", nil)
+		return
+	}
 
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
@@ -186,6 +313,24 @@ func (h *VideoHandler) UpdateVideoRecording(w http.ResponseWriter, r *http.Reque
 // DeleteVideoRecording handles DELETE /api/v1/video/recordings/:id
 func (h *VideoHandler) DeleteVideoRecording(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// Verify recording belongs to tenant before delete
+	recording, err := h.service.GetVideoRecording(r.Context(), id)
+	if err == nil && recording.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video recording delete attempt",
+			zap.String("recording_id", id),
+			zap.String("recording_org", recording.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", nil)
+		return
+	}
 
 	if err := h.service.DeleteVideoRecording(r.Context(), id); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete video recording", err)
@@ -290,9 +435,39 @@ func (h *VideoHandler) CreateVideoAnalytics(w http.ResponseWriter, r *http.Reque
 func (h *VideoHandler) GetVideoAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	analytics, err := h.service.GetVideoAnalytics(r.Context(), id)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", err)
+		return
+	}
+
+	// SECURITY: Verify analytics belongs to tenant via linked recording
+	// First get the recording to check its organization
+	recording, err := h.service.GetVideoRecording(r.Context(), analytics.RecordingID)
+	if err != nil {
+		// If we can't verify ownership, deny access
+		h.logger.Warn("failed to verify analytics ownership",
+			zap.String("analytics_id", id),
+			zap.String("recording_id", analytics.RecordingID),
+			zap.Error(err))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", nil)
+		return
+	}
+
+	if recording.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized video analytics access",
+			zap.String("analytics_id", id),
+			zap.String("recording_id", analytics.RecordingID),
+			zap.String("recording_org", recording.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", nil)
 		return
 	}
 
@@ -302,6 +477,29 @@ func (h *VideoHandler) GetVideoAnalytics(w http.ResponseWriter, r *http.Request)
 // GetVideoAnalyticsByRecordingID handles GET /api/v1/video/analytics/recording/:recording_id
 func (h *VideoHandler) GetVideoAnalyticsByRecordingID(w http.ResponseWriter, r *http.Request) {
 	recordingID := chi.URLParam(r, "recording_id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// Verify recording belongs to tenant before accessing analytics
+	recording, err := h.service.GetVideoRecording(r.Context(), recordingID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusNotFound, "Video recording not found", err)
+		return
+	}
+
+	if recording.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized analytics access via recording",
+			zap.String("recording_id", recordingID),
+			zap.String("recording_org", recording.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Video analytics not found", nil)
+		return
+	}
 
 	analytics, err := h.service.GetVideoAnalyticsByRecordingID(r.Context(), recordingID)
 	if err != nil {
@@ -355,11 +553,21 @@ func (h *VideoHandler) ListVideoAnalytics(w http.ResponseWriter, r *http.Request
 
 // CreateRetentionPolicy handles POST /api/v1/video/retention/policies
 func (h *VideoHandler) CreateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	var policy models.VideoRetentionPolicy
 	if err := json.NewDecoder(r.Body).Decode(&policy); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
+
+	// SECURITY: Force organization from authenticated context (prevent mass assignment)
+	policy.OrganizationID = tenantID
 
 	if err := h.service.CreateRetentionPolicy(r.Context(), &policy); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create retention policy", err)
@@ -373,9 +581,26 @@ func (h *VideoHandler) CreateRetentionPolicy(w http.ResponseWriter, r *http.Requ
 func (h *VideoHandler) GetRetentionPolicy(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
 	policy, err := h.service.GetRetentionPolicy(r.Context(), id)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", err)
+		return
+	}
+
+	// SECURITY: Verify policy belongs to tenant
+	if policy.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized retention policy access",
+			zap.String("policy_id", id),
+			zap.String("policy_org", policy.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", nil)
 		return
 	}
 
@@ -386,9 +611,39 @@ func (h *VideoHandler) GetRetentionPolicy(w http.ResponseWriter, r *http.Request
 func (h *VideoHandler) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// First, get existing policy to verify ownership
+	policy, err := h.service.GetRetentionPolicy(r.Context(), id)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", err)
+		return
+	}
+
+	// SECURITY: Verify policy belongs to tenant
+	if policy.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized retention policy update attempt",
+			zap.String("policy_id", id),
+			zap.String("policy_org", policy.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", nil)
+		return
+	}
+
 	var updates map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
+		return
+	}
+
+	// Prevent changing OrganizationID
+	if _, ok := updates["organization_id"]; ok {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Cannot change organization_id", nil)
 		return
 	}
 
@@ -403,6 +658,24 @@ func (h *VideoHandler) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Requ
 // DeleteRetentionPolicy handles DELETE /api/v1/video/retention/policies/:id
 func (h *VideoHandler) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	// Verify policy belongs to tenant before delete
+	policy, err := h.service.GetRetentionPolicy(r.Context(), id)
+	if err == nil && policy.OrganizationID != tenantID {
+		h.logger.Warn("unauthorized retention policy delete attempt",
+			zap.String("policy_id", id),
+			zap.String("policy_org", policy.OrganizationID.String()),
+			zap.String("request_org", tenantID.String()))
+		h.writeErrorResponse(w, http.StatusNotFound, "Retention policy not found", nil)
+		return
+	}
 
 	if err := h.service.DeleteRetentionPolicy(r.Context(), id); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete retention policy", err)
@@ -613,6 +886,12 @@ func (h *VideoHandler) RegisterRoutes(r chi.Router) {
 		r.Put("/{id}", h.UpdateRetentionPolicy)
 		r.Delete("/{id}", h.DeleteRetentionPolicy)
 	})
+}
+
+// --- Helpers ---
+
+func (h *VideoHandler) getTenantID(r *http.Request) uuid.UUID {
+	return h.validator.GetTenantID(r)
 }
 
 func (h *VideoHandler) writeJSONResponse(w http.ResponseWriter, status int, data interface{}) {

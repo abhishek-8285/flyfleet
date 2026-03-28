@@ -18,36 +18,19 @@ import { MemoryRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthProvider";
 
 import { RBACProvider } from "../context/RBACProvider";
-import apiClient from "../services/apiClient";
+import { vi } from "vitest";
 
 // Mock the API client so no real HTTP requests are made in tests
-jest.mock("../services/apiClient", () => ({
+vi.mock("../services/apiClient", () => ({
   __esModule: true,
   default: {
-    get: jest.fn(),
-    put: jest.fn(),
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
   },
 }));
 
-// Mock window.location
-const originalLocation = window.location;
-beforeAll(() => {
-  delete (window as any).location;
-  window.location = {
-    ...originalLocation,
-    assign: jest.fn(),
-    replace: jest.fn(),
-    reload: jest.fn(),
-  } as any;
-  Object.defineProperty(window.location, "href", {
-    writable: true,
-    value: "http://localhost/",
-  });
-});
-
-afterAll(() => {
-  window.location = originalLocation;
-});
+import apiClient from "../services/apiClient";
 
 const PreferencesReadout: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -114,13 +97,13 @@ const NavigatingApp: React.FC = () => {
 
 const renderAndWait = async () => {
   // Clear any existing state
-  localStorage.clear();
+  window.localStorage.clear();
   // Pre-seed a session token so AuthProvider hydrates user from mock
-  localStorage.setItem("access_token", "test-token");
+  window.localStorage.setItem("access_token", "test-token");
   // Seed defaults to avoid race conditions with local storage fallbacks
-  localStorage.setItem("theme", "light");
-  localStorage.setItem("flyfleet_language", "en");
-  localStorage.setItem("flyfleet_sidebar_collapsed", "false");
+  window.localStorage.setItem("theme", "light");
+  window.localStorage.setItem("flyfleet_language", "en");
+  window.localStorage.setItem("flyfleet_sidebar_collapsed", "false");
 
   const utils = render(<NavigatingApp />);
 
@@ -137,7 +120,7 @@ const renderAndWait = async () => {
 
 describe("Multi-Route Global State Persistence", () => {
   beforeEach(() => {
-    (apiClient.get as jest.Mock).mockImplementation(() =>
+    (apiClient.get as any).mockImplementation(() =>
       Promise.resolve({
         user: {
           id: "test-user-id",
@@ -151,12 +134,23 @@ describe("Multi-Route Global State Persistence", () => {
         orgs: [],
       }),
     );
-    (apiClient.put as jest.Mock).mockResolvedValue({});
+    (apiClient.post as any).mockResolvedValue({
+      token: "new-access-token",
+      user: {
+        id: "test-user-id",
+        name: "Test User",
+        email: "test@flyfleet.io",
+        theme: "light",
+        language: "en",
+        sidebar_collapsed: false,
+      },
+    });
+    (apiClient.put as any).mockResolvedValue({});
 
-    localStorage.clear();
-    localStorage.setItem("access_token", "test-token");
+    window.localStorage.clear();
+    window.localStorage.setItem("access_token", "test-token");
     document.documentElement.classList.remove("dark");
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("Route A: theme starts as light from mock DB value", async () => {
@@ -242,21 +236,21 @@ describe("Multi-Route Global State Persistence", () => {
       fireEvent.click(screen.getByTestId("btn-theme"));
     });
     await waitFor(() => {
-      expect(localStorage.getItem("theme")).toBe("dark");
+      expect(window.localStorage.getItem("theme")).toBe("dark");
     });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-lang"));
     });
     await waitFor(() => {
-      expect(localStorage.getItem("flyfleet_language")).toBe("fr");
+      expect(window.localStorage.getItem("flyfleet_language")).toBe("fr");
     });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-sidebar"));
     });
     await waitFor(() => {
-      expect(localStorage.getItem("flyfleet_sidebar_collapsed")).toBe("true");
+      expect(window.localStorage.getItem("flyfleet_sidebar_collapsed")).toBe("true");
     });
   });
 });

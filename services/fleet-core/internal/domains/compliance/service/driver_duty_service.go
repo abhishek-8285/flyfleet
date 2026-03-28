@@ -19,7 +19,7 @@ var (
 type DriverDutyService interface {
 	RecordDutyStatus(ctx context.Context, driverID, vehicleID uuid.UUID, status models.DriverDutyStatus, location, notes string) (*models.DriverDutyLog, error)
 	GetLatestDutyStatus(ctx context.Context, driverID uuid.UUID) (*models.DriverDutyLog, error)
-	
+
 	RecordBreak(ctx context.Context, driverID uuid.UUID, startTime time.Time, details models.BreakType) (*models.DriverBreakLog, error)
 }
 
@@ -85,7 +85,7 @@ func (s *driverDutyServiceImpl) GetLatestDutyStatus(ctx context.Context, driverI
 		return nil, err
 	}
 	if log == nil {
-		// Default to Off Duty 
+		// Default to Off Duty
 		return &models.DriverDutyLog{
 			DriverID: driverID,
 			Status:   models.DutyStatusOffDuty,
@@ -106,6 +106,6 @@ func (s *driverDutyServiceImpl) RecordBreak(ctx context.Context, driverID uuid.U
 	if err := s.repo.RecordBreakLog(ctx, newBreak); err != nil {
 		return nil, err
 	}
-	
+
 	return newBreak, nil
 }

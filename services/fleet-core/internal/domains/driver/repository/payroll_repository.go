@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,10 +28,12 @@ func (r *PayrollRepository) CreateSalaryConfig(ctx context.Context, config *mode
 		config.ID = uuid.New().String()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		config.ID, config.DriverID, config.BaseSalary, config.PerKmRate,
 		config.DailyAllowance, config.NightAllowance, config.EffectiveFrom,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -44,10 +47,12 @@ func (r *PayrollRepository) CreateTripEarning(ctx context.Context, earning *mode
 		earning.ID = uuid.New().String()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		earning.ID, earning.DriverID, earning.TripID, earning.DistanceKm,
 		earning.Earnings, earning.Bonus, earning.Penalty,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
@@ -60,10 +65,12 @@ func (r *PayrollRepository) GetSalaryConfig(ctx context.Context, driverID string
 		LIMIT 1`
 
 	var c models.SalaryConfig
+	start := time.Now()
 	err := r.db.QueryRow(ctx, query, driverID).Scan(
 		&c.ID, &c.DriverID, &c.BaseSalary, &c.PerKmRate,
 		&c.DailyAllowance, &c.NightAllowance, &c.EffectiveFrom,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +83,9 @@ func (r *PayrollRepository) GetTripEarnings(ctx context.Context, driverID string
 		FROM driver_trip_earnings
 		WHERE driver_id = $1 AND created_at >= $2 AND created_at <= $3`
 
+	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, driverID, start, end)
+	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +116,11 @@ func (r *PayrollRepository) CreatePayout(ctx context.Context, payout *models.Pay
 		payout.CreatedAt = time.Now()
 	}
 
+	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
 		payout.ID, payout.DriverID, payout.PeriodStart, payout.PeriodEnd,
 		payout.TotalAmount, payout.Status, payout.CreatedAt,
 	)
+	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

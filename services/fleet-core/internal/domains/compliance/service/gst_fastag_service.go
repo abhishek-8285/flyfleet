@@ -23,7 +23,7 @@ func NewGSTService(compService ComplianceService) GSTService {
 func (s *gstService) GenerateTripGSTReport(ctx context.Context, tripID uuid.UUID) (*models.GSTTripInvoice, error) {
 	// In a real system, this would fetch from billing_v2
 	// For compliance_v2, we provide the trip data foundation
-	
+
 	return &models.GSTTripInvoice{
 		TripID:        tripID.String(),
 		SupplierGSTIN: "27AAAAA0000A1Z5", // Mock Maharashtra GSTIN

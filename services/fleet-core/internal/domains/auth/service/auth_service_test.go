@@ -17,20 +17,20 @@ import (
 
 // MockAuthRepository is a mock implementation for testing
 type MockAuthRepository struct {
-	GetUserByEmailFn       func(ctx context.Context, email string) (*models.User, error)
-	GetUserByIDFn          func(ctx context.Context, id uuid.UUID) (*models.User, error)
-	CreateUserFn           func(ctx context.Context, user *models.User) error
-	UpdateUserLoginAttemptsFn func(ctx context.Context, id uuid.UUID, attempts int, lockedUntil *time.Time) error
-	ResetLoginAttemptsFn   func(ctx context.Context, id uuid.UUID) error
-	LogSecurityEventFn     func(ctx context.Context, event *models.SecurityEvent) error
-	CreateRefreshTokenFn   func(ctx context.Context, token *models.RefreshToken) error
-	GetRefreshTokenFn      func(ctx context.Context, token string) (*models.RefreshToken, error)
-	RevokeRefreshTokenFn   func(ctx context.Context, token string) error
-	RevokeAllUserTokensFn  func(ctx context.Context, userID uuid.UUID) error
+	GetUserByEmailFn           func(ctx context.Context, email string) (*models.User, error)
+	GetUserByIDFn              func(ctx context.Context, id uuid.UUID) (*models.User, error)
+	CreateUserFn               func(ctx context.Context, user *models.User) error
+	UpdateUserLoginAttemptsFn  func(ctx context.Context, id uuid.UUID, attempts int, lockedUntil *time.Time) error
+	ResetLoginAttemptsFn       func(ctx context.Context, id uuid.UUID) error
+	LogSecurityEventFn         func(ctx context.Context, event *models.SecurityEvent) error
+	CreateRefreshTokenFn       func(ctx context.Context, token *models.RefreshToken) error
+	GetRefreshTokenFn          func(ctx context.Context, token string) (*models.RefreshToken, error)
+	RevokeRefreshTokenFn       func(ctx context.Context, token string) error
+	RevokeAllUserTokensFn      func(ctx context.Context, userID uuid.UUID) error
 	CreatePasswordResetTokenFn func(ctx context.Context, userID uuid.UUID, token string, expiresAt time.Time) error
-	GetPasswordResetTokenFn func(ctx context.Context, token string) (*models.PasswordResetToken, error)
-	UpdatePasswordFn       func(ctx context.Context, userID uuid.UUID, passwordHash string) error
-	UsePasswordResetTokenFn func(ctx context.Context, token string) error
+	GetPasswordResetTokenFn    func(ctx context.Context, token string) (*models.PasswordResetToken, error)
+	UpdatePasswordFn           func(ctx context.Context, userID uuid.UUID, passwordHash string) error
+	UsePasswordResetTokenFn    func(ctx context.Context, token string) error
 
 	// MFA Operations
 	UpdateMFASecretFn func(ctx context.Context, userID uuid.UUID, secret string) error
@@ -290,7 +290,7 @@ func TestAuthService_VerifyTOTP_InvalidCodeLength(t *testing.T) {
 
 func TestValidationError_Error(t *testing.T) {
 	err := ValidationError{Field: "email", Message: "invalid format"}
-	
+
 	assert.Equal(t, "email: invalid format", err.Error())
 }
 
@@ -543,12 +543,12 @@ func TestValidateJWT_ExactExpirationBoundary(t *testing.T) {
 	// Setup service with instantly expiring token
 	repo := &MockAuthRepository{}
 	svc := NewAuthService(nil, repo, nil, "test-secret", nil, nil)
-	// Note: Because we can't easily mock the unexported time generation inside GenerateToken 
+	// Note: Because we can't easily mock the unexported time generation inside GenerateToken
 	// without refactoring the time.Now() calls to use an interface, we rely on the parser asserting an expired token.
-	
+
 	// Issue a token and artificially simulate an expired one by manual signing:
 	token, _ := svc.GenerateToken(uuid.New(), uuid.New(), "user")
-	
+
 	// Wait logic theoretically belongs here for a production check if time wasn't mockable
 	_ = token
 }
@@ -559,7 +559,7 @@ func TestVerifyMFA_ValidCode(t *testing.T) {
 
 	userID := uuid.New()
 	secretKey := "JBSWY3DPEHPK3PXP" // Valid base32 secret
-	
+
 	mockRepo.GetUserByIDFn = func(ctx context.Context, id uuid.UUID) (*models.User, error) {
 		return &models.User{ID: id, MfaEnabled: true, MfaSecret: secretKey}, nil
 	}
@@ -579,7 +579,7 @@ func TestLogin_ProducesSecurityEventAndChecksOrgState(t *testing.T) {
 	mockRepo.GetUserByEmailFn = func(ctx context.Context, email string) (*models.User, error) {
 		return &models.User{ID: userID, OrgID: uuid.New()}, nil
 	}
-	
+
 	// Simulate an org lookup failure or disabled org
 	mockRepo.LogSecurityEventFn = func(ctx context.Context, event *models.SecurityEvent) error {
 		assert.Equal(t, "LOGIN_FAILED", event.EventType)
@@ -596,7 +596,7 @@ func TestPasswordReset_TokenReuse(t *testing.T) {
 	ctx := context.Background()
 
 	resetToken := "token123"
-	
+
 	// First use mock prep
 	mockRepo.GetPasswordResetTokenFn = func(ctx context.Context, token string) (*models.PasswordResetToken, error) {
 		return &models.PasswordResetToken{

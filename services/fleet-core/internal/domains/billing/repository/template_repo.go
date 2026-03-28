@@ -38,7 +38,7 @@ func (r *TemplateRepository) GetDefault(ctx context.Context) (*models.InvoiceTem
 		WHERE is_default = true
 		ORDER BY version DESC
 		LIMIT 1
-	`,).Scan(&t.ID, &t.Name, &t.Version, &t.HTMLContent, &t.IsDefault, &t.CreatedAt)
+	`).Scan(&t.ID, &t.Name, &t.Version, &t.HTMLContent, &t.IsDefault, &t.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

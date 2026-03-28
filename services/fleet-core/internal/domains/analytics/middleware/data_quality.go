@@ -25,7 +25,7 @@ func (v *DataQualityValidator) ValidateTelemetry(next http.Handler) http.Handler
 		}
 
 		// This is a simplified validation. In a real system, we'd use a more robust
-		// way to peak at the body without fully consuming it if possible, 
+		// way to peak at the body without fully consuming it if possible,
 		// or use a structured validator after binding.
 		// For this implementation, we'll demonstrate the logic.
 
@@ -34,7 +34,7 @@ func (v *DataQualityValidator) ValidateTelemetry(next http.Handler) http.Handler
 
 		// Implementation note: This middleware would typically wrap the ingestion handler
 		// and use the parsed models. For demonstration, we provide the logic.
-		
+
 		next.ServeHTTP(w, r)
 	})
 }

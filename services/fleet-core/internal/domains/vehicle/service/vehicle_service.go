@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
+
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/crypto"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/repository"
@@ -19,10 +21,10 @@ type VehicleServiceInterface interface {
 	GetVehicle(ctx context.Context, id uuid.UUID) (*models.Vehicle, error)
 	ListVehicles(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.Vehicle, int64, error)
 	UpdateVehicle(ctx context.Context, id uuid.UUID, req *models.UpdateVehicleRequest) (*models.Vehicle, error)
-	DeleteVehicle(ctx context.Context, id uuid.UUID) error
+	DeleteVehicle(ctx context.Context, id, orgID uuid.UUID) error
 
 	// Driver assignment
-	AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) (*models.Vehicle, error)
+	AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) (*models.Vehicle, error)
 
 	// Location (stub — real data from tracking service)
 	GetVehicleLocation(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleLocation, error)
@@ -131,6 +133,28 @@ func (s *VehicleService) GetVehicle(ctx context.Context, id uuid.UUID) (*models.
 	if err != nil {
 		return nil, err
 	}
+
+	// SECURITY FIX: Validate tenant ownership (CWE-639)
+	orgIDVal := ctx.Value(middleware.OrgIDKey)
+	if orgIDVal != nil {
+		var orgID uuid.UUID
+		switch v2 := orgIDVal.(type) {
+		case uuid.UUID:
+			orgID = v2
+		case string:
+			if parsedID, err := uuid.Parse(v2); err == nil {
+				orgID = parsedID
+			}
+		}
+		if orgID != uuid.Nil && v.TenantID != orgID {
+			s.logger.Warn("unauthorized vehicle access attempt",
+				zap.String("vehicle_id", id.String()),
+				zap.String("vehicle_tenant", v.TenantID.String()),
+				zap.Any("request_org", orgIDVal))
+			return nil, fmt.Errorf("vehicle not found")
+		}
+	}
+
 	// Decrypt sensitive fields for caller
 	_ = crypto.DecryptPtr(v.ChassisNumber)
 	_ = crypto.DecryptPtr(v.EngineNumber)
@@ -154,6 +178,27 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	vehicle, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	// SECURITY FIX: Validate tenant ownership (CWE-639)
+	orgIDVal := ctx.Value(middleware.OrgIDKey)
+	if orgIDVal != nil {
+		var orgID uuid.UUID
+		switch v2 := orgIDVal.(type) {
+		case uuid.UUID:
+			orgID = v2
+		case string:
+			if parsedID, err := uuid.Parse(v2); err == nil {
+				orgID = parsedID
+			}
+		}
+		if orgID != uuid.Nil && vehicle.TenantID != orgID {
+			s.logger.Warn("unauthorized vehicle update attempt",
+				zap.String("vehicle_id", id.String()),
+				zap.String("vehicle_tenant", vehicle.TenantID.String()),
+				zap.Any("request_org", orgIDVal))
+			return nil, fmt.Errorf("vehicle not found")
+		}
 	}
 
 	// Business rule: legal hold prevents modification
@@ -232,22 +277,39 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	return vehicle, nil
 }
 
-func (s *VehicleService) DeleteVehicle(ctx context.Context, id uuid.UUID) error {
+func (s *VehicleService) DeleteVehicle(ctx context.Context, id, orgID uuid.UUID) error {
 	vehicle, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
+	if vehicle.TenantID != orgID {
+		s.logger.Warn("unauthorized delete vehicle attempt",
+			zap.String("vehicle_id", id.String()),
+			zap.String("org_id", orgID.String()))
+		return fmt.Errorf("vehicle not found")
+	}
 	if vehicle.Status == models.StatusDecommissioned {
 		return ErrVehicleCannotBeDeleted
 	}
-	if err := s.repo.Delete(ctx, id); err != nil {
+	if err := s.repo.Delete(ctx, id, orgID); err != nil {
 		return fmt.Errorf("failed to delete vehicle: %w", err)
 	}
 	return nil
 }
 
-func (s *VehicleService) AssignDriver(ctx context.Context, vehicleID, driverID uuid.UUID) (*models.Vehicle, error) {
-	if err := s.repo.AssignDriver(ctx, vehicleID, driverID); err != nil {
+func (s *VehicleService) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) (*models.Vehicle, error) {
+	// Verify vehicle belongs to org
+	vehicle, err := s.repo.GetByID(ctx, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	if vehicle.TenantID != orgID {
+		s.logger.Warn("unauthorized assign driver attempt",
+			zap.String("vehicle_id", vehicleID.String()),
+			zap.String("org_id", orgID.String()))
+		return nil, fmt.Errorf("vehicle not found")
+	}
+	if err := s.repo.AssignDriver(ctx, vehicleID, orgID, driverID); err != nil {
 		return nil, fmt.Errorf("failed to assign driver: %w", err)
 	}
 	return s.repo.GetByID(ctx, vehicleID)

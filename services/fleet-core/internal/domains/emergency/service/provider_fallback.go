@@ -43,7 +43,7 @@ func (m *ProviderFallbackManager) SendSMSWithFallback(ctx context.Context, phone
 			emergency.NotificationRetriesTotal.WithLabelValues(p.GetName(), "sms").Inc()
 			return nil
 		}
-		
+
 		m.health.RecordFailure(ctx, p.GetName())
 		m.logger.Warn("SMS provider failed, trying next", zap.String("provider", p.GetName()))
 		emergency.NotificationRetriesTotal.WithLabelValues(p.GetName(), "sms_fail").Inc()

@@ -61,8 +61,8 @@ func (s *DriverService) SendMessage(ctx context.Context, driverID, orgID string,
 	}
 
 	if err := s.repo.CreateMessage(ctx, msg); err != nil {
-		s.logger.Error("failed to send message", 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to send message",
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -82,8 +82,12 @@ func (s *DriverService) GetMessages(ctx context.Context, driverID, orgID string,
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
-	if page < 1 { page = 1 }
-	if pageSize < 1 { pageSize = 20 }
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
 	offset := (page - 1) * pageSize
 
 	return s.repo.GetMessages(ctx, driverID, pageSize, offset)
@@ -102,10 +106,10 @@ func (s *DriverService) SubmitExpense(ctx context.Context, driverID, orgID strin
 
 	req.DriverID = driverID
 	req.Status = "PENDING"
-	
+
 	if err := s.repo.CreateExpense(ctx, req); err != nil {
-		s.logger.Error("failed to submit expense", 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to submit expense",
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to submit expense: %w", err)
 	}
@@ -147,7 +151,7 @@ func (s *DriverService) TriggerSOS(ctx context.Context, driverID, orgID string, 
 		return fmt.Errorf("unauthorized access to driver data (driver org: %s, req org: %s)", driverRecord.OrgID, orgID)
 	}
 
-	s.logger.Warn("SOS ALERT TRIGGERED", 
+	s.logger.Warn("SOS ALERT TRIGGERED",
 		zap.String("driver_id", driverID),
 		zap.Any("location", location))
 

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
+	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/google/uuid"
-	"github.com/fleet-platform/shared/pkg/logger"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -40,7 +40,7 @@ func NewComplianceService(logger logger.Logger, repo repository.ComplianceReposi
 // RecordDutyStatus simulates the FMCSA ELD State Machine
 func (s *complianceServiceImpl) RecordDutyStatus(ctx context.Context, req *pb.RecordDutyStatusRequest) (*pb.RecordDutyStatusResponse, error) {
 	driverID, _ := uuid.Parse(req.DriverId)
-	
+
 	// 1. Fetch current status to evaluate transition legality
 	currentStatus, err := s.repo.GetLatestDutyStatus(ctx, driverID)
 	if err != nil {

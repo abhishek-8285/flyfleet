@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
 )
 
 func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.PurchaseOrder) error {
@@ -24,11 +24,11 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 	po.UpdatedAt = now
 
 	poQuery := `
-		INSERT INTO purchase_orders (id, organization_id, vendor_id, order_number, status, total_cost, created_at, updated_at)
+		INSERT INTO purchase_orders (id, org_id, vendor_id, order_number, status, total_cost, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err = tx.Exec(ctx, poQuery,
-		po.ID, po.OrganizationID, po.VendorID, po.OrderNumber, po.Status, po.TotalCost, po.CreatedAt, po.UpdatedAt,
+		po.ID, po.OrgID, po.VendorID, po.OrderNumber, po.Status, po.TotalCost, po.CreatedAt, po.UpdatedAt,
 	)
 	if err != nil {
 		return err
@@ -56,16 +56,16 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 }
 
 func (r *MaintenanceRepositoryImpl) GetPOByID(ctx context.Context, id uuid.UUID) (*models.PurchaseOrder, error) {
-	query := `SELECT id, organization_id, vendor_id, order_number, status, total_cost, created_at FROM purchase_orders WHERE id = $1`
+	query := `SELECT id, org_id, vendor_id, order_number, status, total_cost, created_at FROM purchase_orders WHERE id = $1`
 	var po models.PurchaseOrder
-	err := r.db.QueryRow(ctx, query, id).Scan(&po.ID, &po.OrganizationID, &po.VendorID, &po.OrderNumber, &po.Status, &po.TotalCost, &po.CreatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(&po.ID, &po.OrgID, &po.VendorID, &po.OrderNumber, &po.Status, &po.TotalCost, &po.CreatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	
+
 	// Load items
 	itemQuery := `SELECT id, purchase_order_id, part_id, quantity, unit_cost, total_cost FROM purchase_order_items WHERE purchase_order_id = $1`
 	rows, err := r.db.Query(ctx, itemQuery, id)
@@ -73,7 +73,7 @@ func (r *MaintenanceRepositoryImpl) GetPOByID(ctx context.Context, id uuid.UUID)
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	for rows.Next() {
 		var item models.PurchaseOrderItem
 		if err := rows.Scan(&item.ID, &item.PurchaseOrderID, &item.PartID, &item.Quantity, &item.UnitCost, &item.TotalCost); err != nil {
@@ -81,7 +81,7 @@ func (r *MaintenanceRepositoryImpl) GetPOByID(ctx context.Context, id uuid.UUID)
 		}
 		po.Items = append(po.Items, item)
 	}
-	
+
 	return &po, nil
 }
 

@@ -15,9 +15,9 @@ BUILD_STACK="${BUILD_STACK:-1}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-1}"
 STRICT_MIGRATIONS="${STRICT_MIGRATIONS:-0}"
 AUTH_EMAIL="${AUTH_EMAIL:-admin@flyfleet.com}"
-AUTH_PASSWORD="${AUTH_PASSWORD:-admin123}"
+: "${AUTH_PASSWORD:?ERROR: AUTH_PASSWORD environment variable is required. Set it with your admin password.}"
+: "${JWT_SECRET:?ERROR: JWT_SECRET environment variable is required. Set it with a strong secret key.}"
 AUTH_SERVICE_URL="${AUTH_SERVICE_URL:-http://localhost:8080}"
-JWT_SECRET="${JWT_SECRET:-secret}"
 
 SERVICES=(
   postgres

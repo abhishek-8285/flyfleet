@@ -17,13 +17,13 @@ func (s *TripService) OfferTrip(ctx context.Context, tripID, driverID string) (*
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if trip.Status != "planned" && trip.Status != "offered" {
 		return nil, fmt.Errorf("trip cannot be offered in current status: %s", trip.Status)
 	}
 
 	expiresAt := time.Now().Add(15 * time.Minute) // 15 min expiry
-	
+
 	offer := &models.TripOffer{
 		TripID:    tripID,
 		DriverID:  driverID,
@@ -32,13 +32,13 @@ func (s *TripService) OfferTrip(ctx context.Context, tripID, driverID string) (*
 	}
 
 	if err := s.repo.CreateOffer(ctx, offer); err != nil {
-		s.logger.Error("failed to create trip offer", 
-			zap.String("trip_id", tripID), 
-			zap.String("driver_id", driverID), 
+		s.logger.Error("failed to create trip offer",
+			zap.String("trip_id", tripID),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to create trip offer: %w", err)
 	}
-	
+
 	// Update trip status to reflect pending offer
 	// s.repo.Update(ctx, tripID, map[string]interface{}{"status": "offered"})
 
@@ -72,7 +72,7 @@ func (s *TripService) RespondToOffer(ctx context.Context, offerID, driverID, res
 		if err := s.repo.RespondToOffer(ctx, offerID, "ACCEPTED", ""); err != nil {
 			return err
 		}
-		
+
 		// Assign trip to driver
 		updates := map[string]interface{}{
 			"driver_id": driverID,
@@ -83,9 +83,9 @@ func (s *TripService) RespondToOffer(ctx context.Context, offerID, driverID, res
 			s.logger.Error("failed to assign trip after acceptance", zap.Error(err))
 			return fmt.Errorf("failed to assign trip: %w", err)
 		}
-		
+
 		s.publishEvent("trip.accepted", map[string]string{"trip_id": offer.TripID, "driver_id": driverID})
-		
+
 	case "REJECTED":
 		if err := s.repo.RespondToOffer(ctx, offerID, "REJECTED", reason); err != nil {
 			return err

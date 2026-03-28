@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Configuration
-API_URL="http://localhost:8081/api/v1"
-ADMIN_EMAIL="admin@flyfleet.com"
-ADMIN_PASSWORD="admin123"
+# Configuration - require environment variables for credentials
+: "${ADMIN_PASSWORD:?ERROR: ADMIN_PASSWORD environment variable is required. Set it with the admin password.}"
+API_URL="${API_URL:-http://localhost:8081/api/v1}"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@flyfleet.com}"
 
 echo "============================================"
 echo "  FlyFleet Full Flow Verification Script"

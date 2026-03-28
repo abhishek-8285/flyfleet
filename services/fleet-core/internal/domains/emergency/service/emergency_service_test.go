@@ -136,7 +136,9 @@ func (m *MockEmergencyRepo) GetEmergencyContacts(ctx context.Context, orgID uuid
 	return args.Get(0).([]models.EmergencyContact), args.Error(1)
 }
 
-func (m *MockEmergencyRepo) CreateMedia(ctx context.Context, media *models.IncidentMedia) error { return nil }
+func (m *MockEmergencyRepo) CreateMedia(ctx context.Context, media *models.IncidentMedia) error {
+	return nil
+}
 func (m *MockEmergencyRepo) CreateVehicleSnapshot(ctx context.Context, snapshot *models.IncidentVehicleSnapshot) error {
 	return nil
 }
@@ -219,8 +221,8 @@ func TestEmergencyService_OrgIDIsolation(t *testing.T) {
 	userID := uuid.New()
 
 	incident := &models.SOSIncident{
-		ID:    incidentID,
-		OrgID: orgA,
+		ID:     incidentID,
+		OrgID:  orgA,
 		Status: models.StatusTriggered,
 	}
 
@@ -230,7 +232,7 @@ func TestEmergencyService_OrgIDIsolation(t *testing.T) {
 		repo.On("UpdateIncidentStatus", mock.Anything, incidentID, models.StatusAcknowledged, mock.Anything).Return(nil)
 		repo.On("LogTimelineEvent", mock.Anything, mock.Anything).Return(nil)
 		repo.On("LogIncidentAction", mock.Anything, mock.Anything).Return(nil)
-		
+
 		err := svc.AcknowledgeIncident(context.Background(), incidentID, orgA, userID, "Looks real")
 		assert.NoError(t, err)
 	})
@@ -274,7 +276,7 @@ func TestEmergencyService_SimulationMode(t *testing.T) {
 	incident, err := svc.TriggerSimulatedSOS(context.Background(), req)
 	assert.NoError(t, err)
 	assert.True(t, incident.SimulationMode)
-	
+
 	var meta map[string]interface{}
 	json.Unmarshal(incident.Metadata, &meta)
 	assert.Equal(t, true, meta["simulated"])

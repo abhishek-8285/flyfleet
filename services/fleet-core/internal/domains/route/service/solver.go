@@ -44,7 +44,7 @@ func (s *ClarkeWrightSolver) Solve(ctx context.Context, request *models.RouteOpt
 			d_i0, _, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, models.Location{Latitude: request.Stops[i].Latitude, Longitude: request.Stops[i].Longitude}, depot, nil)
 			d_j0, _, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, models.Location{Latitude: request.Stops[j].Latitude, Longitude: request.Stops[j].Longitude}, depot, nil)
 			d_ij, _, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, models.Location{Latitude: request.Stops[i].Latitude, Longitude: request.Stops[i].Longitude}, models.Location{Latitude: request.Stops[j].Latitude, Longitude: request.Stops[j].Longitude}, nil)
-			
+
 			savings = append(savings, saving{i: i, j: j, saving: d_i0 + d_j0 - d_ij})
 		}
 	}
@@ -70,8 +70,12 @@ func (s *ClarkeWrightSolver) Solve(ctx context.Context, request *models.RouteOpt
 		ri, rj := -1, -1
 		for idx, r := range activeRoutes {
 			for _, sIdx := range r.stops {
-				if sIdx == sav.i { ri = idx }
-				if sIdx == sav.j { rj = idx }
+				if sIdx == sav.i {
+					ri = idx
+				}
+				if sIdx == sav.j {
+					rj = idx
+				}
 			}
 		}
 
@@ -82,7 +86,7 @@ func (s *ClarkeWrightSolver) Solve(ctx context.Context, request *models.RouteOpt
 
 			if iAtEnd && jAtEnd {
 				// Check capacity (using first vehicle as proxy for simple MVP)
-				if activeRoutes[ri].capacity + activeRoutes[rj].capacity <= request.Vehicles[0].Capacity {
+				if activeRoutes[ri].capacity+activeRoutes[rj].capacity <= request.Vehicles[0].Capacity {
 					// Merge routes
 					newStops := mergeStops(activeRoutes[ri].stops, activeRoutes[rj].stops, sav.i, sav.j)
 					activeRoutes[ri].stops = newStops
@@ -98,19 +102,21 @@ func (s *ClarkeWrightSolver) Solve(ctx context.Context, request *models.RouteOpt
 	finalRoutes := []models.Route{}
 	totalDistance := 0.0
 	for i, r := range activeRoutes {
-		if i >= len(request.Vehicles) { break }
-		
+		if i >= len(request.Vehicles) {
+			break
+		}
+
 		finalRoute := models.Route{
 			VehicleID: request.Vehicles[i].ID,
 			Stops:     []models.RouteStop{},
 		}
-		
+
 		lastLoc := depot
 		for sIdx, stopIdx := range r.stops {
 			stop := request.Stops[stopIdx]
 			stopLoc := models.Location{Latitude: stop.Latitude, Longitude: stop.Longitude}
 			dist, _, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, lastLoc, stopLoc, &request.Vehicles[i])
-			
+
 			finalRoute.Stops = append(finalRoute.Stops, models.RouteStop{
 				StopID:   stop.ID,
 				Sequence: sIdx,
@@ -121,7 +127,7 @@ func (s *ClarkeWrightSolver) Solve(ctx context.Context, request *models.RouteOpt
 		// Return to depot
 		distBack, _, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, lastLoc, depot, &request.Vehicles[i])
 		finalRoute.Distance += distBack
-		
+
 		totalDistance += finalRoute.Distance
 		finalRoutes = append(finalRoutes, finalRoute)
 	}
@@ -225,11 +231,11 @@ func (s *HeuristicSolver) Solve(ctx context.Context, request *models.RouteOptimi
 
 		for sIdx, stop := range unassignedStops {
 			stopLoc := models.Location{Latitude: stop.Latitude, Longitude: stop.Longitude}
-			
+
 			for vIdx, vehicle := range request.Vehicles {
 				// Calculate Distance and Time
 				dist, travelTime, _ := s.Service.distanceProvider.GetDistanceAndTime(ctx, vehicleLocations[vIdx], stopLoc, &vehicle)
-				
+
 				// Estimate Arrival Time
 				var arrivalTime time.Time
 				if len(routes[vIdx].Stops) == 0 {
@@ -266,7 +272,7 @@ func (s *HeuristicSolver) Solve(ctx context.Context, request *models.RouteOptimi
 		// Assign Stop
 		stop := unassignedStops[bestStopIdx]
 		route := &routes[bestVehicleIdx]
-		
+
 		waitingTime := 0
 		if stop.TimeWindowStart != nil && bestArrival.Equal(*stop.TimeWindowStart) {
 			// Calculate waiting time
@@ -289,11 +295,11 @@ func (s *HeuristicSolver) Solve(ctx context.Context, request *models.RouteOptimi
 		route.Distance += minDist
 		route.Time += (bestTravelTime + stop.ServiceDuration + waitingTime)
 		route.Cost += minDist * request.Vehicles[bestVehicleIdx].CostPerKM
-		
+
 		vehicleLocations[bestVehicleIdx] = models.Location{Latitude: stop.Latitude, Longitude: stop.Longitude, State: stop.State}
 		vehicleCapacities[bestVehicleIdx] -= stop.Demand
 		unassignedStops = append(unassignedStops[:bestStopIdx], unassignedStops[bestStopIdx+1:]...)
-		
+
 		baselineDistance += minDist * 1.3
 	}
 
@@ -301,7 +307,7 @@ func (s *HeuristicSolver) Solve(ctx context.Context, request *models.RouteOptimi
 	for i := range routes {
 		if len(routes[i].Stops) > 0 {
 			lastStopLoc := vehicleLocations[i]
-			
+
 			endLoc := request.Vehicles[i].EndLocation
 			if endLoc.Latitude == 0 && endLoc.Longitude == 0 && len(request.Depots) > 0 {
 				// Find nearest depot to return to

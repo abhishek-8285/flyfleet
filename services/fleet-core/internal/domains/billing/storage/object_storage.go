@@ -64,7 +64,7 @@ func (s *S3Storage) getKey(invoice *models.Invoice) string {
 
 func (s *S3Storage) Save(ctx context.Context, invoice *models.Invoice, data []byte) error {
 	key := s.getKey(invoice)
-	
+
 	reader := bytes.NewReader(data)
 	_, err := s.client.PutObject(ctx, s.bucket, key, reader, int64(len(data)), minio.PutObjectOptions{
 		ContentType: "application/pdf",
@@ -74,7 +74,7 @@ func (s *S3Storage) Save(ctx context.Context, invoice *models.Invoice, data []by
 
 func (s *S3Storage) Get(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
 	key := s.getKey(invoice)
-	
+
 	object, err := s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err

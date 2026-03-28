@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
@@ -62,7 +63,9 @@ func (s *EInvoiceService) GenerateEInvoice(ctx context.Context, req models.Gener
 	}
 	_ = taxRate
 
-	invoiceNum := fmt.Sprintf("INV-%d-%d", time.Now().Unix(), rand.Intn(9999))
+	// SECURITY FIX: Use cryptographically secure random number instead of math/rand
+	randomSuffix, _ := rand.Int(rand.Reader, big.NewInt(9999))
+	invoiceNum := fmt.Sprintf("INV-%d-%d", time.Now().Unix(), randomSuffix.Int64())
 	inv := &models.GSTInvoice{
 		ID:            uuid.New(),
 		InvoiceNumber: invoiceNum,

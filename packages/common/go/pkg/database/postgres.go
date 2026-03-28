@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
+
+	"github.com/fleet-platform/shared/pkg/metrics"
 )
 
 type Postgres struct {
@@ -93,7 +95,11 @@ func WrapPool(pool *pgxpool.Pool, logger *zap.Logger) Database {
 }
 
 func (pg *Postgres) Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error) {
+	start := time.Now()
 	rows, err := pg.pool.Query(ctx, sql, args...)
+	duration := time.Since(start)
+	metrics.RecordDBQuery(sql, duration)
+
 	if err != nil {
 		pg.logger.Error("Query execution failed",
 			zap.String("sql", sql),
@@ -137,7 +143,11 @@ func (pg *Postgres) Query(ctx context.Context, sql string, args ...interface{}) 
 }
 
 func (pg *Postgres) QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner {
+	start := time.Now()
 	row := pg.pool.QueryRow(ctx, sql, args...)
+	// QueryRow execution is synchronous; we can record after the call returns.
+	// Note: The actual scanning happens later, but we measure query execution time.
+	metrics.RecordDBQuery(sql, time.Since(start))
 	return &PostgresRow{row: row}
 }
 
@@ -150,7 +160,11 @@ func (pr *PostgresRow) Scan(dest ...interface{}) error {
 }
 
 func (pg *Postgres) Execute(ctx context.Context, sql string, args ...interface{}) error {
+	start := time.Now()
 	tag, err := pg.pool.Exec(ctx, sql, args...)
+	duration := time.Since(start)
+	metrics.RecordDBQuery(sql, duration)
+
 	if err != nil {
 		pg.logger.Error("Execute failed",
 			zap.String("sql", sql),
@@ -196,7 +210,11 @@ func (pg *Postgres) WithTenant(ctx context.Context, orgID string, fn func(ctx co
 }
 
 func (ptx *PostgresTransaction) Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error) {
+	start := time.Now()
 	rows, err := ptx.tx.Query(ctx, sql, args...)
+	duration := time.Since(start)
+	metrics.RecordDBQuery(sql, duration)
+
 	if err != nil {
 		ptx.logger.Error("Transaction query failed", zap.String("sql", sql), zap.Error(err))
 		return nil, err
@@ -225,12 +243,16 @@ func (ptx *PostgresTransaction) Query(ctx context.Context, sql string, args ...i
 }
 
 func (ptx *PostgresTransaction) QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner {
+	start := time.Now()
 	row := ptx.tx.QueryRow(ctx, sql, args...)
+	metrics.RecordDBQuery(sql, time.Since(start))
 	return &PostgresRow{row: row}
 }
 
 func (ptx *PostgresTransaction) Execute(ctx context.Context, sql string, args ...interface{}) error {
+	start := time.Now()
 	_, err := ptx.tx.Exec(ctx, sql, args...)
+	metrics.RecordDBQuery(sql, time.Since(start))
 	return err
 }
 

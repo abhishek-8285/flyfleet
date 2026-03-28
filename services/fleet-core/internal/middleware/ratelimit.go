@@ -37,7 +37,7 @@ func (r *RedisRateLimiter) Allow(ctx context.Context, key string, limit int, win
 	}
 
 	redisKey := fmt.Sprintf("ratelimit:%s", key)
-	
+
 	pipe := r.client.Pipeline()
 	incr := pipe.Incr(ctx, redisKey)
 	pipe.Expire(ctx, redisKey, window)
@@ -62,7 +62,7 @@ func (r *RedisRateLimiter) Handler(keyPrefix string, limit int, window time.Dura
 			}
 
 			key := fmt.Sprintf("%s:%s", keyPrefix, ip)
-			
+
 			allowed, err := r.Allow(req.Context(), key, limit, window)
 			if err != nil || !allowed {
 				w.Header().Set("Content-Type", "application/json")

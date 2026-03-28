@@ -9,15 +9,15 @@ import (
 )
 
 type LayoutElement struct {
-	Type      string  // "text", "line", "rect", "qrcode", "image"
+	Type       string // "text", "line", "rect", "qrcode", "image"
 	X, Y, W, H float64
-	Text      string
-	Font      string
-	Style     string
-	Size      float64
-	Color     []int   // [R, G, B]
-	FillColor []int   // [R, G, B]
-	Align     string  // "L", "C", "R"
+	Text       string
+	Font       string
+	Style      string
+	Size       float64
+	Color      []int  // [R, G, B]
+	FillColor  []int  // [R, G, B]
+	Align      string // "L", "C", "R"
 }
 
 type Layout struct {
@@ -68,7 +68,9 @@ func (e *Engine) Generate(layout Layout, data interface{}) ([]byte, error) {
 
 func (e *Engine) drawText(el LayoutElement, data interface{}) {
 	tmpl, err := template.New("t").Parse(el.Text)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	var tBuf bytes.Buffer
 	tmpl.Execute(&tBuf, data)
 	txt := tBuf.String()
@@ -80,14 +82,18 @@ func (e *Engine) drawText(el LayoutElement, data interface{}) {
 	}
 
 	font := "Arial"
-	if el.Font != "" { font = el.Font }
+	if el.Font != "" {
+		font = el.Font
+	}
 	e.pdf.SetFont(font, el.Style, el.Size)
 	e.pdf.SetXY(el.X, el.Y)
-	
+
 	// Handle alignment correctly
 	align := "L"
-	if el.Align != "" { align = el.Align }
-	
+	if el.Align != "" {
+		align = el.Align
+	}
+
 	e.pdf.CellFormat(el.W, el.H, txt, "", 0, align, false, 0, "")
 }
 
@@ -95,7 +101,7 @@ func (e *Engine) drawQRCode(el LayoutElement, data interface{}) {
 	tmpl, _ := template.New("q").Parse(el.Text)
 	var tBuf bytes.Buffer
 	tmpl.Execute(&tBuf, data)
-	
+
 	qr, _ := qrcode.New(tBuf.String(), qrcode.Medium)
 	matrix := qr.Bitmap()
 	modSize := el.W / float64(len(matrix))

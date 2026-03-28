@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/reports/models"
 	"github.com/google/uuid"
@@ -17,11 +18,11 @@ type Repository interface {
 	ListReports(ctx context.Context, page, limit int) ([]models.ScheduledReport, int, error)
 	PauseReport(ctx context.Context, id uuid.UUID) error
 	ResumeReport(ctx context.Context, id uuid.UUID) error
-	
+
 	CreateExecution(ctx context.Context, exec *models.ReportExecution) error
 	UpdateExecutionStatus(ctx context.Context, id uuid.UUID, status string, errorMessage *string, fileURL *string, updatedBy uuid.UUID) error
 	ListExecutions(ctx context.Context, reportID uuid.UUID, page, limit int) ([]models.ReportExecution, int, error)
-	
+
 	GetSettings(ctx context.Context) (*models.GlobalSettings, error)
 	UpdateSettings(ctx context.Context, settings *models.GlobalSettings) error
 }
@@ -43,14 +44,25 @@ func (r *PostgresRepository) CreateReport(ctx context.Context, report *models.Sc
 
 	query := `INSERT INTO scheduled_reports (id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time, timezone, filters, status, created_by, updated_by, created_at, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
-	
+
 	_, err = tx.Exec(ctx, query, report.ID, report.OrganizationID, report.Name, report.ReportType, report.Format, report.Frequency, report.CronExpression, report.DeliveryTime, report.Timezone, report.Filters, report.Status, report.CreatedBy, report.UpdatedBy, report.CreatedAt, report.UpdatedAt)
 	if err != nil {
 		return err
 	}
 
-	for _, recipient := range report.Recipients {
-		_, err = tx.Exec(ctx, "INSERT INTO report_recipients (report_id, email) VALUES ($1, $2)", report.ID, recipient)
+	// Batch insert recipients to avoid N+1 queries
+	if len(report.Recipients) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, recipient := range report.Recipients {
+			placeholders = append(placeholders, fmt.Sprintf("($1, $%d)", i+2))
+			args = append(args, report.ID, recipient)
+		}
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO report_recipients (report_id, email) VALUES %s",
+			strings.Join(placeholders, ", "),
+		)
+		_, err = tx.Exec(ctx, batchQuery, args...)
 		if err != nil {
 			return err
 		}
@@ -63,7 +75,7 @@ func (r *PostgresRepository) GetReport(ctx context.Context, id uuid.UUID) (*mode
 	var report models.ScheduledReport
 	query := `SELECT id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time::text, timezone, filters, status, created_by, updated_by, created_at, updated_at
 	          FROM scheduled_reports WHERE id = $1`
-	
+
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&report.ID, &report.OrganizationID, &report.Name, &report.ReportType, &report.Format, &report.Frequency, &report.CronExpression, &report.DeliveryTime, &report.Timezone, &report.Filters, &report.Status, &report.CreatedBy, &report.UpdatedBy, &report.CreatedAt, &report.UpdatedAt,
 	)
@@ -111,8 +123,19 @@ func (r *PostgresRepository) UpdateReport(ctx context.Context, report *models.Sc
 		return err
 	}
 
-	for _, recipient := range report.Recipients {
-		_, err = tx.Exec(ctx, "INSERT INTO report_recipients (report_id, email) VALUES ($1, $2)", report.ID, recipient)
+	// Batch insert recipients to avoid N+1 queries
+	if len(report.Recipients) > 0 {
+		var args []interface{}
+		var placeholders []string
+		for i, recipient := range report.Recipients {
+			placeholders = append(placeholders, fmt.Sprintf("($1, $%d)", i+2))
+			args = append(args, report.ID, recipient)
+		}
+		batchQuery := fmt.Sprintf(
+			"INSERT INTO report_recipients (report_id, email) VALUES %s",
+			strings.Join(placeholders, ", "),
+		)
+		_, err = tx.Exec(ctx, batchQuery, args...)
 		if err != nil {
 			return err
 		}
@@ -177,7 +200,7 @@ func (r *PostgresRepository) UpdateExecutionStatus(ctx context.Context, id uuid.
 func (r *PostgresRepository) ListExecutions(ctx context.Context, reportID uuid.UUID, page, limit int) ([]models.ReportExecution, int, error) {
 	offset := (page - 1) * limit
 	var execs []models.ReportExecution
-	
+
 	whereClause := ""
 	args := []any{}
 	if reportID != uuid.Nil {
@@ -195,9 +218,9 @@ func (r *PostgresRepository) ListExecutions(ctx context.Context, reportID uuid.U
 	// Select
 	query := fmt.Sprintf(`SELECT id, report_id, started_at, duration_seconds, status, error_message, file_url, created_at, created_by, updated_at, updated_by 
 	                      FROM report_executions %s ORDER BY started_at DESC LIMIT $%d OFFSET $%d`, whereClause, len(args)+1, len(args)+2)
-	
+
 	args = append(args, limit, offset)
-	
+
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err

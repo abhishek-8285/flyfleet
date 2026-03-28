@@ -104,18 +104,18 @@ func GenerateInvoiceHTML(invoice *models.Invoice, items []models.InvoiceItem) st
 
 		// Map to template item
 		itemData := InvoiceItemData{
-			SlNo:        i + 1,
-			Description: item.Description,
-			HSNCode:     item.HSNCode,
-			Unit:        "Nos",
-			Quantity:    float64(item.Quantity),
-			UnitPrice:   item.UnitPrice,
-			Discount:    0,
-			TaxPercent:  item.TaxPercent,
-			TaxAmount:   itemTax,
-			CESS:        0,
+			SlNo:           i + 1,
+			Description:    item.Description,
+			HSNCode:        item.HSNCode,
+			Unit:           "Nos",
+			Quantity:       float64(item.Quantity),
+			UnitPrice:      item.UnitPrice,
+			Discount:       0,
+			TaxPercent:     item.TaxPercent,
+			TaxAmount:      itemTax,
+			CESS:           0,
 			AdditionalCESS: 0,
-			Total:       itemSubtotal + itemTax,
+			Total:          itemSubtotal + itemTax,
 		}
 
 		// INDUSTRY DATA FILL: Map metadata to custom columns
@@ -270,18 +270,18 @@ func GenerateInvoiceHTMLWithConfig(invoice *models.Invoice, items []models.Invoi
 
 		// Map to template item
 		itemData := InvoiceItemData{
-			SlNo:        i + 1,
-			Description: item.Description,
-			HSNCode:     item.HSNCode,
-			Unit:        "Nos",
-			Quantity:    float64(item.Quantity),
-			UnitPrice:   item.UnitPrice,
-			Discount:    0,
-			TaxPercent:  item.TaxPercent,
-			TaxAmount:   itemTax,
-			CESS:        0,
+			SlNo:           i + 1,
+			Description:    item.Description,
+			HSNCode:        item.HSNCode,
+			Unit:           "Nos",
+			Quantity:       float64(item.Quantity),
+			UnitPrice:      item.UnitPrice,
+			Discount:       0,
+			TaxPercent:     item.TaxPercent,
+			TaxAmount:      itemTax,
+			CESS:           0,
 			AdditionalCESS: 0,
-			Total:       itemSubtotal + itemTax,
+			Total:          itemSubtotal + itemTax,
 		}
 
 		// INDUSTRY DATA FILL: Map metadata to custom columns

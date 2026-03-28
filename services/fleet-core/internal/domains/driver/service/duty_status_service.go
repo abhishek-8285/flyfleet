@@ -26,31 +26,31 @@ func NewDutyStatusService(repo Repository, logger *zap.Logger) *DutyStatusServic
 
 // Valid duty statuses
 const (
-	StatusOffDuty       = "OFF_DUTY"
-	StatusSleeperBerth  = "SLEEPER_BERTH"
-	StatusDriving       = "DRIVING"
-	StatusOnDuty        = "ON_DUTY"
-	StatusRest          = "REST"
-	StatusBreak         = "BREAK"
+	StatusOffDuty      = "OFF_DUTY"
+	StatusSleeperBerth = "SLEEPER_BERTH"
+	StatusDriving      = "DRIVING"
+	StatusOnDuty       = "ON_DUTY"
+	StatusRest         = "REST"
+	StatusBreak        = "BREAK"
 )
 
 // India HOOS Constants (MTW Act)
 const (
 	IndiaMaxContinuousDriveTime = 8.0  // 8 hours continuous
-	IndiaMaxDutyHours          = 12.0 // 12 hours duty window
-	IndiaMandatoryBreakTime    = 5.0  // Break after 5 hours
-	IndiaRequiredBreakDuration = 30   // 30 minutes
+	IndiaMaxDutyHours           = 12.0 // 12 hours duty window
+	IndiaMandatoryBreakTime     = 5.0  // Break after 5 hours
+	IndiaRequiredBreakDuration  = 30   // 30 minutes
 )
 
 // FMCSA HOS limits
 const (
-	MaxDrivingHours       = 11  // Maximum driving time in a duty day
-	MaxDutyHours          = 14  // Maximum on-duty time in a duty day
-	RequiredRestBreak     = 30  // Required break after 8 hours driving
-	MinSleeperBerthTime   = 7   // Minimum sleeper berth time (with 3hr off-duty)
-	MinOffDutyReset       = 10  // Minimum off-duty to reset 14-hour clock
-	MaxOnDutyDays         = 60  // 60 hours in 7 days
-	MaxOnDutyDays8Day     = 70  // 70 hours in 8 days
+	MaxDrivingHours     = 11 // Maximum driving time in a duty day
+	MaxDutyHours        = 14 // Maximum on-duty time in a duty day
+	RequiredRestBreak   = 30 // Required break after 8 hours driving
+	MinSleeperBerthTime = 7  // Minimum sleeper berth time (with 3hr off-duty)
+	MinOffDutyReset     = 10 // Minimum off-duty to reset 14-hour clock
+	MaxOnDutyDays       = 60 // 60 hours in 7 days
+	MaxOnDutyDays8Day   = 70 // 70 hours in 8 days
 )
 
 // UpdateDutyStatus updates driver's duty status with validation
@@ -296,15 +296,15 @@ func (s *DutyStatusService) GetDriverHOSStatus(ctx context.Context, driverID str
 
 // HOSStatus represents driver's Hours of Service status
 type HOSStatus struct {
-	DriverID              string    `json:"driver_id"`
-	AsOf                  time.Time `json:"as_of"`
-	DrivingHoursToday     float64   `json:"driving_hours_today"`
-	DrivingHoursRemaining float64   `json:"driving_hours_remaining"`
-	OnDutyHoursToday      float64   `json:"on_duty_hours_today"`
-	OnDutyHoursRemaining  float64   `json:"on_duty_hours_remaining"`
-	OnDutyHours7Days      float64   `json:"on_duty_hours_7_days"`
-	OnDutyHours7DaysRemaining float64 `json:"on_duty_hours_7_days_remaining"`
-	ComplianceStatus      string    `json:"compliance_status"` // compliant, warning, violation
+	DriverID                  string    `json:"driver_id"`
+	AsOf                      time.Time `json:"as_of"`
+	DrivingHoursToday         float64   `json:"driving_hours_today"`
+	DrivingHoursRemaining     float64   `json:"driving_hours_remaining"`
+	OnDutyHoursToday          float64   `json:"on_duty_hours_today"`
+	OnDutyHoursRemaining      float64   `json:"on_duty_hours_remaining"`
+	OnDutyHours7Days          float64   `json:"on_duty_hours_7_days"`
+	OnDutyHours7DaysRemaining float64   `json:"on_duty_hours_7_days_remaining"`
+	ComplianceStatus          string    `json:"compliance_status"` // compliant, warning, violation
 }
 
 // GetDutyStatusHistory retrieves driver's duty status history
@@ -360,14 +360,14 @@ func (s *DutyStatusService) GenerateDailyHOSReport(ctx context.Context, driverID
 
 // HOSReport represents a daily HOS report
 type HOSReport struct {
-	DriverID            string                `json:"driver_id"`
-	Date                time.Time             `json:"date"`
-	Logs                []*models.DutyStatusLog `json:"logs"`
-	TotalDrivingHours   float64               `json:"total_driving_hours"`
-	TotalOnDutyHours    float64               `json:"total_on_duty_hours"`
-	TotalOffDutyHours   float64               `json:"total_off_duty_hours"`
-	TotalSleeperBerthHours float64            `json:"total_sleeper_berth_hours"`
-	Violations          []string              `json:"violations,omitempty"`
+	DriverID               string                  `json:"driver_id"`
+	Date                   time.Time               `json:"date"`
+	Logs                   []*models.DutyStatusLog `json:"logs"`
+	TotalDrivingHours      float64                 `json:"total_driving_hours"`
+	TotalOnDutyHours       float64                 `json:"total_on_duty_hours"`
+	TotalOffDutyHours      float64                 `json:"total_off_duty_hours"`
+	TotalSleeperBerthHours float64                 `json:"total_sleeper_berth_hours"`
+	Violations             []string                `json:"violations,omitempty"`
 }
 
 // checkIndiaDrivingEligibility checks if driver is eligible to drive per Indian MTW Act rules

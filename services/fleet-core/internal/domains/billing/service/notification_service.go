@@ -103,7 +103,7 @@ func (s *DunningService) HandlePaymentFailure(ctx context.Context, orgID uuid.UU
 // HandlePaymentSuccess records the successful attempt
 func (s *DunningService) HandlePaymentSuccess(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID, amount float64, currency string) error {
 	currentCount, _ := s.repo.GetLatestAttemptNumber(ctx, invoiceID)
-	
+
 	attempt := &models.PaymentAttempt{
 		OrgID:         orgID,
 		InvoiceID:     invoiceID,

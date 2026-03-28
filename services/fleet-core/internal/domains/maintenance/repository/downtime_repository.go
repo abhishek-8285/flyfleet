@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
+	"github.com/google/uuid"
 )
 
 type DowntimeRepository interface {
@@ -16,7 +16,7 @@ type DowntimeRepository interface {
 
 func (r *MaintenanceRepositoryImpl) RecordDowntimeStart(ctx context.Context, d *models.VehicleDowntime) error {
 	query := `
-		INSERT INTO vehicle_downtime (id, organization_id, vehicle_id, work_order_id, downtime_start, reason)
+		INSERT INTO vehicle_downtime (id, org_id, vehicle_id, work_order_id, downtime_start, reason)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
 	if d.ID == uuid.Nil {
@@ -26,7 +26,7 @@ func (r *MaintenanceRepositoryImpl) RecordDowntimeStart(ctx context.Context, d *
 		d.DowntimeStart = time.Now()
 	}
 
-	_, err := r.db.Exec(ctx, query, d.ID, d.OrganizationID, d.VehicleID, d.WorkOrderID, d.DowntimeStart, d.Reason)
+	_, err := r.db.Exec(ctx, query, d.ID, d.OrgID, d.VehicleID, d.WorkOrderID, d.DowntimeStart, d.Reason)
 	return err
 }
 

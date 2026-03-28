@@ -26,12 +26,12 @@ func (s *maskingService) MaskData(data *models.DSARData, rules json.RawMessage) 
 
 	// Recursively apply masking rules to all fields in the data structure
 	maskedData := *data
-	
+
 	// Apply to User Profile
 	if data.UserProfile != nil {
 		maskedData.UserProfile = s.maskRecursive(data.UserProfile, ruleMap)
 	}
-	
+
 	// Apply to other fields (they are slices of interface{})
 	maskedData.Vehicles = s.maskSlice(data.Vehicles, ruleMap)
 	maskedData.TripHistory = s.maskSlice(data.TripHistory, ruleMap)
@@ -52,7 +52,7 @@ func (s *maskingService) maskSlice(slice interface{}, rules map[string]string) i
 	if !ok {
 		return slice
 	}
-	
+
 	result := make([]interface{}, len(sArr))
 	for i, v := range sArr {
 		result[i] = s.maskRecursive(v, rules)
@@ -87,7 +87,7 @@ func (s *maskingService) applyRule(val, rule string) string {
 	if val == "" {
 		return val
 	}
-	
+
 	// Implementation of rules like {last4}, {first3} etc.
 	if strings.Contains(rule, "{last4}") {
 		if len(val) > 4 {
@@ -95,7 +95,7 @@ func (s *maskingService) applyRule(val, rule string) string {
 		}
 		return rule
 	}
-	
+
 	if strings.Contains(rule, "{first}") && strings.Contains(rule, "{domain}") {
 		parts := strings.Split(val, "@")
 		if len(parts) == 2 {
@@ -103,7 +103,7 @@ func (s *maskingService) applyRule(val, rule string) string {
 			return strings.Replace(r, "{domain}", parts[1], 1)
 		}
 	}
-	
+
 	// Default to just returning the rule if it doesn't match placeholders or simple masking
 	return rule
 }

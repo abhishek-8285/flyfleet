@@ -8,7 +8,7 @@ Welcome to the unified FlyFleet Enterprise platform. This repository is organize
 /flyfleet (Root)
 ├── apps/                # End-user applications (Frontends)
 │   ├── landing-page/    # Next.js customer-facing landing page
-│   └── dashboard-web/   # React-based administrative dashboard
+│   └── dashboard-web/   # React/Vite administrative dashboard (migrated from CRA)
 ├── services/            # Backend Microservices (Go)
 │   ├── auth-service/    # Identity and Access Management
 │   ├── vehicle-service/ # Fleet and Asset Management

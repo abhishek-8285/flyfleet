@@ -32,7 +32,7 @@ const (
 	TypeDriverAssault    IncidentType = "DRIVER_ASSAULT"
 	TypeVehicleTheft     IncidentType = "VEHICLE_THEFT"
 
-	SourceAIS140    PanicSource = "AIS140_DEVICE"
+	SourceAIS140     PanicSource = "AIS140_DEVICE"
 	SourceMobile     PanicSource = "DRIVER_MOBILE"
 	SourceTelematics PanicSource = "VEHICLE_TELEMATICS"
 	SourceDispatcher PanicSource = "DISPATCHER"
@@ -40,33 +40,33 @@ const (
 
 // SOSIncident represents an emergency event
 type SOSIncident struct {
-	ID              uuid.UUID       `db:"id" json:"id"`
-	VehicleID       uuid.UUID       `db:"vehicle_id" json:"vehicle_id"`
-	DriverID        *uuid.UUID      `db:"driver_id" json:"driver_id,omitempty"`
-	TripID          *uuid.UUID      `db:"trip_id" json:"trip_id,omitempty"`
-	DeviceID        *uuid.UUID      `db:"device_id" json:"device_id,omitempty"`
-	Timestamp       time.Time       `db:"timestamp" json:"timestamp"`
-	Latitude        float64         `db:"latitude" json:"latitude"`
-	Longitude       float64         `db:"longitude" json:"longitude"`
-	LocationAddress *string         `db:"location_address" json:"location_address,omitempty"`
-	Status          SOSStatus       `db:"status" json:"status"`
-	Severity        SOSSeverity     `db:"severity" json:"severity"`
-	IncidentType    IncidentType    `db:"incident_type" json:"incident_type"`
-	PanicSource     PanicSource     `db:"panic_source" json:"panic_source"`
-	Speed           int             `db:"speed" json:"speed"`
-	Heading         int             `db:"heading" json:"heading"`
-	Metadata        json.RawMessage `db:"metadata" json:"metadata"`
-	AcknowledgedBy  *uuid.UUID      `db:"acknowledged_by" json:"acknowledged_by,omitempty"`
-	ResolvedBy      *uuid.UUID      `db:"resolved_by" json:"resolved_by,omitempty"`
-	OrgID           uuid.UUID       `db:"org_id" json:"org_id"`
-	HighRiskLocation bool           `db:"high_risk_location" json:"high_risk_location"`
-	SimulationMode   bool           `db:"simulation_mode" json:"simulation_mode"`
-	DriverFeedback   *string        `db:"driver_feedback" json:"driver_feedback,omitempty"`
-	FeedbackNotes    *string        `db:"feedback_notes" json:"feedback_notes,omitempty"`
-	AcknowledgedAt   *time.Time     `db:"acknowledged_at" json:"acknowledged_at,omitempty"`
-	ResolvedAt       *time.Time     `db:"resolved_at" json:"resolved_at,omitempty"`
-	CreatedAt       time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt       time.Time       `db:"updated_at" json:"updated_at"`
+	ID               uuid.UUID       `db:"id" json:"id"`
+	VehicleID        uuid.UUID       `db:"vehicle_id" json:"vehicle_id"`
+	DriverID         *uuid.UUID      `db:"driver_id" json:"driver_id,omitempty"`
+	TripID           *uuid.UUID      `db:"trip_id" json:"trip_id,omitempty"`
+	DeviceID         *uuid.UUID      `db:"device_id" json:"device_id,omitempty"`
+	Timestamp        time.Time       `db:"timestamp" json:"timestamp"`
+	Latitude         float64         `db:"latitude" json:"latitude"`
+	Longitude        float64         `db:"longitude" json:"longitude"`
+	LocationAddress  *string         `db:"location_address" json:"location_address,omitempty"`
+	Status           SOSStatus       `db:"status" json:"status"`
+	Severity         SOSSeverity     `db:"severity" json:"severity"`
+	IncidentType     IncidentType    `db:"incident_type" json:"incident_type"`
+	PanicSource      PanicSource     `db:"panic_source" json:"panic_source"`
+	Speed            int             `db:"speed" json:"speed"`
+	Heading          int             `db:"heading" json:"heading"`
+	Metadata         json.RawMessage `db:"metadata" json:"metadata"`
+	AcknowledgedBy   *uuid.UUID      `db:"acknowledged_by" json:"acknowledged_by,omitempty"`
+	ResolvedBy       *uuid.UUID      `db:"resolved_by" json:"resolved_by,omitempty"`
+	OrgID            uuid.UUID       `db:"org_id" json:"org_id"`
+	HighRiskLocation bool            `db:"high_risk_location" json:"high_risk_location"`
+	SimulationMode   bool            `db:"simulation_mode" json:"simulation_mode"`
+	DriverFeedback   *string         `db:"driver_feedback" json:"driver_feedback,omitempty"`
+	FeedbackNotes    *string         `db:"feedback_notes" json:"feedback_notes,omitempty"`
+	AcknowledgedAt   *time.Time      `db:"acknowledged_at" json:"acknowledged_at,omitempty"`
+	ResolvedAt       *time.Time      `db:"resolved_at" json:"resolved_at,omitempty"`
+	CreatedAt        time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
 
 	// Join fields
 	VehicleRegNumber *string `db:"vehicle_reg_number" json:"vehicle_reg_number,omitempty"`
@@ -148,7 +148,7 @@ type CreateSOSRequest struct {
 	Speed           int             `json:"speed"`
 	Heading         int             `json:"heading"`
 	Metadata        json.RawMessage `json:"metadata"`
-	SimulationMode   bool            `json:"simulation_mode"`
+	SimulationMode  bool            `json:"simulation_mode"`
 }
 
 // UpdateIncidentRequest payload for acknowledging/resolving
@@ -244,15 +244,15 @@ type EmergencyContactResponse struct {
 
 // IncidentAnalyticsResponse for API (updated for enterprise requirements)
 type IncidentAnalyticsResponse struct {
-	TotalIncidents          int                 `json:"total_incidents"`
-	AvgResponseTimeSeconds  float64             `json:"avg_response_time_seconds"`
-	IncidentsLast24h        int                 `json:"incidents_last_24h"`
-	TopLocations            []string            `json:"top_locations"`
-	IncidentsByType         []IncidentTypeCount `json:"incidents_by_type"`
-	IncidentsToday          int                 `json:"incidents_today"`           // Backward compatibility
-	IncidentsThisWeek       int                 `json:"incidents_this_week"`      // Backward compatibility
-	AverageResponseTime     float64             `json:"average_response_time_min"` // Backward compatibility
-	AverageResolutionTime   float64             `json:"average_resolution_time_min"`
+	TotalIncidents         int                 `json:"total_incidents"`
+	AvgResponseTimeSeconds float64             `json:"avg_response_time_seconds"`
+	IncidentsLast24h       int                 `json:"incidents_last_24h"`
+	TopLocations           []string            `json:"top_locations"`
+	IncidentsByType        []IncidentTypeCount `json:"incidents_by_type"`
+	IncidentsToday         int                 `json:"incidents_today"`           // Backward compatibility
+	IncidentsThisWeek      int                 `json:"incidents_this_week"`       // Backward compatibility
+	AverageResponseTime    float64             `json:"average_response_time_min"` // Backward compatibility
+	AverageResolutionTime  float64             `json:"average_resolution_time_min"`
 }
 
 // VehicleSafetyScore based on incident history
@@ -277,10 +277,10 @@ type DeviceEventQueueItem struct {
 
 // EmergencyDrillRequest is the request body for the drill simulation endpoint.
 type EmergencyDrillRequest struct {
-	OrgID       string  `json:"org_id" validate:"required,uuid"`
-	VehicleID   string  `json:"vehicle_id" validate:"required,uuid"`
-	Latitude    float64 `json:"latitude" validate:"required"`
-	Longitude   float64 `json:"longitude" validate:"required"`
+	OrgID        string  `json:"org_id" validate:"required,uuid"`
+	VehicleID    string  `json:"vehicle_id" validate:"required,uuid"`
+	Latitude     float64 `json:"latitude" validate:"required"`
+	Longitude    float64 `json:"longitude" validate:"required"`
 	IncidentType string  `json:"incident_type,omitempty"`
 }
 
@@ -305,6 +305,7 @@ type TimelineEvent struct {
 	EventData  json.RawMessage `db:"event_data" json:"event_data"`
 	CreatedAt  time.Time       `db:"created_at" json:"created_at"`
 }
+
 // IncidentSnapshot represents a backup record of a critical incident.
 type IncidentSnapshot struct {
 	ID           uuid.UUID       `db:"id" json:"id"`

@@ -13,10 +13,10 @@ import (
 
 // DocumentsService manages immutable vehicle document uploads.
 type DocumentsService struct {
-	vRepo     repository.VehicleRepositoryInterface
-	docsRepo  repository.DocumentsRepositoryInterface
-	evtsRepo  repository.EventsRepositoryInterface
-	logger    *zap.Logger
+	vRepo    repository.VehicleRepositoryInterface
+	docsRepo repository.DocumentsRepositoryInterface
+	evtsRepo repository.EventsRepositoryInterface
+	logger   *zap.Logger
 }
 
 func NewDocumentsService(
@@ -29,10 +29,18 @@ func NewDocumentsService(
 }
 
 // Upload validates and inserts an immutable document record.
-func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, req *models.UploadDocumentRequest, uploadedBy *uuid.UUID) (*models.VehicleDocument, error) {
-	// Ensure vehicle exists
-	if _, err := s.vRepo.GetByID(ctx, vehicleID); err != nil {
+func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, req *models.UploadDocumentRequest, uploadedBy *uuid.UUID) (*models.VehicleDocument, error) {
+	// Ensure vehicle exists and belongs to the organization
+	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
+	if err != nil {
 		return nil, err
+	}
+	if vehicle.TenantID != orgID {
+		s.logger.Warn("unauthorized document upload attempt",
+			zap.String("vehicle_id", vehicleID.String()),
+			zap.String("org_id", orgID.String()),
+			zap.String("vehicle_tenant", vehicle.TenantID.String()))
+		return nil, fmt.Errorf("vehicle not found")
 	}
 
 	// Validate hash length (must be exactly 64 hex chars = SHA-256)
@@ -75,13 +83,43 @@ func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, req 
 }
 
 // ListDocuments returns all documents for a vehicle.
-func (s *DocumentsService) ListDocuments(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleDocument, error) {
+func (s *DocumentsService) ListDocuments(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID) ([]models.VehicleDocument, error) {
+	// Verify vehicle belongs to org
+	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	if vehicle.TenantID != orgID {
+		s.logger.Warn("unauthorized document list attempt",
+			zap.String("vehicle_id", vehicleID.String()),
+			zap.String("org_id", orgID.String()))
+		return nil, fmt.Errorf("vehicle not found")
+	}
 	return s.docsRepo.List(ctx, vehicleID)
 }
 
 // GetDocument returns a single document by ID.
-func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID) (*models.VehicleDocument, error) {
-	return s.docsRepo.Get(ctx, docID)
+func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID, orgID uuid.UUID) (*models.VehicleDocument, error) {
+	doc, err := s.docsRepo.Get(ctx, docID)
+	if err != nil {
+		return nil, err
+	}
+	if doc == nil {
+		return nil, nil
+	}
+	// Verify the document's vehicle belongs to the org
+	vehicle, err := s.vRepo.GetByID(ctx, doc.VehicleID)
+	if err != nil {
+		return nil, err
+	}
+	if vehicle.TenantID != orgID {
+		s.logger.Warn("unauthorized document access attempt",
+			zap.String("doc_id", docID.String()),
+			zap.String("vehicle_id", doc.VehicleID.String()),
+			zap.String("org_id", orgID.String()))
+		return nil, nil
+	}
+	return doc, nil
 }
 
 // VerifyHash recomputes a SHA-256 hash from content and verifies it against the stored hash.

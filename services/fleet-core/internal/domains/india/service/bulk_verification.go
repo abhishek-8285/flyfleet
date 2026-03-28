@@ -36,7 +36,7 @@ func (s *bulkVerificationService) BulkVerifyVahan(ctx context.Context, registrat
 			// For now, we simulate the bulk processing
 			// We use a dummy UUID as we don't have org/vehicle context here in this generic bulk call
 			details, err := s.vahanSvc.VerifyVehicle(ctx, [16]byte{}, [16]byte{}, rn)
-			
+
 			mu.Lock()
 			if err != nil {
 				results[rn] = fmt.Sprintf("Error: %v", err)

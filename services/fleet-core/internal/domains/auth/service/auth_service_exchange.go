@@ -53,7 +53,7 @@ func (s *AuthService) SwitchContext(ctx context.Context, requestorID uuid.UUID, 
 	// Right now we will issue standard tokens for the target identity. For full implementation,
 	// issueTokens or generateAccessToken could accept an optional ActorID claim.
 	// For MVP, we fully inherit the target session securely because the Audit Log holds the truth.
-	
+
 	// Issue tokens utilizing existing auth flow for target user
 	return s.issueTokens(ctx, target, ipAddress, userAgent)
 }

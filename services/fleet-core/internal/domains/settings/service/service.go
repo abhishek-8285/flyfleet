@@ -328,7 +328,7 @@ func (s *SettingsService) UpdatePlatformSettings(ctx context.Context, settings *
 	settings.ID = models.PlatformSettingsSingletonID
 	userID := s.getUserID(ctx)
 	settings.UpdatedBy = userID
-	
+
 	if err := s.repo.UpdatePlatformSettings(ctx, settings); err != nil {
 		return err
 	}

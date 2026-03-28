@@ -11,7 +11,7 @@ import (
 func TestPDFSnapshot_Deterministic(t *testing.T) {
 	// This test ensures that generating the same template/data
 	// results in the same checksum (or structural match).
-	
+
 	content1 := "INV-001"
 	hash1 := sha256.Sum256([]byte(content1))
 	checksum1 := hex.EncodeToString(hash1[:])

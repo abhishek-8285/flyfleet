@@ -1,0 +1,155 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  deploy:
+    name: Deploy FlyFleet
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          # For OIDC (recommended), uncomment and configure:
+          # role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/flyfleet-github-actions-deploy
+          # For static credentials (less secure), use:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "short_sha=$(echo $IMAGE_TAG | cut -c1-8)" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "repo=${{ github.repository }}"
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+        run: |
+          # Build fleet-core-service
+          echo "🔨 Building fleet-core-service..."
+          docker build \
+            --build-arg SERVICE_NAME=fleet-core \
+            -t ${ECR_REGISTRY}/flyfleet/fleet-core-service:${IMAGE_TAG} \
+            -t ${ECR_REGISTRY}/flyfleet/fleet-core-service:latest \
+            -f infrastructure/docker/GoService.Dockerfile \
+            .
+
+          echo "🚀 Pushing to ECR..."
+          docker push ${ECR_REGISTRY}/flyfleet/fleet-core-service:${IMAGE_TAG}
+          docker push ${ECR_REGISTRY}/flyfleet/fleet-core-service:latest
+          echo "✅ Image pushed: ${ECR_REGISTRY}/flyfleet/fleet-core-service:${IMAGE_TAG}"
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name flyfleet-${{ github.ref_name == 'main' && 'production' || 'staging' }} \
+            --region us-east-1
+
+      - name: Get AWS account ID
+        id: account
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "account_id=${ACCOUNT_ID}" >> $GITHUB_OUTPUT
+
+      - name: Deploy Helm chart
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+          AWS_ACCOUNT_ID: ${{ steps.account.outputs.account_id }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+          KUBE_NAMESPACE: flyfleet
+        run: |
+          echo "🚀 Deploying with image tag: ${IMAGE_TAG} to ${ENVIRONMENT}"
+
+          # Compute IAM role ARN for fleet-core-service service account
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/flyfleet-fleet-core-service-sa-role-${ENVIRONMENT}"
+          echo "Using IAM role: ${ROLE_ARN}"
+
+          # Upgrade or install
+          helm upgrade --install flyfleet ./infrastructure/helm/flyfleet \
+            --namespace ${KUBE_NAMESPACE} \
+            --create-namespace \
+            --set global.imageTag=${IMAGE_TAG} \
+            --set global.environment=${ENVIRONMENT} \
+            --set global.jwtSecret="${{ secrets.JWT_SECRET }}" \
+            --set global.postgres.password="${{ secrets.DB_PASSWORD }}" \
+            --set iam.annotations."eks\.amazonaws\.com/role-arn"="${ROLE_ARN}" \
+            --timeout 10m \
+            --wait
+
+          echo "✅ Deployment complete!"
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          kubectl get pods -n flyfleet
+          kubectl get svc -n flyfleet
+          kubectl get ingress -n flyfleet
+
+          # Wait for fleet-core-service deployment to be ready
+          kubectl rollout status deployment/flyfleet-fleet-core-service -n flyfleet --timeout=300s
+
+          # Basic health check
+          kubectl port-forward -n flyfleet svc/fleet-core-service 8084:8084 &
+          PF_PID=$!
+          sleep 5
+          curl -sf http://localhost:8084/health || echo "Health check failed"
+          kill $PF_PID 2>/dev/null || true
+
+      - name: Notify deployment status
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            const message = `${emoji} Deployment to ${{ github.ref_name == 'main' && 'Production' || 'Staging' }} **${status}**\n\n` +
+              `**Commit:** ${context.payload.head_commit.message}\n` +
+              `**Author:** ${context.payload.head_commit.author.name}\n` +
+              `**SHA:** ${context.sha}\n` +
+              `**Tag:** ${context.payload.ref}`;
+
+            if (status === 'failure') {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `## 🚨 Deployment Failed\n\n${message}\n\nCheck the Actions tab for logs.`
+              });
+            } else {
+              // Could send Slack/Teams notification here
+            }
+
+            console.log(message);

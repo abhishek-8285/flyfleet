@@ -17,13 +17,13 @@ type MaintenanceRepository interface {
 	GetSchedulesByOrg(ctx context.Context, orgID uuid.UUID, filters *ScheduleFilters) ([]*models.MaintenanceSchedule, error)
 	UpdateSchedule(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteSchedule(ctx context.Context, id string) error
-	
+
 	// Log operations
 	CreateLog(ctx context.Context, log *models.MaintenanceLog) error
 	GetLogByID(ctx context.Context, id string) (*models.MaintenanceLog, error)
 	UpdateLog(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteLog(ctx context.Context, id string) error
-	
+
 	// Query operations
 	GetMaintenanceHistory(ctx context.Context, vehicleID uuid.UUID, limit int) ([]*models.MaintenanceLog, error)
 	GetOverdueSchedules(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceSchedule, error)
@@ -34,13 +34,13 @@ type MaintenanceRepository interface {
 
 // ScheduleFilters represents filters for querying schedules
 type ScheduleFilters struct {
-	Status    *string
-	Type      *string
-	Priority  *string
-	FromDate  *time.Time
-	ToDate    *time.Time
-	Overdue   *bool
-	Upcoming  *bool
-	Page      int
-	PageSize  int
+	Status   *string
+	Type     *string
+	Priority *string
+	FromDate *time.Time
+	ToDate   *time.Time
+	Overdue  *bool
+	Upcoming *bool
+	Page     int
+	PageSize int
 }

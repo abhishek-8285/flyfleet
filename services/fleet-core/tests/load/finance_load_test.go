@@ -13,7 +13,7 @@ import (
 // RunFinanceLoadTest simulates high volume of fuel transaction ingestions
 func RunFinanceLoadTest(svc *service.FinanceService, concurrency int, totalRequests int) {
 	fmt.Printf("Starting load test: %d concurrency, %d total requests\n", concurrency, totalRequests)
-	
+
 	start := time.Now()
 	var wg sync.WaitGroup
 	reqChan := make(chan int, totalRequests)

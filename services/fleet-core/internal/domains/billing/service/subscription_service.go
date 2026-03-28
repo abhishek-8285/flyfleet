@@ -41,16 +41,16 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, pl
 	trialEnd := now.AddDate(0, 0, trialDays)
 
 	sub := &models.Subscription{
-		ID:                  uuid.New(),
-		OrgID:               orgID,
-		PlanID:              planID,
-		Status:              models.SubscriptionTrial,
-		CurrentPeriodStart:   now,
-		CurrentPeriodEnd:     now.AddDate(0, 1, 0), // Default to monthly
-		TrialEnd:            &trialEnd,
-		CancelAtPeriodEnd:   false,
-		CreatedAt:           now,
-		UpdatedAt:           now,
+		ID:                 uuid.New(),
+		OrgID:              orgID,
+		PlanID:             planID,
+		Status:             models.SubscriptionTrial,
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   now.AddDate(0, 1, 0), // Default to monthly
+		TrialEnd:           &trialEnd,
+		CancelAtPeriodEnd:  false,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 
 	err = s.repo.CreateSubscription(ctx, sub)
@@ -80,7 +80,7 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 	// PRORATION TODO: Calculate credit for remaining time on old plan
 	sub.PlanID = newPlanID
 	sub.UpdatedAt = time.Now().UTC()
-	
+
 	err = s.repo.UpdateSubscription(ctx, sub)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (s *SubscriptionService) CancelSubscription(ctx context.Context, orgID uuid
 	} else {
 		sub.CancelAtPeriodEnd = true
 	}
-	
+
 	sub.UpdatedAt = time.Now().UTC()
 	return s.repo.UpdateSubscription(ctx, sub)
 }

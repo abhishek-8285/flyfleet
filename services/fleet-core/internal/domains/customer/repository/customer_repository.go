@@ -185,7 +185,7 @@ func (r customerV2Repository) GetShipmentByID(ctx context.Context, id uuid.UUID)
 
 // -- Shipment Tracking Method (simplified) --
 func (r customerV2Repository) GetShipmentTracking(ctx context.Context, id uuid.UUID) (map[string]interface{}, error) {
-	// The tracking_v2 telemetry data logic will enrich this in the service layer, 
+	// The tracking_v2 telemetry data logic will enrich this in the service layer,
 	// but we fetch the base shipment data here.
 	shipment, err := r.GetShipmentByID(ctx, id)
 	if err != nil {
@@ -194,7 +194,7 @@ func (r customerV2Repository) GetShipmentTracking(ctx context.Context, id uuid.U
 	if shipment == nil {
 		return nil, nil
 	}
-	
+
 	// Let's also fetch events or stops
 	eventsQuery := `
 		SELECT event_type, timestamp, location, metadata 
@@ -213,7 +213,7 @@ func (r customerV2Repository) GetShipmentTracking(ctx context.Context, id uuid.U
 		var eventType string
 		var timestamp time.Time
 		var location, metadata []byte
-		
+
 		if err := rows.Scan(&eventType, &timestamp, &location, &metadata); err != nil {
 			continue // skip on error
 		}
@@ -274,12 +274,12 @@ func (r customerV2Repository) GetDashboardMetrics(ctx context.Context, customerI
 func (r customerV2Repository) GetAnalytics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error) {
 	// Stub for rich analytics. Represents the metrics the user wants:
 	// delivery success rate, average delivery time, monthly shipment volume, customer spend
-	
+
 	return map[string]interface{}{
-		"delivery_success_rate": 98.5,
-		"average_delivery_time": "24h 15m",
+		"delivery_success_rate":   98.5,
+		"average_delivery_time":   "24h 15m",
 		"monthly_shipment_volume": 1420,
-		"total_customer_spend":  1500000.0,
+		"total_customer_spend":    1500000.0,
 	}, nil
 }
 
@@ -288,15 +288,15 @@ func (r customerV2Repository) SearchShipments(ctx context.Context, customerID uu
 		SELECT id, customer_id, trip_id, booking_id, status, origin,
 			   destination, distance_km, created_at, updated_at
 		FROM customer_v2_shipments WHERE customer_id = $1`
-		
+
 	// Simplistic filter application
 	args := []interface{}{customerID}
-	
+
 	if status, ok := filters["status"]; ok && status != "" {
 		args = append(args, status)
 		query += fmt.Sprintf(" AND status = $%d", len(args))
 	}
-	
+
 	query += " ORDER BY created_at DESC LIMIT 50"
 
 	rows, err := r.db.Query(ctx, query, args...)
@@ -316,6 +316,6 @@ func (r customerV2Repository) SearchShipments(ctx context.Context, customerID uu
 		}
 		shipments = append(shipments, s)
 	}
-	
+
 	return shipments, nil
 }

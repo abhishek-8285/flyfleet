@@ -13,10 +13,10 @@ const (
 	MinOdometer    = 0
 
 	// Status ENUM values
-	StatusActive          = "ACTIVE"
-	StatusMaintenance     = "MAINTENANCE"
-	StatusSuspended       = "SUSPENDED"
-	StatusDecommissioned  = "DECOMMISSIONED"
+	StatusActive         = "ACTIVE"
+	StatusMaintenance    = "MAINTENANCE"
+	StatusSuspended      = "SUSPENDED"
+	StatusDecommissioned = "DECOMMISSIONED"
 
 	// Ownership type ENUM values
 	OwnershipOwned    = "OWNED"
@@ -30,8 +30,8 @@ type Vehicle struct {
 	ID                 uuid.UUID  `json:"id"                   db:"id"`
 	TenantID           uuid.UUID  `json:"tenant_id"            db:"tenant_id"`
 	RegistrationNumber string     `json:"registration_number"  db:"registration_number"`
-	ChassisNumber      *string    `json:"chassis_number"       db:"chassis_number"`  // AES-256 encrypted
-	EngineNumber       *string    `json:"engine_number"        db:"engine_number"`   // AES-256 encrypted
+	ChassisNumber      *string    `json:"chassis_number"       db:"chassis_number"` // AES-256 encrypted
+	EngineNumber       *string    `json:"engine_number"        db:"engine_number"`  // AES-256 encrypted
 	VINNumber          *string    `json:"vin_number"           db:"vin_number"`
 	VehicleType        string     `json:"vehicle_type"         db:"vehicle_type"`
 	CapacityTonnage    *float64   `json:"capacity_tonnage"     db:"capacity_tonnage"`
@@ -46,10 +46,10 @@ type Vehicle struct {
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"  db:"immobilizer_enabled"`
 	AIS140Compliant    bool       `json:"ais140_compliant"     db:"ais140_compliant"`
 	// Legacy / convenience fields
-	Make               *string    `json:"make"                 db:"make"`
-	Model              *string    `json:"model"                db:"model"`
-	Year               *int       `json:"year"                 db:"year"`
-	Color              *string    `json:"color"                db:"color"`
+	Make  *string `json:"make"                 db:"make"`
+	Model *string `json:"model"                db:"model"`
+	Year  *int    `json:"year"                 db:"year"`
+	Color *string `json:"color"                db:"color"`
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
@@ -58,7 +58,7 @@ type Vehicle struct {
 }
 
 // Backward-compat aliases used by existing code / tests.
-func (v *Vehicle) OrgID() uuid.UUID { return v.TenantID }
+func (v *Vehicle) OrgID() uuid.UUID     { return v.TenantID }
 func (v *Vehicle) LicensePlate() string { return v.RegistrationNumber }
 
 // VehicleLocation is the real-time location snapshot for a vehicle.
@@ -118,9 +118,9 @@ type UpdateVehicleRequest struct {
 	Year               *int       `json:"year"    validate:"omitempty,min=1900,max=2030"`
 	Color              *string    `json:"color"`
 	// Legacy fields
-	Status     *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
-	Odometer   *int64  `json:"odometer" validate:"omitempty,min=0"`
-	Insurance  *string `json:"insurance"`
+	Status    *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
+	Odometer  *int64  `json:"odometer" validate:"omitempty,min=0"`
+	Insurance *string `json:"insurance"`
 }
 
 // VehicleListResponse is the paginated list response.
@@ -138,12 +138,12 @@ type AssignDriverRequest struct {
 
 // VehicleStats is the aggregated stats response.
 type VehicleStats struct {
-	TotalVehicles     int     `json:"total_vehicles"`
-	ActiveVehicles    int     `json:"active_vehicles"`
-	MaintenanceCount  int     `json:"maintenance_count"`
-	SuspendedCount    int     `json:"suspended_count"`
-	TotalDistance     float64 `json:"total_distance"`
-	TotalFuel         float64 `json:"total_fuel"`
+	TotalVehicles    int     `json:"total_vehicles"`
+	ActiveVehicles   int     `json:"active_vehicles"`
+	MaintenanceCount int     `json:"maintenance_count"`
+	SuspendedCount   int     `json:"suspended_count"`
+	TotalDistance    float64 `json:"total_distance"`
+	TotalFuel        float64 `json:"total_fuel"`
 }
 
 // VehicleSearchParams holds query params for GET /vehicles/search.

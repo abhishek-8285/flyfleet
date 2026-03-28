@@ -4,17 +4,24 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/fleet-platform/shared/pkg/logger"
+	"github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
+	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	ctx := context.Background()
-	dbURL := "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
-	
+
+	// SECURITY: Database connection must be explicitly configured
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		fmt.Fprintln(os.Stderr, "ERROR: DATABASE_URL environment variable is required")
+		os.Exit(1)
+	}
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
 		log.Fatal(err)
@@ -31,33 +38,47 @@ func main() {
 
 	// Initialize Repositories and Services
 	repo := repository.NewAuthRepository(pool, l)
-	
+
 	// IdentityService requires a *zap.Logger for its implementation (IdentityServiceImpl)
 	// But it takes AuthRepositoryInterface
 	// Let's create it.
 	// We need to get the underlying *zap.Logger from ZapLogger if we can, or just mock it.
 	// ZapLogger in packages/common/go has a private 'logger' field.
 	// However, we can use the same logic here or just a dummy zap logger.
-	
+
 	identitySvc := service.NewIdentityService(repo, nil) // passing nil logger to see if it works
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		jwtSecret = "fallback-secret-for-dev-only"
+		fmt.Fprintln(os.Stderr, "ERROR: JWT_SECRET environment variable is required")
+		os.Exit(1)
 	}
 	authSvc := service.NewAuthService(l, repo, identitySvc, jwtSecret, nil, nil)
 
-	email := "super_admin@flyfleet.com"
-	password := "fleet_password"
+	// SECURITY: Diagnostic login requires explicit credentials via environment
+	// This tool is for legitimate debugging/administration only.
+	// DO NOT commit credentials to source control.
+	email := os.Getenv("DIAGNOSTIC_USER_EMAIL")
+	if email == "" {
+		fmt.Fprintln(os.Stderr, "ERROR: DIAGNOSTIC_USER_EMAIL environment variable is required")
+		os.Exit(1)
+	}
+
+	password := os.Getenv("DIAGNOSTIC_USER_PASSWORD")
+	if password == "" {
+		fmt.Fprintln(os.Stderr, "ERROR: DIAGNOSTIC_USER_PASSWORD environment variable is required")
+		os.Exit(1)
+	}
 
 	fmt.Printf("Attempting diagnostic login for %s...\n", email)
 	resp, err := authSvc.Login(ctx, email, password, "", "127.0.0.1", "test-agent")
 	if err != nil {
 		fmt.Printf("Login failed: %v\n", err)
-		
+
 		user, _ := repo.GetUserByEmail(ctx, email)
 		if user != nil {
-			fmt.Printf("User found. Hash in DB: %s\n", user.PasswordHash)
+			// SECURITY FIX: Do not print password hashes to console
+			fmt.Printf("User found.\n")
 		} else {
 			fmt.Println("User NOT found in DB")
 		}

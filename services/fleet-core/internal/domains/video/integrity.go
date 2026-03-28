@@ -3,6 +3,7 @@ package video
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"hash"
@@ -12,10 +13,10 @@ import (
 
 // IntegrityRecord captures the tamper-proof evidence signature for a video clip.
 type IntegrityRecord struct {
-	SHA256Hash      string    // hex-encoded SHA256 of raw video bytes
-	Signature       string    // HMAC or device-signed hash (base64)
-	DeviceCertSerial string   // serial from device TLS certificate
-	SignedAt        time.Time // timestamp embedded in signature payload
+	SHA256Hash       string    // hex-encoded SHA256 of raw video bytes
+	Signature        string    // HMAC or device-signed hash (base64)
+	DeviceCertSerial string    // serial from device TLS certificate
+	SignedAt         time.Time // timestamp embedded in signature payload
 }
 
 // ComputeHash reads the video stream and returns its SHA256 hex digest.
@@ -57,7 +58,8 @@ func VerifyClip(record IntegrityRecord, expectedHash string) bool {
 		return false
 	}
 	expected := SignClip(record.SHA256Hash, record.DeviceCertSerial, record.SignedAt)
-	return record.Signature == expected
+	// SECURITY FIX: Use constant-time comparison to prevent timing attacks
+	return subtle.ConstantTimeCompare([]byte(record.Signature), []byte(expected)) == 1
 }
 
 // ChainIntegrity ensures no gaps exist in continuous recording segments.

@@ -14,7 +14,7 @@
         "datasource": "Prometheus",
         "targets": [
           {
-            "expr": "sum(flyfleet_vehicle_status{status=\"active\"})",
+            "expr": "sum(vehicle_status{status=\"active\"})",
             "instant": true
           }
         ],
@@ -31,7 +31,7 @@
         "datasource": "Prometheus",
         "targets": [
           {
-            "expr": "sum(flyfleet_trip_status{status=\"in_progress\"})",
+            "expr": "sum(trip_status{status=\"in_progress\"})",
             "instant": true
           }
         ]
@@ -43,7 +43,7 @@
         "datasource": "Prometheus",
         "targets": [
           {
-            "expr": "sum(flyfleet_driver_status{status=\"online\"})",
+            "expr": "sum(driver_status{status=\"online\"})",
             "instant": true
           }
         ]

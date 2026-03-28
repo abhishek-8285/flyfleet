@@ -34,7 +34,7 @@ func (w *ArchivalWorker) Process(ctx context.Context) {
 func (w *ArchivalWorker) archiveOldTelemetry(ctx context.Context) {
 	// Retention: 30 days hot storage.
 	cutoff := time.Now().AddDate(0, 0, -30)
-	
+
 	log.Printf("Archiving telemetry older than %v\n", cutoff)
 	// In a real implementation:
 	// 1. Move to cold storage (S3/GCS)

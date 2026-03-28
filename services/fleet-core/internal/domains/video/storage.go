@@ -32,7 +32,7 @@ type VideoStorage interface {
 // Maps to S3 XML, GCS Object Lifecycle JSON, or Azure Blob Management Policy.
 type S3LifecycleConfig struct {
 	// Prefix filters which objects the rule applies to (e.g., "{tenant}/*/continuous/")
-	Prefix      string
+	Prefix string
 	// TransitionDays moves objects to cheaper storage after N days (0 = skip)
 	TransitionDays int
 	// TransitionClass is the target storage class (e.g., "GLACIER", "STANDARD_IA")

@@ -30,7 +30,7 @@ func (i *IdempotencyHelper) CheckAndLock(ctx context.Context, orgID, requestID s
 	}
 
 	key := fmt.Sprintf("idempotency:%s:%s", orgID, requestID)
-	
+
 	// SetNX returns true if the key was set (didn't exist before)
 	acquired, err := i.redisClient.SetNX(ctx, key, "locked", ttl).Result()
 	if err != nil {

@@ -51,18 +51,18 @@ func (e *TripEventImmutable) VerifyHashChain(prevEvent *TripEventImmutable) bool
 
 // TripEventPayload represents structured event payload
 type TripEventPayload struct {
-	EventType      string                 `json:"event_type"`
-	Timestamp      time.Time              `json:"timestamp"`
-	ActorID        string                 `json:"actor_id"`
-	ActorType      string                 `json:"actor_type"` // driver, system, admin, device
-	Location       *Location              `json:"location,omitempty"`
-	Odometer       *float64               `json:"odometer,omitempty"`
-	FuelLevel      *float64               `json:"fuel_level,omitempty"`
-	Speed          *float64               `json:"speed,omitempty"`
-	Reason         string                 `json:"reason,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
-	DeviceID       string                 `json:"device_id,omitempty"`
-	Signature      string                 `json:"signature,omitempty"` // Device signature for AIS-140
+	EventType string                 `json:"event_type"`
+	Timestamp time.Time              `json:"timestamp"`
+	ActorID   string                 `json:"actor_id"`
+	ActorType string                 `json:"actor_type"` // driver, system, admin, device
+	Location  *Location              `json:"location,omitempty"`
+	Odometer  *float64               `json:"odometer,omitempty"`
+	FuelLevel *float64               `json:"fuel_level,omitempty"`
+	Speed     *float64               `json:"speed,omitempty"`
+	Reason    string                 `json:"reason,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+	DeviceID  string                 `json:"device_id,omitempty"`
+	Signature string                 `json:"signature,omitempty"` // Device signature for AIS-140
 }
 
 // TripMetrics represents real-time trip metrics
@@ -89,27 +89,27 @@ type TripMetrics struct {
 
 // TripFinancials represents financial calculations for a completed trip
 type TripFinancials struct {
-	TripID            string    `json:"trip_id"`
-	BillableDistance  float64   `json:"billable_distance_km"`
-	TollCost          float64   `json:"toll_cost_inr"`
-	FuelCost          float64   `json:"fuel_cost_inr"`
-	DriverAllowance   float64   `json:"driver_allowance_inr"`
-	SLAPenalty        float64   `json:"sla_penalty_inr"`
-	Subtotal          float64   `json:"subtotal_inr"`
-	TotalAmount       float64   `json:"total_amount_inr"`
-	GSTAmount         float64   `json:"gst_amount_inr"`
-	GSTRate           float64   `json:"gst_rate_percent"`
-	CGSTAmount        float64   `json:"cgst_amount_inr"`
-	SGSTAmount        float64   `json:"sgst_amount_inr"`
-	IGSTAmount        float64   `json:"igst_amount_inr"`
-	TDSApplicable     bool      `json:"tds_applicable"`
-	TDSAmount         float64   `json:"tds_amount_inr"`
-	ReverseCharge     bool      `json:"reverse_charge"`
-	PlaceOfSupply     string    `json:"place_of_supply"`
-	InvoiceGenerated  bool      `json:"invoice_generated"`
-	InvoiceID         string    `json:"invoice_id"`
-	EWayBillNo        string    `json:"eway_bill_no"`
-	CalculatedAt      time.Time `json:"calculated_at"`
+	TripID           string    `json:"trip_id"`
+	BillableDistance float64   `json:"billable_distance_km"`
+	TollCost         float64   `json:"toll_cost_inr"`
+	FuelCost         float64   `json:"fuel_cost_inr"`
+	DriverAllowance  float64   `json:"driver_allowance_inr"`
+	SLAPenalty       float64   `json:"sla_penalty_inr"`
+	Subtotal         float64   `json:"subtotal_inr"`
+	TotalAmount      float64   `json:"total_amount_inr"`
+	GSTAmount        float64   `json:"gst_amount_inr"`
+	GSTRate          float64   `json:"gst_rate_percent"`
+	CGSTAmount       float64   `json:"cgst_amount_inr"`
+	SGSTAmount       float64   `json:"sgst_amount_inr"`
+	IGSTAmount       float64   `json:"igst_amount_inr"`
+	TDSApplicable    bool      `json:"tds_applicable"`
+	TDSAmount        float64   `json:"tds_amount_inr"`
+	ReverseCharge    bool      `json:"reverse_charge"`
+	PlaceOfSupply    string    `json:"place_of_supply"`
+	InvoiceGenerated bool      `json:"invoice_generated"`
+	InvoiceID        string    `json:"invoice_id"`
+	EWayBillNo       string    `json:"eway_bill_no"`
+	CalculatedAt     time.Time `json:"calculated_at"`
 }
 
 // TripCompliance represents compliance status for a trip
@@ -141,20 +141,20 @@ type TripCompliance struct {
 
 // TripSearchFilter represents search filters for trips
 type TripSearchFilter struct {
-	TenantID      string     `json:"tenant_id"`
-	VehicleID     string     `json:"vehicle_id"`
-	DriverID      string     `json:"driver_id"`
-	Status        []string   `json:"status"`
-	DateFrom      time.Time  `json:"date_from"`
-	DateTo        time.Time  `json:"date_to"`
-	AIS140Only    bool       `json:"ais140_only"`
-	Interstate    *bool      `json:"interstate"`
-	HasViolations *bool      `json:"has_violations"`
-	HasEWayBill   *bool      `json:"has_eway_bill"`
-	Page          int        `json:"page"`
-	PageSize      int        `json:"page_size"`
-	OrderBy       string     `json:"order_by"`
-	OrderDir      string     `json:"order_dir"`
+	OrgID         string    `json:"org_id"`
+	VehicleID     string    `json:"vehicle_id"`
+	DriverID      string    `json:"driver_id"`
+	Status        []string  `json:"status"`
+	DateFrom      time.Time `json:"date_from"`
+	DateTo        time.Time `json:"date_to"`
+	AIS140Only    bool      `json:"ais140_only"`
+	Interstate    *bool     `json:"interstate"`
+	HasViolations *bool     `json:"has_violations"`
+	HasEWayBill   *bool     `json:"has_eway_bill"`
+	Page          int       `json:"page"`
+	PageSize      int       `json:"page_size"`
+	OrderBy       string    `json:"order_by"`
+	OrderDir      string    `json:"order_dir"`
 }
 
 // TripSearchResult represents paginated search results
@@ -175,7 +175,7 @@ var ValidStateTransitions = map[string][]string{
 	TripStatusResumed:   {TripStatusPaused, TripStatusCompleted, TripStatusFailed},
 	TripStatusCompleted: {}, // Terminal state
 	TripStatusCancelled: {}, // Terminal state
-	TripStatusFailed:    {},  // Terminal state
+	TripStatusFailed:    {}, // Terminal state
 }
 
 // IsTerminalState checks if a state is terminal

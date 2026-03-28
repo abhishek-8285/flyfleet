@@ -104,6 +104,8 @@ services:
       - ./backups:/backups
     ports:
       - "8081:8084" # Mapping 8081 (BFF port) to 8084 (Monolith internal port)
+      # Uncomment the following line to expose pprof port (disable in production!)
+      # - "6060:6060"
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-fleet_user}:${POSTGRES_PASSWORD:-fleet_password}@fleet-postgres:5432/${POSTGRES_DB:-fleet_db}?sslmode=disable
       - NATS_URL=nats://fleet-nats:4222
@@ -114,6 +116,9 @@ services:
       - PORT=8084
       - LOG_LEVEL=info
       - ENFORCE_BFF_AUTH_GATE=true
+      # Performance profiling (disabled by default, set ENABLE_PPROF=true to enable)
+      - ENABLE_PPROF=${ENABLE_PPROF:-false}
+      - PPROF_ADDR=${PPROF_ADDR:-127.0.0.1:6060}
       # Unified internal service URLs (Internal loopback via Monolith's internal gateway)
       - AUTH_SERVICE_URL=http://localhost:8084
       - ALERT_SERVICE_URL=http://localhost:8084

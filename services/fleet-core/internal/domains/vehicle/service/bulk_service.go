@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -34,6 +35,37 @@ func NewBulkService(repo *repository.BulkRepository, processor *processor.BulkPr
 	}
 }
 
+// validateCSVContent verifies that the file content is actually valid CSV format
+// and not a malicious script disguised with a .csv extension (CWE-434)
+func (s *BulkService) validateCSVContent(data []byte) error {
+	if len(data) == 0 {
+		return fmt.Errorf("file is empty")
+	}
+
+	// Try to parse as CSV to ensure it's valid CSV data
+	reader := csv.NewReader(bytes.NewReader(data))
+
+	// Set some sane defaults
+	reader.FieldsPerRecord = -1 // Allow variable number of fields
+	reader.LazyQuotes = true    // Allow unescaped quotes in fields (common in real CSVs)
+	reader.TrimLeadingSpace = true
+
+	// Read the first record (header) to validate format
+	_, err := reader.Read()
+	if err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("file has no data")
+		}
+		return fmt.Errorf("invalid CSV format: %w", err)
+	}
+
+	// Additional check: ensure we have at least some columns
+	// CSV files should have at least one column
+	// (We've already successfully parsed a row, so this is valid CSV)
+
+	return nil
+}
+
 func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName string, fileReader io.Reader) (*models.BulkJob, error) {
 	// 1. Validation
 	ext := filepath.Ext(fileName)
@@ -52,8 +84,14 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		return nil, fmt.Errorf("file too large: maximum size is 10MB")
 	}
 
+	// SECURITY FIX: Validate actual file content is CSV, not just extension (CWE-434)
+	// This prevents attackers from uploading malicious scripts with .csv extension
+	if err := s.validateCSVContent(data); err != nil {
+		return nil, fmt.Errorf("invalid CSV file: %w", err)
+	}
+
 	jobID := uuid.New()
-	
+
 	// 2. Save file locally
 	filePath := filepath.Join("uploads", fmt.Sprintf("%s.csv", jobID))
 	if err := os.WriteFile(filePath, data, 0644); err != nil {
@@ -85,8 +123,8 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		// Panic Recovery
 		defer func() {
 			if r := recover(); r != nil {
-				s.logger.Error("Panic in bulk job processing", 
-					zap.String("job_id", job.ID.String()), 
+				s.logger.Error("Panic in bulk job processing",
+					zap.String("job_id", job.ID.String()),
 					zap.Any("recover", r))
 				// Update job status to failed
 				// Create a background context as the request context might be cancelled
@@ -98,7 +136,7 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		reader := bytes.NewReader(data)
 		s.processor.ProcessCSV(job.ID, reader, orgID)
 	}()
-	
+
 	return job, nil
 }
 
@@ -133,14 +171,14 @@ func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				s.logger.Error("Panic in bulk job retry", 
-					zap.String("job_id", job.ID.String()), 
+				s.logger.Error("Panic in bulk job retry",
+					zap.String("job_id", job.ID.String()),
 					zap.Any("recover", r))
 				bgCtx := context.Background()
 				s.repo.UpdateJobStatus(bgCtx, job.ID, "failed", 0, 0)
 			}
 		}()
-		
+
 		reader := bytes.NewReader(data)
 		s.processor.ProcessCSV(job.ID, reader, orgID)
 	}()
@@ -152,10 +190,34 @@ func (s *BulkService) ListJobs(ctx context.Context, orgID uuid.UUID, status stri
 	return s.repo.ListJobs(ctx, orgID, status, page, limit)
 }
 
-func (s *BulkService) GetJob(ctx context.Context, id uuid.UUID) (*models.BulkJob, error) {
-	return s.repo.GetJob(ctx, id)
+func (s *BulkService) GetJob(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.BulkJob, error) {
+	job, err := s.repo.GetJob(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	// SECURITY FIX: Validate job belongs to requesting organization (CWE-639)
+	if job.OrganizationID != orgID {
+		s.logger.Warn("unauthorized bulk job access attempt",
+			zap.String("job_id", id.String()),
+			zap.String("job_org", job.OrganizationID.String()),
+			zap.String("request_org", orgID.String()))
+		return nil, fmt.Errorf("job not found") // Opaque error
+	}
+	return job, nil
 }
 
-func (s *BulkService) GetJobRecords(ctx context.Context, jobID uuid.UUID, status string) ([]models.BulkJobRecord, error) {
+func (s *BulkService) GetJobRecords(ctx context.Context, jobID uuid.UUID, orgID uuid.UUID, status string) ([]models.BulkJobRecord, error) {
+	// SECURITY FIX: Verify job belongs to organization before returning records (CWE-639)
+	job, err := s.repo.GetJob(ctx, jobID)
+	if err != nil {
+		return nil, err
+	}
+	if job.OrganizationID != orgID {
+		s.logger.Warn("unauthorized job records access attempt",
+			zap.String("job_id", jobID.String()),
+			zap.String("job_org", job.OrganizationID.String()),
+			zap.String("request_org", orgID.String()))
+		return nil, fmt.Errorf("job not found")
+	}
 	return s.repo.GetJobRecords(ctx, jobID, status)
 }

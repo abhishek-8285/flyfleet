@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -30,17 +31,29 @@ func NewMSG91Provider(logger *zap.Logger) *MSG91Provider {
 }
 
 func (p *MSG91Provider) SendSMS(ctx context.Context, phone, message string) error {
-	p.logger.Info("MSG91: Sending SMS", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("MSG91: Sending SMS",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *MSG91Provider) SendVoiceCall(ctx context.Context, phone, message string) error {
-	p.logger.Info("MSG91: Initiating Voice Call", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("MSG91: Initiating Voice Call",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *MSG91Provider) SendEmail(ctx context.Context, email, subject, message string) error {
-	p.logger.Info("MSG91: Sending Email", zap.String("email", email), zap.String("subject", subject))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("MSG91: Sending Email",
+		zap.String("provider", p.GetName()),
+		zap.String("email_domain", extractEmailDomain(email)),
+		zap.Int("subject_length", len(subject)))
 	return nil
 }
 
@@ -54,17 +67,29 @@ func NewTwilioProvider(logger *zap.Logger) *TwilioProvider {
 }
 
 func (p *TwilioProvider) SendSMS(ctx context.Context, phone, message string) error {
-	p.logger.Info("Twilio: Sending SMS", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Twilio: Sending SMS",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *TwilioProvider) SendVoiceCall(ctx context.Context, phone, message string) error {
-	p.logger.Info("Twilio: Initiating Voice Call", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Twilio: Initiating Voice Call",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *TwilioProvider) SendEmail(ctx context.Context, email, subject, message string) error {
-	p.logger.Info("Twilio: Sending Email", zap.String("email", email), zap.String("subject", subject))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Twilio: Sending Email",
+		zap.String("provider", p.GetName()),
+		zap.String("email_domain", extractEmailDomain(email)),
+		zap.Int("subject_length", len(subject)))
 	return nil
 }
 
@@ -78,16 +103,45 @@ func NewExotelProvider(logger *zap.Logger) *ExotelProvider {
 }
 
 func (p *ExotelProvider) SendSMS(ctx context.Context, phone, message string) error {
-	p.logger.Info("Exotel: Sending SMS", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Exotel: Sending SMS",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *ExotelProvider) SendVoiceCall(ctx context.Context, phone, message string) error {
-	p.logger.Info("Exotel: Initiating Voice Call", zap.String("phone", phone), zap.String("message", message))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Exotel: Initiating Voice Call",
+		zap.String("provider", p.GetName()),
+		zap.String("phone_last4", maskPhoneNumber(phone)),
+		zap.Int("message_length", len(message)))
 	return nil
 }
 
 func (p *ExotelProvider) SendEmail(ctx context.Context, email, subject, message string) error {
-	p.logger.Info("Exotel: Sending Email", zap.String("email", email), zap.String("subject", subject))
+	// SECURITY FIX: Mask PII in logs
+	p.logger.Info("Exotel: Sending Email",
+		zap.String("provider", p.GetName()),
+		zap.String("email_domain", extractEmailDomain(email)),
+		zap.Int("subject_length", len(subject)))
 	return nil
+}
+
+// maskPhoneNumber hides all but last 4 digits of a phone number
+func maskPhoneNumber(phone string) string {
+	if len(phone) <= 4 {
+		return phone
+	}
+	return "****" + phone[len(phone)-4:]
+}
+
+// extractEmailDomain returns just the domain part of an email address
+func extractEmailDomain(email string) string {
+	parts := strings.Split(email, "@")
+	if len(parts) == 2 {
+		return parts[1]
+	}
+	return "invalid"
 }

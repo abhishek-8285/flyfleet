@@ -25,18 +25,18 @@ func NewOrganizationRepository(db *pgxpool.Pool, logger *zap.Logger) *Organizati
 
 func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, limit int, searchQuery string) ([]models.Organization, int, error) {
 	offset := (page - 1) * limit
-	
+
 	query := `
 		SELECT id, name, domain, status, created_at, created_by, updated_at, updated_by
 		FROM organizations
 		WHERE is_deleted = false
 	`
-	
+
 	countQuery := `SELECT COUNT(*) FROM organizations WHERE is_deleted = false`
-	
+
 	args := []interface{}{}
 	argIdx := 1
-	
+
 	if searchQuery != "" {
 		filter := fmt.Sprintf(" AND (name ILIKE $%d OR domain ILIKE $%d)", argIdx, argIdx+1)
 		query += filter
@@ -44,22 +44,22 @@ func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, li
 		args = append(args, "%"+searchQuery+"%", "%"+searchQuery+"%")
 		argIdx += 2
 	}
-	
+
 	query += fmt.Sprintf(" ORDER BY name ASC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
-	
+
 	var total int
 	err := r.db.QueryRow(ctx, countQuery, args[:argIdx-1]...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	var orgs []models.Organization
 	for rows.Next() {
 		var org models.Organization
@@ -78,7 +78,7 @@ func (r *OrganizationRepository) ListOrganizations(ctx context.Context, page, li
 		}
 		orgs = append(orgs, org)
 	}
-	
+
 	return orgs, total, nil
 }
 
@@ -87,11 +87,11 @@ func (r *OrganizationRepository) GetOrganizationStats(ctx context.Context) (mode
 
 	// Use a transaction or multiple queries
 	queries := map[string]*int{
-		"SELECT COUNT(*) FROM organizations WHERE is_deleted = false": &stats.TotalOrgs,
-		"SELECT COUNT(*) FROM organizations WHERE status = 'active' AND is_deleted = false": &stats.ActiveOrgs,
-		"SELECT COUNT(*) FROM organizations WHERE status = 'pending' AND is_deleted = false": &stats.PendingOrgs,
+		"SELECT COUNT(*) FROM organizations WHERE is_deleted = false":                         &stats.TotalOrgs,
+		"SELECT COUNT(*) FROM organizations WHERE status = 'active' AND is_deleted = false":   &stats.ActiveOrgs,
+		"SELECT COUNT(*) FROM organizations WHERE status = 'pending' AND is_deleted = false":  &stats.PendingOrgs,
 		"SELECT COUNT(*) FROM organizations WHERE status = 'inactive' AND is_deleted = false": &stats.InactiveOrgs,
-		"SELECT COUNT(*) FROM users": &stats.TotalUsers,
+		"SELECT COUNT(*) FROM users":    &stats.TotalUsers,
 		"SELECT COUNT(*) FROM vehicles": &stats.TotalVehicles,
 	}
 
@@ -140,11 +140,11 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 	now := time.Now().UTC()
 	status := "active"
 	plan := "enterprise"
-	
+
 	if req.SubscriptionTier != "" {
 		plan = req.SubscriptionTier
 	}
-	
+
 	defaultTheme := "system"
 	if req.DefaultTheme != "" {
 		defaultTheme = req.DefaultTheme
@@ -157,11 +157,11 @@ func (r *OrganizationRepository) CreateOrganization(ctx context.Context, req mod
 	`
 
 	var resp models.CreateOrganizationResponse
-	err := r.db.QueryRow(ctx, query, 
-		id, 
-		req.Name, 
-		req.Domain, 
-		status, 
+	err := r.db.QueryRow(ctx, query,
+		id,
+		req.Name,
+		req.Domain,
+		status,
 		plan,
 		req.ContactEmail,
 		defaultTheme,
