@@ -11,7 +11,7 @@ import (
 )
 
 func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
-	query := "SELECT id, name, type, logo_url, domain, default_theme, status, created_at, updated_at FROM organizations WHERE id = $1"
+	query := "SELECT id, name, type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations WHERE id = $1"
 	start := time.Now()
 	var org models.Organization
 	err := r.db.QueryRow(ctx, query, id).Scan(
@@ -33,7 +33,7 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 		return nil, 0, err
 	}
 
-	query := "SELECT id, name, type, logo_url, domain, default_theme, status, created_at, updated_at FROM organizations ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+	query := "SELECT id, name, type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations ORDER BY created_at DESC LIMIT $1 OFFSET $2"
 	start2 := time.Now()
 	rows, err := r.db.Query(ctx, query, limit, offset)
 	metrics.RecordDBQuery(query, time.Since(start2))
@@ -55,9 +55,18 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 
 func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email string) ([]models.Organization, error) {
 	query := `
-		SELECT o.id, o.name, o.type, o.logo_url, o.domain, o.default_theme, o.status, o.created_at, o.updated_at
+		SELECT
+			o.id,
+			o.name,
+			o.type,
+			COALESCE(o.logo_url, '') as logo_url,
+			COALESCE(o.domain, '') as domain,
+			COALESCE(o.default_theme, '') as default_theme,
+			COALESCE(o.status, '') as status,
+			o.created_at,
+			o.updated_at
 		FROM organizations o
-		JOIN user_roles ur ON o.id = ur.organization_id
+		JOIN user_roles ur ON o.id = ur.org_id
 		JOIN users u ON ur.user_id = u.id
 		WHERE u.email = $1
 	`

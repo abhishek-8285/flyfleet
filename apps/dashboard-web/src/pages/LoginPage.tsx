@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useState, useEffect, createContext, useContext, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useAuth } from "../context/AuthProvider";
@@ -191,6 +191,7 @@ const AuthenticateStep: React.FC = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
+  const navigate = useNavigate();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,14 +244,14 @@ const AuthenticateStep: React.FC = () => {
       
       const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
       if (role.includes("driver") || role === "staff") {
-        window.location.href = "/dashboard";
+        navigate("/dashboard");
       } else if (role.includes("customer") || role.includes("portal") || role === "user") {
-        window.location.href = "/portal";
+        navigate("/portal");
       } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
-        window.location.href = "/admin";
+        navigate("/admin");
       } else {
         // Fallback for unrecognized roles (default to portal to prevent unauthorized dashboard access)
-        window.location.href = "/portal";
+        navigate("/portal");
       }
     } catch (err: any) {
       setGlobalError({ message: err.message });
@@ -326,6 +327,7 @@ const MFAStep: React.FC = () => {
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const { login } = useAuth();
+  const navigate = useNavigate();
   
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -394,7 +396,7 @@ const MFAStep: React.FC = () => {
       };
 
       login(data.access_token, data.refresh_token, userData);
-      window.location.href = "/admin"; // Simple routing map for MFA
+      navigate("/admin"); // Simple routing map for MFA
     } catch (err: any) {
       setGlobalError({ message: err.message });
     } finally {

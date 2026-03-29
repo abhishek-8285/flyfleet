@@ -137,6 +137,8 @@ import VehicleDetails from "./pages/VehicleDetails";
 import VerifyEmail from "./pages/VerifyEmail";
 import { store } from "./store";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import { useSelector } from "react-redux";
+import type { RootState } from "./store";
 
 // Lazy loaded routes for code splitting
 const Analytics = lazy(() => import("./modules/dashboard/pages/Analytics"));
@@ -187,7 +189,7 @@ const AuthError = lazy(() => import("./pages/AuthError"));
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const token = localStorage.getItem("access_token");
+  const token = useSelector((state: RootState) => state.auth.token);
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
