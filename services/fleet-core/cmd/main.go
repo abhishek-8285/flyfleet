@@ -42,8 +42,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	// Domains
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	billingv2storage "github.com/flyfleet/fleet-core-service/internal/domains/billing/storage"
+//	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+//	billingv2storage "github.com/flyfleet/fleet-core-service/internal/domains/billing/storage"
 	governanceHandlers "github.com/flyfleet/fleet-core-service/internal/domains/governance/handlers"
 	govMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/governance/middleware"
 	governanceRepo "github.com/flyfleet/fleet-core-service/internal/domains/governance/repository"
@@ -127,11 +127,11 @@ import (
 	analyticsRepo "github.com/flyfleet/fleet-core-service/internal/domains/analytics/repository"
 	analyticsService "github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
 
-	billingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/billing/handlers"
-	billingv2models "github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	billingv2pdf "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	billingv2queue "github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
-	billingv2repo "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
+//	billingv2handlers "github.com/flyfleet/fleet-core-service/internal/domains/billing/handlers"
+//	billingv2models "github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+//	billingv2pdf "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+//	billingv2queue "github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
+//	billingv2repo "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
 	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
 
 	compliancev2handlers "github.com/flyfleet/fleet-core-service/internal/domains/compliance/handlers"
@@ -193,29 +193,29 @@ import (
 	_ "github.com/flyfleet/fleet-core-service/internal/domains/vehicle"
 	_ "github.com/flyfleet/fleet-core-service/internal/domains/video"
 	// Sub-package metrics
-	_ "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+//	_ "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
 	_ "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/metrics"
 	_ "github.com/flyfleet/fleet-core-service/internal/domains/governance/metrics"
 	// Platform cost metrics
 	_ "github.com/flyfleet/fleet-core-service/internal/platform/cost"
 )
 
-type billingQueueProvider struct {
-	producer *billingv2queue.TaskProducer
-}
-
-func (p *billingQueueProvider) EnqueueGenerateInvoice(ctx context.Context, payload billingv2models.GenerateInvoicePayload) error {
-	return nil
-}
-func (p *billingQueueProvider) EnqueueDunningTask(ctx context.Context, payload billingv2models.ProcessDunningPayload) error {
-	return nil
-}
-func (p *billingQueueProvider) EnqueueRenderPDF(ctx context.Context, invoiceID uuid.UUID) error {
-	if p.producer == nil {
-		return nil
-	}
-	return p.producer.EnqueueInvoiceRender(ctx, invoiceID.String())
-}
+//type billingQueueProvider struct {
+//	producer *billingv2queue.TaskProducer
+//}
+//
+//func (p *billingQueueProvider) EnqueueGenerateInvoice(ctx context.Context, payload billingv2models.GenerateInvoicePayload) error {
+//	return nil
+//}
+//func (p *billingQueueProvider) EnqueueDunningTask(ctx context.Context, payload billingv2models.ProcessDunningPayload) error {
+//	return nil
+//}
+//func (p *billingQueueProvider) EnqueueRenderPDF(ctx context.Context, invoiceID uuid.UUID) error {
+//	if p.producer == nil {
+//		return nil
+//	}
+//	return p.producer.EnqueueInvoiceRender(ctx, invoiceID.String())
+//}
 
 // updateDatabasePoolMetrics periodically collects stats from each pool and updates Prometheus gauges.
 func updateDatabasePoolMetrics(pools *database.DatabasePools) {
@@ -283,10 +283,10 @@ func main() {
 	// Termux/Android Hardening: Strictly limit connections to protect phone memory
 	pools, err := database.NewDatabasePools(context.Background(), database.PoolConfig{
 		DatabaseURL: cfg.DatabaseURL,
-		CriticalMax: 10, // Reduced from 20 for absolute stability
-		HighMax:     10, // Reduced from 15
-		MediumMax:   5,  // Reduced from 10
-		LowMax:      5,
+		CriticalMax: 25, // Increased for better dev concurrency (auth, emergency, tracking)
+		HighMax:      20, // Reduced from 15
+		MediumMax:    10,  // Reduced from 10
+		LowMax:       10,
 	})
 	if err != nil {
 		logger.Fatal("Failed to initialize database pools", zap.Error(err))
@@ -295,7 +295,7 @@ func main() {
 
 	// 3.1 Start Performance Monitoring
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -307,7 +307,7 @@ func main() {
 
 				if pools.Critical != nil {
 					s := pools.Critical.Stat()
-					logger.Info("DB Pool Saturation Audit", zap.String("pool", "CRITICAL"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
+					logger.Debug("DB Pool Saturation Audit", zap.String("pool", "CRITICAL"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
 
 					// Auto Pool Shedding logic
 					if sharedRedisClient != nil {
@@ -320,15 +320,15 @@ func main() {
 				}
 				if pools.High != nil {
 					s := pools.High.Stat()
-					logger.Info("DB Pool Saturation Audit", zap.String("pool", "HIGH"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
+					logger.Debug("DB Pool Saturation Audit", zap.String("pool", "HIGH"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
 				}
 				if pools.Medium != nil {
 					s := pools.Medium.Stat()
-					logger.Info("DB Pool Saturation Audit", zap.String("pool", "MEDIUM"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
+					logger.Debug("DB Pool Saturation Audit", zap.String("pool", "MEDIUM"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
 				}
 				if pools.Low != nil {
 					s := pools.Low.Stat()
-					logger.Info("DB Pool Saturation Audit", zap.String("pool", "LOW"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
+					logger.Debug("DB Pool Saturation Audit", zap.String("pool", "LOW"), zap.Int32("acquired", s.AcquiredConns()), zap.Int32("idle", s.IdleConns()), zap.Int32("max", s.MaxConns()))
 				}
 			}
 		}
@@ -794,7 +794,7 @@ func main() {
 		govMasker := governanceService.NewMaskingService()
 		govGenerator := govUtils.NewExportFileGenerator()
 		govExportSvc := governanceService.NewExportService(govRepo, govAggregator, govMasker, govGenerator, nc, logger)
-		govDeletionSvc := governanceService.NewDataDeletionService(govRepo, pools.Low, nc, logger)
+		govDeletionSvc := governanceService.NewDataDeletionService(govRepo, pools.Low, nc, sharedRedisClient, logger)
 		govAccessReviewSvc := governanceService.NewAccessReviewService(govRepo, pools.Low, logger)
 
 		// Workers
@@ -931,7 +931,7 @@ func main() {
 		authRepo := authv2repo.NewAuthRepository(pools.Critical, authLog)
 		identitySvc := authv2service.NewIdentityService(authRepo, logger)
 		authSvc := authv2service.NewAuthService(authLog, authRepo, identitySvc, cfg.JWTSecret, sharedRedisClient, nc)
-		authHandler := authv2handlers.NewHandlers(authSvc, logger, sharedRedisClient)
+		authHandler := authv2handlers.NewHandlers(authSvc, logger, sharedRedisClient, jwksURL)
 		authHandler.RegisterRoutes(r)
 
 		// UI Configuration
@@ -1081,90 +1081,89 @@ func main() {
 			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "mechanic"))
 			workOrderHandler.RegisterRoutes(r)
 		})
-		// Billing Domain (migrated v2 in monolith)
-		billRepo := billingv2repo.NewBillingRepository(pools.High)
-		billAuditRepo := billingv2repo.NewAuditLogRepository(pools.High)
-		billSubRepo := billingv2repo.NewSubscriptionRepository(pools.High)
-		billMeterRepo := billingv2repo.NewMeteringRepository(pools.High)
-		billHWRepo := billingv2repo.NewHardwareRepository(pools.High)
-		billLedgerRepo := billingv2repo.NewLedgerRepository(pools.High)
-		billTaxRepo := billingv2repo.NewTaxRepository(pools.High)
-		billSeqRepo := billingv2repo.NewSequenceRepository(pools.High)
-		billNotifRepo := billingv2repo.NewNotificationRepository(pools.High)
-		billCNRepo := billingv2repo.NewCreditNoteRepository(pools.High)
-		billAccountingRepo := billingv2repo.NewAccountingRepository(pools.High)
-		billAdvancedSubRepo := billingv2repo.NewAdvancedSubRepository(pools.High)
-		billTemplateRepo := billingv2repo.NewTemplateRepository(pools.High)
-		billAnalyticsRepo := billingv2repo.NewAnalyticsRepository(pools.High)
-
-		billSubService := billingv2service.NewSubscriptionService(billSubRepo, billAuditRepo, logger)
-		billMeterService := billingv2service.NewMeteringService(billMeterRepo, logger)
-		billHWService := billingv2service.NewHardwareService(billHWRepo, logger)
-		billLedgerService := billingv2service.NewLedgerService(billLedgerRepo, logger)
-		billTaxService := billingv2service.NewTaxService(billTaxRepo, logger)
-		billSeqService := billingv2service.NewSequenceService(billSeqRepo, logger)
-		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
-		billTaskProducer := billingv2queue.NewTaskProducer(nil) // No asynq client for now
-		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
-
-		billQueue := &billingQueueProvider{producer: billTaskProducer}
-
-		var billService *billingv2service.BillingService
-		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
-
-		billService = billingv2service.NewBillingService(
-			billRepo, billAuditRepo, billSubService, billMeterService,
-			billHWService, billLedgerService, billTaxService, billSeqService,
-			billNotifService, billDunningService, billQueue, logger,
-		)
-
-		// Initialize switchable storage based on config flag
-		var billStorage billingv2storage.ObjectStorage
-		if cfg.BillingStorageType == "s3" {
-			minioClient, err := billingv2storage.NewMinioClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3UseSSL)
-			if err != nil {
-				logger.Error("Failed to initialize S3 client, falling back to local storage", zap.Error(err))
-				billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
-			} else {
-				billStorage = billingv2storage.NewS3Storage(minioClient, cfg.S3Bucket, "us-east-1")
-				logger.Info("✅ Billing storage set to S3 Cloud.")
-			}
-		} else {
-			billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
-			logger.Info("✅ Billing storage set to Local Disk.")
-		}
-
-		billInvoiceConfig := billingv2service.InvoiceServiceConfig{
-			InvoiceStoragePath: "/tmp/invoices",
-			ChromeTimeout:      30 * time.Second,
-		}
-		billInvoiceService, err := billingv2service.NewInvoiceService(billRepo, billTaskProducer, billTemplateService, billInvoiceConfig, logger)
-		if err != nil {
-			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
-		}
-
-		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
-		_ = billWorker // Silencing for now until worker.Start is called
-
-		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
-		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
-		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
-
-		// billAccountingService initialization with empty exporters
-		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
-
-		billAnalyticsH := billingv2handlers.NewAnalyticsHandler(billAnalyticsService, logger)
-		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
-
-		billHandler := billingv2handlers.NewBillingHandler(
-			billService, billInvoiceService, billSubService, billMeterService,
-			billCNService, billHWService, billLedgerService, billAdvSubService,
-			billAnalyticsH, billAccountingH, logger,
-		)
-		// Billing operations require elevated roles (finance, admin)
-		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "finance_manager", "billing_manager"))
-		billHandler.RegisterRoutes(r)
-
+//		// Billing Domain (migrated v2 in monolith)
+//		billRepo := billingv2repo.NewBillingRepository(pools.High)
+//		billAuditRepo := billingv2repo.NewAuditLogRepository(pools.High)
+//		billSubRepo := billingv2repo.NewSubscriptionRepository(pools.High)
+//		billMeterRepo := billingv2repo.NewMeteringRepository(pools.High)
+//		billHWRepo := billingv2repo.NewHardwareRepository(pools.High)
+//		billLedgerRepo := billingv2repo.NewLedgerRepository(pools.High)
+//		billTaxRepo := billingv2repo.NewTaxRepository(pools.High)
+//		billSeqRepo := billingv2repo.NewSequenceRepository(pools.High)
+//		billNotifRepo := billingv2repo.NewNotificationRepository(pools.High)
+//		billCNRepo := billingv2repo.NewCreditNoteRepository(pools.High)
+//		billAccountingRepo := billingv2repo.NewAccountingRepository(pools.High)
+//		billAdvancedSubRepo := billingv2repo.NewAdvancedSubRepository(pools.High)
+//		billTemplateRepo := billingv2repo.NewTemplateRepository(pools.High)
+//		billAnalyticsRepo := billingv2repo.NewAnalyticsRepository(pools.High)
+//
+//		billSubService := billingv2service.NewSubscriptionService(billSubRepo, billAuditRepo, logger)
+//		billMeterService := billingv2service.NewMeteringService(billMeterRepo, logger)
+//		billHWService := billingv2service.NewHardwareService(billHWRepo, logger)
+//		billLedgerService := billingv2service.NewLedgerService(billLedgerRepo, logger)
+//		billTaxService := billingv2service.NewTaxService(billTaxRepo, logger)
+//		billSeqService := billingv2service.NewSequenceService(billSeqRepo, logger)
+//		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
+//		billTaskProducer := billingv2queue.NewTaskProducer(nil) // No asynq client for now
+//		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
+//
+//		billQueue := &billingQueueProvider{producer: billTaskProducer}
+//
+//		var billService *billingv2service.BillingService
+//		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
+//
+//		billService = billingv2service.NewBillingService(
+//			billRepo, billAuditRepo, billSubService, billMeterService,
+//			billHWService, billLedgerService, billTaxService, billSeqService,
+//			billNotifService, billDunningService, billQueue, logger,
+//		)
+//
+//		// Initialize switchable storage based on config flag
+//		var billStorage billingv2storage.ObjectStorage
+//		if cfg.BillingStorageType == "s3" {
+//			minioClient, err := billingv2storage.NewMinioClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3UseSSL)
+//			if err != nil {
+//				logger.Error("Failed to initialize S3 client, falling back to local storage", zap.Error(err))
+//				billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
+//			} else {
+//				billStorage = billingv2storage.NewS3Storage(minioClient, cfg.S3Bucket, "us-east-1")
+//				logger.Info("✅ Billing storage set to S3 Cloud.")
+//			}
+//		} else {
+//			billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
+//			logger.Info("✅ Billing storage set to Local Disk.")
+//		}
+//
+//		billInvoiceConfig := billingv2service.InvoiceServiceConfig{
+//			InvoiceStoragePath: "/tmp/invoices",
+//			ChromeTimeout:      30 * time.Second,
+//		}
+//		billInvoiceService, err := billingv2service.NewInvoiceService(billRepo, billTaskProducer, billTemplateService, billInvoiceConfig, logger)
+//		if err != nil {
+//			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
+//		}
+//
+//		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
+//		_ = billWorker // Silencing for now until worker.Start is called
+//
+//		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
+//		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
+//		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
+//
+//		// billAccountingService initialization with empty exporters
+//		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
+//
+////		billAnalyticsH := billingv2handlers.NewAnalyticsHandler(billAnalyticsService, logger)
+////		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
+//
+//		// billHandler := billingv2handlers.NewBillingHandler(
+////			billService, billInvoiceService, billSubService, billMeterService,
+////			billCNService, billHWService, billLedgerService, billAdvSubService,
+////			billAnalyticsH, billAccountingH, logger,
+////		)
+//		// Billing operations require elevated roles (finance, admin)
+//		// billHandler.RegisterRoutes(r)
+//
 		// Emergency Domain
 		emRepo := emergencyRepo.NewEmergencyRepository(pools.Critical)
 		emAnalyticsSvc := emergencyService.NewEmergencyAnalyticsService(emRepo)
@@ -1206,7 +1205,7 @@ func main() {
 
 	// Video Domain
 	vidRepo := videoRepo.NewVideoRepository(pools.High)
-	vidService := videoService.NewVideoService(vidRepo)
+	vidService := videoService.NewVideoService(vidRepo, nc, logger)
 	vidHandlers := videoHandlers.NewVideoHandler(vidService, logger)
 	r.Route("/api/v1/video", func(r chi.Router) {
 		// Video access and management requires elevated roles
@@ -1234,89 +1233,88 @@ func main() {
 			}
 		}()
 
-		// Billing Domain with Resilience
-		billRepo := billingv2repo.NewBillingRepository(pools.Medium)
-		billAuditRepo := billingv2repo.NewAuditLogRepository(pools.Low)
-		billSubRepo := billingv2repo.NewSubscriptionRepository(pools.Medium)
-		billMeterRepo := billingv2repo.NewMeteringRepository(pools.Medium)
-		billHWRepo := billingv2repo.NewHardwareRepository(pools.Low)
-		billLedgerRepo := billingv2repo.NewLedgerRepository(pools.Medium)
-		billTaxRepo := billingv2repo.NewTaxRepository(pools.Low)
-		billSeqRepo := billingv2repo.NewSequenceRepository(pools.Low)
-		billNotifRepo := billingv2repo.NewNotificationRepository(pools.Low)
-		billCNRepo := billingv2repo.NewCreditNoteRepository(pools.Low)
-		billAccountingRepo := billingv2repo.NewAccountingRepository(pools.Low)
-		billAdvancedSubRepo := billingv2repo.NewAdvancedSubRepository(pools.Medium)
-		billTemplateRepo := billingv2repo.NewTemplateRepository(pools.Low)
-		billAnalyticsRepo := billingv2repo.NewAnalyticsRepository(pools.Low)
-
-		billSubService := billingv2service.NewSubscriptionService(billSubRepo, billAuditRepo, logger)
-		billMeterService := billingv2service.NewMeteringService(billMeterRepo, logger)
-		billHWService := billingv2service.NewHardwareService(billHWRepo, logger)
-		billLedgerService := billingv2service.NewLedgerService(billLedgerRepo, logger)
-		billTaxService := billingv2service.NewTaxService(billTaxRepo, logger)
-		billSeqService := billingv2service.NewSequenceService(billSeqRepo, logger)
-		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
-		billTaskProducer := billingv2queue.NewTaskProducer(nil)
-		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
-
-		billQueue := &billingQueueProvider{producer: billTaskProducer}
-
-		var billService *billingv2service.BillingService
-		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
-
-		billService = billingv2service.NewBillingService(
-			billRepo, billAuditRepo, billSubService, billMeterService,
-			billHWService, billLedgerService, billTaxService, billSeqService,
-			billNotifService, billDunningService, billQueue, logger,
-		)
-
-		// Initialize switchable storage based on config flag
-		var billStorage billingv2storage.ObjectStorage
-		if cfg.BillingStorageType == "s3" {
-			minioClient, err := billingv2storage.NewMinioClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3UseSSL)
-			if err != nil {
-				logger.Error("Failed to initialize S3 client, falling back to local storage", zap.Error(err))
-				billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
-			} else {
-				billStorage = billingv2storage.NewS3Storage(minioClient, cfg.S3Bucket, "us-east-1")
-				logger.Info("✅ Billing storage set to S3 Cloud.")
-			}
-		} else {
-			billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
-			logger.Info("✅ Billing storage set to Local Disk.")
-		}
-
-		billInvoiceConfig := billingv2service.InvoiceServiceConfig{
-			InvoiceStoragePath: "/tmp/invoices",
-			ChromeTimeout:      30 * time.Second,
-		}
-		billInvoiceService, err := billingv2service.NewInvoiceService(billRepo, billTaskProducer, billTemplateService, billInvoiceConfig, logger)
-		if err != nil {
-			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
-		}
-
-		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
-		_ = billWorker // Silencing for now until worker.Start is called
-
-		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
-		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
-		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
-
-		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
-
-		billAnalyticsH := billingv2handlers.NewAnalyticsHandler(billAnalyticsService, logger)
-		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
-
-		billHandler := billingv2handlers.NewBillingHandler(
-			billService, billInvoiceService, billSubService, billMeterService,
-			billCNService, billHWService, billLedgerService, billAdvSubService,
-			billAnalyticsH, billAccountingH, logger,
-		)
-		// Billing operations require elevated roles (finance, admin)
-		r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin", "finance_manager", "billing_manager"))
-		billHandler.RegisterRoutes(r)
-		logger.Info("✅ Billing Domain initialized with Isolation Shield.")
+//		// Billing Domain with Resilience
+//		billRepo := billingv2repo.NewBillingRepository(pools.Medium)
+//		billAuditRepo := billingv2repo.NewAuditLogRepository(pools.Low)
+//		billSubRepo := billingv2repo.NewSubscriptionRepository(pools.Medium)
+//		billMeterRepo := billingv2repo.NewMeteringRepository(pools.Medium)
+//		billHWRepo := billingv2repo.NewHardwareRepository(pools.Low)
+//		billLedgerRepo := billingv2repo.NewLedgerRepository(pools.Medium)
+//		billTaxRepo := billingv2repo.NewTaxRepository(pools.Low)
+//		billSeqRepo := billingv2repo.NewSequenceRepository(pools.Low)
+//		billNotifRepo := billingv2repo.NewNotificationRepository(pools.Low)
+//		billCNRepo := billingv2repo.NewCreditNoteRepository(pools.Low)
+//		billAccountingRepo := billingv2repo.NewAccountingRepository(pools.Low)
+//		billAdvancedSubRepo := billingv2repo.NewAdvancedSubRepository(pools.Medium)
+//		billTemplateRepo := billingv2repo.NewTemplateRepository(pools.Low)
+//		billAnalyticsRepo := billingv2repo.NewAnalyticsRepository(pools.Low)
+//
+//		billSubService := billingv2service.NewSubscriptionService(billSubRepo, billAuditRepo, logger)
+//		billMeterService := billingv2service.NewMeteringService(billMeterRepo, logger)
+//		billHWService := billingv2service.NewHardwareService(billHWRepo, logger)
+//		billLedgerService := billingv2service.NewLedgerService(billLedgerRepo, logger)
+//		billTaxService := billingv2service.NewTaxService(billTaxRepo, logger)
+//		billSeqService := billingv2service.NewSequenceService(billSeqRepo, logger)
+//		billNotifService := billingv2service.NewNotificationService(nc, billNotifRepo, logger)
+//		billTaskProducer := billingv2queue.NewTaskProducer(nil)
+//		billTemplateService := billingv2pdf.NewTemplateService(billTemplateRepo)
+//
+//		billQueue := &billingQueueProvider{producer: billTaskProducer}
+//
+//		var billService *billingv2service.BillingService
+//		billDunningService := billingv2service.NewDunningService(billNotifRepo, billNotifService, billService, logger)
+//
+//		billService = billingv2service.NewBillingService(
+//			billRepo, billAuditRepo, billSubService, billMeterService,
+//			billHWService, billLedgerService, billTaxService, billSeqService,
+//			billNotifService, billDunningService, billQueue, logger,
+//		)
+//
+//		// Initialize switchable storage based on config flag
+//		var billStorage billingv2storage.ObjectStorage
+//		if cfg.BillingStorageType == "s3" {
+//			minioClient, err := billingv2storage.NewMinioClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3UseSSL)
+//			if err != nil {
+//				logger.Error("Failed to initialize S3 client, falling back to local storage", zap.Error(err))
+//				billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
+//			} else {
+//				billStorage = billingv2storage.NewS3Storage(minioClient, cfg.S3Bucket, "us-east-1")
+//				logger.Info("✅ Billing storage set to S3 Cloud.")
+//			}
+//		} else {
+//			billStorage, _ = billingv2storage.NewLocalStorage("/tmp/invoices", logger)
+//			logger.Info("✅ Billing storage set to Local Disk.")
+//		}
+//
+//		billInvoiceConfig := billingv2service.InvoiceServiceConfig{
+//			InvoiceStoragePath: "/tmp/invoices",
+//			ChromeTimeout:      30 * time.Second,
+//		}
+//		billInvoiceService, err := billingv2service.NewInvoiceService(billRepo, billTaskProducer, billTemplateService, billInvoiceConfig, logger)
+//		if err != nil {
+//			logger.Error("Failed to initialize billing invoice service", zap.Error(err))
+//		}
+//
+//		billWorker := billingv2queue.NewInvoiceWorker(billRepo, billTemplateService, pdf.NewPDFGenerator(30*time.Second), billStorage, nil, nil, nil, nil, logger)
+//		_ = billWorker // Silencing for now until worker.Start is called
+//
+//		billCNService := billingv2service.NewCreditNoteService(billCNRepo, billLedgerService, logger)
+//		billAdvSubService := billingv2service.NewAdvancedSubService(billAdvancedSubRepo, billLedgerService, billSubService, billService, logger)
+//		billAnalyticsService := billingv2service.NewAnalyticsService(billAnalyticsRepo, logger)
+//
+//		billAccountingService := billingv2service.NewAccountingService(billAccountingRepo, billLedgerRepo, billRepo, nil, []billingv2models.AccountingExporter{}, logger)
+//
+////		billAnalyticsH := billingv2handlers.NewAnalyticsHandler(billAnalyticsService, logger)
+////		billAccountingH := billingv2handlers.NewAccountingHandler(billAccountingService, logger)
+//
+////		// billHandler := billingv2handlers.NewBillingHandler(
+////			billService, billInvoiceService, billSubService, billMeterService,
+////			billCNService, billHWService, billLedgerService, billAdvSubService,
+////			billAnalyticsH, billAccountingH, logger,
+////		)
+//		// Billing operations require elevated roles (finance, admin)
+//		// billHandler.RegisterRoutes(r)
+//		logger.Info("✅ Billing Domain initialized with Isolation Shield.")
 	}()
 
 	indiaComplianceWorker := indiav2workers.NewIndiaComplianceWorker(indiaRepoLegacy, sharedMB, sharedRedisClient, logger)
@@ -1707,7 +1705,7 @@ func main() {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(spec)
 		})
-		r.Get("", func(w http.ResponseWriter, _ *http.Request) {
+		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write([]byte(`<!doctype html>
 <html>
