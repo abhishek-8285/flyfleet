@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
@@ -307,7 +308,14 @@ func (h IndiaComplianceHandler) GetExpiringDocuments(w http.ResponseWriter, r *h
 	}
 
 	days := 30 // default
-	// TODO: Make days configurable via query parameter with validation
+	if daysStr := r.URL.Query().Get("days"); daysStr != "" {
+		if parsedDays, err := strconv.Atoi(daysStr); err == nil && parsedDays > 0 {
+			days = parsedDays
+		} else {
+			http.Error(w, "Invalid days parameter", http.StatusBadRequest)
+			return
+		}
+	}
 	alerts, err := h.docService.GetExpiringDocuments(r.Context(), days)
 	if err != nil {
 		h.logger.Error("GetExpiringDocuments failed", zap.Error(err))
@@ -412,9 +420,10 @@ func (h IndiaComplianceHandler) GetDashboard(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// orgID typically comes from context/auth (TODO: extract from context properly)
 	orgID := uuid.Nil
-	// TODO: Get orgID from context (ctxkeys.OrgIDKey)
+	if val, ok := r.Context().Value(ctxkeys.OrgIDKey).(uuid.UUID); ok {
+		orgID = val
+	}
 
 	metrics, err := h.dashService.GetDashboardMetrics(r.Context(), orgID)
 	if err != nil {

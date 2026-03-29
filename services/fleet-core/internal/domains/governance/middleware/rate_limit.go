@@ -40,7 +40,7 @@ func DSARRateLimit(rdb *redis.Client, nc *nats.Conn, logger *zap.Logger) func(ht
 				// Publish Security Alert for DSAR Abuse
 				payload, _ := json.Marshal(map[string]interface{}{
 					"alert_type":      "DSAR_ABUSE_DETECTED",
-					"organization_id": orgIDStr,
+					"org_id": orgIDStr,
 					"user_id":         userIDStr,
 					"timestamp":       time.Now().Unix(),
 				})

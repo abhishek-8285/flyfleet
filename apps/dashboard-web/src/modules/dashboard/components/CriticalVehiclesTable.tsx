@@ -1,5 +1,6 @@
 import { AlertCircle, Download, MoreVertical } from "lucide-react";
 import React from "react";
+import { motion } from "framer-motion";
 
 interface Vehicle {
   id: string;
@@ -17,6 +18,20 @@ interface CriticalVehiclesTableProps {
 const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
   vehicles,
 }) => {
+  const [shouldReduceMotion, setShouldReduceMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setShouldReduceMotion(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => {
+      setShouldReduceMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className="p-4 border-b border-gray-800 flex justify-between items-center">
@@ -52,10 +67,20 @@ const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
                 </td>
               </tr>
             ) : (
-              vehicles.map((vehicle) => (
-                <tr
+              vehicles.map((vehicle, index) => (
+                <motion.tr
                   key={vehicle.id}
-                  className="hover:bg-gray-800/30 transition-colors"
+                  initial={shouldReduceMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{
+                    duration: 0.3,
+                    delay: shouldReduceMotion ? 0 : Math.min(index * 0.05, 0.5), // Cap delay at 500ms
+                  }}
+                  whileHover={{
+                    backgroundColor: "rgba(255, 255, 255, 0.03)",
+                    x: 2,
+                  }}
+                  className="transition-colors"
                 >
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-white">
@@ -92,7 +117,7 @@ const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
                       <MoreVertical size={20} />
                     </button>
                   </td>
-                </tr>
+                </motion.tr>
               ))
             )}
           </tbody>

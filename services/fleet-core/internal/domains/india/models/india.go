@@ -12,7 +12,7 @@ type FASTagTransaction struct {
 	TagNumber          string     `json:"tag_number" db:"tag_number" validate:"required"`
 	VehicleID          uuid.UUID  `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
 	DriverID           uuid.UUID  `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrganizationID     uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID     uuid.UUID  `json:"org_id" db:"org_id" validate:"required,uuid"`
 	TransactionID      string     `json:"transaction_id" db:"transaction_id" validate:"required"`
 	TransactionType    string     `json:"transaction_type" db:"transaction_type" validate:"required,oneof=debit credit"`
 	Amount             float64    `json:"amount" db:"amount" validate:"required,gt=0"`
@@ -36,7 +36,7 @@ type FASTagTransaction struct {
 // EWayBill represents an E-Way Bill
 type EWayBill struct {
 	ID                      string     `json:"id" db:"id" validate:"required"`
-	OrganizationID          uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID          uuid.UUID  `json:"org_id" db:"org_id" validate:"required,uuid"`
 	EWayBillNumber          string     `json:"eway_bill_number" db:"eway_bill_number" validate:"required"`
 	EWayBillDate            time.Time  `json:"eway_bill_date" db:"eway_bill_date" validate:"required"`
 	EWayBillValidTill       time.Time  `json:"eway_bill_valid_till" db:"eway_bill_valid_till" validate:"required"`
@@ -81,7 +81,7 @@ type EWayBill struct {
 type VehicleVerification struct {
 	ID                 string    `json:"id" db:"id" validate:"required"`
 	VehicleID          uuid.UUID `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
-	OrganizationID     uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID     uuid.UUID `json:"org_id" db:"org_id" validate:"required,uuid"`
 	RegistrationNumber string    `json:"registration_number" db:"registration_number" validate:"required"`
 	Status             string    `json:"status" db:"status" validate:"required,oneof=verified pending failed"`
 	VerificationDate   time.Time `json:"verification_date" db:"verification_date"`
@@ -117,7 +117,7 @@ type VehicleVerification struct {
 type DriverVerification struct {
 	ID               string    `json:"id" db:"id" validate:"required"`
 	DriverID         uuid.UUID `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrganizationID   uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID   uuid.UUID `json:"org_id" db:"org_id" validate:"required,uuid"`
 	LicenseNumber    string    `json:"license_number" db:"license_number" validate:"required"`
 	Status           string    `json:"status" db:"status" validate:"required,oneof=verified pending failed"`
 	VerificationDate time.Time `json:"verification_date" db:"verification_date"`
@@ -147,7 +147,7 @@ type LocalPermit struct {
 	ID                string    `json:"id" db:"id" validate:"required"`
 	VehicleID         uuid.UUID `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
 	DriverID          uuid.UUID `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrganizationID    uuid.UUID `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID    uuid.UUID `json:"org_id" db:"org_id" validate:"required,uuid"`
 	PermitNumber      string    `json:"permit_number" db:"permit_number" validate:"required"`
 	PermitType        string    `json:"permit_type" db:"permit_type" validate:"required,oneof=stage_carriage contract_carriage goods_vehicle"`
 	PermitCategory    string    `json:"permit_category" db:"permit_category"`
@@ -172,7 +172,7 @@ type LocalPermit struct {
 // GSTCompliance represents GST compliance status
 type GSTCompliance struct {
 	ID                    string     `json:"id" db:"id" validate:"required"`
-	OrganizationID        uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID        uuid.UUID  `json:"org_id" db:"org_id" validate:"required,uuid"`
 	GSTIN                 string     `json:"gstin" db:"gstin" validate:"required"`
 	Status                string     `json:"status" db:"status" validate:"required,oneof=active cancelled suspended"`
 	LegalName             string     `json:"legal_name" db:"legal_name" validate:"required"`
@@ -195,7 +195,7 @@ type GSTCompliance struct {
 // IntegrationConfig represents configuration for India integrations
 type IntegrationConfig struct {
 	ID             string     `json:"id" db:"id" validate:"required"`
-	OrganizationID uuid.UUID  `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	OrganizationID uuid.UUID  `json:"org_id" db:"org_id" validate:"required,uuid"`
 	ServiceType    string     `json:"service_type" db:"service_type" validate:"required,oneof=fastag ewaybill vahan sarathi gst permit"`
 	APIEndpoint    string     `json:"api_endpoint" db:"api_endpoint" validate:"required,url"`
 	APIKey         string     `json:"-" db:"api_key"`       // SECURITY FIX: Do not expose in JSON responses
@@ -222,7 +222,7 @@ type IntegrationLog struct {
 	ResponsePayload interface{} `json:"response_payload" db:"response_payload"`
 	Status          int         `json:"status" db:"status"`
 	ErrorMessage    string      `json:"error_message" db:"error_message"`
-	OrganizationID  *uuid.UUID  `json:"organization_id,omitempty" db:"organization_id"`
+	OrganizationID  *uuid.UUID  `json:"org_id,omitempty" db:"org_id"`
 	CreatedAt       time.Time   `json:"created_at" db:"created_at"`
 }
 
@@ -262,14 +262,14 @@ type CreateEWayBillRequest struct {
 
 // VerifyVehicleRequest represents a request to verify a vehicle
 type VerifyVehicleRequest struct {
-	OrganizationID     uuid.UUID `json:"organization_id" validate:"required,uuid"`
+	OrganizationID     uuid.UUID `json:"org_id" validate:"required,uuid"`
 	VehicleID          uuid.UUID `json:"vehicle_id" validate:"required,uuid"`
 	RegistrationNumber string    `json:"registration_number" validate:"required"`
 }
 
 // VerifyDriverRequest represents a request to verify a driver
 type VerifyDriverRequest struct {
-	OrganizationID uuid.UUID `json:"organization_id" validate:"required,uuid"`
+	OrganizationID uuid.UUID `json:"org_id" validate:"required,uuid"`
 	DriverID       uuid.UUID `json:"driver_id" validate:"required,uuid"`
 	LicenseNumber  string    `json:"license_number" validate:"required"`
 	DateOfBirth    string    `json:"date_of_birth" validate:"required"` // Format: YYYY-MM-DD

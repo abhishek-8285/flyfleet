@@ -8,6 +8,7 @@ import {
     Users,
 } from "lucide-react";
 import React from "react";
+import AnimatedNumber from "../../../components/animated/AnimatedNumber";
 
 interface Stat {
   label: string;
@@ -18,6 +19,20 @@ interface Stat {
 }
 
 const StatsGrid: React.FC<{ stats: any }> = ({ stats }) => {
+  const [shouldReduceMotion, setShouldReduceMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setShouldReduceMotion(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => {
+      setShouldReduceMotion(e.matches);
+    };
+
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   const items: Stat[] = [
     {
       label: "Live Vehicles",
@@ -75,9 +90,9 @@ const StatsGrid: React.FC<{ stats: any }> = ({ stats }) => {
       {items.map((stat, idx) => (
         <motion.div
           key={idx}
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: idx * 0.1 }}
+          transition={{ duration: 0.3, delay: shouldReduceMotion ? 0 : idx * 0.1 }}
           className="bg-gray-900 border border-gray-800 p-6 rounded-xl shadow-lg hover:border-gray-700 transition-colors"
         >
           <div className="flex justify-between items-start mb-4">
@@ -97,7 +112,7 @@ const StatsGrid: React.FC<{ stats: any }> = ({ stats }) => {
           </div>
           <h3 className="text-gray-400 text-sm font-medium">{stat.label}</h3>
           <p className="text-2xl font-bold text-white mt-1">
-            {stat.value.toLocaleString()}
+            <AnimatedNumber value={stat.value as number} />
           </p>
         </motion.div>
       ))}

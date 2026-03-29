@@ -96,6 +96,47 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         />
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.29/bundled/lenis.min.js"></script>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            try {
+              gsap.registerPlugin(ScrollTrigger);
+
+              // Initialize Lenis smooth scrolling
+              const lenis = new Lenis({
+                duration: 1.2,
+                easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+                direction: 'vertical',
+                gestureOrientation: 'vertical',
+                smooth: true,
+                mouseMultiplier: 1,
+                smoothTouch: false,
+                touchMultiplier: 2,
+                infinite: false,
+              });
+
+              function raf(time) {
+                lenis.raf(time);
+                requestAnimationFrame(raf);
+              }
+
+              requestAnimationFrame(raf);
+
+              // Integrate Lenis with ScrollTrigger
+              lenis.on('scroll', ScrollTrigger.update);
+
+              gsap.ticker.add((time) => {
+                lenis.raf(time * 1000);
+              });
+
+              gsap.ticker.lagSmoothing(0);
+            } catch (e) {
+              console.warn('Smooth scroll setup failed:', e);
+            }
+          `
+        }}></script>
       </head>
       <body className={`${inter.variable} ${outfit.variable} antialiased`}>
         <CSPostHogProvider>

@@ -29,6 +29,38 @@ Welcome to the unified FlyFleet Enterprise platform. This repository is organize
 - Node.js 20+
 - Docker & Docker Compose
 
+### Quick Start (Basic)
+
+```bash
+# 1. Bootstrap dependencies and start databases (Postgres, Redis, NATS)
+make bootstrap
+
+# 2. Start backend with hot reload
+make hot-reload
+
+# 3. In another terminal, start frontend
+cd apps/dashboard-web && npm run dev
+```
+
+### Full Stack with Observability (Production-like)
+
+```bash
+# Start complete stack with OpenSearch, ClickHouse, Grafana, Jaeger, etc.
+make full-stack-up
+
+# Check all services are healthy
+make full-stack-health
+
+# View all logs
+make full-stack-logs
+
+# Access Grafana dashboards: http://localhost:3000
+# View traces in Jaeger: http://localhost:16686
+# Search with OpenSearch: http://localhost:5601
+```
+
+See **INFRASTRUCTURE_FULL_STACK.md** for complete documentation.
+
 ### Development
 
 1. **Backend**: Services are managed via `go.work`. Run `go build ./...` from the root to verify all services.

@@ -27,6 +27,94 @@
 }
 
 @layer utilities {
+  /* Scene container - creates scrollable canvas for parallax */
+  .scene {
+    position: relative;
+    width: 100%;
+    /* Default height, overridable via style="--scene-height: 250vh" */
+    height: 200vh;
+    overflow: visible;
+  }
+
+  .scene > * {
+    content-visibility: auto;
+  }
+
+  /* Depth layers - parallax multipliers */
+  .depth-0 {
+    --parallax: 0.10;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    filter: blur(8px);
+    transform: scale(0.70);
+    will-change: transform;
+  }
+
+  .depth-1 {
+    --parallax: 0.25;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    filter: blur(4px);
+    transform: scale(0.85);
+    will-change: transform;
+  }
+
+  .depth-2 {
+    --parallax: 0.50;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    transform: scale(1.00);
+    will-change: transform;
+  }
+
+  .depth-3 {
+    --parallax: 0.80;
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    transform: scale(1.05);
+    will-change: transform;
+  }
+
+  .depth-4 {
+    --parallax: 1.00;
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    transform: scale(1.00);
+    will-change: transform;
+  }
+
+  .depth-5 {
+    --parallax: 1.20;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    transform: scale(1.10);
+    will-change: transform;
+  }
+
+  /* Parallax layer content positioning */
+  .layer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Floating loop animation for hero elements */
+  @keyframes float-loop {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(1deg); }
+  }
+
+  .float-loop {
+    animation: float-loop 8s ease-in-out infinite;
+  }
+
+  /* Glow effect */
   .glow-effect {
     position: absolute;
     width: 100%;
@@ -55,5 +143,62 @@
   .mobile-frame::before {
     content: '';
     @apply absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-6 bg-[#233648] rounded-b-xl z-20;
+  }
+
+  /* Clip path birth reveal - clip from bottom */
+  .clip-reveal {
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .clip-reveal.revealed {
+    clip-path: inset(0);
+  }
+
+  /* Reduced motion accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .scene {
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .depth-0,
+    .depth-1,
+    .depth-2,
+    .depth-3,
+    .depth-4,
+    .depth-5 {
+      transform: none !important;
+      filter: none !important;
+      will-change: auto !important;
+    }
+
+    .float-loop {
+      animation: none !important;
+    }
+
+    .clip-reveal {
+      clip-path: inset(0) !important;
+      transition: none !important;
+    }
+  }
+
+  /* Mobile touch detection - reduce effects */
+  @media (pointer: coarse) {
+    .depth-0 { filter: blur(4px); transform: scale(0.85); }
+    .depth-1 { filter: blur(2px); transform: scale(0.92); }
+    .depth-2,
+    .depth-3,
+    .depth-4,
+    .depth-5 { filter: none; transform: none; }
   }
 }

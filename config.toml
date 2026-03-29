@@ -1,30 +1,41 @@
 [server]
-port = "8081"
+port = "8084"
 log_level = "info"
+log_file = ""  # Set path to enable file logging (e.g., "/var/log/flyfleet/app.log")
 
 [database]
-url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
+url = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
 
 [security]
-# JWT secret should be loaded from environment variable in production
-# jwt_secret = "your-jwt-secret-key-here"
+# JWT secret loaded from env var
+
+[nats]
+url = "nats://localhost:4222"
+
+[redis]
+url = "redis://localhost:6379"
 
 [services]
-auth_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-fleet_core_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-alert_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-billing_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-tracking_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-admin_support_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-reports_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-dr_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
-integrations_url = "host=/data/data/com.termux/files/usr/tmp user=u0_a412 dbname=fleet_db sslmode=disable"
+auth_url = "http://localhost:8084"
+alert_url = "http://localhost:8084"
+admin_support_url = "http://localhost:8084"
+billing_url = "http://localhost:8084"
+tracking_url = "http://localhost:8084"
+vehicle_url = "http://localhost:8084"
+trip_url = "http://localhost:8084"
+maintenance_url = "http://localhost:8084"
+governance_url = "http://localhost:8084"
+settings_url = "http://localhost:8084"
+analytics_url = "http://localhost:8084"
+integrations_url = "http://localhost:8084"
+compliance_url = "http://localhost:8084"
+reports_url = "http://localhost:8084"
+ml_url = "http://localhost:8000"
 
 [billing]
 storage_type = "local"
 engine = "premium"
-s3_endpoint = "s3.amazonaws.com"
-s3_bucket = "flyfleet-invoices"
-s3_access_key = "REPLACE_WITH_ACTUAL_KEY"
-s3_secret_key = "REPLACE_WITH_ACTUAL_SECRET"
 s3_use_ssl = true
+
+[observability]
+enable_pprof = false

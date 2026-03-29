@@ -1,16 +1,21 @@
 import { expect, test } from "@playwright/test";
 
+// Require TEST_PASSWORD to be set - fail fast if not configured
+if (!process.env.TEST_PASSWORD) {
+  throw new Error("TEST_PASSWORD environment variable must be set for E2E tests");
+}
+
 const roles = [
-  { role: "super_admin", email: "admin@flyfleet.com", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "org_admin", email: "org_admin@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "fleet_operator", email: "operator@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "maintenance_manager", email: "maintenance@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "analyst", email: "analyst@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "support_agent", email: "support_agent@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "billing_admin", email: "billing@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "super_admin", email: "admin@flyfleet.com", password: process.env.TEST_PASSWORD },
+  { role: "org_admin", email: "org_admin@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "fleet_operator", email: "operator@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "maintenance_manager", email: "maintenance@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "analyst", email: "analyst@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "support_agent", email: "support_agent@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "billing_admin", email: "billing@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD },
 ];
 
 test.describe("Deep Dashboard Crawl For All Roles", () => {

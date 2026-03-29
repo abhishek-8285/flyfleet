@@ -150,3 +150,13 @@ type VideoThumbnail struct {
 	Timestamp   time.Time `json:"timestamp"` // Time offset in the video
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// RequestClipRequest represents a request to capture a specific video clip from a device
+type RequestClipRequest struct {
+	TenantID  uuid.UUID `json:"tenant_id"`   // Organization making the request
+	VehicleID uuid.UUID `json:"vehicle_id"`  // Target vehicle
+	CameraID  uuid.UUID `json:"camera_id"`   // Specific camera on the device
+	StartTime time.Time `json:"start_time"`  // Clip start timestamp
+	EndTime   time.Time `json:"end_time"`    // Clip end timestamp
+	Reason    string    `json:"reason"`      // Justification for clip request
+}

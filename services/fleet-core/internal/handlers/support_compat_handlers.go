@@ -32,8 +32,28 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 	// Check if the authenticated user has admin or super_admin role
 	role, ok := r.Context().Value(ctxkeys.RoleKey).(string)
 	if ok && (role == "admin" || role == "super_admin") {
-		// Admins can access any user in the same org (TODO: verify org membership when orgSvc is available)
-		// For now, allow admin access
+		// Admins can access any user in the same org
+		// Verify if target user belongs to the same org as the authenticated admin
+		authOrgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
+		authOrgID, _ := uuid.Parse(authOrgIDStr)
+
+		targetUser, err := h.authSvc.GetUserByID(r.Context(), targetUserID)
+		if err != nil {
+			h.logger.Error("Failed to fetch target user for access check",
+				zap.Error(err),
+				zap.String("target_user_id", targetUserID.String()))
+			return false, err
+		}
+
+		if targetUser.OrgID != authOrgID && role != "super_admin" {
+			h.logger.Warn("Access denied: Admin from different org attempted access",
+				zap.String("auth_user_id", authUserIDStr),
+				zap.String("auth_org_id", authOrgIDStr),
+				zap.String("target_user_id", targetUserID.String()),
+				zap.String("target_org_id", targetUser.OrgID.String()))
+			return false, errors.New("forbidden: user belongs to a different organization")
+		}
+
 		h.logger.Debug("Admin access granted to user data",
 			zap.String("auth_user_id", authUserIDStr),
 			zap.String("target_user_id", targetUserID.String()),

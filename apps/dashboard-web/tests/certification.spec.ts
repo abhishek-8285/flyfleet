@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+// Require TEST_PASSWORD to be set - fail fast if not configured
+if (!process.env.TEST_PASSWORD) {
+  throw new Error("TEST_PASSWORD environment variable must be set for E2E tests");
+}
+
 test.describe("Final Launch Certification - Hyperscale Reliability", () => {
   test.beforeEach(async ({ page }) => {
     test.setTimeout(600000); // 10 minutes for the whole suite
-    
+
     // Dump headless browser errors to Node.js terminal
     page.on("console", msg => console.log(`[BROWSER CONSOLE] ${msg.type()}: ${msg.text()}`));
     page.on("pageerror", err => console.log(`[BROWSER ERROR] ${err.name}: ${err.message}`));
@@ -15,7 +20,7 @@ test.describe("Final Launch Certification - Hyperscale Reliability", () => {
     console.log("[TEST] Reached login page. Filling credentials...");
     await page.fill('input[type="text"]', "admin@flyfleet.com");
     await page.click('button:has-text("Continue")');
-    await page.fill('input[type="password"]', process.env.TEST_PASSWORD || "change-me-in-test-env");
+    await page.fill('input[type="password"]', process.env.TEST_PASSWORD);
     console.log("[TEST] Clicking Sign In...");
     await page.click('button:has-text("Sign In")', { force: true });
 

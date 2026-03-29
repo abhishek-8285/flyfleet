@@ -8,10 +8,34 @@ import { resolve } from 'path';
 const securityHeadersPlugin = () => ({
   name: 'security-headers',
   transformIndexHtml(html) {
+    // Determine if we're in production or development
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Build CSP based on environment
+    // Production: No unsafe-inline for scripts (XSS protection)
+    // Development: Allow unsafe-inline for HMR and React DevTools
+    let csp = [
+      "default-src 'self'",
+      // Scripts: production forbids inline scripts, dev allows for HMR
+      isProduction
+        ? "script-src 'self' https://us.i.posthog.com"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://us.i.posthog.com",
+      // Styles: keep unsafe-inline for React inline styles (acceptable risk)
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // Fonts
+      "font-src 'self' https://fonts.gstatic.com",
+      // Images and media
+      "img-src 'self' data: https:",
+      // Connections (API, WebSocket, analytics)
+      "connect-src 'self' https://us.i.posthog.com",
+      // Prevent framing
+      "frame-ancestors 'none'",
+    ].join('; ');
+
     return html.replace(
       '</head>',
       `
-      <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;">
+      <meta http-equiv="Content-Security-Policy" content="${csp}">
       <meta http-equiv="X-Content-Type-Options" content="nosniff">
       <meta http-equiv="X-Frame-Options" content="DENY">
       <meta http-equiv="X-XSS-Protection" content="1; mode=block">
@@ -49,6 +73,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    allowedHosts: ['raleigh-displays-rail-seas.trycloudflare.com', 'localhost'],
     proxy: {
       '/api': {
         target: 'http://localhost:8084',

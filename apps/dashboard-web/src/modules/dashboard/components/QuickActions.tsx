@@ -1,17 +1,19 @@
 import { Activity, HelpCircle, PlusCircle, Users } from "lucide-react";
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useRBAC } from "../../../context/RBACProvider";
+import MagneticButton from "../../../components/animated/MagneticButton";
 
 const QuickActions: React.FC = () => {
   const { can } = useRBAC();
+  const navigate = useNavigate();
 
   const actions = [
     {
       label: "Add Vehicle",
       icon: PlusCircle,
-      path: "#",
-      color: "bg-blue-600",
+      path: "/admin/vehicles/new",
+      color: "primary" as const,
       action: () => console.log("Add Vehicle Modal"),
       visible: can("create", "vehicle"),
     },
@@ -19,21 +21,21 @@ const QuickActions: React.FC = () => {
       label: "User Access",
       icon: Users,
       path: "/admin/users",
-      color: "bg-purple-600",
+      color: "secondary" as const,
       visible: can("read", "user"),
     },
     {
       label: "System Health",
       icon: Activity,
       path: "/admin/monitoring",
-      color: "bg-green-600",
+      color: "secondary" as const,
       visible: can("read", "system"),
     },
     {
       label: "Support",
       icon: HelpCircle,
       path: "/support",
-      color: "bg-orange-600",
+      color: "secondary" as const,
       visible: true,
     },
   ];
@@ -43,15 +45,18 @@ const QuickActions: React.FC = () => {
   return (
     <div className="grid grid-cols-2 gap-4">
       {visibleActions.map((action, idx) => (
-        <Link
+        <MagneticButton
           key={idx}
-          to={action.path}
-          onClick={action.action}
-          className={`${action.color} flex flex-col items-center justify-center p-6 rounded-xl shadow-lg hover:opacity-90 transition-all text-white`}
+          onClick={() => {
+            if (action.action) action.action();
+            else navigate(action.path);
+          }}
+          variant={action.color}
+          className="w-full flex flex-col items-center justify-center py-6"
         >
           <action.icon size={32} className="mb-3" />
           <span className="font-semibold">{action.label}</span>
-        </Link>
+        </MagneticButton>
       ))}
     </div>
   );

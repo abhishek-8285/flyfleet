@@ -4,7 +4,9 @@ import {
     REQUEST_ID_HEADER,
     TRACE_ID_HEADER,
 } from "../utils/trace";
-import { store } from "../store";
+
+// Get store from global reference (set in store/index.ts after creation) to avoid circular dependency
+const getStore = () => (window as any).__REDUX_STORE__;
 
 const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
 const BFF_URL = process.env.REACT_APP_BFF_URL || "/";
@@ -36,7 +38,7 @@ class ApiService {
       instance.interceptors.request.use(
         (config) => {
           // SECURITY: Get token from Redux store (memory only), not localStorage
-          const state = store.getState();
+          const state = getStore().getState();
           const token = state.auth.token;
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -54,8 +56,8 @@ class ApiService {
         (error: AxiosError) => {
           if (error.response?.status === 401) {
             // Token invalid, clear state and redirect
-            store.dispatch({ type: 'auth/setToken', payload: null });
-            store.dispatch({ type: 'auth/setUser', payload: null });
+            getStore().dispatch({ type: 'auth/setToken', payload: null });
+            getStore().dispatch({ type: 'auth/setUser', payload: null });
             window.location.href = "/login";
           }
           return Promise.reject(error);

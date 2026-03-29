@@ -195,6 +195,7 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 
 // ListTrips godoc
 func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips")
 	orgID := h.getOrgID(r)
 	if orgID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
@@ -236,6 +237,7 @@ func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
 
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"data":        trips,
+		"trips":       trips,
 		"total":       totalCount,
 		"page":        filter.Page,
 		"page_size":   filter.PageSize,

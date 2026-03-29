@@ -26,14 +26,16 @@ type Handlers struct {
 	logger      *zap.Logger
 	redis       *redis.Client
 	rateLimiter *internalmw.RedisRateLimiter
+	jwksURL     string
 }
 
-func NewHandlers(svc *authservice.AuthService, logger *zap.Logger, redis *redis.Client) *Handlers {
+func NewHandlers(svc *authservice.AuthService, logger *zap.Logger, redis *redis.Client, jwksURL string) *Handlers {
 	return &Handlers{
 		svc:         svc,
 		logger:      logger,
 		redis:       redis,
 		rateLimiter: internalmw.NewRedisRateLimiter(redis, logger),
+		jwksURL:     jwksURL,
 	}
 }
 
@@ -64,6 +66,10 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			// JWKS URL for middleware - configurable for tests
 			jwksURL := os.Getenv("JWKS_URL")
 			if jwksURL == "" {
+				jwksURL = h.jwksURL
+			}
+			if jwksURL == "" {
+				// Final fallback if nothing else is provided
 				jwksURL = "http://localhost:8084/api/v1/auth/.well-known/jwks.json"
 			}
 			authGate := internalmw.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", h.logger)
@@ -949,7 +955,8 @@ func (h *Handlers) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
 	if err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid api key id")
 		return
@@ -961,7 +968,7 @@ func (h *Handlers) RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.json(w, http.StatusOK, map[string]string{"status": "revoked"})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) {
@@ -989,17 +996,14 @@ func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sa, secret, err := h.svc.CreateServiceAccount(r.Context(), orgID, req.Name, req.Description)
+	sa, _, err := h.svc.CreateServiceAccount(r.Context(), orgID, req.Name, req.Description)
 	if err != nil {
 		h.logger.Error("failed to create service account", zap.Error(err))
 		h.errorJSON(w, http.StatusInternalServerError, "failed to create service account")
 		return
 	}
 
-	h.json(w, http.StatusCreated, map[string]any{
-		"service_account": sa,
-		"client_secret":   secret, // Only shown once
-	})
+	h.json(w, http.StatusCreated, sa)
 }
 
 func (h *Handlers) ListServiceAccounts(w http.ResponseWriter, r *http.Request) {
@@ -1029,12 +1033,11 @@ func (h *Handlers) ListServiceAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) EmergencyRevoke(w http.ResponseWriter, r *http.Request) {
-	// Only superadmins should be able to do this, handled by RBAC middleware ideally
 	if err := h.svc.EmergencyRevoke(r.Context()); err != nil {
-		h.logger.Error("emergency revoke failed", zap.Error(err))
-		h.errorJSON(w, http.StatusInternalServerError, "failed to trigger emergency revoke")
+		h.logger.Error("failed to emergency revoke", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to emergency revoke")
 		return
 	}
 
-	h.json(w, http.StatusOK, map[string]string{"status": "emergency_revoke_triggered"})
+	w.WriteHeader(http.StatusNoContent)
 }

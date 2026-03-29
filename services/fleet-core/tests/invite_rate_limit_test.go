@@ -37,7 +37,7 @@ func TestInviteValidationRateLimiter(t *testing.T) {
 	// Create a dummy service to prevent panics when rate limits allow the request through
 	mockRepo := &mockAuthRepo{}
 	svc := service.NewAuthService(nil, mockRepo, nil, "secret", rdb, nil)
-	h := handlers.NewHandlers(svc, logger, rdb)
+	h := handlers.NewHandlers(svc, logger, rdb, "")
 
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {

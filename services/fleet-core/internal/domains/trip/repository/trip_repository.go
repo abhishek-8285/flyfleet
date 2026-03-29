@@ -193,8 +193,8 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	baseQuery := `
 		SELECT
 			id, org_id, vehicle_id, driver_id, status, title, description,
-			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
-			scheduled_start, start_time, end_time,
+			estimated_distance_km, actual_distance_km, estimated_duration_min, actual_duration_min,
+			scheduled_start, started_at, ended_at,
 			customer_name, created_at, updated_at
 		FROM trips
 		WHERE org_id = $1 AND is_deleted = FALSE`
@@ -296,15 +296,54 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
+		var estDist sql.NullFloat64
+		var actDist sql.NullFloat64
+		var estDur sql.NullInt32
+		var actDur sql.NullInt32
+		var schedStart sql.NullTime
+		var startedAt sql.NullTime
+		var endedAt sql.NullTime
+		var custName sql.NullString
+		
 		err := rows.Scan(
 			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
-			&trip.Title, &trip.Description, &trip.PlannedDistance, &trip.TotalDistance,
-			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
-			&trip.StartTime, &trip.EndTime, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
+			&trip.Title, &trip.Description,
+			&estDist, &actDist, &estDur, &actDur,
+			&schedStart, &startedAt, &endedAt,
+			&custName, &trip.CreatedAt, &trip.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
 		}
+		
+		if estDist.Valid {
+			trip.PlannedDistance = estDist.Float64
+		}
+		if actDist.Valid {
+			trip.TotalDistance = &actDist.Float64
+		}
+		if estDur.Valid {
+			trip.EstimatedDurationMin = int(estDur.Int32)
+		}
+		if actDur.Valid {
+			v := int(actDur.Int32)
+			trip.ActualDurationMin = &v
+		}
+		if schedStart.Valid {
+			trip.ScheduledStart = schedStart.Time
+		}
+		if startedAt.Valid {
+			t := startedAt.Time
+			trip.StartTime = &t
+		}
+		if endedAt.Valid {
+			t := endedAt.Time
+			trip.EndTime = &t
+		}
+		if custName.Valid {
+			trip.CustomerName = custName.String
+		}
+		
 		trips = append(trips, &trip)
 	}
 

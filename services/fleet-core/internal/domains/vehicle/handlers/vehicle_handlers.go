@@ -433,8 +433,11 @@ func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode i
 
 func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}

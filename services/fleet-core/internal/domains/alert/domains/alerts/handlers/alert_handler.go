@@ -309,6 +309,7 @@ func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 
 	h.json(w, map[string]interface{}{
 		"data":        alerts,
+		"alerts":      alerts,
 		"total":       totalCount,
 		"page":        filter.Page,
 		"page_size":   filter.PageSize,
@@ -467,8 +468,11 @@ func (h *AlertHandler) errorJSON(w http.ResponseWriter, message string, status i
 
 func (h *AlertHandler) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}

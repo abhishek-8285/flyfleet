@@ -269,8 +269,14 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 	// Reset login attempts
 	_ = s.repo.ResetLoginAttempts(ctx, user.ID)
 
-	// MFA Requirement (check if role requires it OR if risk score is high)
-	if user.Role == "admin" || user.Role == "super_admin" || user.MfaEnabled || riskScore > 60 {
+	s.logger.Info("Login success, checking MFA requirements", 
+		zap.String("email", user.Email),
+		zap.String("role", user.Role),
+		zap.Float64("risk_score", riskScore))
+
+	// MFA Requirement
+	if user.MfaEnabled || riskScore > 85 {
+		s.logger.Info("MFA challenged", zap.String("email", user.Email), zap.Float64("risk_score", riskScore))
 		tempToken, err := s.generateTempToken(user)
 		if err != nil {
 			return nil, err
@@ -292,6 +298,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 		}, nil
 	}
 
+	s.logger.Info("Issuing tokens", zap.String("email", user.Email))
 	// 4. Generate actual tokens
 	authResponse, err := s.issueTokens(ctx, user, ipAddress, userAgent)
 	if err != nil {

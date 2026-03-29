@@ -26,8 +26,8 @@ func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	endLocJSON, _ := json.Marshal(trip.EndLocation)
 
 	query := `
-		INSERT INTO trips (id, trip_id, vehicle_id, driver_id, start_location, end_location, 
-			start_time, end_time, distance, status, organization_id, fuel_consumed_liters, created_at, updated_at)
+		INSERT INTO trips (id, trip_id, vehicle_id, driver_id, start_location, end_location,
+			start_time, end_time, distance, status, org_id, fuel_consumed_liters, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 	`
 	start := time.Now()
@@ -57,7 +57,7 @@ func (r *TripRepository) scanTrip(row interface {
 }
 
 const tripSelectCols = `id, trip_id, vehicle_id, driver_id, start_location, end_location,
-			start_time, end_time, distance, status, organization_id, fuel_consumed_liters, created_at, updated_at`
+			start_time, end_time, distance, status, org_id, fuel_consumed_liters, created_at, updated_at`
 
 func (r *TripRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
 	query := fmt.Sprintf(`SELECT %s FROM trips WHERE id = $1`, tripSelectCols)
@@ -79,7 +79,7 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 	offset := (params.Page - 1) * params.Limit
 
 	// Build dynamic query
-	baseQuery := `FROM trips WHERE organization_id = $1`
+	baseQuery := `FROM trips WHERE org_id = $1`
 	args := []interface{}{params.OrganizationID}
 	argIdx := 2
 
@@ -253,7 +253,7 @@ func (r *TripRepository) GetTelemetry(ctx context.Context, tripID uuid.UUID, lim
 
 // Settings methods
 func (r *TripRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.TripSettings, error) {
-	query := `SELECT id, organization_id, retention_period, policies, updated_at FROM trip_settings WHERE organization_id = $1`
+	query := `SELECT id, org_id, retention_period, policies, updated_at FROM trip_settings WHERE org_id = $1`
 	var s models.TripSettings
 	var policiesJSON []byte
 	start := time.Now()
@@ -275,9 +275,9 @@ func (r *TripRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*mod
 func (r *TripRepository) UpsertSettings(ctx context.Context, s *models.TripSettings) error {
 	policiesJSON, _ := json.Marshal(s.Policies)
 	query := `
-		INSERT INTO trip_settings (id, organization_id, retention_period, policies, updated_at)
+		INSERT INTO trip_settings (id, org_id, retention_period, policies, updated_at)
 		VALUES ($1, $2, $3, $4, NOW())
-		ON CONFLICT (organization_id) DO UPDATE SET
+		ON CONFLICT (org_id) DO UPDATE SET
 			retention_period = $3, policies = $4, updated_at = NOW()
 	`
 	start := time.Now()
