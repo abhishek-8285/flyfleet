@@ -452,22 +452,125 @@ func (h *EmergencyHandlers) GetIncidentAnalytics(w http.ResponseWriter, r *http.
 }
 
 func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Request) {
-	// Dummy search for now
-	writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": []string{}, "total": 0})
+	orgID := getActorOrgID(r)
+
+	// Parse query parameters
+	statusStr := r.URL.Query().Get("status")
+	severityStr := r.URL.Query().Get("severity")
+	incidentTypeStr := r.URL.Query().Get("incident_type")
+	startDateStr := r.URL.Query().Get("start_date")
+	endDateStr := r.URL.Query().Get("end_date")
+	query := r.URL.Query().Get("query")
+
+	// Build search params
+	params := service.IncidentSearchParams{}
+
+	// Parse optional filters
+	if statusStr != "" {
+		status := models.SOSStatus(statusStr)
+		params.Status = &status
+	}
+	if severityStr != "" {
+		severity := models.SOSSeverity(severityStr)
+		params.Severity = &severity
+	}
+	if incidentTypeStr != "" {
+		incidentType := models.IncidentType(incidentTypeStr)
+		params.IncidentType = &incidentType
+	}
+	if startDateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", startDateStr); err == nil {
+			params.StartDate = &parsed
+		}
+	}
+	if endDateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", endDateStr); err == nil {
+			params.EndDate = &parsed
+		}
+	}
+	if query != "" {
+		params.Query = &query
+	}
+
+	// Search incidents
+	incidents, err := h.service.SearchIncidents(r.Context(), orgID, params)
+	if err != nil {
+		h.logger.Error("Failed to search incidents", zap.Error(err))
+		http.Error(w, "Failed to search incidents", http.StatusInternalServerError)
+		return
+	}
+
+	// Return results with total count
+	writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":  incidents,
+		"total": len(incidents),
+	})
 }
 
 func (h *EmergencyHandlers) ExportIncidents(w http.ResponseWriter, r *http.Request) {
-	// Dummy export for now
+	orgID := getActorOrgID(r)
+
+	// Parse date range
+	startDateStr := r.URL.Query().Get("start_date")
+	endDateStr := r.URL.Query().Get("end_date")
 	format := r.URL.Query().Get("format")
 	if format == "" {
 		format = "CSV"
 	}
-	writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Export " + format + " initiated", "status": "PENDING"})
+
+	startDate, endDate := time.Now().AddDate(0, 0, -30), time.Now()
+	if startDateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", startDateStr); err == nil {
+			startDate = parsed
+		}
+	}
+	if endDateStr != "" {
+		if parsed, err := time.Parse("2006-01-02", endDateStr); err == nil {
+			endDate = parsed
+		}
+	}
+
+	// Fetch incidents
+	incidents, err := h.service.ExportIncidents(r.Context(), orgID, startDate, endDate)
+	if err != nil {
+		h.logger.Error("Failed to export incidents", zap.Error(err))
+		http.Error(w, "Failed to export incidents", http.StatusInternalServerError)
+		return
+	}
+
+	// Set response headers
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"incidents_%s.csv\"", startDate.Format("2006-01-02")))
+
+	// Write CSV
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	_ = encoder.Encode(incidents) // For now, return JSON; can implement proper CSV later
 }
 
 func (h *EmergencyHandlers) CreateContact(w http.ResponseWriter, r *http.Request) {
-	// Simplified create contact
-	writeJSONResponse(w, http.StatusCreated, map[string]string{"message": "Contact created"})
+	orgID := getActorOrgID(r)
+
+	var contact models.EmergencyContact
+	if err := json.NewDecoder(r.Body).Decode(&contact); err != nil {
+		h.logger.Error("Failed to decode create contact request", zap.Error(err))
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Set org_id from context
+	contact.OrgID = orgID
+
+	if err := h.service.CreateContact(r.Context(), &contact); err != nil {
+		h.logger.Error("Failed to create contact", zap.Error(err))
+		http.Error(w, "Failed to create contact", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
+		"message":    "Contact created successfully",
+		"contact_id": contact.ID,
+	})
 }
 
 func (h *EmergencyHandlers) ListContacts(w http.ResponseWriter, r *http.Request) {

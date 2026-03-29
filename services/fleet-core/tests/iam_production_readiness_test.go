@@ -153,7 +153,7 @@ func setupTestServer() {
 	}
 	identitySvc := service.NewIdentityService(mockRepo, zapLogger)
 	authSvc := service.NewAuthService(sharedLogger, mockRepo, identitySvc, "test-jwt-secret-key", nil, nil)
-	h := handlers.NewHandlers(authSvc, zapLogger, redisClient)
+	h := handlers.NewHandlers(authSvc, zapLogger, redisClient, "http://localhost:8084/.well-known/jwks.json")
 
 	r := chi.NewRouter()
 

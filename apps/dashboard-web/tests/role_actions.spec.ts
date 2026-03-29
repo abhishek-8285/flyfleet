@@ -1,11 +1,16 @@
 import { test, expect } from "@playwright/test";
 
+// Require TEST_PASSWORD to be set - fail fast if not configured
+if (!process.env.TEST_PASSWORD) {
+  throw new Error("TEST_PASSWORD environment variable must be set for E2E tests");
+}
+
 const BASE_URL = "http://localhost:3000";
 
 const roles = [
-  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
-  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD || "change-me-in-test-env" },
+  { role: "fleet_manager", email: "fleet_manager@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "dispatcher", email: "dispatcher@delta.io", password: process.env.TEST_PASSWORD },
+  { role: "driver", email: "driver@delta.io", password: process.env.TEST_PASSWORD },
 ];
 
 test.describe("Role-Specific UI Actions Authentication & Execution", () => {

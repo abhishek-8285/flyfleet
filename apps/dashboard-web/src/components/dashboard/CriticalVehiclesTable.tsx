@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { motion, cubicBezier } from "framer-motion";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import { Alert } from "../../types";
 
@@ -11,8 +12,35 @@ export const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
   alerts,
 }) => {
   const { uiStrings } = useUIStrings("comp_dashboard");
+
+  const rowVariants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: 0.3,
+        ease: cubicBezier(0.16, 1, 0.3, 1)
+      }
+    }
+  };
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: alerts.length > 10 ? 0.02 : 0.05 // Cap stagger for large lists
+      }
+    }
+  };
+
   return (
-    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+    <motion.div
+      className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
       <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
         <h3 className="text-white font-semibold">
           {uiStrings?.title_critical_table || "Critical Vehicle Status"}
@@ -76,21 +104,34 @@ export const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-color">
+          <motion.tbody
+            className="divide-y divide-border-color"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {alerts.length === 0 ? (
-              <tr>
+              <motion.tr
+                key="empty"
+                variants={rowVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 <td
                   colSpan={8}
                   className="px-6 py-10 text-center text-text-muted italic"
                 >
                   No critical vehicle alerts detected in the last 24 hours.
                 </td>
-              </tr>
+              </motion.tr>
             ) : (
               alerts.map((alert) => (
-                <tr
+                <motion.tr
                   key={alert.id}
-                  className="hover:bg-[#1d2936] transition-colors"
+                  variants={rowVariants}
+                  whileHover={{ backgroundColor: '#1d2936' }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                  className="hover:bg-[#1d2936]"
                 >
                   <td className="px-6 py-3">
                     <input
@@ -135,10 +176,10 @@ export const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
                       Detail
                     </Link>
                   </td>
-                </tr>
+                </motion.tr>
               ))
             )}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
       <div className="bg-surface-darker px-4 py-3 border-t border-border-color text-[11px] text-text-muted flex justify-between items-center">
@@ -162,6 +203,6 @@ export const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

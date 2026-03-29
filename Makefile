@@ -51,7 +51,7 @@ bootstrap: ## Bootstrap development environment (deps, DB, services)
 	@echo "Next steps:"
 	@echo "  - Run: make build"
 	@echo "  - Start services individually in separate terminals:"
-	@echo "      cd services/fleet-core && go run cmd/main.go"
+	@echo "      make hot-reload          # Backend with live reload (dev)"
 	@echo "      cd apps/dashboard-web && npm run dev"
 	@echo "  - Or use docker-compose for full stack: docker-compose up"
 	@echo ""
@@ -354,4 +354,67 @@ self-hosted-clean: ## Remove all self-hosted resources
 	-kubectl delete namespace registry 2>/dev/null || true
 	@echo "$(GREEN)✓ Cleanup complete$(RESET)"
 .PHONY: self-hosted-clean
+
+# Development convenience targets
+hot-reload: ## Start fleet-core backend with hot reload (development)
+	@echo "$(YELLOW)Starting fleet-core with hot reload...$(RESET)"
+	@if [ ! -f .env ]; then \
+		echo "$(RED)⚠ Root .env file not found!$(RESET)"; \
+		echo "Copying from .env.example..."; \
+		cp .env.example .env; \
+		echo "$(GREEN)✓ .env created from .env.example$(RESET)"; \
+		echo "Please edit .env to set required variables (JWT_SECRET, DATABASE_URL, etc.)"; \
+	fi
+	@echo "Hot reload will watch for file changes and automatically rebuild/restart."
+	@echo "Press Ctrl+C to stop."
+	@cd services/fleet-core && ~/go/bin/air
+.PHONY: hot-reload
+
+dev-backend: hot-reload ## Alias for hot-reload
+.PHONY: dev-backend
+
+# =========================================================================
+# Full Observability & Analytics Stack (Razorpay-style)
+# =========================================================================
+
+full-stack-up: ## Start full stack with observability (OpenSearch, ClickHouse, Grafana, etc.)
+	@echo "$(YELLOW)Starting FlyFleet full stack with observability...$(RESET)"
+	@echo "This will start: PostgreSQL, Redis, NATS, Fleet Core,"
+	@echo "OpenSearch, ClickHouse, Prometheus, Grafana, Loki, Jaeger, Vault, OTEL"
+	@docker-compose -f docker-compose.full.yml up -d
+	@echo "$(GREEN)✓ Services starting...$(RESET)"
+	@echo ""
+	@echo "Running setup (Vault, init SQL)..."
+	@./infrastructure/setup-full-stack.sh
+.PHONY: full-stack-up
+
+full-stack-down: ## Stop full stack services
+	@echo "$(YELLOW)Stopping full stack...$(RESET)"
+	@docker-compose -f docker-compose.full.yml down
+	@echo "$(GREEN)✓ Stopped$(RESET)"
+.PHONY: full-stack-down
+
+full-stack-restart: full-stack-down full-stack-up ## Restart full stack
+.PHONY: full-stack-restart
+
+full-stack-logs: ## Show logs from all services
+	@docker-compose -f docker-compose.full.yml logs -f
+.PHONY: full-stack-logs
+
+full-stack-logs-[a-z]*: ## Show logs for specific service (e.g., make full-stack-logs-grafana)
+	@service=$(subst full-stack-logs-,,$@); \
+	docker-compose -f docker-compose.full.yml logs -f $$service
+.PHONY: full-stack-logs-[a-z]*
+
+full-stack-health: ## Check health of all services
+	@./infrastructure/health-check.sh
+.PHONY: full-stack-health
+
+full-stack-status: ## Show status of all containers
+	@docker-compose -f docker-compose.full.yml ps
+.PHONY: full-stack-status
+
+# Quick alias
+obs: full-stack-up ## Alias for full-stack-up
+.PHONY: obs
 

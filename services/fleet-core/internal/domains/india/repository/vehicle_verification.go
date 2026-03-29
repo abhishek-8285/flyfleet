@@ -14,7 +14,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateVehicleVerification(ctx context.Context, verification *models.VehicleVerification) error {
 	query := `
 		INSERT INTO vehicle_verifications (
-			id, vehicle_id, organization_id, registration_number, status, verification_date,
+			id, vehicle_id, org_id, registration_number, status, verification_date,
 			chassis_number, engine_number, model, manufacturer, fuel_type, body_type,
 			cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 			owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,
@@ -63,7 +63,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateVehicleVerification(ctx context.C
 // GetVehicleVerification retrieves a vehicle verification by ID
 func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Context, id string) (*models.VehicleVerification, error) {
 	query := `
-		SELECT id, vehicle_id, organization_id, registration_number, status, verification_date,
+		SELECT id, vehicle_id, org_id, registration_number, status, verification_date,
 		       chassis_number, engine_number, model, manufacturer, fuel_type, body_type,
 		       cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 		       owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,
@@ -123,7 +123,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Cont
 // GetVehicleVerificationByRegNumber retrieves a vehicle verification by registration number
 func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerificationByRegNumber(ctx context.Context, regNumber string) (*models.VehicleVerification, error) {
 	query := `
-		SELECT id, vehicle_id, organization_id, registration_number, status, verification_date,
+		SELECT id, vehicle_id, org_id, registration_number, status, verification_date,
 		       chassis_number, engine_number, model, manufacturer, fuel_type, body_type,
 		       cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 		       owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,
@@ -259,7 +259,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListVehicleVerifications(ctx context.Co
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, vehicle_id, organization_id, registration_number, status, verification_date,
+		SELECT id, vehicle_id, org_id, registration_number, status, verification_date,
 		       chassis_number, engine_number, model, manufacturer, fuel_type, body_type,
 		       cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 		       owner_address, owner_city, owner_district, owner_state, owner_pin, rc_status,

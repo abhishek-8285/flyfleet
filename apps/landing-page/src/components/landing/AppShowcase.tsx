@@ -1,30 +1,146 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 30 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.6 }
-};
-
 const AppShowcase = () => {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const gsap = (window as any).gsap;
+    if (!gsap) return;
+
+    const ctx = gsap.context(() => {
+      // Animate Driver App: clip-path reveal (rising from bottom)
+      const driverApp = document.querySelector('.driver-app');
+      if (driverApp) {
+        gsap.fromTo(driverApp,
+          { clipPath: 'inset(0 0 100% 0)' },
+          {
+            clipPath: 'inset(0)',
+            ease: 'power3.inOut',
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: 'top 20%',
+              end: 'bottom 40%',
+              scrub: 1
+            }
+          }
+        );
+
+        // Float animation for the device
+        gsap.to(driverApp, {
+          y: '-=15',
+          duration: 6,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          delay: 1
+        });
+      }
+
+      // Animate Manager App: clip-path reveal (slightly delayed)
+      const managerApp = document.querySelector('.manager-app');
+      if (managerApp) {
+        gsap.fromTo(managerApp,
+          { clipPath: 'inset(0 0 100% 0)' },
+          {
+            clipPath: 'inset(0)',
+            ease: 'power3.inOut',
+            scrollTrigger: {
+              trigger: sectionRef.current,
+              start: 'top 40%',
+              end: 'bottom 70%',
+              scrub: 1
+            }
+          }
+        );
+
+        // Float animation
+        gsap.to(managerApp, {
+          y: '+=15',
+          duration: 7,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          delay: 2
+        });
+      }
+
+      // Floating companion elements (SOS button, vehicle marker)
+      gsap.utils.toArray('.depth-2').forEach((el: Element) => {
+        gsap.to(el, {
+          y: '+=20',
+          rotate: 5,
+          duration: 4,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut'
+        });
+      });
+
+      // Scatter effect on section exit
+      gsap.to(driverApp, {
+        x: -200,
+        opacity: 0,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'bottom 80%',
+          end: 'bottom top',
+          scrub: 1
+        }
+      });
+
+      gsap.to(managerApp, {
+        x: 200,
+        opacity: 0,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'bottom 80%',
+          end: 'bottom top',
+          scrub: 1
+        }
+      });
+
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="py-24 px-4 md:px-10 bg-slate-50 dark:bg-background-dark text-slate-900 dark:text-white relative overflow-hidden" id="apps">
-      <div className="absolute inset-0 bg-primary/5 z-0"></div>
-      <div className="max-w-[1280px] mx-auto relative z-10">
-        <div className="text-center mb-20">
+    <section
+      ref={sectionRef}
+      className="scene relative"
+      style={{ '--scene-height': '400vh', paddingTop: '0', paddingBottom: '0' } as React.CSSProperties}
+      data-scene="apps"
+    >
+      {/* DEPTH 0: Background */}
+      <div className="depth-0 absolute inset-0 bg-slate-50 dark:bg-background-dark" />
+
+      {/* DEPTH 1: Subtle glow */}
+      <div className="depth-1 absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-primary/5"></div>
+      </div>
+
+      {/* Content container */}
+      <div className="max-w-[1280px] mx-auto relative z-10 pt-32 pb-32 px-4 md:px-10">
+        {/* Section header */}
+        <div className="text-center mb-32">
           <div className="inline-block px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-bold uppercase tracking-wide mb-4">Ecosystem</div>
           <h2 className="text-3xl md:text-5xl font-bold mb-6 font-display text-slate-900 dark:text-white">Field-Ready Apps</h2>
           <p className="text-slate-600 dark:text-text-secondary text-lg max-w-2xl mx-auto">
             A complete ecosystem that connects your HQ, drivers, and clients in real-time. Native iOS and Android apps included with every plan.
           </p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Driver App Frame */}
-          <motion.div {...fadeInUp} className="flex flex-col items-center">
-            <div className="mobile-frame w-[280px] h-[580px] shadow-2xl bg-surface-dark transform">
+
+        {/* Vertical stack layout - apps will animate in from bottom */}
+        <div className="relative min-h-[600px] flex flex-col items-center justify-center gap-32">
+
+          {/* Driver App - depth-3 product */}
+          <div className="driver-app depth-3 relative" style={{ width: '280px', height: '580px' }}>
+            <div className="mobile-frame w-full h-full shadow-2xl bg-surface-dark transform">
               <div className="h-full w-full bg-[#111a22] flex flex-col pt-10 px-4 pb-4">
                 <div className="flex justify-between items-center mb-6">
                   <div>
@@ -75,14 +191,29 @@ const AppShowcase = () => {
                 </div>
               </div>
             </div>
+
+            {/* Floating companion: SOS icon */}
+            <motion.div
+              className="depth-2 absolute -left-16 top-1/3 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl backdrop-blur-sm">
+                <span className="material-symbols-outlined text-4xl text-red-500">sos</span>
+              </div>
+            </motion.div>
+
+            {/* Label below device */}
             <div className="mt-8 text-center" aria-label="Driver Companion App Description">
               <h3 className="text-xl font-bold mb-2 font-display">Driver Companion App</h3>
               <p className="text-text-secondary text-sm max-w-xs mx-auto">Task management, SOS alerts, and vehicle inspection forms.</p>
             </div>
-          </motion.div>
-          {/* Manager App Frame */}
-          <motion.div {...fadeInUp} transition={{ delay: 0.2 }} className="flex flex-col items-center">
-            <div className="mobile-frame w-[280px] h-[580px] shadow-2xl bg-surface-dark transform border-primary/30">
+          </div>
+
+          {/* Manager App - depth-3 product */}
+          <div className="manager-app depth-3 relative" style={{ width: '280px', height: '580px' }}>
+            <div className="mobile-frame w-full h-full shadow-2xl bg-surface-dark transform border-primary/30">
               <div className="h-full w-full bg-[#111a22] flex flex-col pt-0 relative overflow-hidden">
                 <div className="absolute inset-0 bg-slate-800 opacity-30 z-0 bg-cover grayscale" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2674&auto=format&fit=crop')" }}></div>
                 <div className="absolute top-1/3 left-1/4 z-10">
@@ -106,11 +237,26 @@ const AppShowcase = () => {
                 </div>
               </div>
             </div>
+
+            {/* Floating companion: map pin */}
+            <motion.div
+              className="depth-2 absolute -right-16 top-1/2 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+            >
+              <div className="p-3 bg-primary/10 border border-primary/30 rounded-full backdrop-blur-sm">
+                <span className="material-symbols-outlined text-3xl text-primary">location_on</span>
+              </div>
+            </motion.div>
+
+            {/* Label below device */}
             <div className="mt-8 text-center" aria-label="Manager Track App Description">
               <h3 className="text-xl font-bold mb-2 font-display">Manager Track App</h3>
               <p className="text-text-secondary text-sm max-w-xs mx-auto">Real-time fleet visibility and instant alerts from your pocket.</p>
             </div>
-          </motion.div>
+          </div>
+
         </div>
       </div>
     </section>

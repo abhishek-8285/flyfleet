@@ -1,64 +1,69 @@
 import { expect, test } from "@playwright/test";
 
+// Require TEST_PASSWORD to be set - fail fast if not configured
+if (!process.env.TEST_PASSWORD) {
+  throw new Error("TEST_PASSWORD environment variable must be set for E2E tests");
+}
+
 const roles = [
   {
     role: "super_admin",
     email: "admin@flyfleet.com", // [FIX] Use canonical admin account
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "org_admin",
     email: "org_admin@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "fleet_manager",
     email: "fleet_manager@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "dispatcher",
     email: "dispatcher@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "fleet_operator",
     email: "operator@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "maintenance_manager",
     email: "maintenance@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "analyst",
     email: "analyst@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "support_agent",
     email: "support_agent@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "billing_admin",
     email: "billing@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/admin",
   },
   {
     role: "driver",
     email: "driver@delta.io",
-    password: process.env.TEST_PASSWORD || "change-me-in-test-env",
+    password: process.env.TEST_PASSWORD,
     expectedPath: "/dashboard",
   },
 ];

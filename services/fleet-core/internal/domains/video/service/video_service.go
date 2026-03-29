@@ -5,15 +5,17 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
 	"github.com/flyfleet/fleet-core-service/internal/domains/video/repository"
-	"github.com/google/uuid"
 )
 
 // VideoService defines the interface for video business logic
@@ -53,17 +55,24 @@ type VideoService interface {
 	UpdateVideoThumbnail(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteVideoThumbnail(ctx context.Context, id string) error
 	ListVideoThumbnails(ctx context.Context, recordingID string, limit, offset int) ([]*models.VideoThumbnail, int, error)
+
+	// Device operations
+	RequestClip(ctx context.Context, tenantID uuid.UUID, req *models.RequestClipRequest) error
 }
 
 // VideoServiceImpl implements the VideoService interface
 type VideoServiceImpl struct {
-	repo repository.VideoRepository
+	repo  repository.VideoRepository
+	nats  *nats.Conn
+	logger *zap.Logger
 }
 
 // NewVideoService creates a new instance of VideoService
-func NewVideoService(repo repository.VideoRepository) *VideoServiceImpl {
+func NewVideoService(repo repository.VideoRepository, nats *nats.Conn, logger *zap.Logger) *VideoServiceImpl {
 	return &VideoServiceImpl{
-		repo: repo,
+		repo:   repo,
+		nats:   nats,
+		logger: logger,
 	}
 }
 
@@ -464,4 +473,53 @@ func (s *VideoServiceImpl) generateSignedURL(filepath string, expires time.Time)
 	}
 
 	return fmt.Sprintf("%s/%s?expires=%d&sig=%s", baseURL, filepath, validUntil, signature)
+}
+
+// RequestClip sends a command to the edge device to request a specific video clip.
+// This is used by fleet managers to immediately retrieve footage from a vehicle's dashcam.
+func (s *VideoServiceImpl) RequestClip(ctx context.Context, tenantID uuid.UUID, req *models.RequestClipRequest) error {
+	if req.VehicleID == uuid.Nil || req.CameraID == uuid.Nil {
+		return fmt.Errorf("vehicle_id and camera_id are required")
+	}
+	if req.StartTime.After(req.EndTime) {
+		return fmt.Errorf("start_time must be before end_time")
+	}
+
+	// Build command payload
+	payload := map[string]interface{}{
+		"tenant_id":    tenantID.String(),
+		"vehicle_id":   req.VehicleID.String(),
+		"camera_id":    req.CameraID.String(),
+		"start_time":   req.StartTime.UTC().Format(time.RFC3339),
+		"end_time":     req.EndTime.UTC().Format(time.RFC3339),
+		"reason":       req.Reason,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		s.logger.Error("Failed to marshal clip request payload", zap.Error(err))
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	// Publish to device command channel
+	subject := "fleet.video.clip.request"
+	if s.nats == nil {
+		s.logger.Warn("NATS not configured, cannot push clip request", zap.String("subject", subject))
+		return fmt.Errorf("nats client not configured")
+	}
+
+	if err := s.nats.Publish(subject, data); err != nil {
+		s.logger.Error("Failed to publish clip request to device",
+			zap.Error(err),
+			zap.String("subject", subject),
+			zap.String("vehicle_id", req.VehicleID.String()))
+		return fmt.Errorf("failed to publish to device: %w", err)
+	}
+
+	s.logger.Info("Clip request published to device",
+		zap.String("tenant_id", tenantID.String()),
+		zap.String("vehicle_id", req.VehicleID.String()),
+		zap.String("camera_id", req.CameraID.String()),
+		zap.String("subject", subject))
+
+	return nil
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	iamCtx "github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -197,7 +198,8 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 		if sub, ok := claims["sub"].(string); ok {
 			ctx = context.WithValue(ctx, ctxkeys.UserIDKey, sub) // Legacy (string)
 			if uid, err := uuid.Parse(sub); err == nil {
-				ctx = context.WithValue(ctx, middleware.UserIDKey, uid) // Modern (uuid.UUID)
+				ctx = context.WithValue(ctx, middleware.UserIDKey, uid) // Modern (uuid.UUID - shared)
+				ctx = context.WithValue(ctx, iamCtx.UserIDKey, uid)     // Modern (uuid.UUID - local IAM)
 			}
 		}
 
@@ -205,7 +207,8 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 		if orgID, ok := claims["org_id"].(string); ok {
 			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID) // Legacy (string)
 			if oid, err := uuid.Parse(orgID); err == nil {
-				ctx = context.WithValue(ctx, middleware.OrgIDKey, oid) // Modern (uuid.UUID)
+				ctx = context.WithValue(ctx, middleware.OrgIDKey, oid) // Modern (uuid.UUID - shared)
+				ctx = context.WithValue(ctx, iamCtx.OrgIDKey, oid)     // Modern (uuid.UUID - local IAM)
 			}
 		}
 
@@ -214,8 +217,10 @@ func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
 			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantType) // Reusing TenantIDKey for type or separate key
 		}
 
-		// Role
+		// Role - check both "rol" (legacy) and "role" (standard)
 		if role, ok := claims["rol"].(string); ok {
+			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
+		} else if role, ok := claims["role"].(string); ok {
 			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
 		}
 

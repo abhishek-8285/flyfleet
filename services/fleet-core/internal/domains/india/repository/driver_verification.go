@@ -15,7 +15,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateDriverVerification(ctx context.Context, verification *models.DriverVerification) error {
 	query := `
 		INSERT INTO driver_verifications (
-			id, driver_id, organization_id, license_number, status, verification_date,
+			id, driver_id, org_id, license_number, status, verification_date,
 			name, father_name, date_of_birth, gender, address, city, district, state, pin,
 			license_class, issue_date, validity_from, validity_to, last_transaction,
 			enrollment_number, created_at, created_by, updated_at, updated_by
@@ -60,7 +60,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateDriverVerification(ctx context.Co
 // GetDriverVerification retrieves a driver verification by ID
 func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Context, id string) (*models.DriverVerification, error) {
 	query := `
-		SELECT id, driver_id, organization_id, license_number, status, verification_date,
+		SELECT id, driver_id, org_id, license_number, status, verification_date,
 		       name, father_name, date_of_birth, gender, address, city, district, state, pin,
 		       license_class, issue_date, validity_from, validity_to, last_transaction,
 		       enrollment_number, created_at, created_by, updated_at, updated_by
@@ -117,7 +117,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Conte
 // GetDriverVerificationByLicenseNumber retrieves a driver verification by license number
 func (r *IndiaIntegrationRepositoryImpl) GetDriverVerificationByLicenseNumber(ctx context.Context, licenseNumber string) (*models.DriverVerification, error) {
 	query := `
-		SELECT id, driver_id, organization_id, license_number, status, verification_date,
+		SELECT id, driver_id, org_id, license_number, status, verification_date,
 		       name, father_name, date_of_birth, gender, address, city, district, state, pin,
 		       license_class, issue_date, validity_from, validity_to, last_transaction,
 		       enrollment_number, created_at, created_by, updated_at, updated_by
@@ -260,7 +260,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListDriverVerifications(ctx context.Con
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, driver_id, organization_id, license_number, status, verification_date,
+		SELECT id, driver_id, org_id, license_number, status, verification_date,
 		       name, father_name, date_of_birth, gender, address, city, district, state, pin,
 		       license_class, issue_date, validity_from, validity_to, last_transaction,
 		       enrollment_number, created_at, created_by, updated_at, updated_by

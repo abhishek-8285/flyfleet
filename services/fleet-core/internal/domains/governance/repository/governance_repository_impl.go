@@ -23,7 +23,7 @@ func NewGovernanceRepository(db *pgxpool.Pool) GovernanceRepository {
 func (r *pgGovernanceRepository) CreateRequest(ctx context.Context, req *models.GovernanceRequest) error {
 	query := `
 		INSERT INTO governance_requests (
-			id, organization_id, requester_id, request_type, data_scope,
+			id, org_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
 			created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -39,11 +39,11 @@ func (r *pgGovernanceRepository) CreateRequest(ctx context.Context, req *models.
 func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.GovernanceRequest, error) {
 	query := `
 		SELECT 
-			id, organization_id, requester_id, request_type, data_scope,
+			id, org_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
 			created_at, created_by, updated_at, updated_by
 		FROM governance_requests
-		WHERE id = $1 AND organization_id = $2
+		WHERE id = $1 AND org_id = $2
 	`
 	var req models.GovernanceRequest
 	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
@@ -63,7 +63,7 @@ func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUI
 func (r *pgGovernanceRepository) GetRequestByIDInternal(ctx context.Context, id uuid.UUID) (*models.GovernanceRequest, error) {
 	query := `
 		SELECT 
-			id, organization_id, requester_id, request_type, data_scope,
+			id, org_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
 			created_at, created_by, updated_at, updated_by
 		FROM governance_requests
@@ -85,7 +85,7 @@ func (r *pgGovernanceRepository) GetRequestByIDInternal(ctx context.Context, id 
 }
 
 func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models.GovernanceRequestFilter) (*models.GovernanceRequestListResponse, error) {
-	where := []string{"organization_id = $1"}
+	where := []string{"org_id = $1"}
 	args := []interface{}{filter.OrganizationID}
 	argIdx := 2
 
@@ -121,7 +121,7 @@ func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models
 	limit := filter.PageSize
 	query := fmt.Sprintf(`
 		SELECT 
-			id, organization_id, requester_id, request_type, data_scope,
+			id, org_id, requester_id, request_type, data_scope,
 			purpose, format, delivery_method, status, expiry_date, comments,
 			created_at, created_by, updated_at, updated_by
 		FROM governance_requests
@@ -163,7 +163,7 @@ func (r *pgGovernanceRepository) UpdateRequestStatus(ctx context.Context, id uui
 	query := `
 		UPDATE governance_requests
 		SET status = $1, comments = COALESCE($2, comments), expiry_date = COALESCE($3, expiry_date), updated_at = NOW()
-		WHERE id = $4 AND organization_id = $5
+		WHERE id = $4 AND org_id = $5
 	`
 	_, err := r.db.Exec(ctx, query, status, comments, expiryDate, id, orgID)
 	return err
@@ -176,7 +176,7 @@ func (r *pgGovernanceRepository) UpdateVerificationStatus(ctx context.Context, i
 		    verified_at = CASE WHEN $1 = 'VERIFIED' THEN NOW() ELSE verified_at END,
 		    verified_by = $2,
 		    updated_at = NOW()
-		WHERE id = $3 AND organization_id = $4
+		WHERE id = $3 AND org_id = $4
 	`
 	_, err := r.db.Exec(ctx, query, status, verifiedBy, id, orgID)
 	return err
@@ -184,8 +184,8 @@ func (r *pgGovernanceRepository) UpdateVerificationStatus(ctx context.Context, i
 
 func (r *pgGovernanceRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error) {
 	query := `
-		SELECT organization_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours, created_at, updated_at
-		FROM governance_settings WHERE organization_id = $1
+		SELECT org_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours, created_at, updated_at
+		FROM governance_settings WHERE org_id = $1
 	`
 	var s models.GovernanceSettings
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
@@ -203,10 +203,10 @@ func (r *pgGovernanceRepository) GetSettings(ctx context.Context, orgID uuid.UUI
 func (r *pgGovernanceRepository) UpsertSettings(ctx context.Context, s *models.GovernanceSettings) error {
 	query := `
 		INSERT INTO governance_settings (
-			organization_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours,
+			org_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours,
 			created_at, updated_at, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), $6, $7)
-		ON CONFLICT (organization_id) DO UPDATE SET
+		ON CONFLICT (org_id) DO UPDATE SET
 			retention_policies = EXCLUDED.retention_policies,
 			masking_rules = EXCLUDED.masking_rules,
 			auto_expiry_enabled = EXCLUDED.auto_expiry_enabled,
@@ -224,7 +224,7 @@ func (r *pgGovernanceRepository) UpsertSettings(ctx context.Context, s *models.G
 func (r *pgGovernanceRepository) CreateAuditLog(ctx context.Context, log *models.GovernanceAuditLog) error {
 	query := `
 		INSERT INTO governance_audit_logs (
-			id, organization_id, user_id, action, module, change_detail, ip_address
+			id, org_id, user_id, action, module, change_detail, ip_address
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	_, err := r.db.Exec(ctx, query,
@@ -244,7 +244,7 @@ func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, orgID uuid.U
 	// Count total
 	countQuery := `
 		SELECT COUNT(*) FROM governance_audit_logs
-		WHERE organization_id = $1
+		WHERE org_id = $1
 	`
 	var total int
 	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
@@ -253,9 +253,9 @@ func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, orgID uuid.U
 
 	offset := (page - 1) * pageSize
 	query := `
-		SELECT id, organization_id, user_id, action, module, change_detail, ip_address, created_at
+		SELECT id, org_id, user_id, action, module, change_detail, ip_address, created_at
 		FROM governance_audit_logs
-		WHERE organization_id = $1
+		WHERE org_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -291,7 +291,7 @@ func (r *pgGovernanceRepository) ExpireRequests(ctx context.Context) ([]models.E
 		WHERE status = 'APPROVED'
 		AND expiry_date IS NOT NULL
 		AND expiry_date < NOW()
-		RETURNING id, organization_id
+		RETURNING id, org_id
 	`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
@@ -389,7 +389,7 @@ func (r *pgGovernanceRepository) SaveComplianceReport(ctx context.Context, repor
 }
 
 func (r *pgGovernanceRepository) ListAllSettings(ctx context.Context) ([]models.GovernanceSettings, error) {
-	query := `SELECT organization_id, retention_policies, auto_expiry_enabled, download_ttl_hours FROM governance_settings`
+	query := `SELECT org_id, retention_policies, auto_expiry_enabled, download_ttl_hours FROM governance_settings`
 	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, err
@@ -422,11 +422,11 @@ func (r *pgGovernanceRepository) EnforceRetentionPolicy(ctx context.Context, org
 
 	query := fmt.Sprintf(`
 		DELETE FROM %s 
-		WHERE organization_id = $1 
+		WHERE org_id = $1 
 		AND created_at < NOW() - INTERVAL '1 day' * $2
 		AND %s NOT IN (
 			SELECT entity_id FROM legal_holds 
-			WHERE organization_id = $1 
+			WHERE org_id = $1 
 			AND (expires_at IS NULL OR expires_at > NOW())
 		)
 	`, tableName, entityCol)

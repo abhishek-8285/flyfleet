@@ -21,21 +21,37 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 
 			// Extract OrgID from context (set by JWKSAuthGate)
 			orgID, ok := ctx.Value(iamCtx.OrgIDKey).(uuid.UUID)
-			if !ok {
+			if ok {
+				logger.Debug("tenant context found via iamCtx.OrgIDKey", zap.String("org_id", orgID.String()))
+			} else {
 				// Fallback to legacy string if needed
-				if orgIDStr, ok := ctx.Value(ctxkeys.OrgIDKey).(string); ok {
+				if orgIDStr, okStr := ctx.Value(ctxkeys.OrgIDKey).(string); okStr {
 					if id, err := uuid.Parse(orgIDStr); err == nil {
 						orgID = id
 						ok = true
+						logger.Debug("tenant context found via fallback ctxkeys.OrgIDKey string", zap.String("org_id", orgID.String()))
+					} else {
+						logger.Warn("tenant context fallback found invalid org_id string", zap.String("value", orgIDStr))
 					}
 				}
 			}
 
+			// If org_id is missing, check for super_admin role bypass
 			if !ok {
+				role, _ := ctx.Value(ctxkeys.RoleKey).(string)
+				if role == "super_admin" {
+					// Super admin can proceed - log that we're bypassing tenant context
+					logger.Info("super_admin bypassing tenant context check (no org_id found)",
+						zap.String("path", r.URL.Path),
+						zap.String("method", r.Method))
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
 				// OrgID is required for all protected routes - fail securely
 				logger.Warn("tenant context missing for authenticated request",
 					zap.String("path", r.URL.Path),
-					zap.String("method", r.Method))
+					zap.String("method", r.Method),
+					zap.String("role", role))
 				http.Error(w, "Organization context required", http.StatusUnauthorized)
 				return
 			}
