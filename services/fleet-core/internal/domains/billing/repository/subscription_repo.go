@@ -114,6 +114,32 @@ func (r *SubscriptionRepository) GetSubscription(ctx context.Context, orgID uuid
 	return &s, nil
 }
 
+// GetPlan retrieves a billing plan with its pricing components by ID
+func (r *SubscriptionRepository) GetPlan(ctx context.Context, planID uuid.UUID) (*models.Plan, error) {
+	var p models.Plan
+	query := `SELECT id, name, description, is_active, created_at, updated_at
+	          FROM billing_plans WHERE id = $1`
+
+	err := r.db.QueryRow(ctx, query, planID).Scan(
+		&p.ID, &p.Name, &p.Description, &p.IsActive, &p.CreatedAt, &p.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get plan: %w", err)
+	}
+
+	// Fetch components
+	components, err := r.getPlanComponents(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	p.Components = components
+
+	return &p, nil
+}
+
 // CreateSubscription initializes a new subscription for an organization
 func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, sub *models.Subscription) error {
 	if sub.ID == uuid.Nil {

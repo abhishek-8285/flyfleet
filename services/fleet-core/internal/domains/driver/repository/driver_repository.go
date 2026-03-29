@@ -122,12 +122,11 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		       date_of_birth, address, emergency_contact, status, employment_type, current_vehicle_id,
 		       current_trip_id, joining_date, resignation_date, experience_years,
 		       rating, total_trips, total_distance_km, total_hours_driven,
-		       behavior_score, documents, attendance_records, schedules,
-		       metadata, created_at, updated_at, deleted_at
+		       behavior_score, documents, metadata, created_at, updated_at, deleted_at
 		FROM drivers WHERE id = $1 AND deleted_at IS NULL`
 
 	var driver models.Driver
-	var addressJSON, emergencyContactJSON, documentsJSON, attendanceJSON, schedulesJSON, metadataJSON []byte
+	var addressJSON, emergencyContactJSON, documentsJSON, metadataJSON []byte
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
@@ -139,8 +138,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		&driver.CurrentVehicleID, &driver.CurrentTripID, &driver.JoiningDate, &driver.ResignationDate,
 		&driver.ExperienceYears, &driver.Rating, &driver.TotalTrips, &driver.TotalDistanceKm,
 		&driver.TotalHoursDriven, &driver.BehaviorScore, &documentsJSON,
-		&attendanceJSON, &schedulesJSON, &metadataJSON, &driver.CreatedAt,
-		&driver.UpdatedAt, &driver.DeletedAt,
+		&metadataJSON, &driver.CreatedAt, &driver.UpdatedAt, &driver.DeletedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 
@@ -167,23 +165,107 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 			return nil, fmt.Errorf("failed to unmarshal documents: %w", err)
 		}
 	}
-	if len(attendanceJSON) > 0 {
-		if err := json.Unmarshal(attendanceJSON, &driver.AttendanceRecords); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal attendance records: %w", err)
-		}
+	// Fetch attendance and schedules from normalized tables
+	attendance, err := r.GetAttendance(ctx, driver.ID)
+	if err != nil {
+		// Log error but don't fail - return empty attendance
+		attendance = []models.AttendanceRecord{}
 	}
-	if len(schedulesJSON) > 0 {
-		if err := json.Unmarshal(schedulesJSON, &driver.Schedules); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal schedules: %w", err)
-		}
+	driver.AttendanceRecords = attendance
+
+	schedules, err := r.GetSchedules(ctx, driver.ID)
+	if err != nil {
+		schedules = []models.WorkSchedule{}
 	}
-	if len(metadataJSON) > 0 {
-		if err := json.Unmarshal(metadataJSON, &driver.Metadata); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
-		}
-	}
+	driver.Schedules = schedules
 
 	return &driver, nil
+}
+
+// GetAttendance retrieves all attendance records for a driver from the normalized table
+func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) ([]models.AttendanceRecord, error) {
+	query := `
+		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		FROM driver_attendance
+		WHERE driver_id = $1
+		ORDER BY attendance_date DESC
+	`
+
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query attendance: %w", err)
+	}
+	defer rows.Close()
+
+	var records []models.AttendanceRecord
+	for rows.Next() {
+		var rec models.AttendanceRecord
+		var id uuid.UUID
+		var driverID uuid.UUID // dummy, not used
+		var orgID uuid.UUID   // org context, not stored in record
+		var date time.Time
+		err := rows.Scan(
+			&id, &driverID, &orgID, &date, &rec.Status, &rec.CheckInTime, &rec.CheckOutTime, &rec.Remarks, &rec.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan attendance record: %w", err)
+		}
+		rec.ID = id.String()
+		rec.Date = date
+		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("attendance iteration error: %w", err)
+	}
+	return records, nil
+}
+
+// GetSchedules retrieves all work schedules for a driver from the normalized table
+func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([]models.WorkSchedule, error) {
+	query := `
+		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		FROM driver_schedules
+		WHERE driver_id = $1
+		ORDER BY day_of_week
+	`
+
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, driverID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, fmt.Errorf("failed to query schedules: %w", err)
+	}
+	defer rows.Close()
+
+	var schedules []models.WorkSchedule
+	for rows.Next() {
+		var ds models.DriverSchedule
+		var orgID string
+		err := rows.Scan(
+			&ds.ID, &ds.DriverID, &orgID, &ds.DayOfWeek, &ds.StartTime, &ds.EndTime,
+			&ds.IsWorking, &ds.CreatedAt, &ds.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan work schedule: %w", err)
+		}
+		// Map DriverSchedule to WorkSchedule (Driver model field)
+		schedule := models.WorkSchedule{
+			ID:        ds.ID.String(),
+			DayOfWeek: ds.DayOfWeek,
+			StartTime: ds.StartTime,
+			EndTime:   ds.EndTime,
+			IsWorking: ds.IsWorking,
+			CreatedAt: ds.CreatedAt,
+			UpdatedAt: ds.UpdatedAt,
+		}
+		schedules = append(schedules, schedule)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("schedules iteration error: %w", err)
+	}
+	return schedules, nil
 }
 
 // List retrieves drivers with filtering and pagination
@@ -304,6 +386,28 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		return nil
 	}
 
+	// Handle normalized table updates separately
+	if attendanceVal, hasAttendance := updates["attendance_records"]; hasAttendance {
+		// Delete existing attendance records for this driver and insert new ones
+		if err := r.replaceAttendance(ctx, id, attendanceVal); err != nil {
+			return fmt.Errorf("failed to update attendance records: %w", err)
+		}
+		delete(updates, "attendance_records")
+	}
+
+	if schedulesVal, hasSchedules := updates["schedules"]; hasSchedules {
+		// Delete existing schedules for this driver and insert new ones
+		if err := r.replaceSchedules(ctx, id, schedulesVal); err != nil {
+			return fmt.Errorf("failed to update schedules: %w", err)
+		}
+		delete(updates, "schedules")
+	}
+
+	// If no remaining updates after removing special fields, return early
+	if len(updates) == 0 {
+		return nil
+	}
+
 	setParts := make([]string, 0, len(updates))
 	args := make([]interface{}, 0, len(updates)+1)
 	argIndex := 1
@@ -317,7 +421,7 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 
 		// Handle special JSON fields
 		switch key {
-		case "address", "emergency_contact", "documents", "attendance_records", "schedules", "metadata":
+		case "address", "emergency_contact", "documents", "metadata":
 			jsonData, err := json.Marshal(value)
 			if err != nil {
 				return fmt.Errorf("failed to marshal %s: %w", key, err)
@@ -344,6 +448,128 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		return pgx.ErrNoRows
 	}
 
+	return nil
+}
+
+// replaceAttendance deletes and recreates driver attendance records from a slice
+
+// replaceAttendance deletes and recreates driver attendance records from a slice
+func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID string, records interface{}) error {
+	// Get driver's org_id first (needed for attendance records)
+	var orgID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT org_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	if err != nil {
+		return fmt.Errorf("failed to get driver org_id: %w", err)
+	}
+
+	// Delete existing attendance records for this driver
+	_, err = r.db.Exec(ctx, `DELETE FROM driver_attendance WHERE driver_id = $1`, driverID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing attendance: %w", err)
+	}
+
+	// Cast records to expected type
+	attendanceList, ok := records.([]models.AttendanceRecord)
+	if !ok {
+		return fmt.Errorf("invalid attendance records type")
+	}
+
+	if len(attendanceList) == 0 {
+		return nil
+	}
+
+	// Build batch insert (9 columns)
+	var args []interface{}
+	var placeholders []string
+	for i, rec := range attendanceList {
+		id := uuid.New()
+		if rec.ID != "" {
+			id = uuid.MustParse(rec.ID)
+		}
+		placeholders = append(placeholders, fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d)",
+			i*9+1, i*9+2, i*9+3, i*9+4, i*9+5, i*9+6, i*9+7, i*9+8, i*9+9))
+		args = append(args,
+			id,
+			uuid.MustParse(driverID),
+			orgID,
+			rec.Date,
+			rec.Status,
+			rec.CheckInTime,
+			rec.CheckOutTime,
+			rec.Remarks,
+			time.Now(),
+		)
+	}
+
+	query := fmt.Sprintf(
+		`INSERT INTO driver_attendance (id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at) VALUES %s`,
+		strings.Join(placeholders, ", "),
+	)
+
+	_, err = r.db.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to insert attendance records: %w", err)
+	}
+	return nil
+}
+
+// replaceSchedules deletes and recreates driver work schedules from a slice
+func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string, schedules interface{}) error {
+	// Get driver's org_id
+	var orgID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT org_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	if err != nil {
+		return fmt.Errorf("failed to get driver org_id: %w", err)
+	}
+
+	// Delete existing schedules
+	_, err = r.db.Exec(ctx, `DELETE FROM driver_schedules WHERE driver_id = $1`, driverID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing schedules: %w", err)
+	}
+
+	// Cast schedules
+	schedList, ok := schedules.([]models.WorkSchedule)
+	if !ok {
+		return fmt.Errorf("invalid schedules type")
+	}
+
+	if len(schedList) == 0 {
+		return nil
+	}
+
+	// Build batch insert (9 columns)
+	var args []interface{}
+	var placeholders []string
+	for i, s := range schedList {
+		id := uuid.New()
+		if s.ID != "" {
+			id = uuid.MustParse(s.ID)
+		}
+		placeholders = append(placeholders, fmt.Sprintf("($%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d)",
+			i*9+1, i*9+2, i*9+3, i*9+4, i*9+5, i*9+6, i*9+7, i*9+8, i*9+9))
+		args = append(args,
+			id,
+			uuid.MustParse(driverID),
+			orgID,
+			s.DayOfWeek,
+			s.StartTime,
+			s.EndTime,
+			s.IsWorking,
+			time.Now(),
+			time.Now(),
+		)
+	}
+
+	query := fmt.Sprintf(
+		`INSERT INTO driver_schedules (id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at) VALUES %s`,
+		strings.Join(placeholders, ", "),
+	)
+
+	_, err = r.db.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to insert schedules: %w", err)
+	}
 	return nil
 }
 
@@ -463,14 +689,15 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 			COALESCE(COUNT(t.id) FILTER (WHERE t.status = 'completed'), 0) as completed_trips,
 			COALESCE(COUNT(t.id) FILTER (WHERE t.status = 'cancelled'), 0) as cancelled_trips,
 			COALESCE((
-				SELECT AVG(CASE WHEN (v->>'status') = 'present' THEN 1 ELSE 0 END) * 100
-				FROM jsonb_array_elements(d.attendance_records) v
-				WHERE (v->>'date')::date >= CURRENT_DATE - INTERVAL '30 days'
+				SELECT AVG(CASE WHEN da.status = 'present' THEN 1 ELSE 0 END) * 100
+				FROM driver_attendance da
+				WHERE da.driver_id = d.id
+				  AND da.attendance_date >= CURRENT_DATE - INTERVAL '30 days'
 			), 0) as attendance_rate
 		FROM drivers d
 		LEFT JOIN trips t ON d.id = t.driver_id AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
 		WHERE d.id = $1 AND d.deleted_at IS NULL
-		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score, d.attendance_records`
+		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score`
 
 	var analytics models.DriverAnalytics
 	start := time.Now()
@@ -895,508 +1122,3 @@ func (r *DriverRepository) CreateAuditLog(ctx context.Context, audit *models.Dri
 }
 
 // GetAuditLogs retrieves audit logs for a driver
-func (r *DriverRepository) GetAuditLogs(ctx context.Context, filter models.AuditLogFilter) ([]*models.DriverAuditLog, int, error) {
-	baseQuery := `
-		SELECT id, driver_id, org_id, action, old_value, new_value,
-		       user_id, user_type, user_email, reason, metadata,
-		       ip_address, user_agent, created_at
-		FROM driver_audit_logs
-		WHERE 1=1`
-
-	countQuery := `SELECT COUNT(*) FROM driver_audit_logs WHERE 1=1`
-
-	var conditions []string
-	var args []interface{}
-	argIndex := 1
-
-	if filter.DriverID != nil {
-		conditions = append(conditions, fmt.Sprintf("driver_id = $%d", argIndex))
-		args = append(args, filter.DriverID)
-		argIndex++
-	}
-
-	if filter.OrgID != uuid.Nil {
-		conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIndex))
-		args = append(args, filter.OrgID)
-		argIndex++
-	}
-
-	if filter.Action != "" {
-		conditions = append(conditions, fmt.Sprintf("action = $%d", argIndex))
-		args = append(args, filter.Action)
-		argIndex++
-	}
-
-	if filter.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("user_id = $%d", argIndex))
-		args = append(args, filter.UserID)
-		argIndex++
-	}
-
-	if filter.UserType != "" {
-		conditions = append(conditions, fmt.Sprintf("user_type = $%d", argIndex))
-		args = append(args, filter.UserType)
-		argIndex++
-	}
-
-	if filter.FromDate != nil {
-		conditions = append(conditions, fmt.Sprintf("created_at >= $%d", argIndex))
-		args = append(args, filter.FromDate)
-		argIndex++
-	}
-
-	if filter.ToDate != nil {
-		conditions = append(conditions, fmt.Sprintf("created_at <= $%d", argIndex))
-		args = append(args, filter.ToDate)
-		argIndex++
-	}
-
-	// Build WHERE clause
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = " AND " + strings.Join(conditions, " AND ")
-	}
-
-	// Count
-	var totalCount int
-	countSQL := countQuery + whereClause
-	start := time.Now()
-	err := r.db.QueryRow(ctx, countSQL, args...).Scan(&totalCount)
-	metrics.RecordDBQuery(countSQL, time.Since(start))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to count audit logs: %w", err)
-	}
-
-	// List
-	page := filter.Page
-	if page < 1 {
-		page = 1
-	}
-	pageSize := filter.PageSize
-	if pageSize < 1 {
-		pageSize = 50
-	}
-	if pageSize > 100 {
-		pageSize = 100
-	}
-
-	offset := (page - 1) * pageSize
-	limitClause := fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-	args = append(args, pageSize, offset)
-
-	listSQL := baseQuery + whereClause + limitClause
-
-	queryStart := time.Now()
-	rows, err := r.db.Query(ctx, listSQL, args...)
-	metrics.RecordDBQuery(listSQL, time.Since(queryStart))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to query audit logs: %w", err)
-	}
-	defer rows.Close()
-
-	var audits []*models.DriverAuditLog
-	for rows.Next() {
-		audit := &models.DriverAuditLog{}
-		var oldValueJSON, newValueJSON, metadataJSON []byte
-
-		err := rows.Scan(
-			&audit.ID, &audit.DriverID, &audit.OrgID, &audit.Action,
-			&oldValueJSON, &newValueJSON, &audit.UserID, &audit.UserType,
-			&audit.UserEmail, &audit.Reason, &metadataJSON,
-			&audit.IPAddress, &audit.UserAgent, &audit.CreatedAt,
-		)
-		if err != nil {
-			return nil, 0, fmt.Errorf("failed to scan audit log: %w", err)
-		}
-
-		// Parse JSON fields
-		if len(oldValueJSON) > 0 {
-			if err := json.Unmarshal(oldValueJSON, &audit.OldValue); err != nil {
-				return nil, 0, fmt.Errorf("failed to unmarshal old value: %w", err)
-			}
-		}
-		if len(newValueJSON) > 0 {
-			if err := json.Unmarshal(newValueJSON, &audit.NewValue); err != nil {
-				return nil, 0, fmt.Errorf("failed to unmarshal new value: %w", err)
-			}
-		}
-		if len(metadataJSON) > 0 {
-			if err := json.Unmarshal(metadataJSON, &audit.Metadata); err != nil {
-				return nil, 0, fmt.Errorf("failed to unmarshal metadata: %w", err)
-			}
-		}
-
-		audits = append(audits, audit)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("audit log iteration error: %w", err)
-	}
-
-	return audits, totalCount, nil
-}
-
-// LogDriverCreation logs driver creation
-func (r *DriverRepository) LogDriverCreation(ctx context.Context, driver *models.Driver, userID uuid.UUID, userEmail string) error {
-	audit := &models.DriverAuditLog{
-		DriverID:  uuid.MustParse(driver.ID),
-		OrgID:     uuid.MustParse(driver.OrgID),
-		Action:    string(models.ActionDriverCreated),
-		NewValue:  map[string]interface{}{"driver": driver},
-		UserID:    userID,
-		UserType:  "admin",
-		UserEmail: userEmail,
-		CreatedAt: time.Now(),
-	}
-	return r.CreateAuditLog(ctx, audit)
-}
-
-// LogDriverStatusChange logs driver status change
-func (r *DriverRepository) LogDriverStatusChange(ctx context.Context, driverID, orgID uuid.UUID, oldStatus, newStatus string, userID uuid.UUID, userEmail, reason string) error {
-	audit := &models.DriverAuditLog{
-		DriverID:  driverID,
-		OrgID:     orgID,
-		Action:    string(models.ActionDriverStatusChanged),
-		OldValue:  map[string]interface{}{"status": oldStatus},
-		NewValue:  map[string]interface{}{"status": newStatus},
-		UserID:    userID,
-		UserType:  "admin",
-		UserEmail: userEmail,
-		Reason:    reason,
-		CreatedAt: time.Now(),
-	}
-	return r.CreateAuditLog(ctx, audit)
-}
-
-// LogBehaviorScoreChange logs behavior score update
-func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
-	audit := &models.DriverAuditLog{
-		DriverID:  driverID,
-		OrgID:     orgID,
-		Action:    string(models.ActionDriverBehaviorScoreUpdated),
-		OldValue:  map[string]interface{}{"score": oldScore},
-		NewValue:  map[string]interface{}{"score": newScore},
-		UserID:    userID,
-		UserType:  "admin",
-		UserEmail: userEmail,
-		Reason:    reason,
-		Metadata:  map[string]interface{}{"event_type": eventType},
-		CreatedAt: time.Now(),
-	}
-	return r.CreateAuditLog(ctx, audit)
-}
-
-// EndDutyStatusLog ends a duty status log
-func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
-	query := `
-		UPDATE duty_status_logs
-		SET ended_at = NOW(),
-		    duration_minutes = $2,
-		    updated_at = NOW()
-		WHERE id = $1
-	`
-
-	start := time.Now()
-	result, err := r.db.Exec(ctx, query, logID, durationMinutes)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return fmt.Errorf("failed to end duty status log: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
-		return pgx.ErrNoRows
-	}
-
-	return nil
-}
-
-// GetDutyStatusLogs retrieves duty status logs for a driver within a time range
-func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
-	query := `
-		SELECT id, driver_id, status, location, started_at, ended_at, 
-			   duration_minutes, remarks, created_at, updated_at
-		FROM duty_status_logs
-		WHERE driver_id = $1 AND started_at >= $2 AND started_at <= $3
-		ORDER BY started_at ASC`
-
-	fmt.Printf("[DEBUG GetDutyStatusLogs] Fetching logs for driver %s between %v and %v\n", driverID, startDate, endDate)
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		fmt.Printf("[DEBUG GetDutyStatusLogs] Error querying: %v\n", err)
-		return nil, fmt.Errorf("failed to query duty status logs: %w", err)
-	}
-	defer rows.Close()
-
-	var logs []*models.DutyStatusLog
-	for rows.Next() {
-		var log models.DutyStatusLog
-		var locationJSON []byte
-		var endedAt *time.Time
-		var durationMinutes *int
-		var remarks *string
-
-		err := rows.Scan(
-			&log.ID, &log.DriverID, &log.Status, &locationJSON, &log.StartedAt,
-			&endedAt, &durationMinutes, &remarks, &log.CreatedAt, &log.UpdatedAt,
-		)
-		if err != nil {
-			fmt.Printf("[DEBUG GetDutyStatusLogs] Error scanning row: %v\n", err)
-			return nil, fmt.Errorf("failed to scan duty status log: %w", err)
-		}
-		log.EndedAt = endedAt
-		log.DurationMinutes = durationMinutes
-		if remarks != nil {
-			log.Remarks = *remarks
-		}
-
-		if len(locationJSON) > 0 {
-			json.Unmarshal(locationJSON, &log.Location)
-		}
-		logs = append(logs, &log)
-		fmt.Printf("[DEBUG GetDutyStatusLogs] Found log: Status=%s StartedAt=%v Duration=%v\n", log.Status, log.StartedAt, driveDurationStr(log.DurationMinutes))
-	}
-
-	fmt.Printf("[DEBUG GetDutyStatusLogs] Total logs found: %d\n", len(logs))
-	return logs, nil
-}
-
-func driveDurationStr(d *int) string {
-	if d == nil {
-		return "nil"
-	}
-	return fmt.Sprintf("%d", *d)
-}
-func (r *DriverRepository) GetDriversWithExpiringDocuments(ctx context.Context, days int) ([]*models.Driver, error) {
-	query := `
-		SELECT id, org_id, full_name, email, license_number, license_expiry
-		FROM drivers
-		WHERE license_expiry <= $1 AND status = 'active' AND deleted_at IS NULL`
-
-	expiryDate := time.Now().AddDate(0, 0, days)
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, expiryDate)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var drivers []*models.Driver
-	for rows.Next() {
-		var d models.Driver
-		err := rows.Scan(&d.ID, &d.OrgID, &d.FullName, &d.Email, &d.LicenseNumber, &d.LicenseExpiry)
-		if err != nil {
-			return nil, err
-		}
-		drivers = append(drivers, &d)
-	}
-	return drivers, nil
-}
-
-// ==========================
-// Attendance methods
-// ==========================
-
-// CreateAttendance inserts a new attendance record
-func (r *DriverRepository) CreateAttendance(ctx context.Context, att *models.DriverAttendance) error {
-	query := `
-		INSERT INTO driver_attendance (
-			id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id, created_at, updated_at
-	`
-	now := time.Now()
-	if att.ID == uuid.Nil {
-		att.ID = uuid.New()
-	}
-	if att.CreatedAt.IsZero() {
-		att.CreatedAt = now
-	}
-	att.UpdatedAt = now
-
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query,
-		att.ID, att.DriverID, att.OrgID, att.AttendanceDate, att.Status, att.CheckInTime, att.CheckOutTime, att.Remarks, att.CreatedAt, att.UpdatedAt,
-	).Scan(&att.ID, &att.CreatedAt, &att.UpdatedAt)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// GetAttendanceByID retrieves attendance by ID
-func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error) {
-	query := `
-		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
-		FROM driver_attendance WHERE id = $1
-	`
-	att := &models.DriverAttendance{}
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&att.ID, &att.DriverID, &att.OrgID, &att.AttendanceDate, &att.Status, &att.CheckInTime, &att.CheckOutTime, &att.Remarks, &att.CreatedAt, &att.UpdatedAt,
-	)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return att, nil
-}
-
-// GetAttendanceByDriver retrieves attendance records for a driver within a date range
-func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
-	query := `
-		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at, updated_at
-		FROM driver_attendance
-		WHERE driver_id = $1 AND org_id = $2 AND attendance_date >= $3 AND attendance_date <= $4
-		ORDER BY attendance_date DESC
-	`
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, driverID, orgID, from, to)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var attendances []*models.DriverAttendance
-	for rows.Next() {
-		var att models.DriverAttendance
-		err := rows.Scan(
-			&att.ID, &att.DriverID, &att.OrgID, &att.AttendanceDate, &att.Status,
-			&att.CheckInTime, &att.CheckOutTime, &att.Remarks, &att.CreatedAt, &att.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		attendances = append(attendances, &att)
-	}
-	return attendances, nil
-}
-
-// UpdateCheckOut updates check-out time and remarks for an attendance record
-func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
-	query := `
-		UPDATE driver_attendance
-		SET check_out_time = $3, remarks = $4, updated_at = NOW()
-		WHERE id = $1 AND org_id = $2
-		RETURNING updated_at
-	`
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id, orgID, checkOut, remarks).Scan()
-	metrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// ==========================
-// Schedule methods
-// ==========================
-
-// CreateSchedule inserts a new driver schedule
-func (r *DriverRepository) CreateSchedule(ctx context.Context, sch *models.DriverSchedule) error {
-	query := `
-		INSERT INTO driver_schedules (
-			id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, created_at, updated_at
-	`
-	now := time.Now()
-	if sch.ID == uuid.Nil {
-		sch.ID = uuid.New()
-	}
-	if sch.CreatedAt.IsZero() {
-		sch.CreatedAt = now
-	}
-	sch.UpdatedAt = now
-
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query,
-		sch.ID, sch.DriverID, sch.OrgID, sch.DayOfWeek, sch.StartTime, sch.EndTime, sch.IsWorking, sch.CreatedAt, sch.UpdatedAt,
-	).Scan(&sch.ID, &sch.CreatedAt, &sch.UpdatedAt)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// GetScheduleByID retrieves a schedule by ID
-func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error) {
-	query := `
-		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
-		FROM driver_schedules WHERE id = $1
-	`
-	sch := &models.DriverSchedule{}
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&sch.ID, &sch.DriverID, &sch.OrgID, &sch.DayOfWeek, &sch.StartTime, &sch.EndTime, &sch.IsWorking, &sch.CreatedAt, &sch.UpdatedAt,
-	)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return sch, nil
-}
-
-// GetSchedulesByDriver retrieves all schedules for a driver
-func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
-	query := `
-		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
-		FROM driver_schedules
-		WHERE driver_id = $1 AND org_id = $2
-		ORDER BY day_of_week ASC
-	`
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, driverID, orgID)
-	metrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var schedules []*models.DriverSchedule
-	for rows.Next() {
-		var sch models.DriverSchedule
-		err := rows.Scan(
-			&sch.ID, &sch.DriverID, &sch.OrgID, &sch.DayOfWeek, &sch.StartTime, &sch.EndTime, &sch.IsWorking, &sch.CreatedAt, &sch.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		schedules = append(schedules, &sch)
-	}
-	return schedules, nil
-}
-
-// UpdateSchedule updates an existing schedule
-func (r *DriverRepository) UpdateSchedule(ctx context.Context, sch *models.DriverSchedule) error {
-	query := `
-		UPDATE driver_schedules SET
-			day_of_week = $3, start_time = $4, end_time = $5, is_working = $6, updated_at = NOW()
-		WHERE id = $1 AND org_id = $2
-		RETURNING updated_at
-	`
-	start := time.Now()
-	err := r.db.QueryRow(ctx, query,
-		sch.ID, sch.OrgID, sch.DayOfWeek, sch.StartTime, sch.EndTime, sch.IsWorking,
-	).Scan()
-	metrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// DeleteSchedule removes a schedule
-func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
-	query := "DELETE FROM driver_schedules WHERE id = $1 AND org_id = $2"
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, id, orgID)
-	metrics.RecordDBQuery(query, time.Since(start))
-	return err
-}

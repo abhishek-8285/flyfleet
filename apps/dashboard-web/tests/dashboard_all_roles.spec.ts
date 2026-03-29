@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-const defaultPassword = process.env.TEST_PASSWORD || process.env.DEFAULT_PASSWORD || "change-me-in-test-env";
+// Require TEST_PASSWORD to be set - fail fast if not configured
+if (!process.env.TEST_PASSWORD) {
+  throw new Error("TEST_PASSWORD environment variable must be set for E2E tests");
+}
+
+const defaultPassword = process.env.TEST_PASSWORD;
 const roles = [
   { role: "super_admin", email: "admin@flyfleet.com", password: defaultPassword, dashboard: "/admin/dashboard" },
   { role: "org_admin", email: "org_admin@delta.io", password: defaultPassword, dashboard: "/admin/dashboard" },

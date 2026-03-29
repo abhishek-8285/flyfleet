@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/emergency"
@@ -520,6 +521,75 @@ func (s *EmergencyService) ListActiveIncidents(ctx context.Context, orgID uuid.U
 
 func (s *EmergencyService) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
 	return s.repo.GetEmergencyContacts(ctx, orgID)
+}
+
+// CreateContact adds a new emergency contact for the organization
+func (s *EmergencyService) CreateContact(ctx context.Context, contact *models.EmergencyContact) error {
+	// Validate required fields
+	if contact.ID == uuid.Nil {
+		contact.ID = uuid.New()
+	}
+
+	return s.repo.CreateContact(ctx, contact)
+}
+
+// IncidentSearchParams defines search criteria for incidents
+type IncidentSearchParams struct {
+	Status       *models.SOSStatus
+	Severity     *models.SOSSeverity
+	IncidentType *models.IncidentType
+	StartDate    *time.Time
+	EndDate      *time.Time
+	Query        *string
+}
+
+// SearchIncidents searches for incidents with optional filters
+func (s *EmergencyService) SearchIncidents(ctx context.Context, orgID uuid.UUID, params IncidentSearchParams) ([]models.SOSIncident, error) {
+	// Get all active incidents for the org (could be optimized with proper repo search later)
+	incidents, err := s.repo.GetActiveIncidentsByOrg(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply filters client-side for now (can move to repo later for efficiency)
+	var filtered []models.SOSIncident
+	for _, inc := range incidents {
+		// Filter by status if specified
+		if params.Status != nil && inc.Status != *params.Status {
+			continue
+		}
+		// Filter by severity if specified
+		if params.Severity != nil && inc.Severity != *params.Severity {
+			continue
+		}
+		// Filter by incident type if specified
+		if params.IncidentType != nil && inc.IncidentType != *params.IncidentType {
+			continue
+		}
+		// Filter by date range if specified
+		if params.StartDate != nil && inc.Timestamp.Before(*params.StartDate) {
+			continue
+		}
+		if params.EndDate != nil && inc.Timestamp.After(*params.EndDate) {
+			continue
+		}
+		// Text search in location address
+		if params.Query != nil && *params.Query != "" {
+			query := strings.ToLower(*params.Query)
+			match := false
+			if inc.LocationAddress != nil && strings.Contains(strings.ToLower(*inc.LocationAddress), query) {
+				match = true
+			}
+			// Could also search in metadata, feedback, etc.
+			if !match {
+				continue
+			}
+		}
+
+		filtered = append(filtered, inc)
+	}
+
+	return filtered, nil
 }
 
 func (s *EmergencyService) GetTimeline(ctx context.Context, incidentID uuid.UUID) ([]models.IncidentTimeline, error) {

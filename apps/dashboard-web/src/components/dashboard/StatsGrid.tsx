@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useUIStrings } from "../../hooks/useUIStrings";
+import { StatCard } from "../animated/AnimatedCard";
+import { AnimatedNumber } from "../animated/AnimatedNumber";
+import { motion } from "framer-motion";
 
 interface StatsGridProps {
   stats: {
@@ -13,6 +16,7 @@ interface StatsGridProps {
       trips: number;
       alerts: number;
       drivers?: number;
+      [key: string]: number | undefined;
     };
     metadata?: {
       stats_sources?: {
@@ -20,10 +24,21 @@ interface StatsGridProps {
         active_trips?: string;
         online_drivers?: string;
         active_alerts?: string;
+        [key: string]: string | undefined;
       };
     };
   };
 }
+
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
 
 export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
   const { uiStrings } = useUIStrings("comp_dashboard");
@@ -32,109 +47,104 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
   const getTrendIcon = (val: number) =>
     val >= 0 ? "trending_up" : "trending_down";
 
-  return (
-    <div className="col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Live Vehicles Card */}
-      <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
-        <div className="flex justify-between items-start z-10 relative">
-          <div className="tooltip-trigger relative">
-            <div className="flex items-center gap-1 mb-1">
-              <p className="text-text-muted text-sm font-medium">
-                {uiStrings?.label_active_vehicles || "Live Vehicles"}
-              </p>
-              <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">
-                info
-              </span>
-            </div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">
-              {stats.total_vehicles}
-            </h3>
-          </div>
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
-            <span className="material-symbols-outlined">directions_bus</span>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center text-sm">
-          <span
-            className={`${getTrendColor(stats.trends?.vehicles ?? 0)} font-medium flex items-center gap-1`}
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              {getTrendIcon(stats.trends?.vehicles ?? 0)}
+  // Check for reduced motion preference
+  const [shouldAnimate, setShouldAnimate] = React.useState(true);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setShouldAnimate(!mediaQuery.matches);
+    const handleChange = (e: MediaQueryListEvent) => {
+      setShouldAnimate(!e.matches);
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  const StatCardContent = ({ titleKey, value, trendKey, sourceKey, icon, badge }: any) => (
+    <>
+      <div className="flex justify-between items-start z-10 relative">
+        <div className="tooltip-trigger relative">
+          <div className="flex items-center gap-1 mb-1">
+            <p className="text-text-muted text-sm font-medium">
+              {titleKey}
+            </p>
+            <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">
+              info
             </span>
-            {Math.abs(stats.trends?.vehicles ?? 0)}%
-          </span>
-          <span className="text-[#64748b] ml-2">vs last week</span>
+          </div>
+          <h3 className="text-3xl font-bold text-white tracking-tight">
+            {shouldAnimate ? (
+              <AnimatedNumber value={value} duration={1500} />
+            ) : (
+              value.toLocaleString()
+            )}
+          </h3>
         </div>
-        <div className="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
-          <span>
-            Source:{" "}
-            {stats.metadata?.stats_sources?.total_vehicles ||
-              "Live IoT Gateway"}
-          </span>
-          <span className="text-emerald-500/80">Active</span>
+        <div className={`p-2 ${badge} rounded-lg`}>
+          <span className="material-symbols-outlined">{icon}</span>
         </div>
       </div>
+      <div className="mt-4 flex items-center text-sm">
+        <span
+          className={`${getTrendColor(stats.trends?.[trendKey] ?? 0)} font-medium flex items-center gap-1`}
+        >
+          <span className="material-symbols-outlined text-[16px]">
+            {getTrendIcon(stats.trends?.[trendKey] ?? 0)}
+          </span>
+          {Math.abs(stats.trends?.[trendKey] ?? 0)}%
+        </span>
+        <span className="text-[#64748b] ml-2">vs last week</span>
+      </div>
+      <div className="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
+        <span>
+          Source:{" "}
+          {stats.metadata?.stats_sources?.[sourceKey] || "Live System"}
+        </span>
+        <span className="text-emerald-500/80">Active</span>
+      </div>
+    </>
+  );
+
+  return (
+    <motion.div
+      className="col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      {/* Live Vehicles Card */}
+      <StatCard data-testid="stat-card-vehicles">
+        <StatCardContent
+          titleKey={uiStrings?.label_active_vehicles || "Live Vehicles"}
+          value={stats.total_vehicles}
+          trendKey="vehicles"
+          sourceKey="total_vehicles"
+          icon="directions_bus"
+          badge="bg-primary/10 text-primary"
+        />
+      </StatCard>
 
       {/* Active Trips Card */}
-      <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
-        <div className="flex justify-between items-start z-10 relative">
-          <div className="tooltip-trigger relative">
-            <div className="flex items-center gap-1 mb-1">
-              <p className="text-text-muted text-sm font-medium">
-                {uiStrings?.label_active_trips || "Active Trips"}
-              </p>
-              <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">
-                info
-              </span>
-            </div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">
-              {stats.active_trips}
-            </h3>
-          </div>
-          <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
-            <span className="material-symbols-outlined">route</span>
-          </div>
-        </div>
-        <div className="mt-4 flex items-center text-sm">
-          <span
-            className={`${getTrendColor(stats.trends?.trips ?? 0)} font-medium flex items-center gap-1`}
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              {getTrendIcon(stats.trends?.trips ?? 0)}
-            </span>
-            {Math.abs(stats.trends?.trips ?? 0)}%
-          </span>
-          <span className="text-[#64748b] ml-2">vs last week</span>
-        </div>
-        <div className="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
-          <span>
-            Source:{" "}
-            {stats.metadata?.stats_sources?.active_trips || "Routing Engine v4"}
-          </span>
-          <span className="text-text-muted">Live</span>
-        </div>
-      </div>
+      <StatCard data-testid="stat-card-trips">
+        <StatCardContent
+          titleKey={uiStrings?.label_active_trips || "Active Trips"}
+          value={stats.active_trips}
+          trendKey="trips"
+          sourceKey="active_trips"
+          icon="route"
+          badge="bg-purple-500/10 text-purple-500"
+        />
+      </StatCard>
 
       {/* Drivers Card */}
-      <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
-        <div className="flex justify-between items-start z-10 relative">
-          <div className="tooltip-trigger relative">
-            <div className="flex items-center gap-1 mb-1">
-              <p className="text-text-muted text-sm font-medium">
-                {uiStrings?.label_active_drivers || "Active Drivers"}
-              </p>
-              <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">
-                info
-              </span>
-            </div>
-            <h3 className="text-3xl font-bold text-white tracking-tight">
-              {stats.online_drivers ?? 0}
-            </h3>
-          </div>
-          <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500">
-            <span className="material-symbols-outlined">person</span>
-          </div>
-        </div>
+      <StatCard data-testid="stat-card-drivers">
+        <StatCardContent
+          titleKey={uiStrings?.label_active_drivers || "Active Drivers"}
+          value={stats.online_drivers ?? 0}
+          trendKey="drivers"
+          sourceKey="online_drivers"
+          icon="person"
+          badge="bg-blue-500/10 text-blue-500"
+        />
         <div className="mt-4 flex items-center text-sm">
           <span className="text-white font-medium">
             {stats.total_drivers ?? 0}
@@ -148,40 +158,41 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
           </span>
           <span className="text-text-muted">Synced</span>
         </div>
-      </div>
+      </StatCard>
 
       {/* Active Alerts Card */}
-      <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
-        <div className="flex justify-between items-start z-10 relative">
-          <div className="w-full">
-            <div className="flex justify-between items-start w-full">
-              <div className="tooltip-trigger relative">
-                <div className="flex items-center gap-1 mb-1 cursor-help">
-                  <p className="text-text-muted text-sm font-medium">
-                    {uiStrings?.label_alerts || "Critical Alerts"}
-                  </p>
-                  <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary">
-                    info
-                  </span>
-                </div>
-              </div>
-              <div className="p-2 bg-red-500/10 rounded-lg text-red-500">
-                <span className="material-symbols-outlined">warning</span>
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <h3 className="text-3xl font-bold text-white tracking-tight">
-                {stats.active_alerts}
-              </h3>
-              <span
-                className={`${getTrendColor(-(stats.trends?.alerts ?? 0))} text-xs font-medium`}
-              >
-                {(stats.trends?.alerts ?? 0) < 0 ? "↓" : "↑"}{" "}
-                {Math.abs(stats.trends?.alerts ?? 0)}%
-              </span>
-            </div>
+      <StatCard
+        data-testid="stat-card-alerts"
+        whileHover={{
+          y: -6,
+          boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.2)',
+          borderColor: 'rgba(239, 68, 68, 0.4)'
+        }}
+      >
+        <StatCardContent
+          titleKey={uiStrings?.label_alerts || "Critical Alerts"}
+          value={stats.active_alerts}
+          trendKey="alerts"
+          sourceKey="active_alerts"
+          icon="warning"
+          badge="bg-red-500/10 text-red-500"
+        >
+          <div className="flex items-baseline gap-2 mt-1">
+            <h3 className="text-3xl font-bold text-white tracking-tight">
+              {shouldAnimate ? (
+                <AnimatedNumber value={stats.active_alerts} duration={1500} />
+              ) : (
+                stats.active_alerts
+              )}
+            </h3>
+            <span
+              className={`${getTrendColor(-(stats.trends?.alerts ?? 0))} text-xs font-medium`}
+            >
+              {(stats.trends?.alerts ?? 0) < 0 ? "↓" : "↑"}{" "}
+              {Math.abs(stats.trends?.alerts ?? 0)}%
+            </span>
           </div>
-        </div>
+        </StatCardContent>
         <div className="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
           <span>
             Source:{" "}
@@ -191,7 +202,10 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ stats }) => {
             Manage →
           </a>
         </div>
-      </div>
-    </div>
+      </StatCard>
+    </motion.div>
   );
 };
+
+export default StatsGrid;
+

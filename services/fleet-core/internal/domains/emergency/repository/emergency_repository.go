@@ -923,143 +923,25 @@ func (r *emergencyRepository) GetIncidentsCount(ctx context.Context, orgID uuid.
 }
 
 // Phase 4: GetStalledIncidents returns TRIGGERED incidents not updated within stalledFor duration.
-func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
-	cutoff := time.Now().Add(-stalledFor)
-	query := `
-		SELECT id, vehicle_id, driver_id, org_id, status, severity, incident_type, latitude, longitude,
-		       simulation_mode, created_at, updated_at
-		FROM sos_incidents
-		WHERE status = 'TRIGGERED' AND updated_at < $1
-		ORDER BY updated_at ASC
-		LIMIT 50
-	`
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, cutoff)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	var incidents []models.SOSIncident
-	for rows.Next() {
-		var inc models.SOSIncident
-		if err := rows.Scan(&inc.ID, &inc.VehicleID, &inc.DriverID, &inc.OrgID, &inc.Status, &inc.Severity,
-			&inc.IncidentType, &inc.Latitude, &inc.Longitude, &inc.SimulationMode,
-			&inc.CreatedAt, &inc.UpdatedAt); err != nil {
-			continue
-		}
-		incidents = append(incidents, inc)
-	}
-	return incidents, nil
-}
-
-// Phase 3: EnqueueDeviceEvent stores a pending SOS event for later delivery.
-func (r *emergencyRepository) EnqueueDeviceEvent(ctx context.Context, vehicleID uuid.UUID, eventType string, payload []byte) error {
-	query := `
-		INSERT INTO device_event_queue (vehicle_id, event_type, payload, next_retry_at)
-		VALUES ($1, $2, $3, NOW())
-	`
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, vehicleID, eventType, payload)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// Phase 3: GetPendingDeviceEvents retrieves pending events ready for retry.
-func (r *emergencyRepository) GetPendingDeviceEvents(ctx context.Context, limit int) ([]models.DeviceEventQueueItem, error) {
-	query := `
-		SELECT id, vehicle_id, event_type, payload, retry_count, status, created_at, next_retry_at
-		FROM device_event_queue
-		WHERE status = 'PENDING' AND next_retry_at <= NOW()
-		ORDER BY next_retry_at ASC
-		LIMIT $1
-	`
-	start := time.Now()
-	rows, err := r.db.Query(ctx, query, limit)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var items []models.DeviceEventQueueItem
-	for rows.Next() {
-		var item models.DeviceEventQueueItem
-		if err := rows.Scan(&item.ID, &item.VehicleID, &item.EventType, &item.Payload,
-			&item.RetryCount, &item.Status, &item.CreatedAt, &item.NextRetryAt); err != nil {
-			continue
-		}
-		items = append(items, item)
-	}
-	return items, nil
-}
-
-// Phase 3: MarkDeviceEventDelivered marks a queued event as delivered.
-func (r *emergencyRepository) MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error {
-	query := `UPDATE device_event_queue SET status='DELIVERED' WHERE id=$1`
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, id)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// Phase 3: IncrementDeviceEventRetry increments retry count and schedules next attempt.
-func (r *emergencyRepository) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
-	query := `UPDATE device_event_queue SET retry_count = retry_count + 1, next_retry_at = $2,
-		 status = CASE WHEN retry_count >= 5 THEN 'FAILED' ELSE 'PENDING' END
-		 WHERE id = $1`
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, id, nextRetryAt)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// Phase 2: LogAuthorityDelivery logs an attempt to notify authorities.
-func (r *emergencyRepository) LogAuthorityDelivery(ctx context.Context, log *models.AuthorityDeliveryLog) error {
-	query := `
-		INSERT INTO authority_delivery_logs (id, incident_id, authority_type, delivery_status, response_code, response_body, retry_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, log.ID, log.IncidentID, log.AuthorityType, log.DeliveryStatus, log.ResponseCode, log.ResponseBody, log.RetryCount)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// Phase 2: UpdateAuthorityDelivery updates an existing delivery log entry.
-func (r *emergencyRepository) UpdateAuthorityDelivery(ctx context.Context, id uuid.UUID, status string, responseCode int, responseBody string) error {
-	query := `
-		UPDATE authority_delivery_logs
-		SET delivery_status = $1, response_code = $2, response_body = $3, updated_at = NOW()
-		WHERE id = $4
-	`
-	start := time.Now()
-	_, err := r.db.Exec(ctx, query, status, responseCode, responseBody, id)
-	sharedmetrics.RecordDBQuery(query, time.Since(start))
-	return err
-}
-
-// Phase 5: CreateTimelineEvent logs a new incident timeline event.
+// CreateTimelineEvent creates a new timeline event
 func (r *emergencyRepository) CreateTimelineEvent(ctx context.Context, event *models.TimelineEvent) error {
 	query := `
-		INSERT INTO incident_timeline_events (id, incident_id, event_type, event_data)
-		VALUES ($1, $2, $3, $4)
-	`
+		INSERT INTO timeline_events (id, incident_id, event_type, event_data, created_at)
+		VALUES ($1, $2, $3, $4, $5)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, event.ID, event.IncidentID, event.EventType, event.EventData)
+	_, err := r.db.Exec(ctx, query, event.ID, event.IncidentID, event.EventType, event.EventData, event.CreatedAt)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-// Phase 5: GetTimelineEvents retrieves all timeline events for an incident.
+// GetTimelineEvents retrieves timeline events for an incident
 func (r *emergencyRepository) GetTimelineEvents(ctx context.Context, incidentID uuid.UUID) ([]models.TimelineEvent, error) {
 	query := `
 		SELECT id, incident_id, event_type, event_data, created_at
-		FROM incident_timeline_events
+		FROM timeline_events
 		WHERE incident_id = $1
-		ORDER BY created_at ASC
-	`
+		ORDER BY created_at ASC`
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, incidentID)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
@@ -1070,39 +952,179 @@ func (r *emergencyRepository) GetTimelineEvents(ctx context.Context, incidentID 
 
 	var events []models.TimelineEvent
 	for rows.Next() {
-		var event models.TimelineEvent
-		if err := rows.Scan(&event.ID, &event.IncidentID, &event.EventType, &event.EventData, &event.CreatedAt); err != nil {
-			continue
+		var e models.TimelineEvent
+		if err := rows.Scan(&e.ID, &e.IncidentID, &e.EventType, &e.EventData, &e.CreatedAt); err != nil {
+			return nil, err
 		}
-		events = append(events, event)
+		events = append(events, e)
 	}
 	return events, nil
 }
 
-// Phase 4: GetAuthoritiesByLocation finds authorities covering an incident location using PostGIS.
-func (r *emergencyRepository) GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error) {
+// EnqueueDeviceEvent queues an offline device event for retry
+func (r *emergencyRepository) EnqueueDeviceEvent(ctx context.Context, vehicleID uuid.UUID, eventType string, payload []byte) error {
+	event := &models.DeviceEventQueueItem{
+		ID:          uuid.New(),
+		VehicleID:   vehicleID,
+		EventType:   eventType,
+		Payload:     payload,
+		RetryCount:  0,
+		Status:      "PENDING",
+		CreatedAt:   time.Now(),
+		NextRetryAt: time.Now(),
+	}
 	query := `
-		SELECT id, authority_type, zone_name, contact_number, api_endpoint, priority
-		FROM emergency_authority_zones
-		WHERE ST_Contains(zone_polygon, ST_SetSRID(ST_Point($1, $2), 4326))
-		ORDER BY priority ASC
-	`
+		INSERT INTO device_event_queue (id, vehicle_id, event_type, payload, retry_count, status, created_at, next_retry_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, lng, lat) // Point(lng, lat) for SRID 4326
+	_, err := r.db.Exec(ctx, query,
+		event.ID, event.VehicleID, event.EventType, event.Payload,
+		event.RetryCount, event.Status, event.CreatedAt, event.NextRetryAt,
+	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// GetPendingDeviceEvents retrieves pending device events
+func (r *emergencyRepository) GetPendingDeviceEvents(ctx context.Context, limit int) ([]models.DeviceEventQueueItem, error) {
+	query := `
+		SELECT id, vehicle_id, event_type, payload, retry_count, status, created_at, next_retry_at
+		FROM device_event_queue
+		WHERE status = 'PENDING' AND next_retry_at <= NOW()
+		ORDER BY created_at ASC
+		LIMIT $1`
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, limit)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
-		return nil, fmt.Errorf("failed to query authorities by location: %w", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []models.DeviceEventQueueItem
+	for rows.Next() {
+		var e models.DeviceEventQueueItem
+		if err := rows.Scan(&e.ID, &e.VehicleID, &e.EventType, &e.Payload, &e.RetryCount, &e.Status, &e.CreatedAt, &e.NextRetryAt); err != nil {
+			return nil, err
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
+// MarkDeviceEventDelivered marks a device event as delivered
+func (r *emergencyRepository) MarkDeviceEventDelivered(ctx context.Context, id uuid.UUID) error {
+	query := `UPDATE device_event_queue SET status = 'DELIVERED', updated_at = NOW() WHERE id = $1`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// IncrementDeviceEventRetry increments retry count and sets next retry time
+func (r *emergencyRepository) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
+	query := `UPDATE device_event_queue SET retry_count = retry_count + 1, next_retry_at = $1, updated_at = NOW() WHERE id = $2`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, nextRetryAt, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// GetStalledIncidents returns TRIGGERED incidents not updated within stalledFor duration
+func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
+	query := `
+		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.org_id, i.timestamp, i.latitude, i.longitude,
+			   i.location_address, i.status, i.severity, i.incident_type, i.panic_source, i.speed, i.heading,
+			   i.metadata, i.acknowledged_by, i.resolved_by, i.created_at, i.updated_at
+		FROM sos_incidents i
+		WHERE i.status IN ('TRIGGERED', 'ACKNOWLEDGED')
+		  AND i.updated_at < NOW() - $1
+		ORDER BY i.created_at ASC`
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, stalledFor)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var incidents []models.SOSIncident
+	for rows.Next() {
+		var i models.SOSIncident
+		if err := rows.Scan(
+			&i.ID, &i.VehicleID, &i.DriverID, &i.TripID, &i.DeviceID, &i.OrgID,
+			&i.Timestamp, &i.Latitude, &i.Longitude, &i.LocationAddress,
+			&i.Status, &i.Severity, &i.IncidentType, &i.PanicSource,
+			&i.Speed, &i.Heading, &i.Metadata, &i.AcknowledgedBy, &i.ResolvedBy,
+			&i.CreatedAt, &i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		incidents = append(incidents, i)
+	}
+	return incidents, nil
+}
+
+// GetAuthoritiesByLocation finds emergency response units that could cover the given location
+func (r *emergencyRepository) GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error) {
+	// Simplified: return all active units. In production, this would use geospatial queries.
+	query := `
+		SELECT id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active, type, contact_number, api_endpoint, created_at
+		FROM emergency_response_units
+		WHERE is_active = true
+		ORDER BY RANDOM()`
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, err
 	}
 	defer rows.Close()
 
 	var units []models.EmergencyResponseUnit
 	for rows.Next() {
 		var u models.EmergencyResponseUnit
-		var priority int
-		if err := rows.Scan(&u.ID, &u.Type, &u.Name, &u.ContactNumber, &u.APIEndpoint, &priority); err != nil {
-			continue
+		if err := rows.Scan(
+			&u.ID, &u.OrgID, &u.UnitType, &u.Name, &u.Phone,
+			&u.CoverageCity, &u.CoverageState, &u.IsActive, &u.Type, &u.ContactNumber, &u.APIEndpoint, &u.CreatedAt,
+		); err != nil {
+			return nil, err
 		}
 		units = append(units, u)
 	}
 	return units, nil
+}
+
+// LogAuthorityDelivery records an attempt to notify an emergency authority
+func (r *emergencyRepository) LogAuthorityDelivery(ctx context.Context, log *models.AuthorityDeliveryLog) error {
+	query := `
+		INSERT INTO authority_delivery_logs (id, incident_id, authority_type, delivery_status, response_code, response_body, retry_count, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING created_at, updated_at`
+	start := time.Now()
+	now := time.Now()
+	if log.CreatedAt.IsZero() {
+		log.CreatedAt = now
+	}
+	if log.UpdatedAt.IsZero() {
+		log.UpdatedAt = now
+	}
+	_, err := r.db.Exec(ctx, query,
+		log.ID, log.IncidentID, log.AuthorityType, log.DeliveryStatus, log.ResponseCode,
+		log.ResponseBody, log.RetryCount, log.CreatedAt, log.UpdatedAt,
+	)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+// UpdateAuthorityDelivery updates the status of an authority delivery attempt
+func (r *emergencyRepository) UpdateAuthorityDelivery(ctx context.Context, id uuid.UUID, status string, responseCode int, responseBody string) error {
+	query := `
+		UPDATE authority_delivery_logs
+		SET delivery_status = $1, response_code = $2, response_body = $3, updated_at = NOW()
+		WHERE id = $4`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, status, responseCode, responseBody, id)
+	sharedmetrics.RecordDBQuery(query, time.Since(start))
+	return err
 }

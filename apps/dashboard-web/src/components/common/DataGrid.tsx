@@ -169,7 +169,7 @@ export function DataGrid<T extends { id: string | number }>({
             className="p-2 text-text-muted hover:text-primary transition-colors"
             title={uiStrings?.btn_refresh || "Refresh"}
           >
-            <span className={\`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}\`}>
+            <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>
               {uiStrings?.btn_refresh || "refresh"}
             </span>
           </button>

@@ -143,7 +143,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	if size > 100*1024*1024 && s.nats != nil {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"alert_type":      "LARGE_EXPORT_DETECTED",
-			"organization_id": req.OrganizationID.String(),
+			"org_id": req.OrganizationID.String(),
 			"user_id":         req.RequesterID.String(),
 			"timestamp":       time.Now().Unix(),
 		})

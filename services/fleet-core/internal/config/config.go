@@ -16,6 +16,7 @@ type Config struct {
 	NatsURL                string
 	RedisURL               string
 	LogLevel               string
+	LogFile                string // Path to log file (empty for stdout only)
 	JWTSecret              string
 	AuthServiceURL         string
 	AlertServiceURL        string
@@ -91,6 +92,7 @@ func Load() *Config {
 	v.SetDefault("nats.url", "nats://localhost:4222")
 	v.SetDefault("redis.url", "localhost:6380")
 	v.SetDefault("server.log_level", "info")
+	v.SetDefault("server.log_file", "") // Empty = stdout only
 	// SECURITY FIX: Do NOT set a default for JWT secret - it MUST be provided via env var
 	// v.SetDefault("security.jwt_secret", "") // REMOVED: Insecure default
 	v.SetDefault("services.auth_url", "")
@@ -137,6 +139,7 @@ func Load() *Config {
 	v.BindEnv("nats.url", "NATS_URL")
 	v.BindEnv("redis.url", "REDIS_URL")
 	v.BindEnv("server.log_level", "LOG_LEVEL")
+	v.BindEnv("server.log_file", "LOG_FILE")
 	v.BindEnv("security.jwt_secret", "JWT_SECRET")
 	v.BindEnv("services.auth_url", "AUTH_SERVICE_URL")
 	v.BindEnv("services.alert_url", "ALERT_SERVICE_URL")
@@ -169,6 +172,7 @@ func Load() *Config {
 		NatsURL:                v.GetString("nats.url"),
 		RedisURL:               v.GetString("redis.url"),
 		LogLevel:               v.GetString("server.log_level"),
+		LogFile:                v.GetString("server.log_file"),
 		JWTSecret:              secrets.ResolveSecret(ctx, v.GetString("security.jwt_secret")),
 		AuthServiceURL:         v.GetString("services.auth_url"),
 		AlertServiceURL:        v.GetString("services.alert_url"),

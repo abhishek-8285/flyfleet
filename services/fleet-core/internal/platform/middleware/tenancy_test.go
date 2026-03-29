@@ -6,13 +6,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
 	"github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestTenantContextMiddleware(t *testing.T) {
-	handler := TenantContextMiddleware()
+	logger := zap.NewNop()
+	handler := TenantContextMiddleware(logger)
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -32,6 +35,13 @@ func TestTenantContextMiddleware(t *testing.T) {
 	rr = httptest.NewRecorder()
 	handler(next).ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusForbidden, rr.Code)
+
+	// Case: Super Admin Bypass - should pass without org_id
+	req = httptest.NewRequest("GET", "/", nil)
+	ctx = context.WithValue(req.Context(), ctxkeys.RoleKey, "super_admin")
+	rr = httptest.NewRecorder()
+	handler(next).ServeHTTP(rr, req.WithContext(ctx))
+	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
 func TestGetOrganizationID(t *testing.T) {

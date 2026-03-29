@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -23,11 +24,12 @@ type dataDeletionService struct {
 	repo   repository.GovernanceRepository
 	db     *pgxpool.Pool
 	nats   *nats.Conn
+	redis  *redis.Client
 	logger *zap.Logger
 }
 
-func NewDataDeletionService(repo repository.GovernanceRepository, db *pgxpool.Pool, nats *nats.Conn, logger *zap.Logger) DataDeletionService {
-	return &dataDeletionService{repo: repo, db: db, nats: nats, logger: logger}
+func NewDataDeletionService(repo repository.GovernanceRepository, db *pgxpool.Pool, nats *nats.Conn, redis *redis.Client, logger *zap.Logger) DataDeletionService {
+	return &dataDeletionService{repo: repo, db: db, nats: nats, redis: redis, logger: logger}
 }
 
 func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, requestID uuid.UUID) error {
@@ -60,7 +62,7 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	if delCount > 1 && s.nats != nil {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"alert_type":      "MULTIPLE_DELETIONS_DETECTED",
-			"organization_id": req.OrganizationID.String(),
+			"org_id": req.OrganizationID.String(),
 			"user_id":         req.RequesterID.String(),
 			"timestamp":       time.Now().Unix(),
 		})
@@ -114,15 +116,10 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 		hadError = true
 	}
 
-	// 3. Clean up cached data (e.g., VAHAN verification cache) to prevent PII residuals
-	// Note: In a full implementation, we'd iterate all vehicles associated with this user
-	// and clear related cache entries. For now, we document the need.
-	// TODO: Implement Redis cache cleanup for all user-related cache keys
-	// if s.redis != nil {
-	//     // Example: Delete vehicle verification cache keys
-	//     // keys, _ := s.redis.Keys(ctx, "vahan:verify:*").Result()
-	//     // s.redis.Del(ctx, keys...)
-	// }
+	// 3. Clean up cached data to prevent PII residuals
+	if s.redis != nil {
+		s.cleanupUserCache(ctx, req)
+	}
 
 	// 4. Check if any deletion errors occurred
 	if hadError {
@@ -164,4 +161,91 @@ func (s *dataDeletionService) publishEvent(subject string, data interface{}) {
 	}
 	payload, _ := json.Marshal(data)
 	s.nats.Publish(subject, payload)
+}
+
+// cleanupUserCache removes all Redis cache entries related to the deleted user and their vehicles
+func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.GovernanceRequest) {
+	orgID := req.OrganizationID
+	userID := req.RequesterID
+
+	// Fetch all vehicles associated with this user to target vehicle-specific cache
+	rows, err := s.db.Query(ctx, `
+		SELECT id, registration_number
+		FROM vehicles
+		WHERE driver_id = $1 AND org_id = $2`,
+		userID, orgID,
+	)
+	if err != nil {
+		s.logger.Warn("Failed to query vehicles for cache cleanup", zap.Error(err))
+		return
+	}
+	defer rows.Close()
+
+	type VehicleInfo struct {
+		ID                 uuid.UUID
+		RegistrationNumber string
+	}
+	var vehicles []VehicleInfo
+	for rows.Next() {
+		var v VehicleInfo
+		if err := rows.Scan(&v.ID, &v.RegistrationNumber); err != nil {
+			s.logger.Warn("Failed to scan vehicle", zap.Error(err))
+			continue
+		}
+		vehicles = append(vehicles, v)
+	}
+
+	// Delete cache entries for each vehicle
+	for _, v := range vehicles {
+		// 1. VAHAN verification cache: vahan:verify:{orgID}:{regNumber}
+		vahanKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), v.RegistrationNumber)
+		if err := s.redis.Del(ctx, vahanKey).Err(); err != nil {
+			s.logger.Warn("Failed to delete vahan cache", zap.Error(err), zap.String("key", vahanKey))
+		}
+
+		// 2. Compliance expired insurance flag: compliance:expired_insurance:vehicle:{vehicleID}
+		compKey := fmt.Sprintf("compliance:expired_insurance:vehicle:%s", v.ID.String())
+		if err := s.redis.Del(ctx, compKey).Err(); err != nil {
+			s.logger.Warn("Failed to delete compliance cache", zap.Error(err), zap.String("key", compKey))
+		}
+
+		// 3. Vehicle cache keys pattern: vehicle:{id}:*
+		vehiclePattern := fmt.Sprintf("vehicle:%s:*", v.ID.String())
+		keys, err := s.redis.Keys(ctx, vehiclePattern).Result()
+		if err != nil {
+			s.logger.Warn("Failed to list vehicle cache keys", zap.Error(err), zap.String("pattern", vehiclePattern))
+		} else if len(keys) > 0 {
+			if err := s.redis.Del(ctx, keys...).Err(); err != nil {
+				s.logger.Warn("Failed to delete vehicle cache keys", zap.Error(err), zap.String("pattern", vehiclePattern))
+			}
+		}
+
+		// 4. Analytics vehicle cache: analytics:{orgID}:vehicle:{id}:*
+		analyticsVehPattern := fmt.Sprintf("analytics:%s:vehicle:%s:*", orgID.String(), v.ID.String())
+		keys, err = s.redis.Keys(ctx, analyticsVehPattern).Result()
+		if err != nil {
+			s.logger.Warn("Failed to list analytics vehicle cache keys", zap.Error(err), zap.String("pattern", analyticsVehPattern))
+		} else if len(keys) > 0 {
+			if err := s.redis.Del(ctx, keys...).Err(); err != nil {
+				s.logger.Warn("Failed to delete analytics vehicle cache", zap.Error(err), zap.String("pattern", analyticsVehPattern))
+			}
+		}
+	}
+
+	// 5. Analytics driver cache: analytics:{orgID}:driver:{userID}:*
+	analyticsDrvPattern := fmt.Sprintf("analytics:%s:driver:%s:*", orgID.String(), userID.String())
+	keys, err := s.redis.Keys(ctx, analyticsDrvPattern).Result()
+	if err != nil {
+		s.logger.Warn("Failed to list analytics driver cache keys", zap.Error(err), zap.String("pattern", analyticsDrvPattern))
+	} else if len(keys) > 0 {
+		if err := s.redis.Del(ctx, keys...).Err(); err != nil {
+			s.logger.Warn("Failed to delete analytics driver cache", zap.Error(err), zap.String("pattern", analyticsDrvPattern))
+		}
+	}
+
+	// 6. Driver debounce/cache: driver:{userID}
+	driverKey := fmt.Sprintf("driver:%s", userID.String())
+	if err := s.redis.Del(ctx, driverKey).Err(); err != nil {
+		s.logger.Warn("Failed to delete driver cache key", zap.Error(err), zap.String("key", driverKey))
+	}
 }

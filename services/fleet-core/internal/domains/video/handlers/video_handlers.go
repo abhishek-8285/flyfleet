@@ -845,6 +845,37 @@ func (h *VideoHandler) ListVideoThumbnails(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// RequestClip handles POST /api/v1/video/request
+// It sends a command to the edge device to capture and upload a specific video clip
+func (h *VideoHandler) RequestClip(w http.ResponseWriter, r *http.Request) {
+	// Get tenant ID from context
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
+		return
+	}
+
+	var req models.RequestClipRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Set tenant ID (security: ensure request is scoped to tenant)
+	req.TenantID = tenantID
+
+	if err := h.service.RequestClip(r.Context(), tenantID, &req); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to request clip from device", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted) // 202 Accepted - async operation
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{
+		"status":  "accepted",
+		"message": "Clip request sent to device",
+	})
+}
+
 // RegisterRoutes registers all video API routes
 func (h *VideoHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/streams", func(r chi.Router) {
@@ -886,6 +917,9 @@ func (h *VideoHandler) RegisterRoutes(r chi.Router) {
 		r.Put("/{id}", h.UpdateRetentionPolicy)
 		r.Delete("/{id}", h.DeleteRetentionPolicy)
 	})
+
+	// Device operations
+	r.Post("/request", h.RequestClip)
 }
 
 // --- Helpers ---

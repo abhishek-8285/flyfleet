@@ -1,7 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
 import { AlertCircle, CheckCircle, Info, PlayCircle } from "lucide-react";
 import React from "react";
+import { motion } from "framer-motion";
 import { TimelineEvent } from "../../../store/timelineSlice";
+import { StaggerContainer } from "../../../components/animated/StaggerContainer";
 
 interface ActivityFeedProps {
   events: TimelineEvent[];
@@ -38,24 +40,31 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ events }) => {
             No recent activity
           </div>
         ) : (
-          events.slice(0, 20).map((event) => (
-            <div key={event.id} className="flex gap-4">
-              <div className="mt-1">{getIcon(event.type)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-200 leading-snug">
-                  <span className="font-semibold text-white">
-                    {event.actor || "System"}
-                  </span>{" "}
-                  {event.message}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formatDistanceToNow(new Date(event.timestamp), {
-                    addSuffix: true,
-                  })}
-                </p>
-              </div>
-            </div>
-          ))
+          <StaggerContainer staggerDelay={0.08} maxDelay={0.4}>
+            {events.slice(0, 20).map((event) => (
+              <motion.div
+                key={event.id}
+                whileHover={{ x: 4, backgroundColor: "rgba(255, 255, 255, 0.03)" }}
+                transition={{ duration: 0.2 }}
+                className="flex gap-4 p-2 rounded-lg cursor-pointer"
+              >
+                <div className="mt-1">{getIcon(event.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-200 leading-snug">
+                    <span className="font-semibold text-white">
+                      {event.actor || "System"}
+                    </span>{" "}
+                    {event.message}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatDistanceToNow(new Date(event.timestamp), {
+                      addSuffix: true,
+                    })}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </StaggerContainer>
         )}
       </div>
       <div className="p-3 border-t border-gray-800 bg-gray-950 text-center">

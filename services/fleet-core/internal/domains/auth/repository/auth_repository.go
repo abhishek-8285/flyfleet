@@ -36,7 +36,14 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 	_, _ = r.db.Exec(ctx, "SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)")
 	metrics.RecordDBQuery("SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)", time.Since(start1))
 
-	query := "SELECT id, org_id, email, COALESCE(CAST(role_id AS VARCHAR), role, 'user') as role, password_hash, created_at, created_by, updated_at, updated_by, mfa_enabled, mfa_methods, mfa_secret, last_password_change, failed_login_attempts, locked_until FROM users WHERE email = $1"
+	query := `
+		SELECT u.id, u.org_id, u.email, COALESCE(r.name, u.role, 'user') as role, u.password_hash, 
+		u.created_at, u.created_by, u.updated_at, u.updated_by, u.mfa_enabled, u.mfa_methods, 
+		u.mfa_secret, u.last_password_change, u.failed_login_attempts, u.locked_until 
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.id
+		WHERE u.email = $1
+	`
 
 	start2 := time.Now()
 	var user models.User
@@ -46,6 +53,7 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 		&user.MfaEnabled, &user.MfaMethods, &user.MfaSecret, &user.LastPasswordChange,
 		&user.FailedLoginAttempts, &user.LockedUntil,
 	)
+	r.logger.Info("GetUserByEmail RESULT", zap.String("email", email), zap.String("role", user.Role))
 	metrics.RecordDBQuery(query, time.Since(start2))
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -83,7 +91,14 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *models.User) erro
 }
 
 func (r *AuthRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	query := "SELECT id, org_id, email, COALESCE(CAST(role_id AS VARCHAR), role, 'user') as role, created_at, created_by, updated_at, updated_by, mfa_enabled, mfa_methods, mfa_secret, last_password_change, failed_login_attempts, locked_until FROM users WHERE id = $1"
+	query := `
+		SELECT u.id, u.org_id, u.email, COALESCE(r.name, u.role, 'user') as role, 
+		u.created_at, u.created_by, u.updated_at, u.updated_by, u.mfa_enabled, u.mfa_methods, 
+		u.mfa_secret, u.last_password_change, u.failed_login_attempts, u.locked_until 
+		FROM users u
+		LEFT JOIN roles r ON u.role_id = r.id
+		WHERE u.id = $1
+	`
 
 	start := time.Now()
 	var user models.User
@@ -686,10 +701,10 @@ func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID,
 }
 
 func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error) {
-	query := `SELECT r.id, r.name, r.organization_id, r.description, r.is_system, r.created_at, r.updated_at
+	query := `SELECT r.id, r.name, ur.org_id, r.description, r.is_system, r.created_at, r.updated_at
 			  FROM roles r
 			  JOIN user_roles ur ON r.id = ur.role_id
-			  WHERE ur.user_id = $1 AND ur.organization_id = $2`
+			  WHERE ur.user_id = $1 AND ur.org_id = $2`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, userID, orgID)
@@ -714,7 +729,7 @@ func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUI
 	query := `SELECT DISTINCT p.resource || ':' || p.action
 			  FROM permissions p
 			  JOIN user_roles ur ON p.role_id = ur.role_id
-			  WHERE ur.user_id = $1 AND ur.organization_id = $2`
+			  WHERE ur.user_id = $1 AND ur.org_id = $2`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, userID, orgID)
@@ -744,7 +759,7 @@ func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, 
 				SELECT 1
 				FROM permissions p
 				JOIN user_roles ur ON p.role_id = ur.role_id
-				WHERE ur.user_id = $1 AND ur.organization_id = $2 AND p.resource = $3 AND p.action = $4
+				WHERE ur.user_id = $1 AND ur.org_id = $2 AND p.resource = $3 AND p.action = $4
 			  )`
 	start := time.Now()
 	var exists bool

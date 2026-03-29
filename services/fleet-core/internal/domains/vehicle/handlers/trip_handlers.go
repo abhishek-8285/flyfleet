@@ -43,6 +43,7 @@ func (h *TripHandlers) RegisterRoutes(r chi.Router) {
 
 // ListTrips handles GET /api/v1/trips
 func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("DEBUG: Executing VEHICLE DOMAIN TripHandlers.ListTrips")
 	orgID := h.getOrgID(r)
 
 	query := r.URL.Query()
@@ -252,8 +253,11 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 // Helpers
 func (h *TripHandlers) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
 		}

@@ -62,7 +62,7 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, pl
 	return sub, nil
 }
 
-// ChangePlan handles upgrading or downgrading a subscription
+// ChangePlan handles upgrading or downgrading a subscription with proration
 func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, newPlanID uuid.UUID) (*models.Subscription, error) {
 	sub, err := s.repo.GetSubscription(ctx, orgID)
 	if err != nil {
@@ -76,17 +76,62 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 		return sub, nil
 	}
 
-	// Simple plan switch logic: update plan and reset period
-	// PRORATION TODO: Calculate credit for remaining time on old plan
+	// Fetch old plan details for proration calculation
+	oldPlan, err := s.repo.GetPlan(ctx, sub.PlanID)
+	if err != nil {
+		return nil, err
+	}
+	if oldPlan == nil {
+		return nil, fmt.Errorf("old plan not found")
+	}
+
+	// Calculate proration credit for unused time on old plan
+	now := time.Now().UTC()
+	totalPeriod := sub.CurrentPeriodEnd.Sub(sub.CurrentPeriodStart)
+	remaining := sub.CurrentPeriodEnd.Sub(now)
+
+	var prorationCredit float64 = 0
+	if remaining > 0 && totalPeriod > 0 {
+		fraction := remaining.Hours() / totalPeriod.Hours()
+
+		// Sum monthly price of all FLAT components in old plan
+		var monthlyTotal float64
+		for _, comp := range oldPlan.Components {
+			if comp.Type == models.ComponentFlat {
+				monthlyTotal += comp.UnitPrice
+			}
+		}
+
+		prorationCredit = monthlyTotal * fraction
+		s.logger.Info("Proration credit calculated",
+			zap.String("org_id", orgID.String()),
+			zap.String("old_plan_id", sub.PlanID.String()),
+			zap.Float64("credit_amount", prorationCredit),
+			zap.Float64("fraction", fraction))
+	}
+
+	// Update subscription to new plan
 	sub.PlanID = newPlanID
-	sub.UpdatedAt = time.Now().UTC()
+	sub.UpdatedAt = now
+
+	// Store proration credit in metadata for application to next invoice
+	if sub.Metadata == nil {
+		sub.Metadata = make(map[string]interface{})
+	}
+	sub.Metadata["proration_credit"] = prorationCredit
+	sub.Metadata["proration_calculated_at"] = now.Format(time.RFC3339)
 
 	err = s.repo.UpdateSubscription(ctx, sub)
 	if err != nil {
 		return nil, err
 	}
 
-	s.logger.Info("subscription plan changed", zap.String("org_id", orgID.String()), zap.String("new_plan_id", newPlanID.String()))
+	s.logger.Info("subscription plan changed with proration",
+		zap.String("org_id", orgID.String()),
+		zap.String("old_plan_id", sub.PlanID.String()),
+		zap.String("new_plan_id", newPlanID.String()),
+		zap.Float64("proration_credit", prorationCredit))
+
 	return sub, nil
 }
 

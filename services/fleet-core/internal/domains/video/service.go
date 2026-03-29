@@ -2,12 +2,14 @@ package video
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
 
@@ -28,11 +30,12 @@ type Service interface {
 type service struct {
 	repo    Repository
 	storage VideoStorage
+	nats    *nats.Conn
 	logger  *zap.Logger
 }
 
-func NewService(repo Repository, storage VideoStorage, logger *zap.Logger) Service {
-	return &service{repo: repo, storage: storage, logger: logger}
+func NewService(repo Repository, storage VideoStorage, nats *nats.Conn, logger *zap.Logger) Service {
+	return &service{repo: repo, storage: storage, nats: nats, logger: logger}
 }
 
 // UploadVideo handles the full upload flow:
@@ -203,13 +206,42 @@ func (s *service) RequestClip(ctx context.Context, tenantID uuid.UUID, req Reque
 	if err := ValidateClipRequest(req); err != nil {
 		return err
 	}
-	s.logger.Info("Clip requested from device",
+
+	// Build command payload
+	payload := map[string]interface{}{
+		"tenant_id":    tenantID.String(),
+		"vehicle_id":   req.VehicleID.String(),
+		"camera_id":    req.CameraID.String(),
+		"start_time":   req.StartTime.UTC().Format(time.RFC3339),
+		"end_time":     req.EndTime.UTC().Format(time.RFC3339),
+		"reason":       req.Reason,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		s.logger.Error("Failed to marshal clip request payload", zap.Error(err))
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	// Publish to device command channel
+	subject := "fleet.video.clip.request"
+	if s.nats == nil {
+		s.logger.Warn("NATS not configured, cannot push clip request", zap.String("subject", subject))
+		return errors.New("nats client not configured")
+	}
+
+	if err := s.nats.Publish(subject, data); err != nil {
+		s.logger.Error("Failed to publish clip request to device",
+			zap.Error(err),
+			zap.String("subject", subject),
+			zap.String("vehicle_id", req.VehicleID.String()))
+		return fmt.Errorf("failed to publish to device: %w", err)
+	}
+
+	s.logger.Info("Clip request published to device",
 		zap.String("vehicle_id", req.VehicleID.String()),
 		zap.String("camera_id", req.CameraID.String()),
-		zap.Time("start", req.StartTime),
-		zap.Time("end", req.EndTime),
-		zap.String("reason", req.Reason))
-	// TODO: push to device command channel (MQTT/gRPC)
+		zap.String("subject", subject))
+
 	return nil
 }
 

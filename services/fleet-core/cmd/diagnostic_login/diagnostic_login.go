@@ -86,4 +86,9 @@ func main() {
 	}
 
 	fmt.Printf("Login successful! User ID: %s, Role: %s, MFA Required: %v\n", resp.User.ID, resp.User.Role, resp.MfaRequired)
+	if resp.AccessToken != "" {
+		fmt.Printf("ACCESS_TOKEN=%s\n", resp.AccessToken)
+	} else if resp.TempToken != "" {
+		fmt.Printf("TEMP_TOKEN=%s (MFA required)\n", resp.TempToken)
+	}
 }

@@ -37,7 +37,7 @@ func main() {
 
 	kid := uuid.New().String()
 
-	db, err := sql.Open("postgres", "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}

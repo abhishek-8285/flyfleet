@@ -122,9 +122,9 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		// The `false` flag makes this session-wide, which is cleared explicitly
 		// during AfterRelease.
 		if orgIDStr == "" {
-			_, err = conn.Exec(ctx, "SELECT set_config('app.current_org_id', '', false)")
+			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', '', false)")
 		} else {
-			_, err = conn.Exec(ctx, "SELECT set_config('app.current_org_id', $1, false)", orgIDStr)
+			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', $1, false)", orgIDStr)
 		}
 		if err != nil {
 			log.Printf("Failed to set org ID in connection: %v\n", err)
@@ -170,7 +170,7 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 
 	config.AfterRelease = func(conn *pgx.Conn) bool {
 		// Strictly clear all custom session variables before returning to the pool
-		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('app.current_org_id', '', false)")
+		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_org_id', '', false)")
 		_, errUser := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_user_id', '', false)")
 		_, errRole := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_role', '', false)")
 

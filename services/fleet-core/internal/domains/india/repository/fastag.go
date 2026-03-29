@@ -15,7 +15,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateFASTagTransaction(ctx context.Context, transaction *models.FASTagTransaction) error {
 	query := `
 		INSERT INTO fastag_transactions (
-			id, tag_number, vehicle_id, driver_id, organization_id, transaction_id, transaction_type,
+			id, tag_number, vehicle_id, driver_id, org_id, transaction_id, transaction_type,
 			amount, toll_plaza, toll_plaza_id, lane_id, transaction_time, transaction_date,
 			settlement_date, status, error_code, error_description, reconciled,
 			reconciliation_date, created_at, created_by, updated_at, updated_by
@@ -53,7 +53,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateFASTagTransaction(ctx context.Con
 // GetFASTagTransaction retrieves a FASTag transaction by ID
 func (r *IndiaIntegrationRepositoryImpl) GetFASTagTransaction(ctx context.Context, id string) (*models.FASTagTransaction, error) {
 	query := `
-		SELECT id, tag_number, vehicle_id, driver_id, organization_id, transaction_id, transaction_type,
+		SELECT id, tag_number, vehicle_id, driver_id, org_id, transaction_id, transaction_type,
 		       amount, toll_plaza, toll_plaza_id, lane_id, transaction_time, transaction_date,
 		       settlement_date, status, error_code, error_description, reconciled,
 		       reconciliation_date, created_at, created_by, updated_at, updated_by
@@ -188,7 +188,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListFASTagTransactions(ctx context.Cont
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, tag_number, vehicle_id, driver_id, organization_id, transaction_id, transaction_type,
+		SELECT id, tag_number, vehicle_id, driver_id, org_id, transaction_id, transaction_type,
 		       amount, toll_plaza, toll_plaza_id, lane_id, transaction_time, transaction_date,
 		       settlement_date, status, error_code, error_description, reconciled,
 		       reconciliation_date, created_at, created_by, updated_at, updated_by

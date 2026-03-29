@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/models"
@@ -188,6 +189,14 @@ func (s *drService) processRestore(id uuid.UUID, updatedBy uuid.UUID) {
 	}
 
 	_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusInProgress, "Starting restore process...", updatedBy)
+
+	// SECURITY: Validate backup.S3Key to prevent path traversal or command injection
+	// Expected pattern: alphanumeric, hyphens, underscores, dots (e.g., fleet_db-2026-02-21_19-00-00.sql.gz)
+	if !isValidBackupFilename(backup.S3Key) {
+		s.logger.Error("Invalid backup filename", zap.String("s3_key", backup.S3Key))
+		_ = s.repo.UpdateRestoreJobStatus(ctx, id, models.RestoreStatusFailed, fmt.Sprintf("Invalid backup filename: %s", backup.S3Key), updatedBy)
+		return
+	}
 
 	backupDir := os.Getenv("BACKUP_DIR")
 	if backupDir == "" {
@@ -539,4 +548,16 @@ func (s *drService) GetDRTestSettings(ctx context.Context) (*models.DRTestSettin
 
 func (s *drService) UpdateDRTestSettings(ctx context.Context, settings *models.DRTestSettings) error {
 	return s.repo.UpsertDRTestSettings(ctx, settings)
+}
+
+// isValidBackupFilename validates that the filename contains only safe characters
+// Allowed: alphanumeric, hyphens, underscores, dots (typical backup filename pattern)
+func isValidBackupFilename(filename string) bool {
+	if filename == "" {
+		return false
+	}
+	// Pattern: one or more of these characters: letters, numbers, dash, underscore, dot
+	// Examples: "fleet_db-2026-02-21_19-00-00.sql.gz", "backup-123.sql"
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9._-]+$`, filename)
+	return matched
 }

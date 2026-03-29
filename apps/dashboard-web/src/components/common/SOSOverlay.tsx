@@ -1,5 +1,6 @@
 import { ExclamationTriangleIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 interface SOSAlert {
@@ -11,6 +12,7 @@ interface SOSAlert {
 }
 
 export const SOSOverlay: React.FC = () => {
+  const navigate = useNavigate();
   const { uiStrings } = useUIStrings("comp_sos");
   const [activeAlert, setActiveAlert] = useState<SOSAlert | null>(null);
 
