@@ -6,6 +6,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/chromedp/cdproto v0.0.0-20250724212937-08a3db8b4327
 	github.com/chromedp/chromedp v0.14.2
+	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/fleet-platform/shared v0.0.0
 	github.com/flyfleet/proto v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.12.0
