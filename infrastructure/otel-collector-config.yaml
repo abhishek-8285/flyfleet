@@ -1,0 +1,109 @@
+# OpenTelemetry Collector Configuration
+# Receives data from FlyFleet app and exports to Jaeger, Prometheus, Loki
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:55681
+
+  # Metrics receiver from Prometheus
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'fleet-core'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['fleet-core-service:8084']
+
+  # Logs receiver (from Docker logging driver)
+  filelog:
+    include:
+      - /var/log/containers/*.log
+    include_file_path: true
+    include_file_name: false
+    operators:
+      - type: json_parser
+        id: parser-json
+        parse_from: body
+        parse_to: attributes
+      - type: move
+        from: attributes.log
+        to: attributes["log_level"]
+      - type: move
+        from: attributes.message
+        to: body
+      - type: remove
+        field: attributes.message
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_max_size: 1024
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  resource:
+    attributes:
+      - key: service.name
+        value: flyfleet
+        action: upsert
+      - key: deployment.environment
+        value: ${DEPLOYMENT_ENV:-development}
+        action: upsert
+
+exporters:
+  # Traces to Jaeger
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+  # Metrics to Prometheus
+  prometheus:
+    endpoint: prometheus:9090
+    send_timestamps: true
+    metric_expiration: 180s
+
+  # Logs to Loki
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    labels:
+      attributes:
+        - service.name
+        - deployment.environment
+        - log_level
+    tenant_id: flyfleet
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  telemetry:
+    logs:
+      level: "info"
+    metrics:
+      address: 0.0.0.0:8888
+
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [jaeger]
+
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
+
+    logs:
+      receivers: [otlp, filelog]
+      processors: [memory_limiter, resource, batch]
+      exporters: [loki]

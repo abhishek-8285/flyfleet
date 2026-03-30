@@ -1,0 +1,81 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'flyfleet'
+    environment: 'development'
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # =========================================================================
+  # FlyFleet Application Metrics
+  # =========================================================================
+  - job_name: 'fleet-core'
+    static_configs:
+      - targets: ['fleet-core-service:8084']
+        labels:
+          service: 'fleet-core'
+          component: 'backend'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  - job_name: 'fleet-ml'
+    static_configs:
+      - targets: ['fleet-ml-service:8000']
+        labels:
+          service: 'fleet-ml'
+          component: 'ml'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # =========================================================================
+  # Infrastructure Metrics
+  # =========================================================================
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9100']  # Requires node-exporter running on host
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['fleet-redis:6379']
+    metrics_path: '/metrics'
+
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['fleet-nats:8222']
+    metrics_path: '/varz'
+
+  # =========================================================================
+  # Observability Stack Metrics
+  # =========================================================================
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+
+  - job_name: 'clickhouse'
+    static_configs:
+      - targets: ['clickhouse:9000']
+
+  - job_name: 'vault'
+    static_configs:
+      - targets: ['vault:8200']
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
