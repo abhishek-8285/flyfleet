@@ -260,9 +260,9 @@ func main() {
 	pools, err := database.NewDatabasePools(context.Background(), database.PoolConfig{
 		DatabaseURL: cfg.DatabaseURL,
 		CriticalMax: 25, // Increased for better dev concurrency (auth, emergency, tracking)
-		HighMax:      20, // Reduced from 15
-		MediumMax:    10,  // Reduced from 10
-		LowMax:       10,
+		HighMax:     20, // Reduced from 15
+		MediumMax:   10, // Reduced from 10
+		LowMax:      10,
 	})
 	if err != nil {
 		logger.Fatal("Failed to initialize database pools", zap.Error(err))
@@ -288,9 +288,13 @@ func main() {
 					// Auto Pool Shedding logic
 					if sharedRedisClient != nil {
 						if float64(s.AcquiredConns()) > float64(s.MaxConns())*0.90 {
-							sharedRedisClient.Set(ctx, coremiddleware.PoolSheddingKey, "1", 30*time.Second)
+							if setErr := sharedRedisClient.Set(ctx, coremiddleware.PoolSheddingKey, "1", 30*time.Second).Err(); setErr != nil {
+								logger.Debug("Failed to set pool shedding key", zap.Error(setErr))
+							}
 						} else {
-							sharedRedisClient.Del(ctx, coremiddleware.PoolSheddingKey)
+							if delErr := sharedRedisClient.Del(ctx, coremiddleware.PoolSheddingKey).Err(); delErr != nil {
+								logger.Debug("Failed to delete pool shedding key", zap.Error(delErr))
+							}
 						}
 					}
 				}
@@ -1398,10 +1402,12 @@ func main() {
 		}
 		report := control.AnalyzeOpenAPIPaths(payload.Paths)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"service": "fleet-core-service-legacy",
 			"report":  report,
-		})
+		}); err != nil {
+			logger.Debug("Failed to encode response", zap.Error(err))
+		}
 	})
 	r.Get("/api/control/overview", func(w http.ResponseWriter, req *http.Request) {
 		localRoutes, err := control.LocalRoutes(r)
@@ -1449,7 +1455,7 @@ func main() {
 		report := control.AnalyzeOpenAPIPaths(payload.Paths)
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"service":                   "fleet-core-service-legacy",
 			"local_declared_routes":     len(localRoutes),
 			"local_unique_method_paths": localUnique,
@@ -1460,7 +1466,9 @@ func main() {
 			"upstream_health":           upstreamHealth,
 			"upstream_counts":           upstreamCounts,
 			"combined_duplicate_report": report,
-		})
+		}); err != nil {
+			logger.Debug("Failed to encode response", zap.Error(err))
+		}
 	})
 
 	// 7. Initialize and Start Background Workers
