@@ -1,0 +1,91 @@
+apiVersion: 1
+
+datasources:
+  # Prometheus (Metrics)
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+
+  # Loki (Logs)
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      timeout: 60
+
+  # Jaeger (Traces)
+  - name: Jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: true
+    jsonData:
+      tracesToLogs:
+        datasourceUid: 'Loki'
+        tags: ['job', 'service.name', 'deployment.environment']
+        filterBySpanID: false
+        filterByTraceID: true
+        mapTagNamesEnabled: true
+        mapTagNames:
+          - key: 'service.name'
+            value: 'service'
+          - key: 'deployment.environment'
+            value: 'env'
+      tracesToMetrics:
+        datasourceUid: 'Prometheus'
+        tags: ['job', 'service.name']
+        queries:
+          - name: 'HTTP Request Duration'
+            query: 'http_request_duration_seconds_bucket{le="$BUCKET"}'
+          - name: 'HTTP Request Rate'
+            query: 'rate(http_requests_total[5m])'
+      queries:
+        - name: 'Service Graph'
+          query: 'sum(rate(traces_service_graph_request_total[5m])) by (client, server)'
+
+  # ClickHouse (Analytics)
+  - name: ClickHouse
+    type: grafana-clickhouse-datasource
+    access: proxy
+    url: http://clickhouse:8123
+    database: flyfleet_analytics
+    user: flyfleet
+    secure: false
+    editable: true
+    jsonData:
+      defaultDatabase: flyfleet_analytics
+      port: 8123
+      protocol: http
+      secure: false
+      username: flyfleet
+
+  # OpenSearch (Search)
+  - name: OpenSearch
+    type: elasticsearch
+    access: proxy
+    url: http://opensearch:9200
+    database: flyfleet
+    editable: true
+    jsonData:
+      esVersion: 8
+      timeField: '@timestamp'
+      interval: Daily
+      logMessageField: message
+      logLevelField: log_level
+      dataLinks:
+        - datasourceUid: 'Loki'
+          field: 'trace_id'
+          title: 'View in Loki'
+        - datasourceUid: 'Jaeger'
+          field: 'trace_id'
+          title: 'View in Jaeger'
