@@ -131,3 +131,31 @@ artifacts/
 
 .env.secrets
 pgdata/
+
+# --- Secrets & Tokens ---
+token.txt
+secrets/
+*.pem
+*.key
+
+# --- Database Dumps ---
+dump.rdb
+*.sqlite
+*.db
+
+# --- NATS Data ---
+nats-data/
+
+# --- Build Binaries (root level) ---
+cmd
+create_admin
+fleet-core
+fleet-ml
+
+# --- Extra/Backup Files ---
+*.backup
+*.tmp
+*_extra.go
+
+# --- Test Artifacts ---
+headless_login_test.js
