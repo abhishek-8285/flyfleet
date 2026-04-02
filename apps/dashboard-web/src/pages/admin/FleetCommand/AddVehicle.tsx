@@ -272,6 +272,5 @@ export const AddVehicle: React.FC = () => {
           </form>
         </div>
       </div>
-    </div>
   );
 };
