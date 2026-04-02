@@ -59,6 +59,11 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 		r.Post("/password/reset/confirm", h.ConfirmPasswordReset)
 		r.Post("/resolve-orgs", h.ResolveOrgs)
 		r.With(inviteLimit).Post("/invites/validate", h.ValidateInvite)
+		
+		// Development-only Auto Login
+		if os.Getenv("APP_ENV") == "development" {
+			r.Post("/dev-login", h.DevLogin)
+		}
 
 		// Protected auth endpoints
 		r.Group(func(r chi.Router) {
@@ -168,20 +173,58 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	// SECURITY FIX: Set refresh token as HttpOnly cookie to prevent XSS theft
 	// Access token is returned in body and should be stored in memory only (not localStorage)
-	secure := os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true"
+	isLocalhost := strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, "127.0.0.1")
+	secure := (os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true") && !isLocalhost
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    resp.RefreshToken,
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		HttpOnly: true,
-		Secure:   secure, // Set Secure only in production/HTTPS
-		SameSite: http.SameSiteStrictMode,
+		Secure:   secure, // Set Secure only in production/HTTPS (disabled for localhost)
+		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(7 * 24 * time.Hour), // 7 days
 	})
 
 	// Remove refresh token from JSON response to discourage localStorage storage
 	resp.RefreshToken = ""
 
+	h.json(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) DevLogin(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("APP_ENV") != "development" {
+		h.errorJSON(w, http.StatusForbidden, "dev login only available in development environment")
+		return
+	}
+
+	var req struct {
+		Email string `json:"email"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req) // Ignore errors, use default in service if empty
+
+	resp, err := h.svc.DevLogin(r.Context(), req.Email, "", "")
+	if err != nil {
+		h.logger.Error("dev login failed", zap.Error(err))
+		h.errorJSON(w, http.StatusInternalServerError, "failed to perform dev login")
+		return
+	}
+
+	// Set refresh token cookie (same logic as Login)
+	isLocalhost := strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, "127.0.0.1")
+	secure := (os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true") && !isLocalhost
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    resp.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+	})
+
+	resp.RefreshToken = ""
 	h.json(w, http.StatusOK, resp)
 }
 
@@ -204,19 +247,26 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Determine if we should set Secure flag (production vs localhost)
-	secure := os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true"
+	isLocalhost := strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, "127.0.0.1")
+	secure := (os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true") && !isLocalhost
 
-	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, "", "")
+	// Extract optional organization context from header (used for organization switching)
+	orgID := r.Header.Get("X-Org-ID")
+	if orgID == "" {
+		orgID = r.Header.Get("X-Organization-ID")
+	}
+
+	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, orgID, "", "")
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
 		// Clear invalid refresh cookie
 		http.SetCookie(w, &http.Cookie{
 			Name:     "refresh_token",
 			Value:    "",
-			Path:     "/api/v1/auth",
+			Path:     "/",
 			HttpOnly: true,
 			Secure:   secure,
-			SameSite: http.SameSiteStrictMode,
+			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(-1 * time.Hour),
 		})
 		h.errorJSON(w, http.StatusUnauthorized, "invalid or expired refresh token")
@@ -227,10 +277,10 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    resp.RefreshToken,
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
 
@@ -271,10 +321,10 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(-1 * time.Hour),
 	})
 

@@ -29,7 +29,7 @@ const (
 
 type GovernanceRequest struct {
 	ID                 uuid.UUID               `json:"id" db:"id"`
-	OrganizationID     uuid.UUID               `json:"org_id" db:"org_id"`
+	OrganizationID     uuid.UUID               `json:"org_id" db:"organization_id"`
 	RequesterID        uuid.UUID               `json:"requester_id" db:"requester_id"`
 	RequestType        GovernanceRequestType   `json:"request_type" db:"request_type"`
 	DataScope          string                  `json:"data_scope" db:"data_scope"`
@@ -62,7 +62,7 @@ type GovernanceSettings struct {
 
 type GovernanceAuditLog struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrganizationID uuid.UUID `json:"org_id" db:"org_id"`
+	OrganizationID uuid.UUID `json:"org_id" db:"organization_id"`
 	UserID         uuid.UUID `json:"user_id" db:"user_id"`
 	Action         string    `json:"action" db:"action"`
 	Module         string    `json:"module" db:"module"`
@@ -137,7 +137,7 @@ type ExpiredRequestInfo struct {
 
 type LegalHold struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
-	OrganizationID uuid.UUID  `json:"org_id" db:"org_id"`
+	OrganizationID uuid.UUID  `json:"org_id" db:"organization_id"`
 	EntityType     string     `json:"entity_type" db:"entity_type"`
 	EntityID       uuid.UUID  `json:"entity_id" db:"entity_id"`
 	Reason         string     `json:"reason" db:"reason"`

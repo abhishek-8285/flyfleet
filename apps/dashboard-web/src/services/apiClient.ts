@@ -100,7 +100,12 @@ apiClient.interceptors.response.use(
         const res = await axios.post(
           `${API_URL}/auth/refresh`,
           {}, // empty body
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: {
+              'X-Org-ID': localStorage.getItem('org_id') || '',
+            },
+          }
         );
 
         const newToken = res.data?.token || res.data?.access_token;

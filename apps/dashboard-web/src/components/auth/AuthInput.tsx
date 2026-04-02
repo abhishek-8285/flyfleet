@@ -14,16 +14,16 @@ const AuthInput: React.FC<AuthInputProps> = ({
 }) => {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
+      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wide ml-1">
         {label}
       </label>
       <div className="relative group">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-500 group-focus-within:text-primary transition-colors text-xl">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 group-focus-within:text-blue-600 dark:group-focus-within:text-white transition-colors text-lg font-light">
           {icon}
         </span>
         <input
           {...props}
-          className={`w-full bg-slate-800/30 border border-white/5 rounded-2xl pl-12 ${rightElement ? "pr-12" : "pr-4"} py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-600 ${props.className || ""}`}
+          className={`w-full bg-white dark:bg-transparent border border-slate-200 dark:border-slate-700 rounded-md pl-10 ${rightElement ? "pr-10" : "pr-3"} py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-600 dark:focus:ring-white dark:focus:border-white transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${props.className || ""}`}
         />
         {rightElement && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">

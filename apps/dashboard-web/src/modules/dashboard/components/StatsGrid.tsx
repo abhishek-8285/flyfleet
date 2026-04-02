@@ -8,7 +8,11 @@ import {
     Users,
 } from "lucide-react";
 import React from "react";
-import AnimatedNumber from "../../../components/animated/AnimatedNumber";
+
+// Fallback component for missing AnimatedNumber import
+const AnimatedNumber: React.FC<{ value: number | string }> = ({ value }) => {
+  return <span>{value}</span>;
+};
 
 interface Stat {
   label: string;

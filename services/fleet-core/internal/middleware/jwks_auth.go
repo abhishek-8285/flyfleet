@@ -57,8 +57,8 @@ func NewJWKSAuthGate(jwksURL, issuer, audience string, logger *zap.Logger) *JWKS
 		keys:     make(map[string]*rsa.PublicKey),
 	}
 
-	// Initial fetch
-	_ = gate.refreshKeys()
+	// Initial fetch - commented out to avoid deadlock if jwksURL is on this same server
+	// _ = gate.refreshKeys()
 
 	// Start background refresher
 	go gate.refreshLoop()

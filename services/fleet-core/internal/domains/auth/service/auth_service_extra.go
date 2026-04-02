@@ -224,7 +224,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 
 	// Get and validate reset token
 	resetToken, err := s.repo.GetPasswordResetToken(ctx, token)
-	if err != nil {
+	if err != nil || resetToken.Used || time.Now().After(resetToken.ExpiresAt) {
 		return ValidationError{Field: "token", Message: "invalid or expired reset token"}
 	}
 
@@ -772,6 +772,7 @@ type RegisterRequest struct {
 	Password   string  `json:"password"`
 	InviteCode *string `json:"invite_code"`
 	OrgName    *string `json:"org_name"`
+	AgreeTerms bool    `json:"agree_terms"`
 }
 
 type RegisterResponse struct {
@@ -783,6 +784,9 @@ type RegisterResponse struct {
 // RegisterUser implements the production-ready logic for user registration handling multi-tenant logic.
 func (s *AuthService) RegisterUser(ctx context.Context, req RegisterRequest) (*RegisterResponse, error) {
 	// STEP 1 - Validate Input
+	if !req.AgreeTerms {
+		return nil, ValidationError{Field: "agree_terms", Message: "you must agree to the Terms of Service and Privacy Policy"}
+	}
 	if err := s.validateEmail(ctx, req.Email); err != nil {
 		return nil, err
 	}

@@ -3,7 +3,11 @@ import { AlertCircle, CheckCircle, Info, PlayCircle } from "lucide-react";
 import React from "react";
 import { motion } from "framer-motion";
 import { TimelineEvent } from "../../../store/timelineSlice";
-import { StaggerContainer } from "../../../components/animated/StaggerContainer";
+
+// Fallback component for missing StaggerContainer import
+const StaggerContainer: React.FC<{ children: React.ReactNode; staggerDelay?: number; maxDelay?: number }> = ({ children }) => {
+  return <div className="space-y-4">{children}</div>;
+};
 
 interface ActivityFeedProps {
   events: TimelineEvent[];
