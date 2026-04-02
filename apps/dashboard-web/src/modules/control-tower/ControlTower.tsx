@@ -656,7 +656,7 @@ const ControlTower: React.FC = () => {
       </div>
 
       {/* Main Workspace */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative w-full h-full">
         <MapErrorBoundary>
           <MapEngine onMapLoad={handleMapLoad} />
         </MapErrorBoundary>

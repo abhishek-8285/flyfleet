@@ -48,8 +48,8 @@ const MapEngine: React.FC<MapEngineProps> = ({
   }, [center, zoom, onMapLoad]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div className="absolute inset-0 w-full h-full overflow-hidden">
+      <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
       {/* Map Overlays can be added here */}
     </div>
   );
