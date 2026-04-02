@@ -38,12 +38,20 @@ const debounce = (fn: Function, ms: number) => {
 };
 
 const ControlTower: React.FC = () => {
+  console.log('[ControlTower] Component rendering...');
+  
   const telemetryVehicles = useSelector(
     (state: RootState) => state.telemetry.vehicles,
   );
   const breadcrumbs = useSelector(
     (state: RootState) => state.telemetry.breadcrumbs,
   );
+  
+  console.log('[ControlTower] State loaded:', {
+    vehicleCount: telemetryVehicles?.length || 0,
+    breadcrumbs: Object.keys(breadcrumbs || {}).length
+  });
+  
   const [filterMetadata, setFilterMetadata] = React.useState<{
     orgs: string[];
     statuses: string[];
@@ -537,6 +545,8 @@ const ControlTower: React.FC = () => {
     };
   }, [startSimulation]); // startSimulation is memoized
 
+  console.log('[ControlTower] Rendering JSX, mapRef:', !!mapRef.current);
+  
   return (
     <div className="relative w-full h-screen bg-slate-950 flex overflow-hidden">
       {/* Search Overlay (Cmd+K) */}

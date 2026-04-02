@@ -17,8 +17,10 @@ const MapEngine: React.FC<MapEngineProps> = ({
   const map = useRef<maplibregl.Map | null>(null);
 
   useEffect(() => {
+    console.log('[MapEngine] Initializing, container:', !!mapContainer.current);
     if (map.current || !mapContainer.current) return;
 
+    console.log('[MapEngine] Creating maplibre map...');
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: "/carto-proxy/gl/dark-matter-gl-style/style.json",
@@ -34,9 +36,14 @@ const MapEngine: React.FC<MapEngineProps> = ({
     });
 
     map.current.on("load", () => {
+      console.log('[MapEngine] Map loaded successfully!');
       if (onMapLoad && map.current) {
         onMapLoad(map.current);
       }
+    });
+    
+    map.current.on("error", (e) => {
+      console.error('[MapEngine] Map error:', e);
     });
 
     return () => {
