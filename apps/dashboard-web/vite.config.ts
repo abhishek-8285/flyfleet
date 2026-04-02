@@ -1,5 +1,4 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { resolve } from 'path';
@@ -7,7 +6,7 @@ import { resolve } from 'path';
 // Security headers plugin for Vite
 const securityHeadersPlugin = () => ({
   name: 'security-headers',
-  transformIndexHtml(html) {
+  transformIndexHtml(html: string) {
     // Determine if we're in production or development
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -27,21 +26,20 @@ const securityHeadersPlugin = () => ({
       // Images and media
       "img-src 'self' data: https:",
       // Connections (API, WebSocket, analytics)
-      "connect-src 'self' https://us.i.posthog.com",
+      "connect-src 'self' http://localhost:8084 https://us.i.posthog.com",
       // Prevent framing
       "frame-ancestors 'none'",
     ].join('; ');
 
-    return html.replace(
-      '</head>',
-      `
-      <meta http-equiv="Content-Security-Policy" content="${csp}">
-      <meta http-equiv="X-Content-Type-Options" content="nosniff">
-      <meta http-equiv="X-Frame-Options" content="DENY">
-      <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-      <meta name="referrer" content="strict-origin-when-cross-origin">
-      </head>`
-    );
+    const tags = [
+      `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
+      `<meta http-equiv="X-Content-Type-Options" content="nosniff">`,
+      `<meta http-equiv="X-Frame-Options" content="DENY">`,
+      `<meta http-equiv="X-XSS-Protection" content="1; mode=block">`,
+      `<meta name="referrer" content="strict-origin-when-cross-origin">`
+    ].join('\n      ');
+
+    return html.replace('</head>', `      ${tags}\n    </head>`);
   },
 });
 
@@ -58,12 +56,6 @@ export default defineConfig({
       '@heroicons/react',
       'date-fns',
     ],
-    // Vite 8 uses Rolldown instead of esbuild; use rolldownOptions to avoid deprecation warning
-    rolldownOptions: {
-      // Keep esbuild-like behavior for compatibility
-      platform: 'browser',
-      target: 'es2020',
-    },
   },
   resolve: {
     alias: {

@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
         // Only gracefully degrade for specific roles like Driver who have limited views
         // Other unauthorized users should see an error or be kicked out completely
         const user = JSON.parse(localStorage.getItem("user") || "{}");
-        const role = (user?.role_id || user?.role || "").toLowerCase();
+        const role = (user?.role || user?.role_id || "").toLowerCase();
 
         if (role.includes("driver") || role === "staff") {
           dispatch(

@@ -32,9 +32,14 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 	r.logger.Info("GetUserByEmail DEBUG", zap.String("email", email), zap.String("db", dbName))
 
 	// Security: Bypass RLS for initial user lookup during login
-	start1 := time.Now()
-	_, _ = r.db.Exec(ctx, "SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)")
-	metrics.RecordDBQuery("SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)", time.Since(start1))
+	// Use a transaction to ensure set_config and the query use the SAME connection
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, _ = tx.Exec(ctx, "SELECT set_config('flyfleet.bypass_rls', 'true', true)")
 
 	query := `
 		SELECT u.id, u.org_id, u.email, COALESCE(r.name, u.role, 'user') as role, u.password_hash, 
@@ -47,7 +52,7 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 
 	start2 := time.Now()
 	var user models.User
-	err := r.db.QueryRow(ctx, query, email).Scan(
+	err = tx.QueryRow(ctx, query, email).Scan(
 		&user.ID, &user.OrgID, &user.Email, &user.Role, &user.PasswordHash,
 		&user.CreatedAt, &user.CreatedBy, &user.UpdatedAt, &user.UpdatedBy,
 		&user.MfaEnabled, &user.MfaMethods, &user.MfaSecret, &user.LastPasswordChange,
@@ -60,6 +65,10 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 			return nil, fmt.Errorf("user not found")
 		}
 		return nil, fmt.Errorf("database query failed: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &user, nil
@@ -701,10 +710,10 @@ func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID,
 }
 
 func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error) {
-	query := `SELECT r.id, r.name, ur.org_id, r.description, r.is_system, r.created_at, r.updated_at
+	query := `SELECT r.id, r.name, uo.org_id, r.description, r.is_system, r.created_at, r.updated_at
 			  FROM roles r
-			  JOIN user_roles ur ON r.id = ur.role_id
-			  WHERE ur.user_id = $1 AND ur.org_id = $2`
+			  JOIN user_organizations uo ON r.name = uo.role
+			  WHERE uo.user_id = $1 AND uo.org_id = $2`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, userID, orgID)
@@ -728,8 +737,8 @@ func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, org
 func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error) {
 	query := `SELECT DISTINCT p.resource || ':' || p.action
 			  FROM permissions p
-			  JOIN user_roles ur ON p.role_id = ur.role_id
-			  WHERE ur.user_id = $1 AND ur.org_id = $2`
+			  JOIN user_organizations uo ON p.role_id = (SELECT id FROM roles WHERE name = uo.role)
+			  WHERE uo.user_id = $1 AND uo.org_id = $2`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, userID, orgID)
@@ -758,8 +767,8 @@ func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, 
 	query := `SELECT EXISTS (
 				SELECT 1
 				FROM permissions p
-				JOIN user_roles ur ON p.role_id = ur.role_id
-				WHERE ur.user_id = $1 AND ur.org_id = $2 AND p.resource = $3 AND p.action = $4
+				JOIN user_organizations uo ON p.role_id = (SELECT id FROM roles WHERE name = uo.role)
+				WHERE uo.user_id = $1 AND uo.org_id = $2 AND p.resource = $3 AND p.action = $4
 			  )`
 	start := time.Now()
 	var exists bool
@@ -809,6 +818,17 @@ func (r *AuthRepository) CreateOrganization(ctx context.Context, org *models.Org
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, org.ID, org.Name, org.Type, org.LogoURL, org.Domain, org.DefaultTheme, org.Status, org.MaxUsersLimit, org.MaxApiKeysLimit, org.CreatedAt, org.UpdatedAt)
+	metrics.RecordDBQuery(query, time.Since(start))
+	return err
+}
+
+func (r *AuthRepository) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
+	query := `
+		UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() 
+		WHERE user_id IN (SELECT id FROM users WHERE org_id = $1)
+	`
+	start := time.Now()
+	_, err := r.db.Exec(ctx, query, orgID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

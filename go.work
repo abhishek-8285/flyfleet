@@ -6,7 +6,6 @@ use (
 	./services/fleet-core
 	./services/monolith
 	./test-tool
-	/data/data/com.termux/files/home/flyfleet/tests/infrastructure
 )
 
 replace github.com/flyfleet/proto => ./proto
