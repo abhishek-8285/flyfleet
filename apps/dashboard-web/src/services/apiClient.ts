@@ -146,13 +146,15 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // 2. Handle Forbidden (RBAC)
+    // Fix 10: 403 Forbidden — redirect to /403 access-denied page instead of just logging
     if (status === 403) {
-      console.error('Permission Denied'); // Don't log server message which may contain sensitive info
-      // Trigger global toast or redirect to 403 page
+      console.error('Permission Denied');
+      if (window.location.pathname !== '/403') {
+        window.location.href = '/403';
+      }
     }
 
-    // 3. Handle Rate Limiting
+    // Fix 11: Rate Limiting — deduplicated SRE toast
     if (status === 429) {
       const url = error.config?.url || '';
       if (url.includes('/analytics') || url.includes('/reports')) {
@@ -172,8 +174,16 @@ apiClient.interceptors.response.use(
   }
 );
 
-// Helper vanilla JS toast for SRE degrade notices without heavy libraries
+// Fix 11: Track active SRE toast to prevent stacking multiple toasts for rapid 429s
+let activeSREToast: HTMLElement | null = null;
+
 function showSREToast(message: string) {
+  // If a toast is already visible, just update its text rather than stacking
+  if (activeSREToast) {
+    activeSREToast.innerText = message;
+    return;
+  }
+
   const toast = document.createElement('div');
   toast.innerText = message;
   toast.style.position = 'fixed';
@@ -189,10 +199,16 @@ function showSREToast(message: string) {
   toast.style.transition = 'opacity 0.4s ease';
   toast.style.fontFamily = 'ui-sans-serif, system-ui, sans-serif';
   document.body.appendChild(toast);
-  
+  activeSREToast = toast;
+
   setTimeout(() => {
     toast.style.opacity = '0';
-    setTimeout(() => document.body.removeChild(toast), 400);
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+      activeSREToast = null;
+    }, 400);
   }, 4000);
 }
 

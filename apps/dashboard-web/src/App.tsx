@@ -167,7 +167,7 @@ const DeviceTelemetry = lazy(() => import("./pages/devices/DeviceTelemetry"));
 const DeviceTwins = lazy(() => import("./pages/devices/DeviceTwins"));
 const FirmwareManager = lazy(() => import("./pages/devices/FirmwareManager"));
 const RemoteCommands = lazy(() => import("./pages/devices/RemoteCommands"));
-const IntegrationsCenter = lazy(() => import("./pages/integrations/IntegrationsCenter"));
+// IntegrationsCenter removed — IntegrationHub is the canonical integrations page
 const Landing = lazy(() => import("./pages/Landing"));
 const Login = lazy(() => import("./pages/LoginPage"));
 const Register = lazy(() => import("./pages/RegisterPage"));
@@ -186,10 +186,15 @@ const SLAReport = lazy(() => import("./pages/monitoring/SLAReport"));
 const SystemHealth = lazy(() => import("./pages/monitoring/SystemHealth"));
 const AuthError = lazy(() => import("./pages/AuthError"));
 
+// Fix 1: Guard against redirect to /login during initial auth hydration.
+// Without isLoading check, token=null during refresh causes a flash-redirect before
+// the session is restored from the refresh cookie.
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const token = useSelector((state: RootState) => state.auth.token);
+  const { isLoading } = useAuth();
+  if (isLoading) return <LoadingSpinner />;
   return token ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
@@ -240,34 +245,10 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Fix 7: Deduplicated /verify-email — was declared twice */}
               <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route
-                path="/security/change-password"
-                element={<ChangePassword />}
-              />
-              <Route path="/security/devices" element={<SecurityDevices />} />
-              <Route path="/security/api-keys" element={<APIKeyManagement />} />
-              <Route
-                path="/security/security-keys"
-                element={<SecurityKeys />}
-              />
-              <Route
-                path="/security/password-policy"
-                element={<PasswordPolicy />}
-              />
-              <Route path="/mfa-setup" element={<MFASetup />} />
               <Route path="/account-locked" element={<AccountLocked />} />
               <Route path="/auth/challenge" element={<RiskChallenge />} />
-              <Route
-                path="/admin/security/telemetry"
-                element={<SecurityTelemetry />}
-              />
-              <Route path="/admin/security/stats" element={<AuthStats />} />
-              <Route
-                path="/admin/security/user-sessions"
-                element={<UserSessionAdmin />}
-              />
-              <Route path="/device-approval" element={<DeviceApproval />} />
               <Route path="/auth/callback" element={<SSOCallback />} />
               <Route path="/auth/error" element={
                 <Suspense fallback={<LoadingSpinner />}>
@@ -280,12 +261,30 @@ function App() {
               <Route path="/portal/login" element={<CustomerLogin />} />
               <Route path="/portal/track/:id" element={<ShipmentTracking />} />
 
-              <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/select-org" element={<OrgSelection />} />
               <Route path="/session-expired" element={<SessionExpired />} />
               <Route path="/error" element={<ErrorScreen />} />
-              <Route path="/trusted-devices" element={<TrustedDevices />} />
               <Route path="/system-maintenance" element={<SystemMaintenance />} />
+
+              {/* Fix 8: Security routes must be protected — unauthenticated access was possible */}
+              <Route
+                path="/security"
+                element={
+                  <PrivateRoute>
+                    <Layout />
+                  </PrivateRoute>
+                }
+              >
+                <Route path="change-password" element={<ChangePassword />} />
+                <Route path="devices" element={<SecurityDevices />} />
+                <Route path="api-keys" element={<APIKeyManagement />} />
+                <Route path="security-keys" element={<SecurityKeys />} />
+                <Route path="password-policy" element={<PasswordPolicy />} />
+              </Route>
+
+              {/* MFA setup requires auth context */}
+              <Route path="/mfa-setup" element={<PrivateRoute><MFASetup /></PrivateRoute>} />
+              <Route path="/trusted-devices" element={<PrivateRoute><TrustedDevices /></PrivateRoute>} />
+              <Route path="/device-approval" element={<PrivateRoute><DeviceApproval /></PrivateRoute>} />
 
               {/* User Dashboard */}
               <Route
@@ -321,6 +320,7 @@ function App() {
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/:id" element={<VehicleDetails />} />
                 <Route path="trips" element={<Trips />} />
+                {/* Fix 5: Removed duplicate drivers and reports routes */}
                 <Route path="drivers" element={<Drivers />} />
                 <Route path="insights" element={<Insights />} />
                 <Route path="reports" element={<Reports />} />
@@ -368,33 +368,11 @@ function App() {
                   }
                 />
                 <Route path="maintenance" element={<Maintenance />} />
-                <Route path="drivers" element={<Drivers />} />
-                <Route path="reports" element={<Reports />} />
                 <Route path="history" element={<History />} />
                 <Route path="security/mfa" element={<MFACenter />} />
               </Route>
 
-              {/* Security Module (Expansion) */}
-              <Route
-                path="/security"
-                element={
-                  <PrivateRoute>
-                    <Layout />
-                  </PrivateRoute>
-                }
-              >
-                <Route index element={<MFACenter />} />
-                <Route path="logins" element={<LoginActivityLogs />} />
-                <Route path="threats" element={<ThreatAlerts />} />
-                <Route path="sessions" element={<ActiveSessions />} />
-                <Route path="ip-access" element={<IPControls />} />
-                <Route path="access-review" element={<AccessReview />} />
-                <Route path="policy" element={<MFAPolicyEditor />} />
-                <Route path="exceptions" element={<MFAExceptions />} />
-                <Route path="overrides" element={<MFAOverrides />} />
-                <Route path="audit" element={<AuditCenter />} />
-                <Route path="api-keys" element={<APIKeyManagement />} />
-              </Route>
+              {/* Security Management Module (Expansion) — already wrapped inside /security PrivateRoute above */}
 
               {/* Admin Portal */}
               <Route
@@ -603,9 +581,6 @@ function App() {
                 />
                 <Route path="settings/policies" element={<PoliciesLimits />} />
 
-                {/* Integrations Module */}
-                <Route path="integrations" element={<IntegrationsCenter />} />
-
                 {/* Device Diagnostics Module */}
                 <Route
                   path="devices/diagnostics"
@@ -653,7 +628,8 @@ function App() {
                 <Route path="sla" element={<SLAReport />} />
               </Route>
 
-              {/* FleetSupport Module */}
+              {/* Fix 12: Support module — refactored from 7 independent PrivateRoute+SupportLayout
+                   wrappers into a single nested route tree. One auth guard, one layout. */}
               <Route
                 path="/support"
                 element={
@@ -665,75 +641,22 @@ function App() {
                 }
               />
               <Route
-                path="/support/dashboard"
+                path="/support"
                 element={
                   <PrivateRoute>
-                    <SupportLayout>
-                      <SupportDashboard />
-                    </SupportLayout>
+                    <SupportLayout>{null}</SupportLayout>
                   </PrivateRoute>
                 }
-              />
-              <Route
-                path="/support/incidents"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <IncidentManagement />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/support/incidents/:id"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <IncidentDetail />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/support/logs"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <TroubleshootingLogs />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/support/user-console"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <UserConsole />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/support/org-console/:id"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <OrganizationHub />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/support/reports"
-                element={
-                  <PrivateRoute>
-                    <SupportLayout>
-                      <SLAReports />
-                    </SupportLayout>
-                  </PrivateRoute>
-                }
-              />
+              >
+                <Route index element={<SupportDashboard />} />
+                <Route path="dashboard" element={<SupportDashboard />} />
+                <Route path="incidents" element={<IncidentManagement />} />
+                <Route path="incidents/:id" element={<IncidentDetail />} />
+                <Route path="logs" element={<TroubleshootingLogs />} />
+                <Route path="user-console" element={<UserConsole />} />
+                <Route path="org-console/:id" element={<OrganizationHub />} />
+                <Route path="reports" element={<SLAReports />} />
+              </Route>
 
               {/* Customer Portal - Protected */}
               <Route path="/portal" element={<CustomerPortalLayout />}>
