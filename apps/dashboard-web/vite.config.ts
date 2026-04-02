@@ -75,6 +75,12 @@ export default defineConfig({
         target: 'http://localhost:8084',
         changeOrigin: true,
       },
+      '/carto-proxy': {
+        target: 'https://basemaps.cartocdn.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/carto-proxy/, ''),
+      },
     },
   },
   build: {
