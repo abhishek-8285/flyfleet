@@ -13,7 +13,7 @@ url = "postgres://fleet_user:fleet_password@127.0.0.1:5432/fleet_db?sslmode=disa
 url = "nats://localhost:4222"
 
 [redis]
-url = "redis://localhost:6379"
+url = "localhost:6379"
 
 [services]
 auth_url = "http://localhost:8084"
