@@ -99,28 +99,28 @@ export const EditVehicle: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-[#0f111a]">
       <header className="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-[#161b22] sticky top-0 z-10">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate(`/admin/vehicles/${id}`)}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <h1 className="text-xl font-bold text-white">
-              {uiStrings.title_edit_vehicle || "Edit Vehicle"}
-            </h1>
-          </div>
+        <div className="flex items-center gap-4">
           <button
-            type="button"
-            onClick={handleDelete}
-            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            onClick={() => navigate(`/admin/vehicles/${id}`)}
+            className="text-slate-400 hover:text-white transition-colors"
           >
-            <span className="material-symbols-outlined text-sm">delete</span>
-            {uiStrings.btn_delete_vehicle || "Delete Vehicle"}
+            <span className="material-symbols-outlined">arrow_back</span>
           </button>
-        </header>
+          <h1 className="text-xl font-bold text-white">
+            {uiStrings.title_edit_vehicle || "Edit Vehicle"}
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-sm">delete</span>
+          {uiStrings.btn_delete_vehicle || "Delete Vehicle"}
+        </button>
+      </header>
 
-        <div className="p-8 max-w-4xl mx-auto w-full">
+      <div className="p-8 max-w-4xl mx-auto w-full">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Section: Identification */}
             <div className="bg-[#1c222b] rounded-xl border border-white/5 p-6">
@@ -336,6 +336,5 @@ export const EditVehicle: React.FC = () => {
           </form>
         </div>
       </div>
-    </div>
   );
 };
