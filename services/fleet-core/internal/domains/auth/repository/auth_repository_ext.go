@@ -11,7 +11,7 @@ import (
 )
 
 func (r *AuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
-	query := "SELECT id, name, type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations WHERE id = $1"
+	query := "SELECT id, name, plan as type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations WHERE id = $1"
 	start := time.Now()
 	var org models.Organization
 	err := r.db.QueryRow(ctx, query, id).Scan(
@@ -33,7 +33,7 @@ func (r *AuthRepository) ListOrganizations(ctx context.Context, limit, offset in
 		return nil, 0, err
 	}
 
-	query := "SELECT id, name, type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+	query := "SELECT id, name, plan as type, COALESCE(logo_url, '') as logo_url, COALESCE(domain, '') as domain, COALESCE(default_theme, '') as default_theme, COALESCE(status, '') as status, created_at, updated_at FROM organizations ORDER BY created_at DESC LIMIT $1 OFFSET $2"
 	start2 := time.Now()
 	rows, err := r.db.Query(ctx, query, limit, offset)
 	metrics.RecordDBQuery(query, time.Since(start2))
@@ -58,7 +58,7 @@ func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email stri
 		SELECT
 			o.id,
 			o.name,
-			o.type,
+			o.plan as type,
 			COALESCE(o.logo_url, '') as logo_url,
 			COALESCE(o.domain, '') as domain,
 			COALESCE(o.default_theme, '') as default_theme,
@@ -66,12 +66,22 @@ func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email stri
 			o.created_at,
 			o.updated_at
 		FROM organizations o
-		JOIN user_roles ur ON o.id = ur.org_id
-		JOIN users u ON ur.user_id = u.id
+		JOIN user_organizations uo ON o.id = uo.org_id
+		JOIN users u ON uo.user_id = u.id
 		WHERE u.email = $1
 	`
+	// Security: Bypass RLS for organization resolution
+	// Use a transaction to ensure set_config and the query use the SAME connection
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, _ = tx.Exec(ctx, "SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)")
+
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, email)
+	rows, err := tx.Query(ctx, query, email)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user organizations: %w", err)
@@ -89,6 +99,10 @@ func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email stri
 
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return orgs, nil

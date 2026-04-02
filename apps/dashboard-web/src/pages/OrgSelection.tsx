@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { useAuth } from "../context/AuthProvider";
+import api from "../services/api";
 
 const OrgSelection: React.FC = () => {
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
@@ -11,17 +12,14 @@ const OrgSelection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { uiStrings } = useUIStrings("auth_extended");
-  const { user } = useAuth();
+  const { user, setOrganization } = useAuth();
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     const fetchOrgs = async () => {
       try {
-        const res = await fetch(
-          `{import.meta.env.VITE_API_URL || '/api/v1'}/api/v1/generic`,
-        );
-        const payload = await res.json();
+        const payload = await api.getOrganizations();
         setOrgs(payload.data || payload || []);
       } catch (error) {
         console.error("Failed to fetch orgs", error);
@@ -39,15 +37,8 @@ const OrgSelection: React.FC = () => {
     setLoading(true);
 
     try {
-      // API call to select organization context
-      const response = await fetch("/api/v1/auth/select-organization", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ org_id: selectedOrgId }),
-      });
-
-      if (!response.ok) throw new Error("Could not switch context");
-
+      await setOrganization(selectedOrgId);
+      
       const role = (user?.role_id || user?.role || "").toLowerCase();
       let targetPath = "/dashboard";
       if (role.includes("customer") || role.includes("portal") || role === "user") {
@@ -58,14 +49,7 @@ const OrgSelection: React.FC = () => {
 
       navigate(targetPath);
     } catch (err) {
-      console.error(err);
-      // Fallback for demo
-      const role = (user?.role_id || user?.role || "").toLowerCase();
-      let targetPath = "/dashboard";
-      if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
-        targetPath = "/admin";
-      }
-      setTimeout(() => navigate(targetPath), 1000);
+      console.error("Failed to select organization:", err);
     } finally {
       setLoading(false);
     }

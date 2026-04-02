@@ -93,7 +93,12 @@ const Signup: React.FC = () => {
     setError("");
 
     try {
-      const payload: any = { email, password, name };
+      const payload: any = { 
+        email, 
+        password, 
+        name,
+        agree_terms: agreeTerms 
+      };
       if (mode === "create") payload.org_name = orgName;
       else payload.invite_code = inviteCode;
 
@@ -139,10 +144,10 @@ const Signup: React.FC = () => {
               mark_email_read
             </span>
           </div>
-          <p className="text-slate-300 text-sm leading-relaxed">
+          <p className="text-slate-600 text-sm leading-relaxed">
             {uiStrings?.verification_msg_prefix ||
               "We've sent a secure verification link to"}{" "}
-            <span className="text-white font-bold">{email}</span>.{" "}
+            <span className="text-slate-900 font-bold">{email}</span>.{" "}
             {uiStrings?.verification_msg_suffix ||
               "Please follow the link to activate your platform account."}
           </p>
@@ -251,7 +256,7 @@ const Signup: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="text-slate-500 hover:text-primary transition-colors focus:outline-none flex items-center justify-center p-2 rounded-lg"
+                  className="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-white transition-colors focus:outline-none flex items-center justify-center p-2 rounded-lg"
                   aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
                   <span className="material-symbols-outlined text-[20px]">
@@ -266,11 +271,11 @@ const Signup: React.FC = () => {
                 <input
                   type="checkbox"
                   required
-                  className="mt-1 w-4 h-4 rounded border-white/10 bg-slate-800 text-primary focus:ring-primary/50 transition-all cursor-pointer"
+                  className="mt-1 w-4 h-4 rounded border-slate-300 dark:border-slate-700 dark:bg-transparent bg-white text-blue-600 focus:ring-blue-600/50 transition-all cursor-pointer"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
                 />
-                <span className="text-xs text-slate-400 font-medium leading-relaxed group-hover:text-slate-300 transition-colors">
+                <span className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed group-hover:text-slate-800 dark:group-hover:text-white transition-colors">
                   {uiStrings?.agree_text ||
                     "I certify that I have read and agree to the"}
                   <a
@@ -305,11 +310,11 @@ const Signup: React.FC = () => {
 
         {step === 2 && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-             <div className="flex bg-slate-800/50 p-1 rounded-xl mb-4">
-               <button type="button" onClick={() => setMode("create")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "create" ? "bg-primary text-white shadow" : "text-slate-400 hover:text-white"}`}>
+             <div className="flex bg-slate-100 border border-slate-200 p-1 rounded-md mb-4">
+               <button type="button" onClick={() => setMode("create")} className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === "create" ? "bg-white text-slate-900 shadow-sm border border-slate-200/60" : "text-slate-500 hover:text-slate-700"}`}>
                   Create New
                </button>
-               <button type="button" onClick={() => setMode("invite")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === "invite" ? "bg-primary text-white shadow" : "text-slate-400 hover:text-white"}`}>
+               <button type="button" onClick={() => setMode("invite")} className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === "invite" ? "bg-white text-slate-900 shadow-sm border border-slate-200/60" : "text-slate-500 hover:text-slate-700"}`}>
                   Join via Invite
                </button>
              </div>
@@ -343,7 +348,7 @@ const Signup: React.FC = () => {
              )}
 
              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setStep(1)} className="px-4 py-3 border border-slate-700/50 rounded-xl shadow-sm text-sm font-medium text-slate-300 bg-slate-800/50 hover:bg-slate-700 focus:outline-none transition-colors">
+                <button type="button" onClick={() => setStep(1)} className="px-5 py-3 border border-slate-200 rounded-md shadow-sm text-sm font-semibold text-slate-600 bg-white hover:bg-slate-50 focus:outline-none transition-colors">
                    Back
                 </button>
                 <div className="flex-1">
@@ -365,7 +370,7 @@ const Signup: React.FC = () => {
           {uiStrings?.already_member || "Already a fleet member?"}{" "}
           <Link
             to="/login"
-            className="text-primary hover:text-primary-dark font-bold uppercase tracking-wider ml-1"
+            className="text-blue-600 hover:text-blue-800 font-semibold uppercase tracking-wider ml-1"
           >
             {uiStrings?.sign_in_link || "Sign In"}
           </Link>
