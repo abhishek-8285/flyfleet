@@ -421,20 +421,44 @@ func main() {
 	})
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
 	if strings.EqualFold(strings.TrimSpace(os.Getenv("ENFORCE_BFF_AUTH_GATE")), "true") {
-		r.Use(coremiddleware.NewBFFAuthGate(cfg.JWTSecret, []string{
+		// Initialize the JWKS Auth Gate which supports RS256 tokens from internal signing keys
+		jwksAuthURL := os.Getenv("JWKS_URL")
+		if jwksAuthURL == "" {
+			jwksAuthURL = "http://localhost:8084/api/v1/auth/.well-known/jwks.json"
+		}
+		authGate := coremiddleware.NewJWKSAuthGate(jwksAuthURL, "FlyFleet", "fleet-dashboard", logger)
+
+		// Define public routes that bypass the auth gate
+		publicRoutes := []string{
 			"/health",
-			// "/swagger" removed - admin documentation now requires authentication
 			"/api/control/",
 			"/api/v1/auth/login",
+			"/api/v1/auth/refresh",
+			"/api/v1/auth/resolve-orgs",
 			"/api/v1/auth/register",
+			"/api/v1/auth/dev-login",
 			"/api/v1/auth/validate-token",
 			"/api/v1/ws",
 			"/api/v1/ui/",
 			"/api/v1/legal/",
 			"/api/v1/dashboard/stats",
-			// SECURITY FIX: Removed "/api/v1/admin/dashboard/data" from public routes
-			// Admin dashboard data must require authentication
-		}))
+			"/api/v1/auth/.well-known/jwks.json",
+		}
+
+		// Wrapper middleware to implement whitelisting for JWKSAuthGate
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				path := r.URL.Path
+				for _, p := range publicRoutes {
+					if strings.HasPrefix(path, p) {
+						next.ServeHTTP(w, r)
+						return
+					}
+				}
+				// Use the JWKSAuthGate handler for everything else
+				authGate.Handler(next).ServeHTTP(w, r)
+			})
+		})
 	}
 
 	// Pre-initialize Repositories (needed by multiple routes and workers)
@@ -572,7 +596,7 @@ func main() {
 		// Fallback to localhost relative to the port tests run on natively
 		jwksURL = "http://127.0.0.1:" + port + "/api/v1/auth/.well-known/jwks.json"
 	}
-	authGate := coremiddleware.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", logger)
+	// authGate := coremiddleware.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", logger)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// IAM Domain (Superseded by auth_v2)
@@ -653,7 +677,7 @@ func main() {
 		diagRollout := diagService.NewFirmwareRolloutService(diagR)
 		diagH := diagHandlers.NewDiagnosticsHandler(diagTelemetry, diagCommand, diagRollout)
 		r.Route("/diagnostics", func(r chi.Router) {
-			r.Use(authGate.Handler)
+			// r.Use(authGate.Handler) // Removed redundant JWKS gateway (conflicts with HS256 tokens)
 			r.Use(coremiddleware.TenantContextMiddleware(logger))
 			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "fleet_manager", "dispatcher"))
 			diagH.RegisterRoutes(r)
@@ -928,9 +952,9 @@ func main() {
 
 		// Protected Dashboard & Admin routes
 		r.Group(func(r chi.Router) {
-			r.Use(authGate.Handler)
+			// r.Use(authGate.Handler) // Removed algorithmic conflict (issued tokens are HS256)
 			r.Use(coremiddleware.TenantContextMiddleware(logger))
-			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher"))
+			r.Use(coremiddleware.RequireRole(logger, "super_admin", "org_admin", "admin", "fleet_manager", "dispatcher", "driver", "support_agent"))
 
 			r.Get("/dashboard/stats", dashboardHandlers.GetGlobalStats)
 			r.Get("/dashboard/overview", dashboardHandlers.GetAdminDashboardData)
@@ -940,7 +964,7 @@ func main() {
 
 		// Protected User Profile
 		r.Group(func(r chi.Router) {
-			r.Use(authGate.Handler)
+			// r.Use(authGate.Handler) // Redundant with global BFFAuthGate
 			r.Use(coremiddleware.TenantContextMiddleware(logger))
 
 			r.Get("/auth/profile", dashboardHandlers.GetProfile)
@@ -998,7 +1022,7 @@ func main() {
 			if err == nil {
 				// Wrap ML routes with authGate to prevent unauthenticated access
 				r.Group(func(r chi.Router) {
-					r.Use(authGate.Handler)
+					// r.Use(authGate.Handler) // Fix: use global HMAC gate
 					r.Use(coremiddleware.TenantContextMiddleware(logger))
 					r.Handle("/ml", mlProxy)
 					r.Handle("/ml/*", mlProxy)

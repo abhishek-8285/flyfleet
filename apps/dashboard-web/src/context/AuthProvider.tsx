@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import axios from "axios";
 import apiClient from "../services/apiClient";
 import { store } from "../store";
 import { setToken, setUser as setReduxUser } from "../store/authSlice";
@@ -8,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  authError: string | null;
   login: (token: string, refreshToken: string, userData: User) => void;
   logout: () => void;
   setOrganization: (orgId: string) => void;
@@ -18,67 +20,131 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Apply the given theme to the DOM and localStorage. */
+function applyTheme(theme: string) {
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+  localStorage.setItem("theme", theme);
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Fix 6: expose an explicit authError state so callers can show a proper message
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  // Hydrate state on mount: try to refresh session using refresh cookie
+  const hydrateUser = (data: any) => {
+    const userWithPermissions: User = {
+      ...data.user,
+      permissions: data.user.permissions || (data.permissions?.map((p: any) =>
+        typeof p === "string" ? p : `${p.module}:${p.action}`
+      ) || []),
+    } as User;
+    store.dispatch(setReduxUser(userWithPermissions));
+    return userWithPermissions;
+  };
+
+  const fetchProfile = async () => {
+    try {
+      const profileData = await apiClient.get("/auth/profile") as any;
+
+      // Fix 2: Prefer values returned by the backend; fall back to localStorage only when absent
+      const backendTheme = profileData.user?.theme;
+      const savedTheme = backendTheme || localStorage.getItem("theme") || "light";
+      applyTheme(savedTheme);
+
+      const backendLang = profileData.user?.language;
+      const savedLang = backendLang || localStorage.getItem("flyfleet_language") || "en";
+      localStorage.setItem("flyfleet_language", savedLang);
+
+      const backendSidebar = profileData.user?.sidebar_collapsed;
+      const savedSidebar =
+        backendSidebar !== undefined
+          ? backendSidebar
+          : localStorage.getItem("flyfleet_sidebar_collapsed") === "true";
+      localStorage.setItem("flyfleet_sidebar_collapsed", String(savedSidebar));
+
+      const userData: User = {
+        ...profileData.user,
+        permissions:
+          profileData.permissions?.map((p: any) =>
+            typeof p === "string" ? p : `${p.module}:${p.action}`
+          ) || [],
+        theme: savedTheme,
+        language: savedLang,
+        sidebar_collapsed: savedSidebar,
+      };
+
+      store.dispatch(setReduxUser(userData));
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error("Failed to fetch full profile:", err);
+      throw err;
+    }
+  };
+
+  // Hydrate state on mount
   useEffect(() => {
     const initAuth = async () => {
+      setAuthError(null);
       try {
-        // Attempt to refresh session using refresh token cookie (no body needed)
+        // 1. Try standard session refresh
         const response = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
         const token = response.token || response.access_token;
         if (token) {
           store.dispatch(setToken(token));
         }
 
-        // Store user if returned
-        if (response.user) {
-          // Transform permissions to string[] if needed
-          const userWithPermissions: User = {
-            ...response.user,
-            permissions: response.user.permissions || (response.permissions?.map((p: any) =>
-              typeof p === "string" ? p : `${p.module}:${p.action}`
-            ) || []),
-          } as User;
-          store.dispatch(setReduxUser(userWithPermissions));
+        // Fix 3: No redundant double-hydration. hydrateUser on refresh is only
+        // for quick Redux population; fetchProfile is the authoritative source.
+        // We skip the intermediate hydrateUser call to avoid two renders with
+        // stale/partial data.
+        try {
+          await fetchProfile();
+        } catch (profileErr) {
+          // Fix 6: fetchProfile failed after a valid refresh — surface the error
+          console.error("AuthProvider: Profile fetch failed after refresh:", profileErr);
+          setAuthError("Could not load your profile. Please try refreshing.");
+          store.dispatch(setToken(null));
+          store.dispatch(setReduxUser(null));
+          setUser(null);
         }
-
-        // Then fetch full profile to ensure we have latest user data
-        const profileData = await apiClient.get("/auth/profile") as any;
-        const userData: User = {
-          ...profileData.user,
-          permissions:
-            profileData.permissions?.map((p: any) =>
-              typeof p === "string" ? p : `${p.module}:${p.action}`
-            ) || [],
-        };
-
-        // Restore UI preferences from localStorage (these are not security-critical)
-        const savedTheme = localStorage.getItem("theme") || "light";
-        userData.theme = savedTheme;
-        if (savedTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-
-        const savedLang = localStorage.getItem("flyfleet_language") || "en";
-        userData.language = savedLang;
-        localStorage.setItem("flyfleet_language", savedLang);
-
-        const savedSidebar = localStorage.getItem("flyfleet_sidebar_collapsed") === "true";
-        userData.sidebar_collapsed = savedSidebar;
-        localStorage.setItem("flyfleet_sidebar_collapsed", String(savedSidebar));
-
-        store.dispatch(setReduxUser(userData));
-        setUser(userData);
       } catch (err) {
-        // No valid session
-        console.error("Session hydration failed:", err);
+        // 2. Refresh failed — try Dev Auto-Login if in development
+        if (import.meta.env.DEV) {
+          try {
+            // Fix 1: Dev email comes from env var so each dev can use their own account
+            const devEmail =
+              import.meta.env.VITE_DEV_LOGIN_EMAIL || "org_admin@delta.io";
+            console.log(`AuthProvider: Attempting Dev Auto-Login as ${devEmail}...`);
+            // Use axios directly to bypass apiClient interceptors
+            const devResponse = await axios.post(
+              "/api/v1/auth/dev-login",
+              { email: devEmail },
+              { withCredentials: true }
+            ) as any;
+            const devToken = devResponse.data?.token || devResponse.data?.access_token;
+            if (devToken) {
+              store.dispatch(setToken(devToken));
+              if (devResponse.data?.user) {
+                hydrateUser(devResponse.data);
+              }
+              await fetchProfile();
+              return; // Success!
+            }
+          } catch (devErr) {
+            console.error("AuthProvider: Dev Auto-Login failed:", devErr);
+          }
+        }
+
+        // 3. Fallback: No valid session
+        console.error("AuthProvider: Session hydration failed:", err);
         store.dispatch(setToken(null));
         store.dispatch(setReduxUser(null));
         setUser(null);
@@ -90,17 +156,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initAuth();
   }, []);
 
+  // Fix 4: Apply theme to the DOM immediately when login() is called manually
   const login = (token: string, refreshToken: string, userData: User) => {
-    // Store token and user in Redux
     store.dispatch(setToken(token));
     store.dispatch(setReduxUser(userData));
-    // Update local state
     setUser(userData);
+    if (userData.theme) {
+      applyTheme(userData.theme);
+    }
   };
 
   const logout = async () => {
     try {
-      await apiClient.post("/auth/logout", {}, { withCredentials: true }); // Clears cookie
+      await apiClient.post("/auth/logout", {}, { withCredentials: true });
     } catch (err) {
       console.error("Logout error:", err);
     }
@@ -110,31 +178,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     window.location.href = "/login";
   };
 
-  const setOrganization = (orgId: string) => {
-    // Store in localStorage for UI persistence only - server validates org access on each request
+  // Fix 5: Avoid full page reload — update context state and re-fetch org-scoped profile
+  const setOrganization = async (orgId: string) => {
     localStorage.setItem("org_id", orgId);
-    // Reload to apply org context
-    window.location.reload();
+    try {
+      // Step A: Trigger a session refresh with the new org_id.
+      // This ensures the backend issues a new JWT with the correct org_id claim immediately.
+      const refreshResponse = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
+      const newToken = refreshResponse.token || refreshResponse.access_token;
+      if (newToken) {
+        store.dispatch(setToken(newToken));
+        if (refreshResponse.user) {
+          hydrateUser(refreshResponse);
+        }
+      }
+      
+      // Step B: Re-fetch the authoritative profile (scoped to the new org)
+      await fetchProfile();
+    } catch (err: any) {
+      // If the switch fails, clear the invalid org_id so we don't get stuck in a loop
+      console.warn("setOrganization: org switch failed, clearing org_id and falling back:", err);
+      localStorage.removeItem("org_id");
+      
+      // If it's a 403/401, the apiClient might have already handled it, but we'll force a reload
+      // to ensure state is clean from the default organization perspective.
+      if (err.status === 403 || err.status === 401) {
+        window.location.href = "/";
+      } else {
+        window.location.reload();
+      }
+    }
   };
 
   const toggleTheme = async () => {
     if (!user) return;
     const newTheme = user.theme === "dark" ? "light" : "dark";
-
-    // Update local DOM
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-
-    // Update local storage
-    localStorage.setItem("theme", newTheme);
-
-    // Optimistic UI update
+    applyTheme(newTheme);
     setUser({ ...user, theme: newTheme });
-
-    // Sync with API
     try {
       await apiClient.put(`/admin/users/${user.id}`, { theme: newTheme });
     } catch (err) {
@@ -173,6 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         isAuthenticated: !!user,
         isLoading,
+        authError,
         login,
         logout,
         setOrganization,

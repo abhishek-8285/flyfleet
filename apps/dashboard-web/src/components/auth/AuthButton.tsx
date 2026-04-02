@@ -15,14 +15,14 @@ const AuthButton: React.FC<AuthButtonProps> = ({
 }) => {
   const variantClasses =
     variant === "primary"
-      ? "bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-blue-700 text-white shadow-primary/20"
-      : "bg-slate-800/50 hover:bg-slate-800 text-white border border-white/5";
+      ? "bg-[#004bb5] hover:bg-blue-800 dark:bg-[#004bb5] dark:hover:bg-blue-600 text-white"
+      : "bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-white border border-slate-200 dark:border-slate-700";
 
   return (
     <button
       {...props}
       disabled={loading || props.disabled}
-      className={`w-full ${variantClasses} font-bold py-4 rounded-2xl transition-all shadow-xl disabled:opacity-50 flex items-center justify-center space-x-2 text-sm uppercase tracking-widest ${props.className || ""}`}
+      className={`w-full ${variantClasses} font-semibold py-3 rounded-md transition-all shadow-sm disabled:opacity-50 flex items-center justify-center space-x-2 text-sm uppercase tracking-wide ${props.className || ""}`}
     >
       {loading ? (
         <>

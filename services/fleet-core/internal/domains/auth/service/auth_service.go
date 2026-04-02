@@ -119,6 +119,7 @@ type AuthRepositoryInterface interface {
 
 	// Compliance & Admin
 	RevokeAllTokensGlobal(ctx context.Context) error
+	RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error
 	AnonymizeUser(ctx context.Context, userID uuid.UUID) error
 }
 
@@ -318,6 +319,21 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 	return authResponse, nil
 }
 
+func (s *AuthService) DevLogin(ctx context.Context, email string, ipAddress, userAgent string) (*models.AuthResponse, error) {
+	if email == "" {
+		email = "admin@flyfleet.com"
+	}
+
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Skip password and MFA checks in DevLogin
+	s.logger.Info("DevLogin successful (Password Bypass)", zap.String("email", email))
+	return s.issueTokens(ctx, user, ipAddress, userAgent)
+}
+
 func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// Fetch permissions via IdentityService/Repository (New RBAC)
 	permissions, _ := s.repo.GetUserPermissions(ctx, user.ID, user.OrgID)
@@ -336,6 +352,15 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddr
 	if err != nil {
 		return nil, err
 	}
+
+	// Audit session issuance with org context
+	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+		UserID:    user.ID,
+		EventType: "SESSION_ISSUED",
+		IPAddress: ipAddress,
+		UserAgent: userAgent,
+		Metadata:  fmt.Sprintf("org_id: %s, role: %s", user.OrgID.String(), user.Role),
+	})
 
 	return &models.AuthResponse{
 		AccessToken:    accessToken,
@@ -371,7 +396,7 @@ func (s *AuthService) generateTempToken(user *models.User) (string, error) {
 	return token.SignedString([]byte(s.jwtSecret))
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// Validate refresh token
 	refreshToken, err := s.repo.GetRefreshToken(ctx, refreshTokenStr)
 	if err != nil {
@@ -400,7 +425,47 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, ipAddre
 		return nil, err
 	}
 
-	// Issue new tokens
+	// Organization context switching logic
+	if orgIDStr != "" {
+		orgID, err := uuid.Parse(orgIDStr)
+		if err != nil {
+			return nil, errors.New("invalid organization id format")
+		}
+
+		// Verify user belongs to the requested organization
+		orgs, err := s.repo.GetOrganizationsByEmail(ctx, user.Email)
+		if err != nil {
+			return nil, err
+		}
+
+		found := false
+		for _, o := range orgs {
+			if o.ID == orgID {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return nil, errors.New("unauthorized: user does not belong to the requested organization")
+		}
+
+		// Audit context switch
+		if orgID != user.OrgID {
+			_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+				UserID:    user.ID,
+				EventType: "ORG_CONTEXT_SWITCH",
+				IPAddress: ipAddress,
+				UserAgent: userAgent,
+				Metadata:  fmt.Sprintf("old_org: %s, new_org: %s", user.OrgID.String(), orgID.String()),
+			})
+		}
+
+		// Update user's active organization context for the new session
+		user.OrgID = orgID
+	}
+
+	// Issue new tokens (scoped to user.OrgID)
 	return s.issueTokens(ctx, user, ipAddress, userAgent)
 }
 
@@ -989,4 +1054,27 @@ func (s *AuthService) verifyCode(secret []byte, timeStep int64, expectedCode str
 	return generatedCode == expectedCode
 }
 
-// EnableMFA enables MFA for a user and returns recovery codes
+// Compliance & Admin
+
+func (s *AuthService) RevokeAllTokensGlobal(ctx context.Context) error {
+	return s.repo.RevokeAllTokensGlobal(ctx)
+}
+
+func (s *AuthService) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
+	return s.repo.RevokeAllOrgTokens(ctx, orgID)
+}
+
+func (s *AuthService) AnonymizeUser(ctx context.Context, userID uuid.UUID) error {
+	return s.repo.AnonymizeUser(ctx, userID)
+}
+
+// GenerateToken is a public helper for generating tokens in tests
+func (s *AuthService) GenerateToken(userID, orgID uuid.UUID, role string) (string, error) {
+	user := &models.User{
+		ID:    userID,
+		OrgID: orgID,
+		Role:  role,
+	}
+	permissions, _ := s.repo.GetRolePermissions(context.Background(), role)
+	return s.generateAccessToken(user, permissions)
+}

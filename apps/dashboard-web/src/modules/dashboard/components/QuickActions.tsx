@@ -2,7 +2,16 @@ import { Activity, HelpCircle, PlusCircle, Users } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useRBAC } from "../../../context/RBACProvider";
-import MagneticButton from "../../../components/animated/MagneticButton";
+
+// Fallback component for missing MagneticButton import
+const MagneticButton: React.FC<{ children: React.ReactNode; onClick?: () => void; variant?: "primary" | "secondary"; className?: string }> = ({ children, onClick, variant, className }) => {
+  const variantClasses = variant === "primary" ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-800 hover:bg-gray-700";
+  return (
+    <button onClick={onClick} className={`${variantClasses} text-white rounded-xl transition-colors ${className}`}>
+      {children}
+    </button>
+  );
+};
 
 const QuickActions: React.FC = () => {
   const { can } = useRBAC();
