@@ -142,12 +142,12 @@ const AuthenticateStep: React.FC = () => {
 
   const performLogin = async (orgId: string) => {
     try {
-      const data = await api.post("/auth/login", { 
-        email: emailOrPhone, 
-        password, 
-        org_id: orgId 
+      const data = await api.post("/auth/login", {
+        email: emailOrPhone,
+        password,
+        org_id: orgId
       }) as any;
- 
+
       if (data.mfa_required) {
         setTempToken(data.temp_token);
         setPartialUser(data.user);
@@ -160,15 +160,20 @@ const AuthenticateStep: React.FC = () => {
         permissions: data.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
       };
 
+      // CRITICAL: Store org_id BEFORE calling login()
+      const responseOrgId = data.user?.org_id || orgId;
+      console.log('[LoginPage] Login response org_id:', responseOrgId);
+      if (responseOrgId) {
+        localStorage.setItem('org_id', responseOrgId);
+        console.log('[LoginPage] Stored org_id:', responseOrgId);
+      }
+
       login(data.token || data.access_token, data.refresh_token || "", userData);
 
       if (rememberMe) {
         localStorage.setItem("remembered_email", emailOrPhone);
       }
-      if (orgId) {
-        localStorage.setItem("org_id", orgId);
-      }
-      
+
       const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
       let targetPath = "/dashboard";
       if (role.includes("customer") || role.includes("portal") || role === "user") {
@@ -309,6 +314,12 @@ const MFAStep: React.FC = () => {
       };
 
       login(data.access_token, data.refresh_token, userData);
+
+      // Fix: Store org_id after MFA verification
+      const responseOrgId = data.user?.org_id;
+      if (responseOrgId) {
+        localStorage.setItem("org_id", responseOrgId);
+      }
 
       // Fix 3: Use role-based routing after MFA, same logic as performLogin
       const role = (data.user?.role_id || data.user?.role || "").toLowerCase();

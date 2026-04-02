@@ -908,4 +908,315 @@ func (h *DriverHandler) GetAttendance(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SetSchedule godoc
+// StartOnboarding handles starting the driver onboarding process
+func (h *DriverHandler) StartOnboarding(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID string `json:"driver_id" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := h.onboarding.StartOnboarding(r.Context(), req.DriverID); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "onboarding_started"})
+}
+
+// AdvanceOnboarding handles advancing the driver to the next onboarding step
+func (h *DriverHandler) AdvanceOnboarding(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID string `json:"driver_id" validate:"required"`
+		StepName string `json:"step_name" validate:"required"`
+		Status   string `json:"status" validate:"required"`
+		Remarks  string `json:"remarks"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := h.onboarding.AdvanceOnboarding(r.Context(), req.DriverID, req.StepName, req.Status, req.Remarks); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "onboarding_advanced"})
+}
+
+// GetOnboardingStatus retrieves the driver's onboarding status
+func (h *DriverHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	steps, err := h.onboarding.GetOnboardingStatus(r.Context(), driverID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"steps":     steps,
+	})
+}
+
+// CreateShift handles creating a new shift for a driver
+func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID  string    `json:"driver_id" validate:"required"`
+		ShiftStart time.Time `json:"shift_start" validate:"required"`
+		ShiftEnd   time.Time `json:"shift_end" validate:"required"`
+		ShiftType  string    `json:"shift_type"`
+		VehicleID *string   `json:"vehicle_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	shift := &models.Shift{
+		ID:         uuid.New().String(),
+		DriverID:   req.DriverID,
+		ShiftStart: req.ShiftStart,
+		ShiftEnd:   req.ShiftEnd,
+		ShiftType:  req.ShiftType,
+		Status:     "SCHEDULED",
+	}
+
+	if err := h.shift.CreateShift(r.Context(), shift); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	if req.VehicleID != nil {
+		if err := h.shift.AssignToVehicle(r.Context(), shift.ID, *req.VehicleID); err != nil {
+			h.logger.Warn("failed to assign vehicle to shift", zap.Error(err))
+		}
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, shift)
+}
+
+// GetShifts retrieves shifts for a driver
+func (h *DriverHandler) GetShifts(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	startDate := r.URL.Query().Get("start_date")
+	endDate := r.URL.Query().Get("end_date")
+
+	var start, end time.Time
+	var err error
+
+	if startDate != "" {
+		start, err = time.Parse("2006-01-02", startDate)
+	} else {
+		start = time.Now().AddDate(0, -1, 0)
+	}
+
+	if endDate != "" {
+		end, err = time.Parse("2006-01-02", endDate)
+	} else {
+		end = time.Now()
+	}
+
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid date format", err)
+		return
+	}
+
+	shifts, err := h.shift.GetShiftsByDriverID(r.Context(), driverID, start, end)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"shifts":    shifts,
+		"count":     len(shifts),
+	})
+}
+
+// GetEarnings retrieves trip earnings for a driver
+func (h *DriverHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	startDate := r.URL.Query().Get("start_date")
+	endDate := r.URL.Query().Get("end_date")
+
+	var start, end time.Time
+	var err error
+
+	if startDate != "" {
+		start, err = time.Parse("2006-01-02", startDate)
+	} else {
+		start = time.Now().AddDate(0, -1, 0)
+	}
+
+	if endDate != "" {
+		end, err = time.Parse("2006-01-02", endDate)
+	} else {
+		end = time.Now()
+	}
+
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid date format", err)
+		return
+	}
+
+	earnings, err := h.payroll.GetTripEarnings(r.Context(), driverID, start, end)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"earnings":  earnings,
+		"count":     len(earnings),
+	})
+}
+
+// GetPayouts retrieves payouts for a driver
+func (h *DriverHandler) GetPayouts(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	// For now, return empty payouts - can be implemented later
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"payouts":   []interface{}{},
+	})
+}
+
+// SubmitRating handles submitting a rating for a driver
+func (h *DriverHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		DriverID        string  `json:"driver_id" validate:"required"`
+		TripID          string  `json:"trip_id" validate:"required"`
+		PunctualityScore int    `json:"punctuality_score"`
+		BehaviorScore   int     `json:"behavior_score"`
+		DrivingScore    int     `json:"driving_score"`
+		OverallRating   float64 `json:"overall_rating"`
+		Comments        string  `json:"comments"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	rating := &models.Rating{
+		DriverID:         req.DriverID,
+		TripID:           req.TripID,
+		PunctualityScore: req.PunctualityScore,
+		BehaviorScore:    req.BehaviorScore,
+		DrivingScore:     req.DrivingScore,
+		OverallRating:    req.OverallRating,
+		Comments:         req.Comments,
+	}
+
+	if err := h.rating.SubmitRating(r.Context(), rating); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, rating)
+}
+
+// GetRatings retrieves ratings for a driver
+func (h *DriverHandler) GetRatings(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	avgRating, err := h.rating.GetDriverRating(r.Context(), driverID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id":      driverID,
+		"average_rating": avgRating,
+	})
+}
+
+// GetSchedule retrieves the schedule for a driver
+func (h *DriverHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	// For now, return empty schedule - can be implemented later
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"schedule":  []interface{}{},
+	})
+}
+
+// SetSchedule handles setting a driver's schedule
+func (h *DriverHandler) SetSchedule(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	var req struct {
+		DayOfWeek int    `json:"day_of_week"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+		IsWorking bool   `json:"is_working"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"schedule":  req,
+	})
+}
+
+// SyncMobileData handles mobile data synchronization
+func (h *DriverHandler) SyncMobileData(w http.ResponseWriter, r *http.Request) {
+	driverID := chi.URLParam(r, "id")
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id": driverID,
+		"synced":    true,
+	})
+}
+
+// Helper methods
+
+func (h *DriverHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *DriverHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	if err != nil {
+		h.logger.Debug("error details", zap.Error(err))
+	}
+}
+
+func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value("orgID"); val != nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID string) (uuid.UUID, bool) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
+		return uuid.Nil, false
+	}
+	return orgID, true
+}

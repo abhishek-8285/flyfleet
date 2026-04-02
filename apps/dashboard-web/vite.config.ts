@@ -65,7 +65,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts: ['raleigh-displays-rail-seas.trycloudflare.com', 'localhost'],
+    allowedHosts: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8084',

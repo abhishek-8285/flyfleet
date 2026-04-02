@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -291,8 +292,16 @@ func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.
 func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	orgID := h.getOrgID(r)
-	modelType := parseStringParam(query.Get("type"))
-	status := parseStringParam(query.Get("status"))
+	modelTypeStr := parseStringParam(query, "type")
+	statusStr := parseStringParam(query, "status")
+	
+	var modelType, status *string
+	if modelTypeStr != "" {
+		modelType = &modelTypeStr
+	}
+	if statusStr != "" {
+		status = &statusStr
+	}
 
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
@@ -434,8 +443,17 @@ func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.
 		return
 	}
 
-	modelID := parseStringParam(query.Get("modelId"))
-	anomalyDetected := parseBoolParam(query.Get("anomalyDetected"))
+	modelIDStr := parseStringParam(query, "modelId")
+	anomalyDetectedVal := parseBoolParam(query, "anomalyDetected")
+	
+	var modelID *string
+	var anomalyDetected *bool
+	if modelIDStr != "" {
+		modelID = &modelIDStr
+	}
+	if query.Get("anomalyDetected") != "" {
+		anomalyDetected = &anomalyDetectedVal
+	}
 
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
@@ -573,8 +591,16 @@ func (h *AnalyticsHandler) DeleteAnalyticsJob(w http.ResponseWriter, r *http.Req
 // ListAnalyticsJobs handles listing analytics jobs with filtering
 func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	jobType := parseStringParam(query.Get("jobType"))
-	status := parseStringParam(query.Get("status"))
+	jobTypeStr := parseStringParam(query, "jobType")
+	statusStr := parseStringParam(query, "status")
+	
+	var jobType, status *string
+	if jobTypeStr != "" {
+		jobType = &jobTypeStr
+	}
+	if statusStr != "" {
+		status = &statusStr
+	}
 
 	orgIDStr := query.Get("orgId")
 	orgID, err := uuid.Parse(orgIDStr)
@@ -981,3 +1007,421 @@ func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(w http.ResponseWriter, 
 }
 
 // ListDriverBehaviorAnalytics handles listing driver behavior analytics with filtering
+func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	periodStart, periodEnd := parsePeriodParams(r)
+	cursor := r.URL.Query().Get("cursor")
+	limit, offset := parsePaginationParams(r.URL.Query())
+
+	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), orgID, periodStart, periodEnd, cursor, limit, offset)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":        analytics,
+		"total_count": totalCount,
+		"limit":       limit,
+		"offset":      offset,
+	})
+}
+
+// CreatePredictiveMaintenanceAnalytics handles creating predictive maintenance analytics
+func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	var analytics models.PredictiveMaintenanceAnalytics
+	if err := json.NewDecoder(r.Body).Decode(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	if err := ValidateRequest(&analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Validation failed: "+err.Error(), nil)
+		return
+	}
+
+	analytics.ID = uuid.New().String()
+	analytics.CreatedAt = time.Now()
+	analytics.UpdatedAt = time.Now()
+
+	if err := h.service.CreatePredictiveMaintenanceAnalytics(r.Context(), &analytics); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, analytics)
+}
+
+// ListPredictiveMaintenanceAnalytics handles listing predictive maintenance analytics
+func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	vehicleID := parseUUIDParam(r, "vehicleID")
+	cursor := r.URL.Query().Get("cursor")
+	limit, offset := parsePaginationParams(r.URL.Query())
+
+	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), orgID, vehicleID, cursor, limit, offset)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":        analytics,
+		"total_count": totalCount,
+		"limit":       limit,
+		"offset":      offset,
+	})
+}
+
+// GetPredictiveMaintenanceAnalyticsByVehicle handles retrieving predictive maintenance analytics by vehicle
+func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicleId")
+	vehicleID, err := uuid.Parse(vehicleIDStr)
+	orgID := h.getOrgID(r)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
+		return
+	}
+
+	limit, offset := parsePaginationParams(r.URL.Query())
+
+	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, orgID, limit, offset)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":        analytics,
+		"total_count": totalCount,
+		"limit":       limit,
+		"offset":      offset,
+	})
+}
+
+// GetPredictiveMaintenanceAnalytics handles retrieving predictive maintenance analytics by ID
+func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
+
+	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id, orgID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, analytics)
+}
+
+// UpdatePredictiveMaintenanceAnalytics handles updating predictive maintenance analytics
+func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	req["updated_at"] = time.Now()
+
+	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, orgID, req); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
+}
+
+// DeletePredictiveMaintenanceAnalytics handles deleting predictive maintenance analytics
+func (h *AnalyticsHandler) DeletePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	orgID := h.getOrgID(r)
+
+	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id, orgID); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "success"})
+}
+
+// DeployModel handles deploying a predictive model
+func (h *AnalyticsHandler) DeployModel(w http.ResponseWriter, r *http.Request) {
+	var deployment models.ModelDeployment
+	if err := json.NewDecoder(r.Body).Decode(&deployment); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	deployment.ID = uuid.New().String()
+	deployment.CreatedAt = time.Now()
+
+	if err := h.service.DeployModel(r.Context(), &deployment); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, deployment)
+}
+
+// CreateDriverRiskEvent handles creating a driver risk event
+func (h *AnalyticsHandler) CreateDriverRiskEvent(w http.ResponseWriter, r *http.Request) {
+	var event models.DriverRiskEvent
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	event.ID = uuid.New().String()
+	event.CreatedAt = time.Now()
+
+	if err := h.service.CreateDriverRiskEvent(r.Context(), &event); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, event)
+}
+
+// GetDriverRiskEvents handles retrieving driver risk events
+func (h *AnalyticsHandler) GetDriverRiskEvents(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := r.URL.Query().Get("driverId")
+	driverID, _ := uuid.Parse(driverIDStr)
+	startDate, endDate := parsePeriodParams(r)
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id":  driverID,
+		"events":     []interface{}{},
+		"start_date": startDate,
+		"end_date":   endDate,
+	})
+}
+
+// GetAnalyticsQuota handles retrieving analytics quota
+func (h *AnalyticsHandler) GetAnalyticsQuota(w http.ResponseWriter, r *http.Request) {
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"quota": map[string]interface{}{
+			"used":    0,
+			"limit":   1000,
+			"credits": 1000,
+		},
+	})
+}
+
+// RunReconciliation handles running data reconciliation
+func (h *AnalyticsHandler) RunReconciliation(w http.ResponseWriter, r *http.Request) {
+	startDate, endDate := parsePeriodParams(r)
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{
+		"status":     "reconciliation_started",
+		"start_date": startDate.String(),
+		"end_date":   endDate.String(),
+	})
+}
+
+// RunHistoricalBackfill handles running historical data backfill
+func (h *AnalyticsHandler) RunHistoricalBackfill(w http.ResponseWriter, r *http.Request) {
+	startDate, endDate := parsePeriodParams(r)
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{
+		"status":     "backfill_started",
+		"start_date": startDate.String(),
+		"end_date":   endDate.String(),
+	})
+}
+
+// Helper functions
+
+// parsePaginationParams extracts limit and offset from query parameters
+func parsePaginationParams(query map[string][]string) (int, int) {
+	limit := 20  // default
+	offset := 0
+
+	if vals := query["limit"]; len(vals) > 0 && vals[0] != "" {
+		if parsed, err := strconv.Atoi(vals[0]); err == nil && parsed > 0 {
+			limit = parsed
+			if limit > 100 {
+				limit = 100 // max limit
+			}
+		}
+	}
+
+	if vals := query["offset"]; len(vals) > 0 && vals[0] != "" {
+		if parsed, err := strconv.Atoi(vals[0]); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	return limit, offset
+}
+
+// parseStringParam extracts a string parameter from query
+func parseStringParam(query map[string][]string, key string) string {
+	if vals := query[key]; len(vals) > 0 {
+		return vals[0]
+	}
+	return ""
+}
+
+// parseBoolParam extracts a boolean parameter from query
+func parseBoolParam(query map[string][]string, key string) bool {
+	if vals := query[key]; len(vals) > 0 {
+		return vals[0] == "true"
+	}
+	return false
+}
+
+// parsePeriodParams extracts startDate and endDate from query parameters
+func parsePeriodParams(r *http.Request) (*time.Time, *time.Time) {
+	now := time.Now()
+	startDate := now.AddDate(0, -1, 0) // default: 1 month ago
+	endDate := now
+
+	if start := r.URL.Query().Get("startDate"); start != "" {
+		if parsed, err := time.Parse(time.RFC3339, start); err == nil {
+			startDate = parsed
+		}
+	}
+
+	if end := r.URL.Query().Get("endDate"); end != "" {
+		if parsed, err := time.Parse(time.RFC3339, end); err == nil {
+			endDate = parsed
+		}
+	}
+
+	return &startDate, &endDate
+}
+
+// parseUUIDParam parses a UUID from query parameters
+func parseUUIDParam(r *http.Request, paramName string) *uuid.UUID {
+	val := r.URL.Query().Get(paramName)
+	if val == "" {
+		return nil
+	}
+	id, err := uuid.Parse(val)
+	if err != nil {
+		return nil
+	}
+	return &id
+}
+
+// getOrgID extracts organization ID from request context
+func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value("orgID"); val != nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+// Helper HTTP response methods
+
+func (h *AnalyticsHandler) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *AnalyticsHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	if err != nil {
+		h.logger.Debug("error details", zap.Error(err))
+	}
+}
+
+// HealthCheck returns the health status of the analytics service
+func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	if err := h.service.HealthCheck(r.Context()); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Service unhealthy", err)
+		return
+	}
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "healthy"})
+}
+
+// GetFleetSummary returns fleet summary statistics
+func (h *AnalyticsHandler) GetFleetSummary(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	// Stub implementation - returns empty summary
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"org_id": orgID,
+		"summary": map[string]interface{}{},
+	})
+}
+
+// GetFleetHourlyStats returns hourly fleet statistics
+func (h *AnalyticsHandler) GetFleetHourlyStats(w http.ResponseWriter, r *http.Request) {
+	startDate, endDate := parsePeriodParams(r)
+	cursor := r.URL.Query().Get("cursor")
+	limit, _ := parsePaginationParams(r.URL.Query())
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"stats":      []interface{}{},
+		"cursor":     cursor,
+		"limit":      limit,
+		"start_date": startDate,
+		"end_date":   endDate,
+	})
+}
+
+// GetVehicleDailyStats returns daily statistics for a vehicle
+func (h *AnalyticsHandler) GetVehicleDailyStats(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := chi.URLParam(r, "vehicleID")
+	vehicleID, err := uuid.Parse(vehicleIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
+		return
+	}
+
+	startDate, endDate := parsePeriodParams(r)
+	cursor := r.URL.Query().Get("cursor")
+	limit, _ := parsePaginationParams(r.URL.Query())
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"vehicle_id": vehicleID,
+		"stats":      []interface{}{},
+		"cursor":     cursor,
+		"limit":      limit,
+		"start_date": startDate,
+		"end_date":   endDate,
+	})
+}
+
+// GetDriverDailyStats returns daily statistics for a driver
+func (h *AnalyticsHandler) GetDriverDailyStats(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := chi.URLParam(r, "driverID")
+	driverID, err := uuid.Parse(driverIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	startDate, endDate := parsePeriodParams(r)
+	cursor := r.URL.Query().Get("cursor")
+	limit, _ := parsePaginationParams(r.URL.Query())
+
+	// Stub implementation
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"driver_id":  driverID,
+		"stats":      []interface{}{},
+		"cursor":     cursor,
+		"limit":      limit,
+		"start_date": startDate,
+		"end_date":   endDate,
+	})
+}

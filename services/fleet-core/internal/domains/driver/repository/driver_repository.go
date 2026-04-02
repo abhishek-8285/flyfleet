@@ -212,14 +212,153 @@ func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) (
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan attendance record: %w", err)
 		}
-		rec.ID = id.String()
-		rec.Date = date
 		records = append(records, rec)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("attendance iteration error: %w", err)
-	}
+
 	return records, nil
+}
+
+// CreateAttendance creates a new attendance record for a driver
+func (r *DriverRepository) CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error {
+	query := `
+		INSERT INTO driver_attendance (driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+	`
+	_, err := r.db.Exec(ctx, query, attendance.DriverID, attendance.OrgID, attendance.AttendanceDate, attendance.Status, attendance.CheckInTime, attendance.CheckOutTime, attendance.Remarks)
+	return err
+}
+
+// GetAttendanceByID retrieves an attendance record by ID
+func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error) {
+	query := `
+		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		FROM driver_attendance
+		WHERE id = $1
+	`
+	var attendance models.DriverAttendance
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&attendance.ID, &attendance.DriverID, &attendance.OrgID, &attendance.AttendanceDate,
+		&attendance.Status, &attendance.CheckInTime, &attendance.CheckOutTime, &attendance.Remarks, &attendance.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &attendance, nil
+}
+
+// GetAttendanceByDriver retrieves attendance records for a driver within a date range
+func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+	query := `
+		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		FROM driver_attendance
+		WHERE driver_id = $1 AND org_id = $2 AND attendance_date BETWEEN $3 AND $4
+		ORDER BY attendance_date DESC
+	`
+	rows, err := r.db.Query(ctx, query, driverID, orgID, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attendances []*models.DriverAttendance
+	for rows.Next() {
+		var attendance models.DriverAttendance
+		err := rows.Scan(
+			&attendance.ID, &attendance.DriverID, &attendance.OrgID, &attendance.AttendanceDate,
+			&attendance.Status, &attendance.CheckInTime, &attendance.CheckOutTime, &attendance.Remarks, &attendance.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		attendances = append(attendances, &attendance)
+	}
+	return attendances, nil
+}
+
+// UpdateCheckOut updates the check-out time for an attendance record
+func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
+	query := `
+		UPDATE driver_attendance
+		SET check_out_time = $1, remarks = $2, updated_at = NOW()
+		WHERE id = $3 AND org_id = $4
+	`
+	_, err := r.db.Exec(ctx, query, checkOut, remarks, id, orgID)
+	return err
+}
+
+// CreateSchedule creates a new work schedule for a driver
+func (r *DriverRepository) CreateSchedule(ctx context.Context, schedule *models.DriverSchedule) error {
+	query := `
+		INSERT INTO driver_schedules (driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+	`
+	_, err := r.db.Exec(ctx, query, schedule.DriverID, schedule.OrgID, schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, schedule.IsWorking)
+	return err
+}
+
+// GetScheduleByID retrieves a work schedule by ID
+func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error) {
+	query := `
+		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		FROM driver_schedules
+		WHERE id = $1
+	`
+	var schedule models.DriverSchedule
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&schedule.ID, &schedule.DriverID, &schedule.OrgID, &schedule.DayOfWeek,
+		&schedule.StartTime, &schedule.EndTime, &schedule.IsWorking, &schedule.CreatedAt, &schedule.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &schedule, nil
+}
+
+// GetSchedulesByDriver retrieves all work schedules for a driver
+func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+	query := `
+		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		FROM driver_schedules
+		WHERE driver_id = $1 AND org_id = $2
+		ORDER BY day_of_week
+	`
+	rows, err := r.db.Query(ctx, query, driverID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var schedules []*models.DriverSchedule
+	for rows.Next() {
+		var schedule models.DriverSchedule
+		err := rows.Scan(
+			&schedule.ID, &schedule.DriverID, &schedule.OrgID, &schedule.DayOfWeek,
+			&schedule.StartTime, &schedule.EndTime, &schedule.IsWorking, &schedule.CreatedAt, &schedule.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		schedules = append(schedules, &schedule)
+	}
+	return schedules, nil
+}
+
+// UpdateSchedule updates a work schedule
+func (r *DriverRepository) UpdateSchedule(ctx context.Context, schedule *models.DriverSchedule) error {
+	query := `
+		UPDATE driver_schedules
+		SET day_of_week = $1, start_time = $2, end_time = $3, is_working = $4, updated_at = NOW()
+		WHERE id = $5
+	`
+	_, err := r.db.Exec(ctx, query, schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, schedule.IsWorking, schedule.ID)
+	return err
+}
+
+// DeleteSchedule deletes a work schedule
+func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
+	query := `DELETE FROM driver_schedules WHERE id = $1 AND org_id = $2`
+	_, err := r.db.Exec(ctx, query, id, orgID)
+	return err
 }
 
 // GetSchedules retrieves all work schedules for a driver from the normalized table
@@ -651,6 +790,18 @@ func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID str
 	}
 
 	return nil
+}
+
+// LogBehaviorScoreChange logs a behavior score change event
+func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
+	query := `
+		INSERT INTO driver_behavior_logs (
+			driver_id, org_id, old_score, new_score, reason, event_type,
+			user_id, user_email, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+	`
+	_, err := r.db.Exec(ctx, query, driverID, orgID, oldScore, newScore, reason, eventType, userID, userEmail)
+	return err
 }
 
 // IncrementStats increments driver statistics

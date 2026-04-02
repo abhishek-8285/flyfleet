@@ -53,6 +53,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const profileData = await apiClient.get("/auth/profile") as any;
 
+      // CRITICAL: Store org_id from profile response
+      const profileOrgId = profileData.user?.org_id;
+      if (profileOrgId) {
+        localStorage.setItem('org_id', profileOrgId);
+        console.log('[AuthProvider] fetchProfile stored org_id:', profileOrgId);
+      }
+
       // Fix 2: Prefer values returned by the backend; fall back to localStorage only when absent
       const backendTheme = profileData.user?.theme;
       const savedTheme = backendTheme || localStorage.getItem("theme") || "light";
@@ -94,11 +101,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const initAuth = async () => {
       setAuthError(null);
       try {
+        console.log('[AuthProvider] Starting auth initialization...');
+        
         // 1. Try standard session refresh
         const response = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
         const token = response.token || response.access_token;
+        const orgIdFromResponse = response.user?.org_id;
+        
+        console.log('[AuthProvider] Refresh response:', { 
+          hasToken: !!token, 
+          orgIdFromResponse,
+          localStorageOrgId: localStorage.getItem('org_id')
+        });
+        
         if (token) {
           store.dispatch(setToken(token));
+        }
+
+        // CRITICAL FIX: Store org_id from refresh response BEFORE calling fetchProfile
+        if (orgIdFromResponse) {
+          localStorage.setItem('org_id', orgIdFromResponse);
+          console.log('[AuthProvider] Stored org_id from refresh:', orgIdFromResponse);
+        } else {
+          console.warn('[AuthProvider] Refresh succeeded but no org_id in response');
         }
 
         // Fix 3: No redundant double-hydration. hydrateUser on refresh is only
@@ -107,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         // stale/partial data.
         try {
           await fetchProfile();
+          console.log('[AuthProvider] Auth initialization complete');
         } catch (profileErr) {
           // Fix 6: fetchProfile failed after a valid refresh — surface the error
           console.error("AuthProvider: Profile fetch failed after refresh:", profileErr);
@@ -124,9 +150,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               import.meta.env.VITE_DEV_LOGIN_EMAIL || "org_admin@delta.io";
             console.log(`AuthProvider: Attempting Dev Auto-Login as ${devEmail}...`);
             // Use axios directly to bypass apiClient interceptors
+            // Note: dev-login endpoint removed, using standard login instead
             const devResponse = await axios.post(
-              "/api/v1/auth/dev-login",
-              { email: devEmail },
+              "/api/v1/auth/login",
+              { email: devEmail, password: "Fleet_password123", org_id: "" },
               { withCredentials: true }
             ) as any;
             const devToken = devResponse.data?.token || devResponse.data?.access_token;
@@ -134,6 +161,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               store.dispatch(setToken(devToken));
               if (devResponse.data?.user) {
                 hydrateUser(devResponse.data);
+                // Store org_id from response
+                if (devResponse.data.user?.org_id) {
+                  localStorage.setItem('org_id', devResponse.data.user.org_id);
+                }
               }
               await fetchProfile();
               return; // Success!
@@ -158,9 +189,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Fix 4: Apply theme to the DOM immediately when login() is called manually
   const login = (token: string, refreshToken: string, userData: User) => {
+    console.log('[AuthProvider] login() called with:', { 
+      hasToken: !!token, 
+      userOrgId: userData?.org_id,
+      currentLocalStorageOrgId: localStorage.getItem('org_id')
+    });
+    
     store.dispatch(setToken(token));
     store.dispatch(setReduxUser(userData));
     setUser(userData);
+    
+    // CRITICAL FIX: Ensure org_id is stored in localStorage immediately
+    if (userData?.org_id) {
+      localStorage.setItem('org_id', userData.org_id);
+      console.log('[AuthProvider] Stored org_id in localStorage:', userData.org_id);
+    } else {
+      console.error('[AuthProvider] login() called without org_id in userData!');
+    }
+    
     if (userData.theme) {
       applyTheme(userData.theme);
     }
