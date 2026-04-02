@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 // ============================================================================
 // FlyFleet IAM Production Readiness Validation
 // ============================================================================
@@ -1503,9 +1500,10 @@ func registerUser(t *testing.T, email, password string) {
 		redisClient.FlushAll(context.Background())
 	}
 
-	regReq := map[string]string{
-		"email":    email,
-		"password": password,
+	regReq := map[string]interface{}{
+		"email":       email,
+		"password":    password,
+		"agree_terms": true,
 	}
 	resp := makeRequestWithStatus(t, "POST", testBaseURL+"/api/v1/auth/register", regReq)
 	require.Equal(t, http.StatusCreated, resp.statusCode, "User registration should succeed")

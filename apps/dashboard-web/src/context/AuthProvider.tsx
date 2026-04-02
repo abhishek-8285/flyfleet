@@ -182,11 +182,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const setOrganization = async (orgId: string) => {
     localStorage.setItem("org_id", orgId);
     try {
+      // Step A: Trigger a session refresh with the new org_id.
+      // This ensures the backend issues a new JWT with the correct org_id claim immediately.
+      const refreshResponse = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
+      const newToken = refreshResponse.token || refreshResponse.access_token;
+      if (newToken) {
+        store.dispatch(setToken(newToken));
+        if (refreshResponse.user) {
+          hydrateUser(refreshResponse);
+        }
+      }
+      
+      // Step B: Re-fetch the authoritative profile (scoped to the new org)
       await fetchProfile();
-    } catch (err) {
-      // If the profile re-fetch fails for the new org, force a hard reload as fallback
-      console.warn("setOrganization: profile re-fetch failed, falling back to reload:", err);
-      window.location.reload();
+    } catch (err: any) {
+      // If the switch fails, clear the invalid org_id so we don't get stuck in a loop
+      console.warn("setOrganization: org switch failed, clearing org_id and falling back:", err);
+      localStorage.removeItem("org_id");
+      
+      // If it's a 403/401, the apiClient might have already handled it, but we'll force a reload
+      // to ensure state is clean from the default organization perspective.
+      if (err.status === 403 || err.status === 401) {
+        window.location.href = "/";
+      } else {
+        window.location.reload();
+      }
     }
   };
 

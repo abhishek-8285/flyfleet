@@ -53,77 +53,49 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
 
   return (
     <>
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 selection:bg-primary/30">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse"></div>
-          <div
-            className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"
-            style={{ animationDelay: "2s" }}
-          ></div>
+      <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 md:bg-white dark:bg-[#121212] selection:bg-blue-600/30">
+        {/* Top/Left Background */}
+        <div className="flex flex-col w-full h-[40vh] md:h-auto md:w-1/2 relative bg-[#1e3a8a] overflow-hidden items-center md:justify-center">
+          <div className="absolute inset-0">
+            <img 
+              src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=2000" 
+              className="object-cover w-full h-full mix-blend-overlay opacity-80" 
+              alt="Fleet Highway Background" 
+            />
+          </div>
+          <div className="mt-[12vh] md:mt-0 relative z-10 flex items-center gap-2 md:gap-3 p-3 md:p-6 drop-shadow-lg">
+            <span className="material-symbols-outlined text-white text-[36px] md:text-[56px] drop-shadow-md">local_shipping</span>
+            <span className="text-white text-3xl md:text-5xl font-bold tracking-tight drop-shadow-md">{branding.companyName}</span>
+          </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="max-w-md w-full relative z-10"
-        >
-          <div className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border-t-white/10">
-            <div className="text-center mb-6">
-              <div className="flex justify-center mb-4">
-                <div className="h-12 w-12 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 rotate-3 hover:rotate-0 transition-transform duration-300">
-                  <span className="material-symbols-outlined text-white text-2xl">
-                    local_shipping
-                  </span>
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
-                {branding.companyName}
-              </h1>
-              <div className="h-1 w-10 bg-primary mx-auto rounded-full mb-3"></div>
-              <h2 className="text-lg font-semibold text-slate-200 mb-1">
-                {title}
-              </h2>
-              {subtitle && (
-                <p className="text-slate-400 text-sm font-medium">{subtitle}</p>
-              )}
+        {/* Bottom/Right Form Panel */}
+        <div className="w-full md:w-1/2 flex flex-col justify-start md:justify-center items-center px-4 md:p-8 lg:p-16 relative bg-slate-50 dark:bg-[#121212] md:bg-white md:dark:bg-[#121212] pt-0 md:pt-0 min-h-[60vh] md:min-h-0">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl dark:shadow-2xl md:shadow-none md:bg-transparent md:dark:bg-transparent border border-transparent dark:border-white/5 md:dark:border-transparent p-6 md:p-0 -mt-16 md:mt-0 relative z-20"
+          >
+            <div className="mb-6 md:mb-10 text-center md:text-left">
+              <h1 className="text-2xl md:text-3xl font-bold md:font-medium text-slate-900 dark:text-white mb-1">{title}</h1>
+              {subtitle && <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{subtitle}</p>}
             </div>
 
             {children}
-
-            <div className="mt-6 pt-4 border-t border-slate-800/50 text-center">
-              <p className="text-slate-500 text-xs tracking-wide uppercase font-semibold mb-3">
-                {uiStrings?.gateway_label || "Secure Identity Gateway"}
-              </p>
-              <div className="flex justify-center gap-4 text-xs text-slate-500">
-                <button
-                  className="hover:text-primary transition-colors"
-                  onClick={() => setActiveModal("privacy")}
-                >
-                  {uiStrings?.label_privacy || "Privacy"}
-                </button>
-                <span className="text-slate-800">•</span>
-                <button
-                  className="hover:text-primary transition-colors"
-                  onClick={() => setActiveModal("terms")}
-                >
-                  {uiStrings?.label_terms || "Terms"}
-                </button>
-                <span className="text-slate-800">•</span>
-                <button
-                  className="hover:text-primary transition-colors"
-                  onClick={() => setActiveModal("support")}
-                >
-                  {uiStrings?.label_support || "Support"}
-                </button>
-              </div>
+          </motion.div>
+          
+          {/* Footer */}
+          <div className="mt-8 md:mt-16 text-center text-slate-500 pb-8 md:pb-0 w-full md:max-w-sm relative z-20">
+            <div className="flex justify-center gap-3 text-[11px] md:text-xs font-semibold pt-1">
+              <button onClick={() => setActiveModal("privacy")} className="hover:text-blue-600 transition-colors">Privacy</button>
+              <span className="text-slate-300">•</span>
+              <button onClick={() => setActiveModal("terms")} className="hover:text-blue-600 transition-colors">Terms</button>
+              <span className="text-slate-300">•</span>
+              <button onClick={() => setActiveModal("support")} className="hover:text-blue-600 transition-colors">Support</button>
             </div>
           </div>
-
-          <p className="text-center mt-6 text-slate-600 text-[10px] uppercase tracking-[0.2em] font-bold">
-            {uiStrings?.powered_by || "Powered by FleetCommand Core v4.0"}
-          </p>
-        </motion.div>
+        </div>
       </div>
 
       {/* Privacy Modal */}
@@ -140,7 +112,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
                 policy
               </span>
               {uiStrings?.last_updated || "Last Updated:"}{" "}
-              {legalDocs?.privacy_policy.last_updated || "Loading..."}
+              {legalDocs?.privacy_policy?.last_updated || "Loading..."}
             </h4>
             <p className="text-slate-400 text-sm">
               This Privacy Policy describes how FlyFleet Global Operations
@@ -149,7 +121,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
           </div>
 
           <div className="space-y-8">
-            {legalDocs?.privacy_policy.sections.map((section, idx) => (
+            {legalDocs?.privacy_policy?.sections.map((section, idx) => (
               <div key={idx}>
                 <h4 className="text-white mb-3 text-lg font-bold border-b border-slate-700 pb-2">
                   {section.title}
@@ -186,7 +158,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
                 description
               </span>
               {uiStrings?.effective_date || "Effective Date:"}{" "}
-              {legalDocs?.terms_of_service.effective_date || "Loading..."}
+              {legalDocs?.terms_of_service?.effective_date || "Loading..."}
             </h4>
             <p className="text-slate-400 text-sm">
               These Terms of Service govern your access to and use of FlyFleet's
@@ -195,7 +167,7 @@ const EnterpriseAuthLayout: React.FC<EnterpriseAuthLayoutProps> = ({
           </div>
 
           <div className="space-y-8">
-            {legalDocs?.terms_of_service.sections.map((section, idx) => (
+            {legalDocs?.terms_of_service?.sections.map((section, idx) => (
               <div key={idx}>
                 <h4 className="text-white mb-3 text-lg font-bold border-b border-slate-700 pb-2">
                   {section.title}

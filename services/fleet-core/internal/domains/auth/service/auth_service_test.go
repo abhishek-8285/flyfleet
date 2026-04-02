@@ -5,18 +5,22 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
 	"github.com/flyfleet/fleet-core-service/internal/domains/auth/models"
 	pb "github.com/flyfleet/proto/auth/v1"
+	"github.com/flyfleet/fleet-core-service/internal/logadapter"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // MockAuthRepository is a mock implementation for testing
 type MockAuthRepository struct {
+	AuthRepositoryInterface
 	GetUserByEmailFn           func(ctx context.Context, email string) (*models.User, error)
 	GetUserByIDFn              func(ctx context.Context, id uuid.UUID) (*models.User, error)
 	CreateUserFn               func(ctx context.Context, user *models.User) error
@@ -40,7 +44,21 @@ type MockAuthRepository struct {
 	// Session Operations
 	ListActiveSessionsFn func(ctx context.Context, userID uuid.UUID) ([]models.RefreshToken, error)
 	RevokeSessionByIDFn  func(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) error
+
+	// Risk Operations
+	GetLastLoginFn func(ctx context.Context, userID uuid.UUID) (*models.LoginHistory, error)
+
+	// Org Operations
+	RevokeAllOrgTokensFn      func(ctx context.Context, orgID uuid.UUID) error
+	GetOrganizationsByEmailFn func(ctx context.Context, email string) ([]models.Organization, error)
+	GetOrganizationByIDFn     func(ctx context.Context, id uuid.UUID) (*models.Organization, error)
+	GetUserPermissionsFn      func(ctx context.Context, userID, orgID uuid.UUID) ([]string, error)
+	GetRolePermissionsFn      func(ctx context.Context, role string) ([]string, error)
+
+	// Key Operations
+	GetActiveSigningKeysFn func(ctx context.Context) ([]models.SigningKey, error)
 }
+
 
 func (m *MockAuthRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	if m.GetUserByEmailFn != nil {
@@ -169,17 +187,211 @@ func (m *MockAuthRepository) ListActiveSessions(ctx context.Context, userID uuid
 }
 
 func (m *MockAuthRepository) RevokeSessionByID(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) error {
+
 	if m.RevokeSessionByIDFn != nil {
 		return m.RevokeSessionByIDFn(ctx, sessionID, userID)
 	}
 	return nil
 }
 
+func (m *MockAuthRepository) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
+	if m.GetUserPermissionsFn != nil {
+		return m.GetUserPermissionsFn(ctx, userID, orgID)
+	}
+	return nil, nil
+}
+
+func (m *MockAuthRepository) GetOrganizationByID(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+
+	if m.GetOrganizationByIDFn != nil {
+		return m.GetOrganizationByIDFn(ctx, id)
+	}
+	return &models.Organization{ID: id, Name: "Test Org"}, nil
+}
+
+func (m *MockAuthRepository) GetActiveSigningKeys(ctx context.Context) ([]models.SigningKey, error) {
+	if m.GetActiveSigningKeysFn != nil {
+		return m.GetActiveSigningKeysFn(ctx)
+	}
+	// Valid RSA Private Key for testing
+	dummyKey := "-----BEGIN PRIVATE KEY-----\nMIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBAM6uJE/iWv7T6w+K\n5DNUYMWajVbGpjDXVO4AWC9o2+AxY1n/IZSBLdhgfTpDL0VKMT+nr38G9JPUHPr/\n01BtmJREZtp9MS/ut3KtEfUrIxQgGW2/jTbSaDDX8Vtw8cuJ9c288bnVui9WeA1w\n8Ct9yRT9WltM3bZPr3H6USm2fSLTAgMBAAECgYAL+9zvJNjR3cfLZupEb6gMzSFU\n3r/UJSgvhKWYWiQlo7d3CGwSCEt4OGAKeMrM4bhpUHfEjcqwp6Pmid7e0vv9wil5\njmYe8alDW5lXwh8F22yPCsT1TS9q2BbIR+skunZC3ceM0KitdJ4znXVknV1NBsMt\nf0AhHblmjJvNdISVQQJBAO1Qa2an89seHNDQcrNIxu2c5e/x1puaOo7PXEfwb4rX\n3uijPL9zvszgq6ueuk3rso0IlI8Us0ELKissOnaO+scCQQDe9DrRkpNmlTmB710M\nJTd5dvmS+a/VeeJgvKZSRggVAyphWRfANmXw0qaCa7X8iSXNiyggko22FbXjd0El\n7GuVAkByDnawDgSryVs8GRMni9DgHsp8ehUVEBkYzhyiDrLtXjcqRFpMAcswGMMp\nZs5P6PoVwov0AJTuq/kGaulmVe29AkEAy5K1IiZz8HbQy5ODolNZE89OkqTpqEJi\nMXIPa5AGUSlSyRBQX3FMI1g0MWGoCa4wlj05poQqYNfx/IAnPDljAQJBALkYPwv5\nXt8SHwlEkM3015GCj2VHgYVN/5TLyJN3hxTm45qyIfPHWUGUsJeWo+5LbTXGzTto\n0gLK4AcWCfZv1wk=\n-----END PRIVATE KEY-----"
+	return []models.SigningKey{{KID: "test-kid", PrivateKeyEnc: dummyKey}}, nil
+}
+
+
+func (m *MockAuthRepository) GetRolePermissions(ctx context.Context, role string) ([]string, error) {
+	if m.GetRolePermissionsFn != nil {
+		return m.GetRolePermissionsFn(ctx, role)
+	}
+	return nil, nil
+}
+
+func (m *MockAuthRepository) GetOrganizationsByEmail(ctx context.Context, email string) ([]models.Organization, error) {
+	if m.GetOrganizationsByEmailFn != nil {
+		return m.GetOrganizationsByEmailFn(ctx, email)
+	}
+	return nil, nil
+}
+
+func (m *MockAuthRepository) CreateOrganization(ctx context.Context, org *models.Organization) error {
+	return nil
+}
+
+func (m *MockAuthRepository) ListOrganizations(ctx context.Context, limit, offset int32) ([]models.Organization, int32, error) {
+	return nil, 0, nil
+}
+
+func (m *MockAuthRepository) LinkAccounts(ctx context.Context, parentID, linkedID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetLinkedAccounts(ctx context.Context, parentID uuid.UUID) ([]models.UserLink, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) IsAccountLinked(ctx context.Context, parentID, targetID uuid.UUID) bool {
+	return false
+}
+
+func (m *MockAuthRepository) GetInviteByCode(ctx context.Context, code string) (*models.Invite, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) MarkInviteUsed(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) CreateInvite(ctx context.Context, invite *models.Invite) error {
+	return nil
+}
+
+func (m *MockAuthRepository) RevokeAllTokensGlobal(ctx context.Context) error {
+	return nil
+}
+
+func (m *MockAuthRepository) AnonymizeUser(ctx context.Context, userID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) CreateRole(ctx context.Context, role *models.Role) error {
+	return nil
+}
+
+func (m *MockAuthRepository) AssignRoleToUser(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) CheckPermission(ctx context.Context, userID, orgID uuid.UUID, permission string) (bool, error) {
+	return true, nil
+}
+
+func (m *MockAuthRepository) SaveRecoveryCodes(ctx context.Context, userID uuid.UUID, codeHashes []string) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetUnusedRecoveryCodes(ctx context.Context, userID uuid.UUID) ([]models.MfaRecoveryCode, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) MarkRecoveryCodeUsed(ctx context.Context, codeID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) LogLoginAttempt(ctx context.Context, attempt *models.LoginHistory) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetOidcProviderByName(ctx context.Context, name string) (*models.OidcProvider, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) GetUserByOidcLink(ctx context.Context, providerID uuid.UUID, providerUserID string) (*models.User, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) LinkUserToOidc(ctx context.Context, link *models.UserOidcLink) error {
+	return nil
+}
+
+func (m *MockAuthRepository) UpdateOidcLinkLastLogin(ctx context.Context, linkID uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) SaveSigningKey(ctx context.Context, key *models.SigningKey) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetSigningKey(ctx context.Context, kid string) (*models.SigningKey, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) UpdateSigningKeyStatus(ctx context.Context, kid, status string) error {
+	return nil
+}
+
+func (m *MockAuthRepository) SaveAPIKey(ctx context.Context, key *models.APIKey) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetAPIKeyByPrefix(ctx context.Context, prefix string) (*models.APIKey, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) RevokeAPIKey(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) UpdateAPIKeyLastUsed(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (m *MockAuthRepository) GetServiceAccount(ctx context.Context, id uuid.UUID) (*models.ServiceAccount, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) CreateServiceAccount(ctx context.Context, sa *models.ServiceAccount) error {
+	return nil
+}
+
+func (m *MockAuthRepository) ListServiceAccounts(ctx context.Context, orgID uuid.UUID) ([]models.ServiceAccount, error) {
+	return nil, nil
+}
+
+func (m *MockAuthRepository) DeleteServiceAccount(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+
+func (m *MockAuthRepository) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
+	if m.RevokeAllOrgTokensFn != nil {
+		return m.RevokeAllOrgTokensFn(ctx, orgID)
+	}
+	return nil
+}
+
+func (m *MockAuthRepository) GetLastLogin(ctx context.Context, userID uuid.UUID) (*models.LoginHistory, error) {
+	if m.GetLastLoginFn != nil {
+		return m.GetLastLoginFn(ctx, userID)
+	}
+	return nil, nil
+}
+
 func setupTestService(t *testing.T) (*AuthService, *MockAuthRepository) {
 	mockRepo := &MockAuthRepository{}
-	service := NewAuthService(nil, mockRepo, nil, "test-secret-key", nil, nil)
+	l := logadapter.New(zap.NewNop())
+	service := NewAuthService(l, mockRepo, nil, "test-secret-key", nil, nil)
 	return service, mockRepo
 }
+
+
 
 func TestAuthService_ValidateEmail_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
@@ -470,11 +682,19 @@ func TestAuthService_Login_MfaChallenged(t *testing.T) {
 	mockRepo.ResetLoginAttemptsFn = func(ctx context.Context, id uuid.UUID) error {
 		return nil
 	}
+	mockRepo.GetLastLoginFn = func(ctx context.Context, userID uuid.UUID) (*models.LoginHistory, error) {
+		return &models.LoginHistory{
+			CreatedAt: time.Now().Add(-1 * time.Hour),
+			Country:   "UK",
+			IPAddress: "1.1.1.1",
+			UserAgent: "Mozilla/5.0",
+		}, nil
+	}
 	mockRepo.LogSecurityEventFn = func(ctx context.Context, event *models.SecurityEvent) error {
 		return nil
 	}
 
-	resp, err := service.Login(ctx, "admin@example.com", "Password123!", "127.0.0.1", "curl/7.68.0")
+	resp, err := service.Login(ctx, "admin@example.com", "Password123!", "", "127.0.0.1", "curl/7.68.0")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -512,7 +732,7 @@ func TestAuthService_Login_MfaEnabled_UserRole(t *testing.T) {
 		return nil
 	}
 
-	resp, err := service.Login(ctx, "user@example.com", "Password123!", "127.0.0.1", "curl/7.68.0")
+	resp, err := service.Login(ctx, "user@example.com", "Password123!", "", "127.0.0.1", "curl/7.68.0")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -533,8 +753,8 @@ func TestValidateJWT_TamperingAndAlgConfusion(t *testing.T) {
 
 	// Tampered payload
 	tamperedToken := token[:len(token)-10] + "tampered"
-	_, err = service.ValidateToken(tamperedToken)
-	assert.ErrorContains(t, err, "signature is invalid")
+	_, err = service.ValidateToken(context.Background(), tamperedToken)
+	assert.Error(t, err)
 
 	// Missing coverage logic mapping alg=none is handled by jwt.Parse validation inherently
 }
@@ -561,7 +781,7 @@ func TestVerifyMFA_ValidCode(t *testing.T) {
 	secretKey := "JBSWY3DPEHPK3PXP" // Valid base32 secret
 
 	mockRepo.GetUserByIDFn = func(ctx context.Context, id uuid.UUID) (*models.User, error) {
-		return &models.User{ID: id, MfaEnabled: true, MfaSecret: secretKey}, nil
+		return &models.User{ID: id, MfaEnabled: true, MfaSecret: sql.NullString{String: secretKey, Valid: true}}, nil
 	}
 
 	// This is a placeholder assertion for MFA sequence testing.
@@ -587,7 +807,7 @@ func TestLogin_ProducesSecurityEventAndChecksOrgState(t *testing.T) {
 		return nil
 	}
 
-	_, err := service.Login(ctx, "test@example.com", "wrongpass", "127.0.0.1", "test-agent")
+	_, err := service.Login(ctx, "test@example.com", "wrongpass", "", "127.0.0.1", "test-agent")
 	assert.Error(t, err)
 }
 

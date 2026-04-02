@@ -4,7 +4,7 @@ log_level = "info"
 log_file = ""  # Set path to enable file logging (e.g., "/var/log/flyfleet/app.log")
 
 [database]
-url = "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"
+url = "postgres://fleet_user:fleet_password@127.0.0.1:5432/fleet_db?sslmode=disable"
 
 [security]
 # JWT secret loaded from env var

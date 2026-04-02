@@ -62,7 +62,7 @@ const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({
           {getStrengthText(strength) || "NONE"}
         </span>
       </div>
-      <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+      <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: isEmpty ? 0 : `${Math.max(strength, 5)}%` }}

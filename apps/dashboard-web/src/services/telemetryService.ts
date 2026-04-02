@@ -1,5 +1,7 @@
 import { store } from "../store";
 import { addTimelineEvent } from "../store/timelineSlice";
+import { updateKpi, incrementAlertCount, fetchStatsSuccess } from "../store/dashboardSlice";
+import type { RootState } from "../store";
 
 export interface TelemetryPayload {
   vehicleId: string;
@@ -11,6 +13,32 @@ export interface TelemetryPayload {
   heading: number;
   status: "moving" | "idling" | "alert" | "offline";
   timestamp: string;
+}
+
+export interface StatsUpdatePayload {
+  stats: {
+    total_vehicles: number;
+    active_trips: number;
+    active_drivers: number;
+    alerts_count: number;
+    fleet_health_score: number;
+    vehicles_offline: number;
+    sla_violations: number;
+  };
+}
+
+export interface OverviewUpdatePayload {
+  stats: {
+    total_vehicles: number;
+    active_trips: number;
+    active_drivers: number;
+    alerts_count: number;
+    fleet_health_score: number;
+    vehicles_offline: number;
+    sla_violations: number;
+  };
+  timeline: any[];
+  alerts: any[];
 }
 
 export const getWsUrl = (): string => {
@@ -25,7 +53,8 @@ export const getWsUrl = (): string => {
     }
   }
 
-  const token = localStorage.getItem("token") || localStorage.getItem("access_token") || "";
+  const state = store.getState() as RootState;
+  const token = state.auth.token || "";
   let orgId = "";
   if (token) {
     try {
@@ -82,6 +111,14 @@ class TelemetryService {
               },
             });
           }
+        } else if (data.type === "STATS_UPDATE") {
+          // Update dashboard statistics in real-time
+          store.dispatch(fetchStatsSuccess(data.payload.stats));
+        } else if (data.type === "OVERVIEW_UPDATE") {
+          // Update full dashboard overview
+          store.dispatch(fetchStatsSuccess(data.payload.stats));
+          // Note: timeline and alerts updates would need separate actions
+          // For now, we'll rely on EVENT_PUSH for those
         }
       } catch (err) {
         console.error("Failed to parse WebSocket message", err);
