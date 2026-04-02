@@ -8,6 +8,10 @@ interface RBACContextType {
 
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
+// Fix 4: Removed hard-coded Super Admin UUID bypass. Super admin is determined
+// only by role slug and the wildcard permission — no magic UUIDs.
+const SUPER_ADMIN_SLUGS = ["super_admin", "superadmin", "Super Admin"];
+
 export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -16,20 +20,22 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({
   // This relies on the backend sending compiled 'permissions' list in the User object or specific endpoint
   // For now, we assume user.permissions is a list of strings like "vehicle:active", "org:read"
 
+  const isSuperAdmin = () => {
+    if (!user) return false;
+    return (
+      SUPER_ADMIN_SLUGS.includes(user.role ?? "") ||
+      SUPER_ADMIN_SLUGS.includes(user.role_id ?? "") ||
+      user.permissions?.includes("*:*") === true
+    );
+  };
+
   const can = (action: string, resource: string) => {
     if (!user) {
       console.log("[RBAC] No user found");
       return false;
     }
 
-    // Super Admin Bypass - check for name, ID, or literal string
-    const isSuperAdmin =
-      user.role_id === "super_admin" ||
-      user.role_id === "Super Admin" ||
-      user.role_id === "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11" || // Known Super Admin UUID
-      user.permissions?.includes("*:*");
-
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin()) return true;
 
     const permissionKey = `${resource}:${action}`;
     const hasPerm = user.permissions?.includes(permissionKey) || false;
@@ -37,7 +43,8 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!hasPerm) {
       console.log(`[RBAC] Access denied for ${permissionKey}`, {
         userPermissions: user.permissions,
-        userRole: user.role_id,
+        userRole: user.role,
+        userRoleId: user.role_id,
       });
     }
 
@@ -46,9 +53,9 @@ export const RBACProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const hasRole = (roleName: string) => {
     return (
+      user?.role === roleName ||
       user?.role_id === roleName ||
-      (roleName === "super_admin" &&
-        (user?.role_id === "Super Admin" || user?.role_id === "super_admin"))
+      (SUPER_ADMIN_SLUGS.includes(roleName) && isSuperAdmin())
     );
   };
 
