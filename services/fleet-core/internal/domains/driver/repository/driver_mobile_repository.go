@@ -148,7 +148,7 @@ func (r *DriverRepository) CreateDutyStatusLog(ctx context.Context, log *models.
 // GetLatestDutyStatus retrieves the latest duty status for a driver
 func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error) {
 	query := `
-		SELECT id, driver_id, status, location, started_at, ended_at, 
+		SELECT id, driver_id, status, location, started_at, ended_at,
 			   duration_minutes, remarks, created_at, updated_at
 		FROM duty_status_logs
 		WHERE driver_id = $1
@@ -174,4 +174,48 @@ func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID str
 
 	json.Unmarshal(locationJSON, &log.Location)
 	return &log, nil
+}
+
+// EndDutyStatusLog updates a duty status log with end time and duration
+func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
+	query := `
+		UPDATE duty_status_logs
+		SET ended_at = NOW(), duration_minutes = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+	_, err := r.db.Exec(ctx, query, durationMinutes, logID)
+	return err
+}
+
+// GetDutyStatusLogs retrieves duty status logs for a driver within a date range
+func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
+	query := `
+		SELECT id, driver_id, status, location, started_at, ended_at,
+			   duration_minutes, remarks, created_at, updated_at
+		FROM duty_status_logs
+		WHERE driver_id = $1 AND started_at BETWEEN $2 AND $3
+		ORDER BY started_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, driverID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []*models.DutyStatusLog
+	for rows.Next() {
+		var log models.DutyStatusLog
+		var locationJSON []byte
+		err := rows.Scan(
+			&log.ID, &log.DriverID, &log.Status, &locationJSON, &log.StartedAt,
+			&log.EndedAt, &log.DurationMinutes, &log.Remarks, &log.CreatedAt, &log.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		json.Unmarshal(locationJSON, &log.Location)
+		logs = append(logs, &log)
+	}
+	return logs, nil
 }

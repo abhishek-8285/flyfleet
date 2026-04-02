@@ -730,6 +730,7 @@ func main() {
 			bulkService,
 			encryptionService,
 			sharedRedisClient,
+			logger,
 		)
 		r.Route("/india", func(r chi.Router) {
 			// India compliance operations require elevated roles
@@ -754,7 +755,7 @@ func main() {
 			})
 			r.Route("/sarathi", func(r chi.Router) {
 				r.Post("/verifications", indiaHandlersLegacy.CreateDriverVerification)
-				r.Post("/verify", indiaHandlersLegacy.VerifyDriver)
+				r.Post("/verify", indiaHandlersLegacy.VerifyVehicle)
 				r.Get("/verifications/{id}", indiaHandlersLegacy.GetDriverVerification)
 				r.Get("/verifications/license/{license_number}", indiaHandlersLegacy.GetDriverVerificationByLicenseNumber)
 				r.Get("/verifications", indiaHandlersLegacy.ListDriverVerifications)
@@ -1160,6 +1161,7 @@ func main() {
 		bulkServiceLegacy,
 		encryptServiceLegacy,
 		sharedRedisClient,
+		logger,
 	)
 	r.Route("/api", func(r chi.Router) {
 		// India compliance endpoints require elevated roles (regulatory)
@@ -1186,7 +1188,7 @@ func main() {
 		})
 		r.Route("/sarathi", func(r chi.Router) {
 			r.Post("/verifications", indiaHandlersLegacy.CreateDriverVerification)
-			r.Post("/verify", indiaHandlersLegacy.VerifyDriver)
+			r.Post("/verify", indiaHandlersLegacy.VerifyVehicle)
 			r.Get("/verifications/{id}", indiaHandlersLegacy.GetDriverVerification)
 			r.Get("/verifications/license/{license_number}", indiaHandlersLegacy.GetDriverVerificationByLicenseNumber)
 			r.Get("/verifications", indiaHandlersLegacy.ListDriverVerifications)

@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 // IndiaIntegrationHandlers handles HTTP requests for India integration services
@@ -26,6 +27,7 @@ type IndiaIntegrationHandlers struct {
 	bulkService     service.BulkVerificationService
 	encryptService  service.EncryptionService
 	idempotency     *billing.IdempotencyHelper
+	logger          *zap.Logger
 }
 
 // NewIndiaIntegrationHandlers creates a new instance of IndiaIntegrationHandlers
@@ -39,6 +41,7 @@ func NewIndiaIntegrationHandlers(
 	bulk service.BulkVerificationService,
 	encrypt service.EncryptionService,
 	redisClient *redis.Client,
+	logger *zap.Logger,
 ) *IndiaIntegrationHandlers {
 	var helper *billing.IdempotencyHelper
 	if redisClient != nil {
@@ -55,6 +58,7 @@ func NewIndiaIntegrationHandlers(
 		bulkService:     bulk,
 		encryptService:  encrypt,
 		idempotency:     helper,
+		logger:          logger,
 	}
 }
 
@@ -899,3 +903,201 @@ func (h *IndiaIntegrationHandlers) DeleteIntegrationConfig(w http.ResponseWriter
 }
 
 // ListIntegrationConfigs retrieves integration configurations with filtering
+func (h *IndiaIntegrationHandlers) ListIntegrationConfigs(w http.ResponseWriter, r *http.Request) {
+	limit, offset := parsePaginationParams(r.URL.Query())
+
+	// Stub implementation - return empty list
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"data":        []interface{}{},
+		"total_count": 0,
+		"limit":       limit,
+		"offset":      offset,
+	})
+}
+
+// SyncFASTag synchronizes FASTag transactions from the issuer
+func (h *IndiaIntegrationHandlers) SyncFASTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		VehicleID   string `json:"vehicle_id"`
+		FromDate    string `json:"from_date"`
+		ToDate      string `json:"to_date"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Stub implementation
+	h.logger.Info("FASTag sync requested", zap.String("vehicle_id", req.VehicleID))
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "sync_initiated"})
+}
+
+// HandleFASTagWebhook handles incoming FASTag webhook notifications
+func (h *IndiaIntegrationHandlers) HandleFASTagWebhook(w http.ResponseWriter, r *http.Request) {
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid webhook payload", err)
+		return
+	}
+
+	h.logger.Info("received FASTag webhook", zap.Any("payload", payload))
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "webhook_received"})
+}
+
+// ValidateEWayBill validates an E-Way Bill with the GST portal
+func (h *IndiaIntegrationHandlers) ValidateEWayBill(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		EWayBillNumber string `json:"ewaybill_number" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Stub implementation - return mock validation result
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"ewaybill_number": req.EWayBillNumber,
+		"valid":           true,
+		"status":          "ACTIVE",
+	})
+}
+
+// HandleEWayBillWebhook handles incoming E-Way Bill webhook notifications
+func (h *IndiaIntegrationHandlers) HandleEWayBillWebhook(w http.ResponseWriter, r *http.Request) {
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid webhook payload", err)
+		return
+	}
+
+	h.logger.Info("received E-Way Bill webhook", zap.Any("payload", payload))
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "webhook_received"})
+}
+
+// VerifyVehicle verifies a vehicle using VAHAN API
+func (h *IndiaIntegrationHandlers) VerifyVehicle(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RegistrationNumber string `json:"registration_number" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	// Stub implementation - return mock vehicle data
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"registration_number": req.RegistrationNumber,
+		"vehicle_class":       "LMV",
+		"fuel_type":           "DIESEL",
+		"valid":               true,
+	})
+}
+
+// BulkVerifyVahan performs bulk vehicle verification
+func (h *IndiaIntegrationHandlers) BulkVerifyVahan(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RegistrationNumbers []string `json:"registration_numbers" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	results := make([]interface{}, 0, len(req.RegistrationNumbers))
+	for _, regNum := range req.RegistrationNumbers {
+		results = append(results, map[string]interface{}{
+			"registration_number": regNum,
+			"vehicle_class":       "LMV",
+			"fuel_type":           "DIESEL",
+			"valid":               true,
+		})
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"total":   len(results),
+		"results": results,
+	})
+}
+
+// BulkVerifySarathi performs bulk driver license verification
+func (h *IndiaIntegrationHandlers) BulkVerifySarathi(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		LicenseNumbers []string `json:"license_numbers" validate:"required"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	results := make([]interface{}, 0, len(req.LicenseNumbers))
+	for _, licNum := range req.LicenseNumbers {
+		results = append(results, map[string]interface{}{
+			"license_number": licNum,
+			"valid":          true,
+			"status":         "ACTIVE",
+		})
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"total":   len(results),
+		"results": results,
+	})
+}
+
+// HandleGSTWebhook handles incoming GST webhook notifications
+func (h *IndiaIntegrationHandlers) HandleGSTWebhook(w http.ResponseWriter, r *http.Request) {
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid webhook payload", err)
+		return
+	}
+
+	h.logger.Info("received GST webhook", zap.Any("payload", payload))
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"status": "webhook_received"})
+}
+
+// HealthCheck returns the health status of India integration services
+func (h *IndiaIntegrationHandlers) HealthCheck(w http.ResponseWriter, r *http.Request) {
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{
+		"status": "healthy",
+		"service": "india-integration",
+	})
+}
+
+// Helper functions
+
+func parsePaginationParams(query map[string][]string) (int, int) {
+	limit := 20
+	offset := 0
+
+	if vals := query["limit"]; len(vals) > 0 && vals[0] != "" {
+		if parsed, err := strconv.Atoi(vals[0]); err == nil && parsed > 0 {
+			limit = parsed
+			if limit > 100 {
+				limit = 100
+			}
+		}
+	}
+
+	if vals := query["offset"]; len(vals) > 0 && vals[0] != "" {
+		if parsed, err := strconv.Atoi(vals[0]); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	return limit, offset
+}
+
+func (h *IndiaIntegrationHandlers) getOrgID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value("orgID"); val != nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}

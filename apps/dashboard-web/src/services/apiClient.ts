@@ -20,7 +20,19 @@ apiClient.interceptors.request.use(
     // SECURITY: Token from Redux store (in-memory only), not localStorage
     const state = store.getState();
     const token = state.auth.token;
-    const orgId = localStorage.getItem('org_id'); // Non-security preference, kept in localStorage
+    // Get org_id from localStorage (user preference, not security-critical)
+    let orgId = localStorage.getItem('org_id');
+
+    // If org_id is not in localStorage but we have user data in Redux, use that
+    if (!orgId && state.auth.user?.org_id) {
+      orgId = state.auth.user.org_id;
+      localStorage.setItem('org_id', orgId);
+    }
+
+    // CRITICAL: Always ensure org_id is set for authenticated requests
+    if (token && !orgId) {
+      console.warn('[apiClient] Token present but org_id missing!');
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -28,6 +40,9 @@ apiClient.interceptors.request.use(
 
     if (orgId) {
       config.headers['X-Org-ID'] = orgId;
+      console.log('[apiClient] Request with org_id:', orgId, 'to:', config.url);
+    } else if (config.url?.includes('/dashboard') || config.url?.includes('/auth/profile')) {
+      console.error('[apiClient] CRITICAL: Missing org_id for authenticated request to', config.url);
     }
 
     const traceId = createTraceId();
@@ -69,7 +84,23 @@ const processQueue = (error: any, token: string | null = null) => {
 
 // Response Interceptor: Handle Global Errors (401, 403, 429)
 apiClient.interceptors.response.use(
-  (response) => response.data, // Unwrap data directly for cleaner usage
+  (response) => {
+    // Extract and store org_id from auth responses
+    const responseData = response.data;
+    const configUrl = response.config?.url || '';
+    
+    if (configUrl.includes('/auth/')) {
+      // Try multiple paths to find org_id
+      const orgId = responseData?.user?.org_id || responseData?.org_id;
+      if (orgId) {
+        localStorage.setItem('org_id', orgId);
+        console.log('[apiClient] ✅ Stored org_id from', configUrl, ':', orgId);
+      } else if (configUrl.includes('/login') || configUrl.includes('/refresh')) {
+        console.warn('[apiClient] ⚠️ Auth response missing org_id:', configUrl);
+      }
+    }
+    return responseData; // Unwrap data directly for cleaner usage
+  },
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
