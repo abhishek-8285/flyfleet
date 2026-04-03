@@ -201,6 +201,34 @@ npm audit --workspaces
 **Maintainer:** FlyFleet Architecture Team
 **Source:** Based on comprehensive architecture review (ARCHITECTURE_REVIEW_SUMMARY.md)
 
+## Billing System
+
+The billing domain (`internal/domains/billing/`) is fully implemented and wired into `main.go`.
+
+### Architecture
+- **Handler**: `handlers/handlers.go` — `BillingHandler` with 11+ endpoints
+- **Service**: `service/service.go` — `BillingService` + `InvoiceService`
+- **Repository**: `repository/repository.go` — `BillingRepository` (main CRUD)
+- **PDF Engine**: `pdf/pdf_generator.go` — chromedp HTML→PDF rendering
+- **Routes**: Registered at `/api/v1/billing/*` in `cmd/main.go`
+
+### Key Endpoints
+| Endpoint | Method | Handler |
+|----------|--------|---------|
+| `/api/v1/billing/invoices` | GET, POST | ListInvoices, CreateInvoice |
+| `/api/v1/billing/invoices/{id}` | GET, PUT, DELETE | GetInvoice, UpdateInvoice, DeleteInvoice |
+| `/api/v1/billing/invoices/{id}/payments` | POST | RecordPayment |
+| `/api/v1/billing/invoices/{id}/pdf` | GET | DownloadInvoicePDF |
+| `/api/v1/billing/settings` | GET, PUT | GetSettings, UpdateSettings |
+| `/api/v1/billing/metrics` | GET | GetMetrics |
+| `/api/v1/billing/health` | GET | HealthCheck |
+
+### Database Schema
+The `invoices` table uses `custom_fields` (JSONB), NOT `metadata`. It does NOT have `created_by` or `updated_by` columns. Always verify column names with `\d invoices` before writing SQL.
+
+### Termux Note
+On Android/Termux, invoice storage uses `$PREFIX/tmp/flyfleet/invoices` instead of `/tmp/flyfleet/invoices`.
+
 ## Database
 
 - Primary: PostgreSQL
