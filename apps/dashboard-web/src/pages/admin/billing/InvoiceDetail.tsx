@@ -11,6 +11,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import apiClient from "../../../services/apiClient";
+import billingService from "../../../services/billingService";
 
 const InvoiceDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -48,13 +49,27 @@ const InvoiceDetail: React.FC = () => {
 
   const handleRecordPayment = async () => {
     try {
-      await apiClient.post("/billing/invoices/" + id + "/record-payment", {
-        amount: paymentAmount,
-      });
+      await billingService.recordPayment(id!, paymentAmount);
       setShowPaymentModal(false);
       fetchInvoice();
     } catch (error) {
       console.error("Failed to record payment", error);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const blob = await billingService.downloadPDF(id!);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoice?.invoice_number || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Failed to download PDF", error);
     }
   };
 
@@ -104,7 +119,10 @@ const InvoiceDetail: React.FC = () => {
                 })}
               </p>
             </div>
-            <button className="bg-primary/10 text-primary px-6 py-2 rounded-xl font-bold hover:bg-primary/20 transition-colors flex items-center gap-2">
+            <button
+              onClick={handleDownloadPDF}
+              className="bg-primary/10 text-primary px-6 py-2 rounded-xl font-bold hover:bg-primary/20 transition-colors flex items-center gap-2"
+            >
               <ArrowDownTrayIcon className="h-5 w-5" />
               {uiStrings?.btn_download || "Download PDF"}
             </button>

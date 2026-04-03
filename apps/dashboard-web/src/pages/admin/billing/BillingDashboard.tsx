@@ -27,17 +27,18 @@ const BillingDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [invoicesRes, metricsRes] = await Promise.all([
+      const [invoicesRes, metricsRes, settingsRes] = await Promise.all([
         billingService.getInvoices(1, 5),
         billingService.getMetrics(),
+        billingService.getSettings(),
       ]);
-      setInvoices(invoicesRes.data);
+      setInvoices(invoicesRes.data || []);
       setMetrics(metricsRes);
-      // Mock billingData for the new stat cards
+      // Use real settings for stat cards
       setBillingData({
-        balance: 1234.56,
-        next_billing_date: "2024-07-15",
-        tier: "premium",
+        balance: metricsRes?.pending_payment || 0,
+        next_billing_date: settingsRes?.auto_invoicing_enabled ? "Auto-generated" : "Manual",
+        tier: settingsRes?.base_currency || "USD",
       });
     } catch (error) {
       console.error("Failed to fetch billing data", error);
