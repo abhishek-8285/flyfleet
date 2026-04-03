@@ -877,8 +877,16 @@ func main() {
 			billingAnalyticsHandler, billingAccountingHandler,
 			logger,
 		)
-		// NOTE: billingHandler.RegisterRoutes(r) is called AFTER the /api/v1 block closes
-		// because the handler already includes "/api/v1/billing" in its route definition
+		// Billing routes (with JWKS auth middleware for RS256 JWT validation)
+		billingJWKSURL := os.Getenv("JWKS_URL")
+		if billingJWKSURL == "" {
+			billingJWKSURL = "http://localhost:8084/api/v1/auth/.well-known/jwks.json"
+		}
+		billingAuthGate := coremiddleware.NewJWKSAuthGate(billingJWKSURL, "FlyFleet", "fleet-dashboard", logger)
+		r.Route("/billing", func(r chi.Router) {
+			r.Use(billingAuthGate.Handler)
+			billingHandler.RegisterRoutes(r)
+		})
 
 		// Governance Domain (migrated in monolith)
 		govRepo := governanceRepo.NewGovernanceRepository(pools.Low)
@@ -1456,9 +1464,6 @@ func main() {
 			"upstreams":      items,
 		})
 	})
-
-	// Billing routes (handler already includes "/api/v1/billing" prefix)
-	billingHandler.RegisterRoutes(r)
 
 	r.Get("/api/control/apis/routes", func(w http.ResponseWriter, _ *http.Request) {
 		routes, err := control.LocalRoutes(r)
