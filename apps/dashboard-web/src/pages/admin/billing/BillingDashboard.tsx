@@ -27,18 +27,18 @@ const BillingDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [invoicesRes, metricsRes, settingsRes] = await Promise.all([
+      const [invoicesData, metricsData, settingsData] = await Promise.all([
         billingService.getInvoices(1, 5),
         billingService.getMetrics(),
         billingService.getSettings(),
       ]);
-      setInvoices(invoicesRes.data || []);
-      setMetrics(metricsRes);
+      setInvoices(invoicesData?.data || []);
+      setMetrics(metricsData);
       // Use real settings for stat cards
       setBillingData({
-        balance: metricsRes?.pending_payment || 0,
-        next_billing_date: settingsRes?.auto_invoicing_enabled ? "Auto-generated" : "Manual",
-        tier: settingsRes?.base_currency || "USD",
+        balance: metricsData?.pending_payment || 0,
+        next_billing_date: settingsData?.auto_invoicing_enabled ? "Auto-generated" : "Manual",
+        tier: settingsData?.base_currency || "USD",
       });
     } catch (error) {
       console.error("Failed to fetch billing data", error);
@@ -47,11 +47,14 @@ const BillingDashboard: React.FC = () => {
     }
   };
 
-  const statusColors = {
+  const statusColors: Record<string, string> = {
     PAID: "bg-green-500/10 text-green-500 border-green-500/20",
     PENDING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     OVERDUE: "bg-red-500/10 text-red-500 border-red-500/20",
     PARTIAL: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    DRAFT: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+    SENT: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+    VIEWED: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   };
 
   if (loading)
