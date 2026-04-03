@@ -836,11 +836,20 @@ func main() {
 
 		// Invoice service (PDF generation + email + storage + cache)
 		templateService := billingPDF.NewTemplateService(billingTemplateRepo)
+		invoiceStoragePath := os.Getenv("INVOICE_STORAGE_PATH")
+		if invoiceStoragePath == "" {
+			// Use Termux temp dir on Android, /tmp on Linux
+			if os.Getenv("PREFIX") != "" {
+				invoiceStoragePath = os.Getenv("PREFIX") + "/tmp/flyfleet/invoices"
+			} else {
+				invoiceStoragePath = "/tmp/flyfleet/invoices"
+			}
+		}
 		invoiceService, err := billingv2service.NewInvoiceService(
 			billingRepoInstance, nil, // nil producer for MVP — sync PDF gen
 			templateService,
 			billingv2service.InvoiceServiceConfig{
-				InvoiceStoragePath: "/tmp/flyfleet/invoices",
+				InvoiceStoragePath: invoiceStoragePath,
 				CacheMaxSize:       500,
 				CacheTTL:           24 * time.Hour,
 				EmailConfig:        billingEmail.EmailConfig{}, // empty — email disabled for MVP
