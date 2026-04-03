@@ -51,6 +51,10 @@ func NewBillingHandler(s *service.BillingService, invServ *service.InvoiceServic
 }
 
 func (h *BillingHandler) RegisterRoutes(r chi.Router) {
+	// Public endpoints (no auth required)
+	r.Get("/health", h.HealthCheck)
+
+	// Protected endpoints (auth required)
 	r.Get("/invoices", h.ListInvoices)
 	r.Post("/invoices", h.CreateInvoice)
 	r.Get("/invoices/{id}", h.GetInvoice)
@@ -63,7 +67,6 @@ func (h *BillingHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/settings", h.GetSettings)
 	r.Put("/settings", h.UpdateSettings)
 	r.Get("/metrics", h.GetMetrics)
-	r.Get("/health", h.HealthCheck)
 	r.Get("/stats", h.GetStats)
 
 	// Subscription Routes

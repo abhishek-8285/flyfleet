@@ -877,7 +877,10 @@ func main() {
 			billingAnalyticsHandler, billingAccountingHandler,
 			logger,
 		)
-		// Billing routes (with JWKS auth middleware for RS256 JWT validation)
+		// Billing routes
+		// Health endpoint is public (no auth)
+		r.Get("/billing/health", billingHandler.HealthCheck)
+		// Protected endpoints (with JWKS auth)
 		billingJWKSURL := os.Getenv("JWKS_URL")
 		if billingJWKSURL == "" {
 			billingJWKSURL = "http://localhost:8084/api/v1/auth/.well-known/jwks.json"
