@@ -265,7 +265,9 @@ func (s *BillingService) UpdateInvoice(ctx context.Context, inv *models.Invoice)
 	}
 
 	// Audit log - invoice updated
-	_ = s.auditRepo.CreateAuditLogEntry(ctx, inv.ID, models.AuditActionUpdated, existing, inv, inv.UpdatedBy, "", "", "", "")
+	if s.auditRepo != nil {
+		_ = s.auditRepo.CreateAuditLogEntry(ctx, inv.ID, models.AuditActionUpdated, existing, inv, inv.UpdatedBy, "", "", "", "")
+	}
 
 	return nil
 }
@@ -327,12 +329,14 @@ func (s *BillingService) RecordPayment(ctx context.Context, id uuid.UUID, amount
 	}
 
 	// Fire NATS notification for payment success
-	_ = s.notifServ.PublishEvent(ctx, "payment_success", invoice.OrgID, map[string]interface{}{
-		"invoice_id":     id,
-		"amount_paid":    amount,
-		"balance_due":    invoice.BalanceDue,
-		"invoice_status": invoice.Status,
-	})
+	if s.notifServ != nil {
+		_ = s.notifServ.PublishEvent(ctx, "payment_success", invoice.OrgID, map[string]interface{}{
+			"invoice_id":     id,
+			"amount_paid":    amount,
+			"balance_due":    invoice.BalanceDue,
+			"invoice_status": invoice.Status,
+		})
+	}
 
 	return nil
 }
