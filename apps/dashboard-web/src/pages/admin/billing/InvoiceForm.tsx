@@ -12,7 +12,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import billingService from "../../../services/billingService";
-import { Invoice, InvoiceItem } from "../../../types/billing";
+import { Invoice, InvoiceItem, InvoiceStatus } from "../../../types/billing";
 
 const InvoiceForm: React.FC = () => {
   const navigate = useNavigate();
@@ -155,7 +155,7 @@ const InvoiceForm: React.FC = () => {
         invoice_date: formData.invoice_date,
         due_date: formData.due_date,
         currency: formData.currency || "INR",
-        status: "PENDING",
+        status: "PENDING" as InvoiceStatus,
         subtotal,
         tax_amount: tax,
         total_amount: total,
@@ -172,9 +172,9 @@ const InvoiceForm: React.FC = () => {
       };
 
       if (isEdit) {
-        await billingService.updateInvoice(id!, payload);
+        await billingService.updateInvoice(id!, payload as Partial<Invoice>);
       } else {
-        await billingService.createInvoice(payload);
+        await billingService.createInvoice(payload as Partial<Invoice>);
       }
       navigate("/admin/billing");
     } catch (error: any) {

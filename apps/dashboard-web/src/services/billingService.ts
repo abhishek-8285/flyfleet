@@ -1,36 +1,34 @@
 import apiClient from './apiClient';
-import { BillingSettings, Invoice } from '../types/billing';
+import { BillingSettings, BillingMetrics, Invoice } from '../types/billing';
+
+// Note: apiClient interceptors unwrap .data automatically,
+// so all methods return the response body directly (not AxiosResponse).
 
 const billingService = {
   getInvoices: async (page = 1, size = 10) => {
-    const response = await apiClient.get('/billing/invoices', {
+    return apiClient.get<any, { data: any[]; total: number; page: number; size: number }>('/billing/invoices', {
       params: { page, size },
     });
-    return response;
   },
 
   getInvoice: async (id: string) => {
-    const response = await apiClient.get(`/billing/invoices/${id}`);
-    return response;
+    return apiClient.get<any, Invoice>(`/billing/invoices/${id}`);
   },
 
   createInvoice: async (invoice: Partial<Invoice>) => {
-    const response = await apiClient.post('/billing/invoices', invoice);
-    return response;
+    return apiClient.post<any, Invoice>('/billing/invoices', invoice);
   },
 
   updateInvoice: async (id: string, invoice: Partial<Invoice>) => {
-    const response = await apiClient.put(`/billing/invoices/${id}`, invoice);
-    return response;
+    return apiClient.put<any, Invoice>(`/billing/invoices/${id}`, invoice);
   },
 
   deleteInvoice: async (id: string) => {
-    await apiClient.delete(`/billing/invoices/${id}`);
+    return apiClient.delete(`/billing/invoices/${id}`);
   },
 
   recordPayment: async (id: string, amount: number) => {
-    const response = await apiClient.post(`/billing/invoices/${id}/payments`, { amount });
-    return response;
+    return apiClient.post(`/billing/invoices/${id}/payments`, { amount });
   },
 
   downloadPDF: async (id: string): Promise<Blob> => {
@@ -41,36 +39,30 @@ const billingService = {
   },
 
   emailInvoice: async (id: string, email: string, customerName: string) => {
-    const response = await apiClient.post(`/billing/invoices/${id}/email`, {
+    return apiClient.post(`/billing/invoices/${id}/email`, {
       email,
       customer_name: customerName,
     });
-    return response;
   },
 
   getSettings: async () => {
-    const response = await apiClient.get('/billing/settings');
-    return response;
+    return apiClient.get<any, BillingSettings>('/billing/settings');
   },
 
   updateSettings: async (settings: Partial<BillingSettings>) => {
-    const response = await apiClient.put('/billing/settings', settings);
-    return response;
+    return apiClient.put('/billing/settings', settings);
   },
 
   getMetrics: async () => {
-    const response = await apiClient.get('/billing/metrics');
-    return response;
+    return apiClient.get<any, BillingMetrics>('/billing/metrics');
   },
 
   getHealth: async () => {
-    const response = await apiClient.get('/billing/health');
-    return response;
+    return apiClient.get('/billing/health');
   },
 
   getStats: async () => {
-    const response = await apiClient.get('/billing/stats');
-    return response;
+    return apiClient.get('/billing/stats');
   },
 };
 

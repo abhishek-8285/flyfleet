@@ -1,4 +1,4 @@
-export type InvoiceStatus = "PAID" | "PENDING" | "OVERDUE" | "PARTIAL";
+export type InvoiceStatus = "PAID" | "PENDING" | "OVERDUE" | "PARTIAL" | "DRAFT" | "SENT" | "VIEWED";
 
 export interface InvoiceItem {
   id: string;
@@ -16,6 +16,9 @@ export interface Invoice {
   id: string;
   org_id: string;
   customer_name: string;
+  customer_email?: string;
+  billing_address?: string;
+  invoice_number?: string;
   invoice_date: string;
   due_date: string;
   status: InvoiceStatus;
@@ -23,6 +26,9 @@ export interface Invoice {
   total_amount: number;
   amount_paid: number;
   balance_due: number;
+  subtotal?: number;
+  tax_amount?: number;
+  notes?: string;
   items?: InvoiceItem[];
   created_at: string;
   updated_at: string;
