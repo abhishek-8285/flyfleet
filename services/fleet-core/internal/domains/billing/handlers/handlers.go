@@ -51,62 +51,60 @@ func NewBillingHandler(s *service.BillingService, invServ *service.InvoiceServic
 }
 
 func (h *BillingHandler) RegisterRoutes(r chi.Router) {
-	r.Route("/api/v1/billing", func(r chi.Router) {
-		r.Get("/invoices", h.ListInvoices)
-		r.Post("/invoices", h.CreateInvoice)
-		r.Get("/invoices/{id}", h.GetInvoice)
-		r.Put("/invoices/{id}", h.UpdateInvoice)
-		r.Delete("/invoices/{id}", h.DeleteInvoice)
-		r.Post("/invoices/{id}/payments", h.RecordPayment)
-		r.Get("/invoices/{id}/pdf", h.DownloadInvoicePDF)
-		r.Post("/invoices/{id}/email", h.EmailInvoice)
+	r.Get("/invoices", h.ListInvoices)
+	r.Post("/invoices", h.CreateInvoice)
+	r.Get("/invoices/{id}", h.GetInvoice)
+	r.Put("/invoices/{id}", h.UpdateInvoice)
+	r.Delete("/invoices/{id}", h.DeleteInvoice)
+	r.Post("/invoices/{id}/payments", h.RecordPayment)
+	r.Get("/invoices/{id}/pdf", h.DownloadInvoicePDF)
+	r.Post("/invoices/{id}/email", h.EmailInvoice)
 
-		r.Get("/settings", h.GetSettings)
-		r.Put("/settings", h.UpdateSettings)
-		r.Get("/metrics", h.GetMetrics)
-		r.Get("/health", h.HealthCheck)
-		r.Get("/stats", h.GetStats)
+	r.Get("/settings", h.GetSettings)
+	r.Put("/settings", h.UpdateSettings)
+	r.Get("/metrics", h.GetMetrics)
+	r.Get("/health", h.HealthCheck)
+	r.Get("/stats", h.GetStats)
 
-		// Subscription Routes
-		r.Get("/plans", h.ListPlans)
-		r.Get("/subscription", h.GetSubscription)
-		r.Post("/subscription/subscribe", h.Subscribe)
-		r.Post("/subscription/change-plan", h.ChangePlan)
-		r.Post("/subscription/prorate-upgrade", h.ProrateUpgrade)
-		r.Post("/subscription/redeem-coupon", h.RedeemCoupon)
-		r.Post("/subscription/cancel", h.CancelSubscription)
+	// Subscription Routes
+	r.Get("/plans", h.ListPlans)
+	r.Get("/subscription", h.GetSubscription)
+	r.Post("/subscription/subscribe", h.Subscribe)
+	r.Post("/subscription/change-plan", h.ChangePlan)
+	r.Post("/subscription/prorate-upgrade", h.ProrateUpgrade)
+	r.Post("/subscription/redeem-coupon", h.RedeemCoupon)
+	r.Post("/subscription/cancel", h.CancelSubscription)
 
-		// Metering & Draft Invoicing
-		r.Post("/usage/record", h.RecordUsage)
-		r.Post("/invoices/generate-draft", h.GenerateDraftInvoice)
+	// Metering & Draft Invoicing
+	r.Post("/usage/record", h.RecordUsage)
+	r.Post("/invoices/generate-draft", h.GenerateDraftInvoice)
 
-		// External Payment Webhooks
-		r.Post("/webhooks/stripe", h.StripeWebhook)
-		r.Post("/webhooks/razorpay", h.RazorpayWebhook)
+	// External Payment Webhooks
+	r.Post("/webhooks/stripe", h.StripeWebhook)
+	r.Post("/webhooks/razorpay", h.RazorpayWebhook)
 
-		// Credit Notes
-		r.Post("/credit-notes", h.IssueCreditNote)
-		r.Get("/credit-notes", h.ListCreditNotes)
+	// Credit Notes
+	r.Post("/credit-notes", h.IssueCreditNote)
+	r.Get("/credit-notes", h.ListCreditNotes)
 
-		// Hardware Billing
-		r.Get("/hardware/products", h.ListHardwareProducts)
-		r.Post("/hardware/assign", h.AssignHardware)
+	// Hardware Billing
+	r.Get("/hardware/products", h.ListHardwareProducts)
+	r.Post("/hardware/assign", h.AssignHardware)
 
-		// Ledger & Wallet
-		r.Get("/wallet/balance", h.GetBalance)
-		r.Post("/wallet/credit", h.ApplyCredit)
+	// Ledger & Wallet
+	r.Get("/wallet/balance", h.GetBalance)
+	r.Post("/wallet/credit", h.ApplyCredit)
 
-		// Financial Analytics
-		r.Route("/analytics", func(r chi.Router) {
-			r.Get("/system", h.analyticsHandler.GetSystemMetrics)
-		})
+	// Financial Analytics
+	r.Route("/analytics", func(r chi.Router) {
+		r.Get("/system", h.analyticsHandler.GetSystemMetrics)
+	})
 
-		// Accounting Integration
-		r.Route("/accounting", func(r chi.Router) {
-			r.Post("/export/ledger", h.accountingHandler.ExportLedger)
-			r.Post("/export/invoices", h.accountingHandler.ExportInvoices)
-			r.Get("/history", h.accountingHandler.GetExportHistory)
-		})
+	// Accounting Integration
+	r.Route("/accounting", func(r chi.Router) {
+		r.Post("/export/ledger", h.accountingHandler.ExportLedger)
+		r.Post("/export/invoices", h.accountingHandler.ExportInvoices)
+		r.Get("/history", h.accountingHandler.GetExportHistory)
 	})
 }
 
@@ -129,6 +127,11 @@ func (h *BillingHandler) errorJSON(w http.ResponseWriter, r *http.Request, messa
 
 func (h *BillingHandler) getOrgID(r *http.Request) uuid.UUID {
 	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+		// Try uuid.UUID first (set by JWKS auth gate)
+		if oid, ok := val.(uuid.UUID); ok {
+			return oid
+		}
+		// Fallback to string (set by BFF auth gate)
 		if orgIDStr, ok := val.(string); ok {
 			if id, err := uuid.Parse(orgIDStr); err == nil {
 				return id
