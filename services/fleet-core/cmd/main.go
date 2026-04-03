@@ -126,6 +126,10 @@ import (
 	analyticsService "github.com/flyfleet/fleet-core-service/internal/domains/analytics/service"
 
 	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	billingHandlers "github.com/flyfleet/fleet-core-service/internal/domains/billing/handlers"
+	billingRepo "github.com/flyfleet/fleet-core-service/internal/domains/billing/repository"
+	billingPDF "github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	billingEmail "github.com/flyfleet/fleet-core-service/internal/domains/billing/email"
 
 	compliancev2handlers "github.com/flyfleet/fleet-core-service/internal/domains/compliance/handlers"
 	compliancev2repo "github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
@@ -598,6 +602,9 @@ func main() {
 	}
 	// authGate := coremiddleware.NewJWKSAuthGate(jwksURL, "FlyFleet", "fleet-dashboard", logger)
 
+	// Billing handler (declared here for scope, initialized inside /api/v1 block)
+	var billingHandler *billingHandlers.BillingHandler
+
 	r.Route("/api/v1", func(r chi.Router) {
 		// IAM Domain (Superseded by auth_v2)
 		/*
@@ -789,6 +796,80 @@ func main() {
 			r.Use(coremiddleware.RequireRoleForMutations(logger, "super_admin", "org_admin", "admin"))
 			setHandlers.RegisterRoutes(r)
 		})
+
+		// Billing Domain — Invoice CRUD, PDF generation, settings, metrics
+		billingRepoInstance := billingRepo.NewBillingRepository(pools.High)
+		billingAuditRepo := billingRepo.NewAuditLogRepository(pools.High)
+
+		// Billing sub-service repositories
+		billingSubRepo := billingRepo.NewSubscriptionRepository(pools.High)
+		billingMeterRepo := billingRepo.NewMeteringRepository(pools.High)
+		billingHWRepo := billingRepo.NewHardwareRepository(pools.High)
+		billingLedgerRepo := billingRepo.NewLedgerRepository(pools.High)
+		billingTaxRepo := billingRepo.NewTaxRepository(pools.High)
+		billingSeqRepo := billingRepo.NewSequenceRepository(pools.High)
+		billingNotifRepo := billingRepo.NewNotificationRepository(pools.High)
+		billingCreditNoteRepo := billingRepo.NewCreditNoteRepository(pools.High)
+		billingAdvancedSubRepo := billingRepo.NewAdvancedSubRepository(pools.High)
+		billingAnalyticsRepo := billingRepo.NewAnalyticsRepository(pools.High)
+		billingAccountingRepo := billingRepo.NewAccountingRepository(pools.High)
+		billingTemplateRepo := billingRepo.NewTemplateRepository(pools.High)
+
+		// Billing sub-services
+		billingSubServ := billingv2service.NewSubscriptionService(billingSubRepo, billingAuditRepo, logger)
+		billingMeterServ := billingv2service.NewMeteringService(billingMeterRepo, logger)
+		billingHWServ := billingv2service.NewHardwareService(billingHWRepo, logger)
+		billingLedgerServ := billingv2service.NewLedgerService(billingLedgerRepo, logger)
+		billingTaxServ := billingv2service.NewTaxService(billingTaxRepo, logger)
+		billingSeqServ := billingv2service.NewSequenceService(billingSeqRepo, logger)
+		billingNotifServ := billingv2service.NewNotificationService(nc, billingNotifRepo, logger)
+		billingDunningServ := billingv2service.NewDunningService(billingNotifRepo, billingNotifServ, nil, logger) // nil billService to avoid circular dep
+
+		// Billing main service
+		billingService := billingv2service.NewBillingService(
+			billingRepoInstance, billingAuditRepo,
+			billingSubServ, billingMeterServ, billingHWServ,
+			billingLedgerServ, billingTaxServ, billingSeqServ,
+			billingNotifServ, billingDunningServ, nil, // nil queue for MVP
+			logger,
+		)
+
+		// Invoice service (PDF generation + email + storage + cache)
+		templateService := billingPDF.NewTemplateService(billingTemplateRepo)
+		invoiceService, err := billingv2service.NewInvoiceService(
+			billingRepoInstance, nil, // nil producer for MVP — sync PDF gen
+			templateService,
+			billingv2service.InvoiceServiceConfig{
+				InvoiceStoragePath: "/tmp/flyfleet/invoices",
+				CacheMaxSize:       500,
+				CacheTTL:           24 * time.Hour,
+				EmailConfig:        billingEmail.EmailConfig{}, // empty — email disabled for MVP
+				ChromePath:         "",
+				ChromeTimeout:      30 * time.Second,
+			},
+			logger,
+		)
+		if err != nil {
+			logger.Warn("Invoice service initialization failed, continuing without PDF generation", zap.Error(err))
+		}
+
+		// Analytics and accounting handlers (minimal for MVP)
+		billingAnalyticsHandler := billingHandlers.NewAnalyticsHandler(billingv2service.NewAnalyticsService(billingAnalyticsRepo, logger), logger)
+		// Accounting service needs ledger repo + billing repo + storage + exporters — simplified for MVP
+		billingAccountingHandler := billingHandlers.NewAccountingHandler(billingv2service.NewAccountingService(billingAccountingRepo, billingLedgerRepo, billingRepoInstance, nil, nil, logger), logger)
+
+		// Billing handler (full invoice + billing management)
+		billingHandler = billingHandlers.NewBillingHandler(
+			billingService, invoiceService,
+			billingSubServ, billingMeterServ,
+			billingv2service.NewCreditNoteService(billingCreditNoteRepo, billingLedgerServ, logger),
+			billingHWServ, billingLedgerServ,
+			billingv2service.NewAdvancedSubService(billingAdvancedSubRepo, billingLedgerServ, billingSubServ, billingService, logger),
+			billingAnalyticsHandler, billingAccountingHandler,
+			logger,
+		)
+		// NOTE: billingHandler.RegisterRoutes(r) is called AFTER the /api/v1 block closes
+		// because the handler already includes "/api/v1/billing" in its route definition
 
 		// Governance Domain (migrated in monolith)
 		govRepo := governanceRepo.NewGovernanceRepository(pools.Low)
@@ -1366,6 +1447,10 @@ func main() {
 			"upstreams":      items,
 		})
 	})
+
+	// Billing routes (handler already includes "/api/v1/billing" prefix)
+	billingHandler.RegisterRoutes(r)
+
 	r.Get("/api/control/apis/routes", func(w http.ResponseWriter, _ *http.Request) {
 		routes, err := control.LocalRoutes(r)
 		if err != nil {
