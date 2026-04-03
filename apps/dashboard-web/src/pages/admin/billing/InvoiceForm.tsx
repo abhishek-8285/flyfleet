@@ -146,10 +146,29 @@ const InvoiceForm: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      const subtotal = calculateSubtotal();
+      const tax = calculateTax();
+      const total = calculateTotal();
+
       const payload = {
-        ...formData,
-        total_amount: calculateTotal(),
-        balance_due: calculateTotal() - (formData.amount_paid || 0),
+        customer_name: formData.customer_name,
+        invoice_date: formData.invoice_date,
+        due_date: formData.due_date,
+        currency: formData.currency || "INR",
+        status: "PENDING",
+        subtotal,
+        tax_amount: tax,
+        total_amount: total,
+        amount_paid: 0,
+        balance_due: total,
+        notes: formData.notes || "",
+        items: (formData.items || []).map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          tax_percent: item.tax_percent,
+          total: item.quantity * item.unit_price,
+        })),
       };
 
       if (isEdit) {
@@ -158,10 +177,11 @@ const InvoiceForm: React.FC = () => {
         await billingService.createInvoice(payload);
       }
       navigate("/admin/billing");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save invoice", error);
+      alert(error?.message || "Failed to save invoice");
     } finally {
-      setLoading((status) => false);
+      setLoading(false);
     }
   };
 
@@ -355,6 +375,8 @@ const InvoiceForm: React.FC = () => {
               Notes / Terms
             </label>
             <textarea
+              value={formData.notes || ""}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full h-24 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors resize-none"
               placeholder="Payment is due within 14 days..."
             ></textarea>
