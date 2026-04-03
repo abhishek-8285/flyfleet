@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -66,11 +68,11 @@ func (r *BillingRepository) CreateInvoice(ctx context.Context, inv *models.Invoi
 	defer tx.Rollback(ctx)
 
 	inv.ID = uuid.New()
-	query := `INSERT INTO invoices (id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, metadata, created_by, updated_by)
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING created_at, updated_at`
+	query := `INSERT INTO invoices (id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING created_at, updated_at`
 
 	start1 := time.Now()
-	err = tx.QueryRow(ctx, query, inv.ID, inv.OrgID, inv.InvoiceNumber, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.Metadata, inv.CreatedBy, inv.UpdatedBy).Scan(&inv.CreatedAt, &inv.UpdatedAt)
+	err = tx.QueryRow(ctx, query, inv.ID, inv.OrgID, inv.InvoiceNumber, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.CustomFields).Scan(&inv.CreatedAt, &inv.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start1))
 	if err != nil {
 		return fmt.Errorf("failed to insert invoice: %w", err)
@@ -116,11 +118,20 @@ func (r *BillingRepository) CreateInvoice(ctx context.Context, inv *models.Invoi
 
 func (r *BillingRepository) GetInvoice(ctx context.Context, id uuid.UUID) (*models.Invoice, error) {
 	var i models.Invoice
-	query := `SELECT id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, metadata, created_at, updated_at
+	var notes sql.NullString
+	var customFields []byte
+	query := `SELECT id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields, created_at, updated_at
 	          FROM invoices WHERE id = $1 AND deleted_at IS NULL`
 
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id).Scan(&i.ID, &i.OrgID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &i.Notes, &i.Metadata, &i.CreatedAt, &i.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(&i.ID, &i.OrgID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &notes, &customFields, &i.CreatedAt, &i.UpdatedAt)
+	if notes.Valid {
+		i.Notes = notes.String
+	}
+	if len(customFields) > 0 {
+		i.CustomFields = make(map[string]interface{})
+		json.Unmarshal(customFields, &i.CustomFields)
+	}
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -160,11 +171,11 @@ func (r *BillingRepository) UpdateInvoice(ctx context.Context, inv *models.Invoi
 	}
 	defer tx.Rollback(ctx)
 
-	query := `UPDATE invoices SET customer_name = $1, invoice_date = $2, due_date = $3, status = $4, currency = $5, total_amount = $6, amount_paid = $7, balance_due = $8, notes = $9, metadata = $10, updated_by = $11, updated_at = CURRENT_TIMESTAMP
-	          WHERE id = $12`
+	query := `UPDATE invoices SET customer_name = $1, invoice_date = $2, due_date = $3, status = $4, currency = $5, total_amount = $6, amount_paid = $7, balance_due = $8, notes = $9, custom_fields = $10, updated_at = CURRENT_TIMESTAMP
+	          WHERE id = $11`
 
 	start1 := time.Now()
-	_, err = tx.Exec(ctx, query, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.Metadata, inv.UpdatedBy, inv.ID)
+	_, err = tx.Exec(ctx, query, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.CustomFields, inv.ID)
 	metrics.RecordDBQuery(query, time.Since(start1))
 	if err != nil {
 		return fmt.Errorf("failed to update invoice: %w", err)
