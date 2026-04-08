@@ -11,7 +11,6 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/iam/config"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/email"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/models"
-	"github.com/flyfleet/fleet-core/internal/platform/events"
 	redis2 "github.com/flyfleet/fleet-core/internal/domains/iam/redis"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/repository"
 	"github.com/golang-jwt/jwt/v5"
@@ -45,7 +44,7 @@ type AuthService struct {
 	jwtManager   JWTManager
 	config       config.SecurityConfig
 	log          *zap.Logger
-	publisher    *nats.Publisher
+	// publisher    *nats.Publisher // unused stub
 	emailSender  *email.EmailService
 	passwordSvc  *PasswordService
 }
@@ -60,7 +59,7 @@ func NewAuthService(
 	jwtManager JWTManager,
 	cfg config.SecurityConfig,
 	log *zap.Logger,
-	publisher *nats.Publisher,
+	// publisher *nats.Publisher, // unused stub
 	emailSender *email.EmailService,
 	passwordSvc *PasswordService,
 ) *AuthService {
@@ -68,7 +67,7 @@ func NewAuthService(
 		userRepo: userRepo, orgRepo: orgRepo, roleRepo: roleRepo,
 		sessionRepo: sessionRepo, passwordRepo: passwordRepo,
 		redis: redis, jwtManager: jwtManager, config: cfg,
-		log: log, publisher: publisher,
+		log: log, // publisher: publisher,
 		emailSender: emailSender, passwordSvc: passwordSvc,
 	}
 }
