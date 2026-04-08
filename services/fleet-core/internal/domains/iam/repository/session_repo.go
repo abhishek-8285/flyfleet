@@ -90,3 +90,15 @@ func (r *SessionRepository) UpdateLastActive(ctx context.Context, id uuid.UUID) 
 	)
 	return err
 }
+
+// GetSessionOwner returns the user ID that owns the given session.
+func (r *SessionRepository) GetSessionOwner(ctx context.Context, sessionID string) (string, error) {
+	var userID string
+	err := r.pool.QueryRow(ctx,
+		"SELECT user_id FROM sessions WHERE id = $1", sessionID,
+	).Scan(&userID)
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}

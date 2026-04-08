@@ -56,7 +56,10 @@ func (h *SessionHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.sessionSvc.RevokeSession(r.Context(), sessionID); err != nil {
+	userID := GetUserIDUUID(r)
+	orgID := GetOrgUUID(r)
+
+	if err := h.sessionSvc.RevokeSession(r.Context(), userID, orgID, sessionID); err != nil {
 		h.log.Error("failed to revoke session", zap.Error(err), zap.String("session_id", sessionID))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to revoke session", r)
 		return

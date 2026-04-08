@@ -214,3 +214,11 @@ func (r *UserRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	)
 	return err
 }
+
+// MarkEmailVerified marks the user's email as verified.
+func (r *UserRepository) MarkEmailVerified(ctx context.Context, id uuid.UUID) error {
+	_, err := r.pool.Exec(ctx,
+		"UPDATE users SET email_verified = true, updated_at = NOW() WHERE id = $1", id,
+	)
+	return err
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/iam/handlers"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/repository"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/service"
+	redis2 "github.com/flyfleet/fleet-core/internal/domains/iam/redis"
 	fcmiddleware "github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/permissions"
 )
@@ -67,11 +68,12 @@ func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg c
 	// 4. Create services
 	secCfg := iamCfg.SecurityConfig()
 	passwordSvc := service.NewPasswordService(userRepo, passwordRepo, sessionRepo, secCfg, logger)
-	authSvc := service.NewAuthService(userRepo, orgRepo, roleRepo, sessionRepo, passwordRepo, rdb, jwtManager, secCfg, logger, emailSvc, passwordSvc)
-	sessionSvc := service.NewSessionService(sessionRepo, rdb, logger)
+	iamRedis := redis2.NewClient(rdb) // Wrap raw redis in IAM-specific client
+	authSvc := service.NewAuthService(userRepo, orgRepo, roleRepo, sessionRepo, passwordRepo, iamRedis, jwtManager, secCfg, logger, emailSvc, passwordSvc)
+	sessionSvc := service.NewSessionService(sessionRepo, iamRedis, logger)
 	rbacSvc := service.NewRBACService(roleRepo, logger)
 	userSvc := service.NewUserService(userRepo, orgRepo, roleRepo, auditRepo, logger)
-	mfaSvc := service.NewMFAService(userRepo, logger)
+	mfaSvc := service.NewMFAService(userRepo, iamRedis, logger)
 	inviteSvc := service.NewInvitationService(invitationRepo, userRepo, orgRepo, roleRepo, auditRepo, emailSvc, logger)
 
 	// 5. Create handlers

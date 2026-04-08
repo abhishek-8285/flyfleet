@@ -87,8 +87,8 @@ func (s *SessionService) RevokeSession(ctx context.Context, userID, orgID uuid.U
 	if !found {
 		// Check if the session exists but belongs to another user
 		// We query by session ID to see who owns it
-		ownerID, err := s.sessionRepo.GetSessionOwner(ctx, sUUID)
-		if err == nil && ownerID != nil && *ownerID != userID {
+		ownerID, err := s.sessionRepo.GetSessionOwner(ctx, sUUID.String())
+		if err == nil && ownerID != "" && ownerID != userID.String() {
 			return errors.New("not_owner")
 		}
 		return errors.New("session_not_found")

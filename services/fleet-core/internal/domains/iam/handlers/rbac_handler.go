@@ -91,7 +91,8 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.rbacSvc.UpdateRole(r.Context(), roleID, req.Name, req.Description); err != nil {
+	orgID := GetOrgUUID(r)
+	if err := h.rbacSvc.UpdateRole(r.Context(), roleID, orgID, req.Name, req.Description); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -129,8 +130,9 @@ func (h *RBACHandler) CloneRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createdBy := GetUserIDUUID(r)
+	orgID := GetOrgUUID(r)
 
-	role, err := h.rbacSvc.CloneRole(r.Context(), sourceID, req.Name, req.Description, createdBy)
+	role, err := h.rbacSvc.CloneRole(r.Context(), sourceID, orgID, req.Name, req.Description, createdBy)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
@@ -155,7 +157,8 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.rbacSvc.DeleteRole(r.Context(), roleID); err != nil {
+	orgID := GetOrgUUID(r)
+	if err := h.rbacSvc.DeleteRole(r.Context(), roleID, orgID); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -206,7 +209,8 @@ func (h *RBACHandler) UpdateRolePermissions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := h.rbacSvc.UpdateRolePermissions(r.Context(), roleID, req.Permissions); err != nil {
+	orgID := GetOrgUUID(r)
+	if err := h.rbacSvc.UpdateRolePermissions(r.Context(), roleID, orgID, req.Permissions); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)

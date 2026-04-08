@@ -34,7 +34,7 @@ type passwordService interface {
 
 type sessionService interface {
 	ListSessions(ctx context.Context, userID, orgID uuid.UUID) ([]models.Session, error)
-	RevokeSession(ctx context.Context, sessionID string) error
+	RevokeSession(ctx context.Context, userID, orgID uuid.UUID, sessionID string) error
 	RevokeAllSessions(ctx context.Context, userID uuid.UUID) error
 }
 
@@ -42,10 +42,10 @@ type rbacService interface {
 	ListRoles(ctx context.Context, orgID uuid.UUID) ([]models.Role, error)
 	GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error)
 	CreateRole(ctx context.Context, orgID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error)
-	UpdateRole(ctx context.Context, id uuid.UUID, name, description string) error
-	UpdateRolePermissions(ctx context.Context, id uuid.UUID, perms []string) error
-	CloneRole(ctx context.Context, sourceID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error)
-	DeleteRole(ctx context.Context, id uuid.UUID) error
+	UpdateRole(ctx context.Context, id, orgID uuid.UUID, name, description string) error
+	UpdateRolePermissions(ctx context.Context, id, orgID uuid.UUID, perms []string) error
+	CloneRole(ctx context.Context, sourceID, orgID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error)
+	DeleteRole(ctx context.Context, id, orgID uuid.UUID) error
 	GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) ([]models.RolePermissionMatrixEntry, error)
 	AssignRole(ctx context.Context, userID, roleID, orgID, assignedBy uuid.UUID) error
 	BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, orgID, assignedBy uuid.UUID) *service.BulkAssignResult
