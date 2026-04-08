@@ -136,7 +136,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		// All API routes require authentication
 		r.Use(middleware.JWKSAuthGate(cfg.JWTSecret, logger))
-		r.Use(middleware.TenantContextMiddleware)
+		r.Use(middleware.TenantMiddleware(logger))
 
 		api := chi.NewRouter()
 
