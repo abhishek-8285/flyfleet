@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/repository"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

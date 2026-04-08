@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 )
 
 // DeviceServiceInterface defines the interface for device service

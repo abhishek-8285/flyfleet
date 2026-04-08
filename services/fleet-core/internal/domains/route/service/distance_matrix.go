@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
+	"github.com/flyfleet/fleet-core/internal/domains/route/models"
 )
 
 // DistanceMatrixProvider defines the interface for fetching distance and travel time

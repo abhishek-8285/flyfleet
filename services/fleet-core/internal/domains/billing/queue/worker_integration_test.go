@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/testutil"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/queue"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/testutil"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/stretchr/testify/assert"

@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/service"
 )
 
 type mockFuelService struct {

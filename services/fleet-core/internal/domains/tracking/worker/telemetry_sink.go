@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/messaging"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/repository"
 	"go.uber.org/zap"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"

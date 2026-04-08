@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/qrcode"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/pkg/qrcode"
 )
 
 // GenerateInvoiceHTML generates HTML from invoice data using professional template

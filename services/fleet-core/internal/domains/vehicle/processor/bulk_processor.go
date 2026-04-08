@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/provider_clients"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/provider_clients"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

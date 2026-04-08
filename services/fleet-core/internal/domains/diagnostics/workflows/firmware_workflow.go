@@ -1,7 +1,7 @@
 package workflows
 
 import (
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/service"
 )
 
 type FirmwareState string

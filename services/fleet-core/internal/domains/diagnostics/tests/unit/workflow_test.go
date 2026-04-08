@@ -3,7 +3,7 @@ package unit
 import (
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/workflows"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/workflows"
 	"github.com/stretchr/testify/assert"
 )
 

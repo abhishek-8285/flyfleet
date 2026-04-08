@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	driverMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/driver/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/driver/service"
+	driverMiddleware "github.com/flyfleet/fleet-core/internal/domains/driver/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/flyfleet/fleet-core/internal/domains/driver/service"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)

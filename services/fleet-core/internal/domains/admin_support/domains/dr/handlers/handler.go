@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/dto"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/service"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/dto"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

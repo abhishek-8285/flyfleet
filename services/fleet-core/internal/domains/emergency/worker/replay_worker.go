@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/models"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

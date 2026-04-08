@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
 	"github.com/google/uuid"
 )
 

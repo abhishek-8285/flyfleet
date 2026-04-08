@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )

@@ -1,0 +1,23 @@
+PIR Action Items Template
+Copy to Google Sheets, Excel, or Linear project
+
+Columns:
+- ID (FF-PIR-YYYY-NNNN-001)
+- Category (Preventive/Corrective/Process)
+- Description (specific, measurable)
+- Owner (@username or team)
+- Due Date (YYYY-MM-DD)
+- Status (Not Started/In Progress/Done/Blocked)
+- Success Criteria (how to verify)
+- Priority (P0/P1/P2)
+- Related Incident (INC-YYYY-NNNN)
+- Notes
+
+Example rows:
+
+ID,Category,Description,Owner,Due Date,Status,Success Criteria,Priority,Related Incident,Notes
+FF-PIR-2026-0124-001,Preventive,Add pre-deployment validation: pool_size >= (replicas × 5),@marcus-j,2026-04-05,Not Started,CI pipeline fails if validation fails,P0,INC-2026-0124,Dependency on CI/CD team
+FF-PIR-2026-0124-002,Corrective,Increase fleet-core DATABASE_MAX_OPEN_CONNS to 50,@infra-sre,2026-03-29,Done,Deployment updated, connection pool = 50,P0,INC-2026-0124,Completed at 14:55 UTC
+FF-PIR-2026-0124-003,Process,Create IC training module on quick mitigation,@sarah-chen,2026-04-15,In Progress,Training deck complete, ICs certified,P1,INC-2026-0124,Requires L&D approval
+
+Use this template in Linear project or Google Sheets. Sync with PIR document.

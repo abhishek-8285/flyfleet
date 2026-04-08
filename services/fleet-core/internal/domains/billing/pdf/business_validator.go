@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 )
 
 // BusinessValidator handles industrial and legal compliance rules

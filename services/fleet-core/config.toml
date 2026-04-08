@@ -1,0 +1,24 @@
+[server]
+port = "8084"
+log_level = "info"
+environment = "development"
+
+[database]
+url = "postgres://fleet_user:fleet_pass@localhost:5432/fleet_db?sslmode=disable"
+
+[redis]
+url = "redis://localhost:6379/0"
+
+[nats]
+url = "nats://localhost:4222"
+
+[security]
+jwt_secret = ""
+jwks_url = "http://localhost:8080/.well-known/jwks.json"
+
+[feature_flags]
+vehicle_map_enabled = true
+real_time_updates = true
+geofence_alerts = false
+history_trail = true
+max_vehicles_on_map = 500

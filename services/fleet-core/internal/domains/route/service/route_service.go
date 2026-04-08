@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/route/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/route/models"
+	"github.com/flyfleet/fleet-core/internal/domains/route/repository"
 	"github.com/google/uuid"
 )
 

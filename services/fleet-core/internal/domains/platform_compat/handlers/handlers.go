@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
+	"github.com/flyfleet/fleet-core/internal/domains/platform_compat/models"
+	"github.com/flyfleet/fleet-core/internal/domains/platform_compat/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

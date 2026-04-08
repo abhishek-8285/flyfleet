@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency"
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/models"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/repository"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"

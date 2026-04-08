@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations/connectors"
+	"github.com/flyfleet/fleet-core/internal/domains/integrations/connectors"
 )
 
 type SyncEngine struct {

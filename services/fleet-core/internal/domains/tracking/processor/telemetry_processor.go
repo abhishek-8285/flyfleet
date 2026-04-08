@@ -8,8 +8,8 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/cache"
 	"github.com/fleet-platform/shared/pkg/database"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/analytics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/analytics"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/nats-io/nats.go"

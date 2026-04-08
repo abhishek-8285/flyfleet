@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	billingv2service "github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/repository"
+	billingv2service "github.com/flyfleet/fleet-core/internal/domains/billing/service"
+	"github.com/flyfleet/fleet-core/internal/domains/india/models"
+	"github.com/flyfleet/fleet-core/internal/domains/india/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"

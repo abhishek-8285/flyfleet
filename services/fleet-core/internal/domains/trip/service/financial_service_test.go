@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )

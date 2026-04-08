@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/service"
 	"go.uber.org/zap"
 )
 

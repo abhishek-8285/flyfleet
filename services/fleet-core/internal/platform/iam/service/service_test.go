@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

@@ -10,8 +10,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/service"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/service"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)

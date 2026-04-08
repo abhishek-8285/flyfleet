@@ -1,208 +1,128 @@
 package config
 
 import (
-	"context"
-	"fmt"
 	"strings"
+	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/secrets"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
+// Config holds the fleet-core service configuration.
 type Config struct {
-	Port                   string
-	DatabaseURL            string
-	NatsURL                string
-	RedisURL               string
-	LogLevel               string
-	LogFile                string // Path to log file (empty for stdout only)
-	JWTSecret              string
-	AuthServiceURL         string
-	AlertServiceURL        string
-	AdminSupportServiceURL string
-	BillingServiceURL      string
-	TrackingServiceURL     string
-	ReportsServiceURL      string
-	SettingsServiceURL     string
-	GovernanceServiceURL   string
-	AnalyticsServiceURL    string
-	IntegrationsServiceURL string
-	ComplianceServiceURL   string
-	VehicleServiceURL      string
-	TripServiceURL         string
-	MaintenanceServiceURL  string
-	MLServiceURL           string
-	JWKSURL                string
-	BillingStorageType     string // "local" or "s3"
-	BillingEngine          string // "premium" or "high_speed"
-	S3Endpoint             string
-	S3Bucket               string
-	S3AccessKey            string
-	S3SecretKey            string
-	S3UseSSL               bool
+	Port        string   `mapstructure:"port"`
+	DatabaseURL string   `mapstructure:"database_url"`
+	RedisURL    string   `mapstructure:"redis_url"`
+	NatsURL     string   `mapstructure:"nats_url"`
+	JWTSecret   string   `mapstructure:"jwt_secret"`
+	JWKSURL     string   `mapstructure:"jwks_url"`
+	LogLevel    string   `mapstructure:"log_level"`
+	Environment string   `mapstructure:"environment"`
+	Flags       FeatureFlags `mapstructure:"feature_flags"`
+	IAM         IAMConfig    `mapstructure:"iam"`
 }
 
-// Validate checks configuration completeness and returns error if any required field is missing.
-func (c *Config) Validate() error {
-	var missing []string
+// FeatureFlags controls runtime toggles for the tracking feature.
+type FeatureFlags struct {
+	VehicleMapEnabled  bool `mapstructure:"vehicle_map_enabled"`
+	RealTimeUpdates    bool `mapstructure:"real_time_updates"`
+	GeofenceAlerts     bool `mapstructure:"geofence_alerts"`
+	HistoryTrail       bool `mapstructure:"history_trail"`
+	MaxVehiclesOnMap   int  `mapstructure:"max_vehicles_on_map"`
+}
 
-	if c.Port == "" {
-		missing = append(missing, "server.port")
-	}
-	if c.DatabaseURL == "" {
-		missing = append(missing, "database.url")
-	}
-	if c.NatsURL == "" {
-		missing = append(missing, "nats.url")
-	}
-	if c.RedisURL == "" {
-		missing = append(missing, "redis.url")
-	}
-	if c.JWTSecret == "" {
-		missing = append(missing, "security.jwt_secret")
-	} else if len(c.JWTSecret) < 32 {
-		return fmt.Errorf("security.jwt_secret must be at least 32 characters for security (got %d)", len(c.JWTSecret))
-	}
-
-	// Optional but recommended service URLs - warn if missing
-	if c.AuthServiceURL == "" {
-		zap.S().Warn("Auth service URL not configured (services.auth_url)")
-	}
-	if c.BillingServiceURL == "" && c.BillingStorageType == "local" {
-		// OK if using local storage
-	} else if c.BillingServiceURL == "" {
-		zap.S().Warn("Billing service URL not configured (services.billing_url)")
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
-	}
-
-	return nil
+// IAMConfig holds configuration for the IAM (Identity & Access Management) domain.
+type IAMConfig struct {
+	Enabled             bool          `mapstructure:"enabled"`
+	BcryptCost          int           `mapstructure:"bcrypt_cost"`
+	MaxLoginAttempts    int           `mapstructure:"max_login_attempts"`
+	LockoutDuration     time.Duration `mapstructure:"lockout_duration"`
+	PasswordHistoryLen  int           `mapstructure:"password_history_length"`
+	JWTAccessTTL        time.Duration `mapstructure:"jwt_access_ttl"`
+	JWTRefreshTTL       time.Duration `mapstructure:"jwt_refresh_ttl"`
+	EmailProvider       string        `mapstructure:"email_provider"`
+	EmailSendGridKey    string        `mapstructure:"email_sendgrid_key"`
+	EmailSMTPHost       string        `mapstructure:"email_smtp_host"`
+	EmailSMTPPort       int           `mapstructure:"email_smtp_port"`
+	EmailSMTPUser       string        `mapstructure:"email_smtp_user"`
+	EmailSMTPPassword   string        `mapstructure:"email_smtp_password"`
+	EmailFromAddress    string        `mapstructure:"email_from_address"`
+	EmailFromName       string        `mapstructure:"email_from_name"`
 }
 
 func Load() *Config {
 	v := viper.New()
 
-	// Defaults
-	v.SetDefault("server.port", "8084") // Fleet Core default port from compose
-	// Database URL default for local dev
-	v.SetDefault("database.url", "")
-	v.SetDefault("nats.url", "nats://localhost:4222")
-	v.SetDefault("redis.url", "localhost:6380")
-	v.SetDefault("server.log_level", "info")
-	v.SetDefault("server.log_file", "") // Empty = stdout only
-	// SECURITY FIX: Do NOT set a default for JWT secret - it MUST be provided via env var
-	// v.SetDefault("security.jwt_secret", "") // REMOVED: Insecure default
-	v.SetDefault("services.auth_url", "")
-	v.SetDefault("services.alert_url", "")
-	v.SetDefault("services.admin_support_url", "")
-	v.SetDefault("services.billing_url", "")
-	v.SetDefault("services.tracking_url", "")
-	v.SetDefault("services.reports_url", "")
-	v.SetDefault("services.settings_url", "")
-	v.SetDefault("services.governance_url", "")
-	v.SetDefault("services.analytics_url", "")
-	v.SetDefault("services.integrations_url", "")
-	v.SetDefault("services.compliance_url", "")
-	v.SetDefault("services.vehicle_url", "")
-	v.SetDefault("services.trip_url", "")
-	v.SetDefault("services.maintenance_url", "")
-	v.SetDefault("services.ml_url", "http://localhost:8000") // Sidecar default
-	v.SetDefault("security.jwks_url", "http://localhost:8084/.well-known/jwks.json")
-	v.SetDefault("billing.storage_type", "local")
-	v.SetDefault("billing.engine", "premium")
-	v.SetDefault("billing.s3_endpoint", "s3.amazonaws.com")
-	v.SetDefault("billing.s3_bucket", "flyfleet-invoices")
-	v.SetDefault("billing.s3_use_ssl", true)
+	// Global defaults
+	v.SetDefault("port", "8084")
+	v.SetDefault("database_url", "postgres://fleet_user:fleet_pass@localhost:5432/fleet_db?sslmode=disable")
+	v.SetDefault("redis_url", "redis://localhost:6379/0")
+	v.SetDefault("nats_url", "nats://localhost:4222")
+	v.SetDefault("jwt_secret", "")
+	v.SetDefault("jwks_url", "http://localhost:8080/.well-known/jwks.json")
+	v.SetDefault("log_level", "info")
+	v.SetDefault("environment", "development")
 
-	// Config file setup
-	v.SetConfigName("config")
-	v.SetConfigType("toml")
-	v.AddConfigPath("../../")
-	v.AddConfigPath(".")
+	// Feature flag defaults
+	v.SetDefault("feature_flags.vehicle_map_enabled", true)
+	v.SetDefault("feature_flags.real_time_updates", true)
+	v.SetDefault("feature_flags.geofence_alerts", false)
+	v.SetDefault("feature_flags.history_trail", true)
+	v.SetDefault("feature_flags.max_vehicles_on_map", 500)
 
-	// Env vars
+	// IAM defaults
+	v.SetDefault("iam.enabled", true)
+	v.SetDefault("iam.bcrypt_cost", 12)
+	v.SetDefault("iam.max_login_attempts", 5)
+	v.SetDefault("iam.lockout_duration", 15)
+	v.SetDefault("iam.password_history_length", 5)
+	v.SetDefault("iam.jwt_access_ttl", 900)
+	v.SetDefault("iam.jwt_refresh_ttl", 604800)
+	v.SetDefault("iam.email_provider", "noop")
+	v.SetDefault("iam.email_smtp_port", 587)
+
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			zap.S().Warnf("Error reading config file: %v", err)
-		}
+	// Config file search
+	v.SetConfigName("config")
+	v.SetConfigType("toml")
+	v.AddConfigPath(".")
+	v.AddConfigPath("./cmd")
+	v.AddConfigPath("../")
+	_ = v.ReadInConfig() // ignore — config file is optional
+
+	return &Config{
+		Port:        v.GetString("port"),
+		DatabaseURL: v.GetString("database_url"),
+		RedisURL:    v.GetString("redis_url"),
+		NatsURL:     v.GetString("nats_url"),
+		JWTSecret:   v.GetString("jwt_secret"),
+		JWKSURL:     v.GetString("jwks_url"),
+		LogLevel:    v.GetString("log_level"),
+		Environment: v.GetString("environment"),
+		Flags: FeatureFlags{
+			VehicleMapEnabled:  v.GetBool("feature_flags.vehicle_map_enabled"),
+			RealTimeUpdates:    v.GetBool("feature_flags.real_time_updates"),
+			GeofenceAlerts:     v.GetBool("feature_flags.geofence_alerts"),
+			HistoryTrail:       v.GetBool("feature_flags.history_trail"),
+			MaxVehiclesOnMap:   v.GetInt("feature_flags.max_vehicles_on_map"),
+		},
+		IAM: IAMConfig{
+			Enabled:            v.GetBool("iam.enabled"),
+			BcryptCost:         v.GetInt("iam.bcrypt_cost"),
+			MaxLoginAttempts:   v.GetInt("iam.max_login_attempts"),
+			LockoutDuration:    time.Duration(v.GetInt("iam.lockout_duration")) * time.Minute,
+			PasswordHistoryLen: v.GetInt("iam.password_history_length"),
+			JWTAccessTTL:       time.Duration(v.GetInt("iam.jwt_access_ttl")) * time.Second,
+			JWTRefreshTTL:      time.Duration(v.GetInt("iam.jwt_refresh_ttl")) * time.Second,
+			EmailProvider:      v.GetString("iam.email_provider"),
+			EmailSendGridKey:   v.GetString("iam.email_sendgrid_key"),
+			EmailSMTPHost:      v.GetString("iam.email_smtp_host"),
+			EmailSMTPPort:      v.GetInt("iam.email_smtp_port"),
+			EmailSMTPUser:      v.GetString("iam.email_smtp_user"),
+			EmailSMTPPassword:  v.GetString("iam.email_smtp_password"),
+			EmailFromAddress:   v.GetString("iam.email_from_address"),
+			EmailFromName:      v.GetString("iam.email_from_name"),
+		},
 	}
-
-	// Manual bindings for Docker compatibility
-	v.BindEnv("server.port", "PORT")
-	v.BindEnv("database.url", "DATABASE_URL")
-	v.BindEnv("nats.url", "NATS_URL")
-	v.BindEnv("redis.url", "REDIS_URL")
-	v.BindEnv("server.log_level", "LOG_LEVEL")
-	v.BindEnv("server.log_file", "LOG_FILE")
-	v.BindEnv("security.jwt_secret", "JWT_SECRET")
-	v.BindEnv("services.auth_url", "AUTH_SERVICE_URL")
-	v.BindEnv("services.alert_url", "ALERT_SERVICE_URL")
-	v.BindEnv("services.admin_support_url", "ADMIN_SUPPORT_SERVICE_URL")
-	v.BindEnv("services.billing_url", "BILLING_SERVICE_URL")
-	v.BindEnv("services.tracking_url", "TRACKING_SERVICE_URL")
-	v.BindEnv("services.reports_url", "REPORTS_SERVICE_URL")
-	v.BindEnv("services.settings_url", "SETTINGS_SERVICE_URL")
-	v.BindEnv("services.governance_url", "GOVERNANCE_SERVICE_URL")
-	v.BindEnv("services.analytics_url", "ANALYTICS_SERVICE_URL")
-	v.BindEnv("services.integrations_url", "INTEGRATIONS_SERVICE_URL")
-	v.BindEnv("services.compliance_url", "COMPLIANCE_SERVICE_URL")
-	v.BindEnv("services.vehicle_url", "VEHICLE_SERVICE_URL")
-	v.BindEnv("services.trip_url", "TRIP_SERVICE_URL")
-	v.BindEnv("services.maintenance_url", "MAINTENANCE_SERVICE_URL")
-	v.BindEnv("services.ml_url", "ML_SERVICE_URL")
-	v.BindEnv("security.jwks_url", "AUTH_V2_JWKS_URL")
-	v.BindEnv("billing.storage_type", "BILLING_STORAGE_TYPE")
-	v.BindEnv("billing.engine", "BILLING_ENGINE")
-	v.BindEnv("billing.s3_endpoint", "S3_ENDPOINT")
-	v.BindEnv("billing.s3_bucket", "S3_BUCKET")
-	v.BindEnv("billing.s3_access_key", "S3_ACCESS_KEY")
-	v.BindEnv("billing.s3_secret_key", "S3_SECRET_KEY")
-
-	ctx := context.Background()
-
-	cfg := &Config{
-		Port:                   v.GetString("server.port"),
-		DatabaseURL:            v.GetString("database.url"),
-		NatsURL:                v.GetString("nats.url"),
-		RedisURL:               v.GetString("redis.url"),
-		LogLevel:               v.GetString("server.log_level"),
-		LogFile:                v.GetString("server.log_file"),
-		JWTSecret:              secrets.ResolveSecret(ctx, v.GetString("security.jwt_secret")),
-		AuthServiceURL:         v.GetString("services.auth_url"),
-		AlertServiceURL:        v.GetString("services.alert_url"),
-		AdminSupportServiceURL: v.GetString("services.admin_support_url"),
-		BillingServiceURL:      v.GetString("services.billing_url"),
-		TrackingServiceURL:     v.GetString("services.tracking_url"),
-		ReportsServiceURL:      v.GetString("services.reports_url"),
-		SettingsServiceURL:     v.GetString("services.settings_url"),
-		GovernanceServiceURL:   v.GetString("services.governance_url"),
-		AnalyticsServiceURL:    v.GetString("services.analytics_url"),
-		IntegrationsServiceURL: v.GetString("services.integrations_url"),
-		ComplianceServiceURL:   v.GetString("services.compliance_url"),
-		VehicleServiceURL:      v.GetString("services.vehicle_url"),
-		TripServiceURL:         v.GetString("services.trip_url"),
-		MaintenanceServiceURL:  v.GetString("services.maintenance_url"),
-		MLServiceURL:           v.GetString("services.ml_url"),
-		JWKSURL:                v.GetString("security.jwks_url"),
-		BillingStorageType:     v.GetString("billing.storage_type"),
-		BillingEngine:          v.GetString("billing.engine"),
-		S3Endpoint:             v.GetString("billing.s3_endpoint"),
-		S3Bucket:               v.GetString("billing.s3_bucket"),
-		S3AccessKey:            secrets.ResolveSecret(ctx, v.GetString("billing.s3_access_key")),
-		S3SecretKey:            secrets.ResolveSecret(ctx, v.GetString("billing.s3_secret_key")),
-		S3UseSSL:               v.GetBool("billing.s3_use_ssl"),
-	}
-
-	// Validate configuration (fail fast on startup)
-	if err := cfg.Validate(); err != nil {
-		zap.S().Fatal("Configuration validation failed", zap.Error(err))
-	}
-
-	return cfg
 }

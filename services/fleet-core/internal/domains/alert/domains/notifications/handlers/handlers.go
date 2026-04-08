@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/dto"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/dto"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/models"
 )
 
 func TestAlertTypesConstants(t *testing.T) {

@@ -26,10 +26,10 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/handlers"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/handlers"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/service"
 )
 
 type MaintenanceIntegrationTestSuite struct {

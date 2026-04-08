@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/models"
+	"github.com/flyfleet/fleet-core/internal/domains/platform_compat/models"
 	"go.uber.org/zap"
 )
 

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )

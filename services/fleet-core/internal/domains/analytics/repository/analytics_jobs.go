@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/models"
 	"github.com/google/uuid"
 )
 

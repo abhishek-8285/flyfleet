@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )

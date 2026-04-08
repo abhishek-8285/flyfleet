@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/utils"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/utils"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"

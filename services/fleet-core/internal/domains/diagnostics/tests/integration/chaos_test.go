@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/service"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

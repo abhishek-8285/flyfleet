@@ -6,8 +6,8 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/cache"
 	"github.com/fleet-platform/shared/pkg/database"
-	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/monitoring/models"
+	"github.com/flyfleet/fleet-core/internal/domains/monitoring/repository"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )

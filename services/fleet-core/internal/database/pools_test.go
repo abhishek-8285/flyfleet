@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 // TestPoolPoisoningSimulation simulates a dangerous state where a malicious session variable

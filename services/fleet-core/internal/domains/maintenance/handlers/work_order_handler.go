@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/service"
 )
 
 // WorkOrderHandler handles HTTP requests for work orders

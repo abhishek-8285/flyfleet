@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/billing/service"
-	iam_middleware "github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
+	"github.com/flyfleet/fleet-core/internal/platform/billing/service"
+	iam_middleware "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/models"
+	"github.com/flyfleet/fleet-core/internal/domains/india/models"
 )
 
 func (r *IndiaIntegrationRepositoryImpl) BulkCreateVehicleVerification(ctx context.Context, verifications []*models.VehicleVerification) error {

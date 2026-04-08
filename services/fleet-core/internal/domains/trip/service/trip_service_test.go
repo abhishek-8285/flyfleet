@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"

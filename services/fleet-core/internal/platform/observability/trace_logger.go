@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/middleware"
 )
 
 // WithTrace adds trace_id from context to zap fields if available.

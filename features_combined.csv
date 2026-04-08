@@ -1,0 +1,19 @@
+name,reach,impact,confidence,effort,description
+Complete IAM / User Management,10000,high,high,m,Uncomment IAM routes, build user CRUD, role assignment, password reset
+Live Vehicle Tracking on Map,10000,massive,high,xl,Real-time GPS positions on interactive map with geofencing alerts
+Working Dispatch Flow,8000,high,high,xl,Assign driver + vehicle + route → track delivery end-to-end
+Real Payment Gateway Integration,5000,high,medium,l,Razorpay/Stripe integration for invoice payments
+GPS Telematics Integration,7000,massive,medium,xl,Traccar/Teltonika device integration for live vehicle data
+India Compliance APIs,3000,high,high,l,Real FastTag, e-way bill, Vahan API connections
+Driver Mobile App,6000,high,medium,xl,Android app for drivers to accept trips, log hours, scan deliveries
+Fleet Analytics Dashboard,4000,medium,high,m,Real trip data, fuel costs, utilization metrics, trend analysis
+Notification System,8000,medium,high,m,Push/SMS/email alerts for geofence, delays, maintenance due
+Multi-Org Onboarding Flow,2000,high,medium,s,Self-service org creation, invite users, role setup
+TLS/HTTPS Enforcement,10000,massive,high,s,HTTPS termination, HSTS headers, production security
+Rate Limiting Coverage,10000,high,high,m,Add rate limits to all 41 endpoint groups (currently 4/41)
+SQL Injection Audit,10000,massive,high,m,Audit 42 fmt.Sprintf queries, convert to parameterized queries
+API Versioning Strategy,5000,medium,high,s,Define /api/v2/ strategy, deprecation policy
+OpenAPI/Swagger Spec,3000,medium,high,m,Generate API contract docs from existing routes
+Test Coverage Report,2000,medium,high,s,Run go test -cover, identify gaps, target 80% coverage
+Unified Health Endpoint,10000,high,high,s,Aggregate all domain health checks into single /health endpoint
+Login Performance Optimization,10000,medium,high,s,Optimize bcrypt cost, add connection pooling, target <200ms

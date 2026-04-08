@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/repository"
 	"github.com/google/uuid"
 )
 

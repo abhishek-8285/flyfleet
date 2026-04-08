@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"

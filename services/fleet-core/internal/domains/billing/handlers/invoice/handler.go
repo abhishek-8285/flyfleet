@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/domain/invoice"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/domain/invoice"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

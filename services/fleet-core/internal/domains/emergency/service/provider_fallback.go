@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency"
 )
 
 // ProviderFallbackManager handles the SMS → Voice Call → Email fallback chain.

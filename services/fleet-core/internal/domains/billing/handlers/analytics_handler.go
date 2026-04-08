@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
 	"go.uber.org/zap"
 )
 

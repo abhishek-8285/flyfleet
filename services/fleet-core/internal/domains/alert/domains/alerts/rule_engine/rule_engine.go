@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/alerts/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/repository"
 )
 
 // RuleEngine processes telemetry events and generates alerts based on rules

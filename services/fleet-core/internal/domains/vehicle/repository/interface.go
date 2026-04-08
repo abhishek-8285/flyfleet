@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 	"github.com/google/uuid"
 )
 

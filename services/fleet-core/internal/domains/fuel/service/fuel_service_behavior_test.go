@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	finService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
+	finService "github.com/flyfleet/fleet-core/internal/domains/finance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/repository"
 )
 
 type fakeFuelRepo struct {

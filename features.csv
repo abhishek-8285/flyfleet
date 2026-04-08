@@ -1,0 +1,11 @@
+name,reach,impact,confidence,effort,description
+Complete IAM / User Management,10000,high,high,m,Uncomment IAM routes, build user CRUD, role assignment, password reset
+Live Vehicle Tracking on Map,10000,massive,high,xl,Real-time GPS positions on interactive map with geofencing alerts
+Working Dispatch Flow,8000,high,high,xl,Assign driver + vehicle + route → track delivery end-to-end
+Real Payment Gateway Integration,5000,high,medium,l,Razorpay/Stripe integration for invoice payments
+GPS Telematics Integration,7000,massive,medium,xl,Traccar/Teltonika device integration for live vehicle data
+India Compliance APIs,3000,high,high,l,Real FastTag, e-way bill, Vahan API connections
+Driver Mobile App,6000,high,medium,xl,Android app for drivers to accept trips, log hours, scan deliveries
+Fleet Analytics Dashboard,4000,medium,high,m,Real trip data, fuel costs, utilization metrics, trend analysis
+Notification System,8000,medium,high,m,Push/SMS/email alerts for geofence, delays, maintenance due
+Multi-Org Onboarding Flow,2000,high,medium,s,Self-service org creation, invite users, role setup

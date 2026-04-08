@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/video/service"
+	"github.com/flyfleet/fleet-core/internal/domains/video/models"
+	"github.com/flyfleet/fleet-core/internal/domains/video/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/security"
+	"github.com/flyfleet/fleet-core/internal/security"
 )
 
 // VideoHandler handles HTTP requests for video operations

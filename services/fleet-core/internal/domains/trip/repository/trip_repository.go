@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
 )
 
 // TripRepository defines the interface for trip data persistence

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/platform/billing/repository"
+	"github.com/flyfleet/fleet-core/internal/platform/billing/models"
+	"github.com/flyfleet/fleet-core/internal/platform/billing/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

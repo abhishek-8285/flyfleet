@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"

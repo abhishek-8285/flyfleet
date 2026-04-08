@@ -1,0 +1,91 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//FlyFleet//Incident Response Training//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+
+BEGIN:VEVENT
+DTSTART:20260330T140000Z
+DTEND:20260330T160000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-ir-training-20260330@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Complete incident response training for FlyFleet. Mandatory for all on-call engineers. We'll cover: severity classification, war room procedures, runbooks, communication templates, and tabletop exercise. Bring laptop for hands-on portion.\n\nTopics:\n- Framework overview (15 min)\n- Live demo: API outage walkthrough (30 min)\n- Hands-on exercise: Telemetry lag scenario (30 min)\n- Q&A (15 min)\n\nPreparation:\n1. Read FRAMEWORK.md (skim okay)\n2. Review your service runbooks\n3. Print SEVERITY_QUICK_REFERENCE.md\n\nLocation: Zoom - link in calendar invite\nFacilitator: @sre-lead\nSlack: #sre-team for questions
+SUMMARY:FlyFleet Incident Response Training (Mandatory)
+LOCATION:Zoom - https://zoom.us/j/FlyFleetTraining (link in description)
+CATEGORIES:TRAINING,INCIDENT_RESPONSE
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260401T150000Z
+DTEND:20260401T170000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-drill-1-20260401@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:First quarterly tabletop drill. Scenario: Telemetry Ingestion Lag Crisis.\n\nDuration: 60 min + 15 min debrief\nParticipants: All SREs, Platform Engineers, ICs\n\nAgenda:\n0-15 min: Initial response (severity, war room, investigation)\n15-35 min: Root cause identification & mitigation planning\n35-50 min: Recovery execution & validation\n50-60 min: PIR preparation\n60-75 min: Debrief & feedback\n\nThis is a safe learning environment. No grades, just improvement.\n\nPre-read: DRILL_SCENARIO.md\nLocation: Zoom - https://zoom.us/j/FlyFleetDrill
+SUMMARY:Incident Response Drill #1 - Telemetry Lag
+LOCATION:Zoom - https://zoom.us/j/FlyFleetDrill
+CATEGORIES:DRILL,TRAINING
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260406T143000Z
+DTEND:20260406T153000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-pir-review-q1-20260406@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Quarterly PIR Review - Q1 2026\n\nAgenda:\n- Review all SEV1/SEV2 incidents from Q1\n- Analyze action item completion\n- Update runbooks based on learnings\n- Adjust SLO targets if needed\n- Plan next quarter's improvements\n\nRequired attendees: All ICs, VP Engineering, Platform Lead\n\nReading: All PIRs from Q1 (in Linear project "PIR Archive")
+SUMMARY:Quarterly PIR Review - Q1 2026
+LOCATION:Conference Room A / Zoom - https://zoom.us/j/FlyFleetPIR
+CATEGORIES:PIR_REVIEW,QUARTERLY
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260413T140000Z
+DTEND:20260413T150000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-drill-2-20260413@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Second quarterly tabletop drill. Scenario: API Complete Outage (SEV1).\n\nThis drills fast-paced decision making under pressure.\n\nParticipants: All on-call engineers (required)\nPre-read: Will be provided 1 week prior\n\nFocus areas:\n- SEV1 declaration within 5 min\n- War room setup efficiency\n- Runbook adherence\n- Communication cadence\n- PIR completion\n\nLocation: Zoom - link in description
+SUMMARY:Incident Response Drill #2 - API Outage (SEV1)
+LOCATION:Zoom - https://zoom.us/j/FlyFleetDrill2
+CATEGORIES:DRILL,TRAINING
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260615T143000Z
+DTEND:20260615T153000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-drill-3-20260615@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Quarterly tabletop drill #3. Scenario: Security Incident (Data Breach).\n\nDrill focuses on:\n- Legal/Compliance escalation\n- Evidence preservation\n- Customer notification timing\n- Coordination with Security Officer\n\nPre-read: Security Incident runbook + GDPR requirements\n\nRequired: ICs, Security team, Legal liaison, VP Eng\n\nLocation: Zoom
+SUMMARY:Incident Response Drill #3 - Security Incident
+LOCATION:Zoom - https://zoom.us/j/FlyFleetDrill3
+CATEGORIES:DRILL,SECURITY
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260701T143000Z
+DTEND:20260701T160000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-ir-training-new-hires-20260701@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Onboarding session for new SRE hires.\n\nIncident response overview for engineers joining on-call rotation.\n\nTopics:\n- Framework quick tour\n- Walkthrough of common runbooks\n- Demonstration of war room tools\n- Hands-on: Create mock incident (exercise)\n- Q&A\n\nPrerequisite: Read FRAMEWORK.md and your service runbooks\n\nDuration: 2.5 hours (including hands-on)\n\nLocation: Office Training Room / Zoom
+SUMMARY:Incident Response Training - New Hires
+LOCATION:Office Training Room 3
+CATEGORIES:TRAINING,ONBOARDING
+END:VEVENT
+
+BEGIN:VEVENT
+DTSTART:20260706T143000Z
+DTEND:20260706T160000Z
+DTSTAMP:20260329T000000Z
+UID:flyfleet-ic-certification-20260706@flyfleet.com
+ORGANIZER;CN=Platform Engineering:mailto:sre@flyfleet.com
+DESCRIPTION:Incident Commander Certification Training\n\nFor senior engineers aspiring to be ICs.\n\nAdvanced topics:\n- Command & control under pressure\n- Decision-making frameworks\n- Stakeholder communication (executives, legal)\n- Crisis management\n- PIR facilitation\n- Blameless culture\n\nIncludes: 1-hour tabletop simulation with evaluation\n\nPrerequisite: 6 months on-call experience, attended IR training\n\nAssessment: Scenario-based evaluation, pass/fail\n\nLocation: Conference Room A
+SUMMARY:IC Certification Training
+LOCATION:Conference Room A
+CATEGORIES:CERTIFICATION,TRAINING
+END:VEVENT
+
+END:VCALENDAR

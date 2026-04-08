@@ -383,12 +383,43 @@ func (ge *GeofenceEngine) triggerGeofenceEvent(ctx context.Context, vehicleID, g
 			ge.logger.Error("Failed to publish geofence event", zap.Error(err))
 		}
 	}
+
+	// NEW: Publish to Redis for WebSocket fan-out
+	if ge.redis != nil {
+		orgID := ge.getOrgIDForVehicle(ctx, vehicleID)
+		if orgID != uuid.Nil {
+			geoMsg := map[string]interface{}{
+				"type":            "geofence_alert",
+				"vehicle_id":      vehicleID.String(),
+				"geofence_id":     geofenceID.String(),
+				"geofence_name":   geofenceName,
+				"event_type":      eventType,
+				"latitude":        event.Latitude,
+				"longitude":       event.Longitude,
+				"timestamp":       time.Unix(event.Timestamp, 0).UTC().Format(time.RFC3339),
+			}
+			data, _ := json.Marshal(geoMsg)
+			channel := fmt.Sprintf("org:%s:geofence_alerts", orgID.String())
+			if err := ge.redis.Publish(ctx, channel, string(data)).Err(); err != nil {
+				ge.logger.Warn("failed to publish geofence to Redis", zap.Error(err))
+			}
+		}
+	}
+
 	geofenceEventsTotal.WithLabelValues(eventType).Inc()
 
 	ge.logger.Info("Geofence event triggered",
 		zap.String("vehicle_id", vehicleID.String()),
 		zap.String("geofence_id", geofenceID.String()),
 		zap.String("type", eventType))
+}
+
+func (ge *GeofenceEngine) getOrgIDForVehicle(ctx context.Context, vehicleID uuid.UUID) uuid.UUID {
+	var orgID uuid.UUID
+	_ = ge.db.QueryRow(ctx,
+		`SELECT tenant_id FROM vehicles WHERE id = $1 AND deleted_at IS NULL`,
+		vehicleID).Scan(&orgID)
+	return orgID
 }
 
 func (ge *GeofenceEngine) stateKey(vehicleID uuid.UUID) string {

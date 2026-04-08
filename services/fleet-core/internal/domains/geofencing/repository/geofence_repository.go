@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/geofencing/models"
 )
 
 type GeofenceRepository struct {

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
 )
 
 // OfferTrip creates a trip offer for a driver

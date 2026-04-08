@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/pdf"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/queue"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

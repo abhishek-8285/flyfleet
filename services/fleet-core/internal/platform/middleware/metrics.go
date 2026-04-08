@@ -7,7 +7,7 @@ import (
 
 	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	"github.com/flyfleet/fleet-core/internal/platform/metrics"
 	"go.uber.org/zap"
 )
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

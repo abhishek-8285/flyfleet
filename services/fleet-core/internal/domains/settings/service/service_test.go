@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/models"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

@@ -1,7 +1,7 @@
 package invoice
 
 import (
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/go-chi/chi/v5"
 )
 

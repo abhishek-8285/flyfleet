@@ -5,16 +5,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
-	authservice "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
-	monitoringservice "github.com/flyfleet/fleet-core-service/internal/domains/monitoring/service"
-	vehicleservice "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
-	"github.com/flyfleet/fleet-core-service/internal/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
+	authservice "github.com/flyfleet/fleet-core/internal/domains/auth/service"
+	monitoringservice "github.com/flyfleet/fleet-core/internal/domains/monitoring/service"
+	vehicleservice "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
+	"github.com/flyfleet/fleet-core/internal/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 type DashboardHandlers struct {
@@ -163,6 +163,17 @@ func (h *DashboardHandlers) GetTopErrors(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(errors)
 }
+
+// UpdateUserPreferences handles theme/language/sidebar preference updates.
+// These are stored client-side in localStorage; this endpoint exists for API compatibility
+// and returns 200 OK to prevent frontend redirect loops.
+func (h *DashboardHandlers) UpdateUserPreferences(w http.ResponseWriter, r *http.Request) {
+	// Accept and discard the request body — preferences are stored in localStorage
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
 func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

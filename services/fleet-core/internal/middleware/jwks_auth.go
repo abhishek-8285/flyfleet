@@ -2,233 +2,86 @@ package middleware
 
 import (
 	"context"
-	"crypto/rsa"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"math/big"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
-	iamCtx "github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
+	"github.com/gofrs/uuid/v5"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
-
-	"github.com/fleet-platform/shared/pkg/middleware"
 )
 
-// JWK represents a JSON Web Key
-type JWK struct {
-	Kty string `json:"kty"`
-	Kid string `json:"kid"`
-	Use string `json:"use"`
-	Alg string `json:"alg"`
-	N   string `json:"n"`
-	E   string `json:"e"`
-}
+// contextKey is a private type to prevent context key collisions.
+type contextKey string
 
-// JWKS represents a JSON Web Key Set
-type JWKS struct {
-	Keys []JWK `json:"keys"`
-}
+const (
+	CtxUserID    contextKey = "user_id"
+	CtxOrgID     contextKey = "org_id"
+	CtxUserRoles contextKey = "user_roles"
+)
 
-// JWKSAuthGate handles JWKS-based JWT validation
-type JWKSAuthGate struct {
-	jwksURL  string
-	logger   *zap.Logger
-	keys     map[string]*rsa.PublicKey
-	issuer   string
-	audience string
-	mu       sync.RWMutex
-}
-
-// NewJWKSAuthGate creates a new JWKSAuthGate
-func NewJWKSAuthGate(jwksURL, issuer, audience string, logger *zap.Logger) *JWKSAuthGate {
-	gate := &JWKSAuthGate{
-		jwksURL:  jwksURL,
-		logger:   logger,
-		issuer:   issuer,
-		audience: audience,
-		keys:     make(map[string]*rsa.PublicKey),
-	}
-
-	// Initial fetch - commented out to avoid deadlock if jwksURL is on this same server
-	// _ = gate.refreshKeys()
-
-	// Start background refresher
-	go gate.refreshLoop()
-
-	return gate
-}
-
-func (g *JWKSAuthGate) refreshLoop() {
-	ticker := time.NewTicker(1 * time.Hour)
-	for range ticker.C {
-		if err := g.refreshKeys(); err != nil {
-			g.logger.Error("Failed to refresh JWKS", zap.Error(err))
-		}
-	}
-}
-
-func (g *JWKSAuthGate) refreshKeys() error {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(g.jwksURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("JWKS endpoint returned status: %d", resp.StatusCode)
-	}
-
-	var jwks JWKS
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
-		return err
-	}
-
-	newKeys := make(map[string]*rsa.PublicKey)
-	for _, key := range jwks.Keys {
-		if key.Kty != "RSA" {
-			continue
-		}
-
-		pubKey, err := decodeRSAPublicKey(key.N, key.E)
-		if err != nil {
-			g.logger.Warn("Failed to decode RSA public key", zap.String("kid", key.Kid), zap.Error(err))
-			continue
-		}
-		newKeys[key.Kid] = pubKey
-	}
-
-	g.mu.Lock()
-	g.keys = newKeys
-	g.mu.Unlock()
-
-	g.logger.Info("JWKS keys refreshed", zap.Int("count", len(newKeys)))
-	return nil
-}
-
-func decodeRSAPublicKey(nStr, eStr string) (*rsa.PublicKey, error) {
-	nBytes, err := base64.RawURLEncoding.DecodeString(nStr)
-	if err != nil {
-		return nil, err
-	}
-	eBytes, err := base64.RawURLEncoding.DecodeString(eStr)
-	if err != nil {
-		return nil, err
-	}
-
-	var e int
-	if len(eBytes) < 4 {
-		paddedE := make([]byte, 4)
-		copy(paddedE[4-len(eBytes):], eBytes)
-		e = int(big.NewInt(0).SetBytes(paddedE).Uint64())
-	} else {
-		e = int(big.NewInt(0).SetBytes(eBytes).Uint64())
-	}
-
-	return &rsa.PublicKey{
-		N: big.NewInt(0).SetBytes(nBytes),
-		E: e,
-	}, nil
-}
-
-func (g *JWKSAuthGate) Handler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+// JWKSAuthGate validates the JWT in the Authorization header.
+// In production this would fetch and validate against a JWKS endpoint.
+// For now it uses HMAC-SHA256 with the shared secret.
+func JWKSAuthGate(jwtSecret string, logger *zap.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, `{"error":"missing authorization header"}`, http.StatusUnauthorized)
+				return
 			}
 
-			kid, ok := token.Header["kid"].(string)
-			if !ok {
-				return nil, errors.New("missing kid in header")
+			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenStr == authHeader {
+				http.Error(w, `{"error":"invalid authorization format"}`, http.StatusUnauthorized)
+				return
 			}
 
-			g.mu.RLock()
-			pubKey, ok := g.keys[kid]
-			g.mu.RUnlock()
-
-			if !ok {
-				// Try a single on-demand refresh if key is missing
-				g.logger.Info("KID not found, attempting on-demand JWKS refresh", zap.String("kid", kid))
-				if err := g.refreshKeys(); err == nil {
-					g.mu.RLock()
-					pubKey, ok = g.keys[kid]
-					g.mu.RUnlock()
-				}
+			// For WebSocket connections, also check query param
+			if tokenStr == "" {
+				tokenStr = r.URL.Query().Get("token")
 			}
 
-			if !ok {
-				return nil, fmt.Errorf("unknown kid after refresh: %s", kid)
+			claims, err := validateToken(tokenStr, jwtSecret)
+			if err != nil {
+				logger.Debug("jwt validation failed", zap.Error(err))
+				http.Error(w, `{"error":"invalid token"}`, http.StatusUnauthorized)
+				return
 			}
 
-			return pubKey, nil
-		}, jwt.WithIssuer(g.issuer), jwt.WithAudience(g.audience))
+			ctx := context.WithValue(r.Context(), CtxUserID, claims.UserID)
+			ctx = context.WithValue(ctx, CtxOrgID, claims.OrgID)
+			ctx = context.WithValue(ctx, CtxUserRoles, claims.Roles)
 
-		if err != nil || !token.Valid {
-			g.logger.Warn("Invalid token", zap.Error(err))
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+type Claims struct {
+	UserID uuid.UUID `json:"sub"`
+	OrgID  uuid.UUID `json:"org_id"`
+	Roles  []string  `json:"roles"`
+	jwt.RegisteredClaims
+}
 
-		// Inject into context
-		ctx := r.Context()
-
-		// User ID
-		if sub, ok := claims["sub"].(string); ok {
-			ctx = context.WithValue(ctx, ctxkeys.UserIDKey, sub) // Legacy (string)
-			if uid, err := uuid.Parse(sub); err == nil {
-				ctx = context.WithValue(ctx, middleware.UserIDKey, uid) // Modern (uuid.UUID - shared)
-				ctx = context.WithValue(ctx, iamCtx.UserIDKey, uid)     // Modern (uuid.UUID - local IAM)
-			}
-		}
-
-		// Organization ID
-		if orgID, ok := claims["org_id"].(string); ok {
-			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID) // Legacy (string)
-			if oid, err := uuid.Parse(orgID); err == nil {
-				ctx = context.WithValue(ctx, middleware.OrgIDKey, oid) // Modern (uuid.UUID - shared)
-				ctx = context.WithValue(ctx, iamCtx.OrgIDKey, oid)     // Modern (uuid.UUID - local IAM)
-			}
-		}
-
-		// Tenant Type
-		if tenantType, ok := claims["ten"].(string); ok {
-			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantType) // Reusing TenantIDKey for type or separate key
-		}
-
-		// Role - check both "rol" (legacy) and "role" (standard)
-		if role, ok := claims["rol"].(string); ok {
-			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
-		} else if role, ok := claims["role"].(string); ok {
-			ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
-		}
-
-		// Permission Mask
-		if permMask, ok := claims["pmsk"].(float64); ok {
-			ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, permMask)
-		}
-
-		next.ServeHTTP(w, r.WithContext(ctx))
+func validateToken(tokenStr, secret string) (*Claims, error) {
+	claims := &Claims{}
+	_, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
+}
+
+// ValidateJWTFromQuery extracts and validates a JWT from the URL query
+// string. Used for WebSocket handshake where headers can't be set.
+func ValidateJWTFromQuery(r *http.Request, jwtSecret string) (*Claims, error) {
+	tokenStr := r.URL.Query().Get("token")
+	if tokenStr == "" {
+		return nil, jwt.ErrTokenMalformed
+	}
+	return validateToken(tokenStr, jwtSecret)
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

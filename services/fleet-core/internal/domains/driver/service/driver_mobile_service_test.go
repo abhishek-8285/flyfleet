@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
+	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

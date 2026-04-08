@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
+	"github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/platform/observability"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

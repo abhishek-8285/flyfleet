@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/models"
+	"github.com/flyfleet/fleet-core/internal/domains/india/models"
 	"github.com/google/uuid"
 )
 

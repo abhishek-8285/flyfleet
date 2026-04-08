@@ -3,7 +3,7 @@ package pdf_test
 import (
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/pdf"
 	"github.com/stretchr/testify/assert"
 )
 

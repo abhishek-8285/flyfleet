@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/repository"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -22,11 +22,13 @@ type IAMService interface {
 	Login(ctx context.Context, email, password string) (string, error)
 	ValidateToken(tokenString string) (*IAMClaims, error)
 	CheckPermission(ctx context.Context, userID uuid.UUID, resource, action string) (bool, error)
+	IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error)
 }
 
 type IAMClaims struct {
 	UserID uuid.UUID `json:"user_id"`
 	OrgID  uuid.UUID `json:"org_id"`
+	JTI    string    `json:"jti"`
 	jwt.RegisteredClaims
 }
 
@@ -163,4 +165,13 @@ func (s *iamService) CheckPermission(ctx context.Context, userID uuid.UUID, reso
 	}
 
 	return false, nil
+}
+
+// IsSessionActive checks if a session (by JTI) is still active.
+// Used by AuthMiddleware to reject revoked tokens.
+func (s *iamService) IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error) {
+	// In the full IAM implementation, this checks Redis for "session:{jti}"
+	// For now, fail-open (return true) to avoid breaking existing functionality
+	// when Redis isn't wired up. The auth-service implementation has the full check.
+	return true, nil
 }

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
-	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/repository"
+	"github.com/flyfleet/fleet-core/internal/platform/metrics"
 	"go.uber.org/zap"
 )
 

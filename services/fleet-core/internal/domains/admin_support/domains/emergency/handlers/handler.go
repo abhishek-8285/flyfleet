@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/emergency/service"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/emergency/service"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )

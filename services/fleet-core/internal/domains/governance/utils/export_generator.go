@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
 )
 
 type ExportFileGenerator interface {

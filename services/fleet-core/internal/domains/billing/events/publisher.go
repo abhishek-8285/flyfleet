@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/domain"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/domain"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"

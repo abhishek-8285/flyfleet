@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 	"go.uber.org/zap"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
