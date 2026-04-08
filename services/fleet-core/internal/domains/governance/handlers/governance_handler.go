@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/service"
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/service"
+	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

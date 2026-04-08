@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/service"
+	"github.com/flyfleet/fleet-core/internal/domains/geofencing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/geofencing/service"
 )
 
 // DTOs for request payloads (separate from models to avoid mass assignment)

@@ -5,7 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/google/uuid"
 )
 

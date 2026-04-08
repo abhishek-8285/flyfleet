@@ -7,8 +7,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/workers"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/workers"
 	"github.com/google/uuid"
 )
 

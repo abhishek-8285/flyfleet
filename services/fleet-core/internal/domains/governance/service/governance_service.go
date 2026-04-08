@@ -12,9 +12,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/metrics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/metrics"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/repository"
 )
 
 var (

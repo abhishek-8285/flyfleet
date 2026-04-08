@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/service"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )

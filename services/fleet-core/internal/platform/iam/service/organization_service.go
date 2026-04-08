@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/repository"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/repository"
 	"github.com/google/uuid"
 	"time"
 )

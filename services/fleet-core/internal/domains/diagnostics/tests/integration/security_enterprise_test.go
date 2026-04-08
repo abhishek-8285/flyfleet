@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

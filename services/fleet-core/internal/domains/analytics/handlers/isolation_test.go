@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
-	analyticsMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/analytics/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics"
+	analyticsMiddleware "github.com/flyfleet/fleet-core/internal/domains/analytics/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/pashagolub/pgxmock/v3"

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/driver/models"
+	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

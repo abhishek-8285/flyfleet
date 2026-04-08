@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/logger"
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/repository"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

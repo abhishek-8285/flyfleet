@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 )
 
 // DeviceRepository defines the interface for device data persistence

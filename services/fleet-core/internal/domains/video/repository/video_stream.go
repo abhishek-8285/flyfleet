@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
+	"github.com/flyfleet/fleet-core/internal/domains/video/models"
 	"github.com/google/uuid"
 )
 

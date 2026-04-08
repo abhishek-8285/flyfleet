@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	india_models "github.com/flyfleet/fleet-core-service/internal/domains/india/models"
-	india_repo "github.com/flyfleet/fleet-core-service/internal/domains/india/repository"
+	india_models "github.com/flyfleet/fleet-core/internal/domains/india/models"
+	india_repo "github.com/flyfleet/fleet-core/internal/domains/india/repository"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )

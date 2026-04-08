@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	vehMiddleware "github.com/flyfleet/fleet-core-service/internal/domains/vehicle/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
+	vehMiddleware "github.com/flyfleet/fleet-core/internal/domains/vehicle/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

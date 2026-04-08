@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/customer/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/customer/repository"
 	"go.uber.org/zap"
 )
 

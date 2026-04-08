@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	complianceservice "github.com/flyfleet/fleet-core-service/internal/domains/compliance/service"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	complianceservice "github.com/flyfleet/fleet-core/internal/domains/compliance/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	pb "github.com/flyfleet/proto/compliance/v1"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"

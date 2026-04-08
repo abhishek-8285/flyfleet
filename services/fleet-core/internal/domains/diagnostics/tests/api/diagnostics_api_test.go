@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/handlers"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )

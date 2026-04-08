@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/secrets"
+	"github.com/flyfleet/fleet-core/internal/pkg/secrets"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

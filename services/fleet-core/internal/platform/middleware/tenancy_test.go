@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"

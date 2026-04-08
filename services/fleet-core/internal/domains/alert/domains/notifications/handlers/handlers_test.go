@@ -10,9 +10,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service/mocks"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"

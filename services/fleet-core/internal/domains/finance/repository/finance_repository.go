@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
-	fuelModels "github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/models"
+	fuelModels "github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

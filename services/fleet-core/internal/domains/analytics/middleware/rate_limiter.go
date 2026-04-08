@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/cache"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/cache"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/service"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)

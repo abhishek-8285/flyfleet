@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/crypto"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

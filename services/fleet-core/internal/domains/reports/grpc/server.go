@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/reports/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/reports/service"
+	"github.com/flyfleet/fleet-core/internal/domains/reports/models"
+	"github.com/flyfleet/fleet-core/internal/domains/reports/service"
 	pb "github.com/flyfleet/proto/reports/v1"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

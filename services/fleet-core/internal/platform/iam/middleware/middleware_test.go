@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/service"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/service"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

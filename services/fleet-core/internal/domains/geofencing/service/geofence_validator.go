@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/geofencing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/geofencing/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

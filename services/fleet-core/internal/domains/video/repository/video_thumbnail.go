@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/video/models"
+	"github.com/flyfleet/fleet-core/internal/domains/video/models"
 )
 
 func (r *VideoRepositoryImpl) CreateVideoThumbnail(ctx context.Context, thumbnail *models.VideoThumbnail) error {

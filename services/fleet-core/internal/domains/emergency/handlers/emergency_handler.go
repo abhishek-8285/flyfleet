@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/service"
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/models"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/service"
+	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

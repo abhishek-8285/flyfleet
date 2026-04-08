@@ -6,14 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/service"
-	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/service"
+	"github.com/flyfleet/fleet-core/internal/platform/metrics"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)

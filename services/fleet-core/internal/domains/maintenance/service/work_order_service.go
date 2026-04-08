@@ -11,8 +11,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/repository"
 )
 
 // WorkOrderService handles work order business logic

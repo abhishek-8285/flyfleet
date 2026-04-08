@@ -1,0 +1,50 @@
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.560Z","caller":"cmd/main.go:348","msg":"Configuration loaded","db_url":"postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable","port":"8084"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.812Z","caller":"messaging/nats.go:58","msg":"Connected to NATS with JetStream","url":"nats://localhost:4222"}
+{"level":"WARN","timestamp":"2026-03-29T10:46:03.891Z","caller":"cmd/main.go:451","msg":"Failed to initialize Redis cache, some features might be limited","error":"failed to connect to redis: dial tcp: address redis://localhost:6379: too many colons in address"}
+{"level":"WARN","timestamp":"2026-03-29T10:46:03.935Z","caller":"cmd/main.go:741","msg":"Failed to start websocket gateway","error":"nats: no stream matches subject"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.942Z","caller":"workers/governance_expiry_worker.go:27","msg":"Starting Governance Expiry Worker"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.942Z","caller":"workers/governance_retention_worker.go:27","msg":"Starting Governance Retention Worker (Daily schedule)"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.943Z","caller":"workers/governance_retention_worker.go:44","msg":"Running daily governance retention enforcement"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.956Z","caller":"cmd/main.go:1214","msg":"✅ Billing storage set to Local Disk."}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.960Z","caller":"cmd/main.go:1367","msg":"✅ Billing storage set to Local Disk."}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.960Z","caller":"workers/india_compliance_worker.go:31","msg":"IndiaComplianceWorker started"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.962Z","caller":"workers/india_compliance_worker.go:51","msg":"IndiaComplianceWorker: starting compliance scan"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"cmd/main.go:1399","msg":"✅ Billing Domain initialized with Isolation Shield."}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"cmd/main.go:1834","msg":"Starting fleet-core-service","port":"8084"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"service/telemetry_worker.go:37","msg":"Starting telemetry worker"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"engine/geofence_engine.go:88","msg":"Starting geofence engine..."}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"service/telemetry_worker.go:63","msg":"Subscribed to fleet.telemetry.gps"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:03.979Z","caller":"engine/geofence_engine.go:120","msg":"Geofence engine started","subject":"fleet.telemetry.gps"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:04.059Z","caller":"workers/india_compliance_worker.go:103","msg":"IndiaComplianceWorker: scan completed"}
+{"level":"INFO","timestamp":"2026-03-29T10:46:13.755Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:13.756Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:13.756Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:13.757Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:23.757Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:23.758Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:23.758Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:23.758Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:33.757Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:33.758Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:33.758Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:33.758Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:43.757Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:43.759Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:43.760Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:43.760Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:53.756Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:53.762Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:46:53.762Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:46:53.762Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:03.750Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:03.750Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:03.750Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:03.750Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:13.755Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:13.755Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:13.756Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:13.756Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:23.758Z","caller":"cmd/main.go:389","msg":"DB Pool Saturation Audit","pool":"CRITICAL","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:23.759Z","caller":"cmd/main.go:402","msg":"DB Pool Saturation Audit","pool":"HIGH","acquired":0,"idle":2,"max":10}
+{"level":"INFO","timestamp":"2026-03-29T10:47:23.759Z","caller":"cmd/main.go:406","msg":"DB Pool Saturation Audit","pool":"MEDIUM","acquired":0,"idle":1,"max":5}
+{"level":"INFO","timestamp":"2026-03-29T10:47:23.759Z","caller":"cmd/main.go:410","msg":"DB Pool Saturation Audit","pool":"LOW","acquired":0,"idle":2,"max":5}

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/service"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/service"
 	"github.com/google/uuid"
 )
 
@@ -35,6 +35,15 @@ func AuthMiddleware(iamSvc service.IAMService) func(http.Handler) http.Handler {
 			if err != nil {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
+			}
+
+			// Check session revocation — if the token's JTI is no longer active, reject
+			if claims.JTI != "" {
+				active, err := iamSvc.IsSessionActive(r.Context(), claims.UserID, claims.OrgID, claims.JTI)
+				if err == nil && !active {
+					http.Error(w, "session revoked", http.StatusUnauthorized)
+					return
+				}
 			}
 
 			// Store UUIDs as strings to maintain type consistency across handlers

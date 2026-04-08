@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"

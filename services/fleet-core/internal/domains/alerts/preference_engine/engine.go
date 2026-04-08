@@ -1,7 +1,7 @@
 package preference_engine
 
 import (
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/models"
 	"github.com/google/uuid"
 )
 

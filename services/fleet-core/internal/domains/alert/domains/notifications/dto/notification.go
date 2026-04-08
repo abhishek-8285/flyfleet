@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/models"
 	"github.com/google/uuid"
 )
 

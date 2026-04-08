@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/dto"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alert/domains/notifications/service/mocks"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/dto"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

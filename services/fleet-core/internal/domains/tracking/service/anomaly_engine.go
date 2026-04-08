@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 )
 
 // AnomalyConfig holds thresholds for anomaly detection.

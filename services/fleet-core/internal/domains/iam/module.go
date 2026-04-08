@@ -1,0 +1,256 @@
+package iam
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"github.com/flyfleet/fleet-core/internal/domains/iam/config"
+	"github.com/flyfleet/fleet-core/internal/domains/iam/email"
+	"github.com/flyfleet/fleet-core/internal/domains/iam/handlers"
+	"github.com/flyfleet/fleet-core/internal/domains/iam/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/iam/service"
+	fcmiddleware "github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/permissions"
+)
+
+// Module wires together the IAM domain: repositories, services, and handlers.
+// It exposes RegisterPublicRoutes and RegisterAuthRoutes to attach all 74 auth endpoints to a chi router.
+type Module struct {
+	// Handlers
+	authHandler    *handlers.AuthHandler
+	profileHandler *handlers.ProfileHandler
+	sessionHandler *handlers.SessionHandler
+	userHandler    *handlers.UserHandler
+	inviteHandler  *handlers.InviteHandler
+	rbacHandler    *handlers.RBACHandler
+	mfaHandler     *handlers.MFAHandler
+
+	// Services (exposed for cross-domain calls)
+	AuthService     *service.AuthService
+	SessionService  *service.SessionService
+	RBACService     *service.RBACService
+	UserService     *service.UserService
+	MFAService      *service.MFAService
+	PasswordService *service.PasswordService
+	InviteService   *service.InvitationService
+
+	// Repositories (exposed for cross-domain calls)
+	UserRepo    *repository.UserRepository
+	RoleRepo    *repository.RoleRepository
+	OrgRepo     *repository.OrgRepository
+	SessionRepo *repository.SessionRepository
+}
+
+// NewModule creates all IAM repos, services, and handlers.
+func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg config.IAMConfig, logger *zap.Logger) *Module {
+	// 1. Create repositories
+	userRepo := repository.NewUserRepository(pool)
+	orgRepo := repository.NewOrgRepository(pool)
+	roleRepo := repository.NewRoleRepository(pool)
+	sessionRepo := repository.NewSessionRepository(pool)
+	passwordRepo := repository.NewPasswordHistoryRepository(pool)
+	auditRepo := repository.NewAuditRepository(pool)
+	invitationRepo := repository.NewInvitationRepository(pool)
+
+	// 2. Create email service
+	emailSvc := email.NewEmailService(iamCfg.Email, logger)
+
+	// 3. Create JWT manager
+	jwtManager := &jwtManagerImpl{secret: []byte(jwtSecret)}
+
+	// 4. Create services
+	secCfg := iamCfg.SecurityConfig()
+	passwordSvc := service.NewPasswordService(userRepo, passwordRepo, sessionRepo, secCfg, logger)
+	authSvc := service.NewAuthService(userRepo, orgRepo, roleRepo, sessionRepo, passwordRepo, rdb, jwtManager, secCfg, logger, emailSvc, passwordSvc)
+	sessionSvc := service.NewSessionService(sessionRepo, rdb, logger)
+	rbacSvc := service.NewRBACService(roleRepo, logger)
+	userSvc := service.NewUserService(userRepo, orgRepo, roleRepo, auditRepo, logger)
+	mfaSvc := service.NewMFAService(userRepo, logger)
+	inviteSvc := service.NewInvitationService(invitationRepo, userRepo, orgRepo, roleRepo, auditRepo, emailSvc, logger)
+
+	// 5. Create handlers
+	authHandler := handlers.NewAuthHandler(authSvc, passwordSvc, logger)
+	profileHandler := handlers.NewProfileHandler(userRepo, logger)
+	sessionHandler := handlers.NewSessionHandler(sessionSvc, logger)
+	userHandler := handlers.NewUserHandler(userSvc, logger)
+	inviteHandler := handlers.NewInviteHandler(inviteSvc, logger)
+	rbacHandler := handlers.NewRBACHandler(rbacSvc, logger)
+	mfaHandler := handlers.NewMFAHandler(mfaSvc, logger)
+
+	return &Module{
+		authHandler:    authHandler,
+		profileHandler: profileHandler,
+		sessionHandler: sessionHandler,
+		userHandler:    userHandler,
+		inviteHandler:  inviteHandler,
+		rbacHandler:    rbacHandler,
+		mfaHandler:     mfaHandler,
+		AuthService:     authSvc,
+		SessionService:  sessionSvc,
+		RBACService:     rbacSvc,
+		UserService:     userSvc,
+		MFAService:      mfaSvc,
+		PasswordService: passwordSvc,
+		InviteService:   inviteSvc,
+		UserRepo:        userRepo,
+		RoleRepo:        roleRepo,
+		OrgRepo:         orgRepo,
+		SessionRepo:     sessionRepo,
+	}
+}
+
+// RegisterPublicRoutes attaches all public (no-auth) IAM endpoints to the given chi router.
+// These endpoints do not require JWT middleware — the caller should NOT apply auth middleware.
+// This method expects to be called within an r.Route("/api/v1", ...) block.
+func (m *Module) RegisterPublicRoutes(r chi.Router, logger *zap.Logger) {
+	r.Post("/auth/identify", m.authHandler.Identify)
+	r.Post("/auth/login", m.authHandler.Login)
+	r.Post("/auth/forgot-password", m.authHandler.ForgotPassword)
+	r.Post("/auth/register", m.authHandler.Register)
+	r.Post("/auth/mfa/verify", m.authHandler.VerifyMFA)
+	r.Post("/auth/refresh", m.authHandler.Refresh)
+	r.Post("/auth/reset-password", m.authHandler.ResetPassword)
+	r.Post("/auth/verify-email", m.authHandler.VerifyEmail)
+	r.Get("/auth/invite/{token}", m.inviteHandler.ValidateInviteToken)
+	r.Post("/auth/invite/accept", m.inviteHandler.AcceptInvite)
+
+	// Frontend compatibility aliases
+	r.Post("/auth/resolve-orgs", m.authHandler.Identify)
+}
+
+// RegisterAuthRoutes attaches all authenticated IAM endpoints to the given chi router.
+// The caller MUST apply JWT middleware before calling this method (e.g., via r.Use or r.Group).
+// RBAC permission groups use fcmiddleware.RequirePermissions with fleet-core permission constants.
+// This method expects to be called within an r.Route("/api/v1", ...) block.
+func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
+	// Auth
+	r.Post("/auth/logout", m.authHandler.Logout)
+	r.Post("/auth/change-password", m.authHandler.ChangePassword)
+	r.Get("/auth/password-policy", m.authHandler.GetPolicy)
+	r.Post("/auth/orgs/{orgId}/switch", m.authHandler.SwitchOrg)
+	r.Get("/auth/orgs", m.authHandler.ListOrgs)
+
+	// Profile
+	r.Get("/auth/profile", m.profileHandler.GetProfile)
+	r.Put("/auth/profile", m.profileHandler.UpdateProfile)
+
+	// Sessions
+	r.Get("/auth/sessions", m.sessionHandler.ListSessions)
+	r.Delete("/auth/sessions/{id}", m.sessionHandler.RevokeSession)
+	r.Delete("/auth/sessions/all", m.sessionHandler.RevokeAllSessions)
+
+	// MFA
+	r.Post("/auth/mfa/setup/totp", m.mfaHandler.SetupTOTP)
+	r.Post("/auth/mfa/setup/totp/verify", m.mfaHandler.VerifyTOTP)
+	r.Post("/auth/mfa/disable", m.mfaHandler.DisableMFA)
+	r.Get("/auth/mfa/backup-codes", m.mfaHandler.GetBackupCodes)
+
+	// Admin - User management (requires user:read)
+	// TODO: Replace PermReadVehicles with a proper PermReadUsers IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
+		r.Get("/admin/users", m.userHandler.ListUsers)
+		r.Get("/admin/users/{id}", m.userHandler.GetUser)
+		r.Get("/admin/users/{id}/audit-log", m.userHandler.GetUserAuditLog)
+	})
+
+	// Admin - User status update (requires user:write)
+	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Put("/admin/users/{id}/status", m.userHandler.UpdateStatus)
+	})
+
+	// Admin - User delete (requires user:delete)
+	// TODO: Replace PermWriteVehicles with a proper PermDeleteUsers IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Delete("/admin/users/{id}", m.userHandler.DeleteUser)
+	})
+
+	// Admin - Invitations (requires user:write)
+	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Post("/admin/users/invite", m.inviteHandler.CreateInvite)
+		r.Post("/admin/users/invite/{id}/resend", m.inviteHandler.ResendInvite)
+		r.Delete("/admin/users/invite/{id}", m.inviteHandler.RevokeInvite)
+	})
+
+	// Admin - RBAC reads (requires role:read)
+	// TODO: Replace PermReadVehicles with a proper PermReadRoles IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
+		r.Get("/admin/rbac/roles", m.rbacHandler.ListRoles)
+		r.Get("/admin/rbac/matrix", m.rbacHandler.GetPermissionMatrix)
+		r.Get("/admin/rbac/permissions", m.rbacHandler.ListAllPermissions)
+		r.Get("/admin/rbac/users/{id}/roles", m.rbacHandler.GetUserRoles)
+		r.Get("/admin/rbac/users/{id}/permissions", m.rbacHandler.GetUserPermissions)
+	})
+
+	// Admin - RBAC writes (requires role:write)
+	// TODO: Replace PermWriteVehicles with a proper PermWriteRoles IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Post("/admin/rbac/roles", m.rbacHandler.CreateRole)
+		r.Put("/admin/rbac/roles/{id}", m.rbacHandler.UpdateRole)
+		r.Post("/admin/rbac/roles/{id}/clone", m.rbacHandler.CloneRole)
+		r.Put("/admin/rbac/roles/{id}/permissions", m.rbacHandler.UpdateRolePermissions)
+		r.Post("/admin/rbac/users/assign", m.rbacHandler.AssignRole)
+		r.Post("/admin/rbac/users/assign/bulk", m.rbacHandler.BulkAssignRole)
+		r.Delete("/admin/rbac/users/unassign", m.rbacHandler.UnassignRole)
+	})
+
+	// Admin - RBAC deletes (requires role:delete)
+	// TODO: Replace PermWriteVehicles with a proper PermDeleteRoles IAM permission
+	r.Group(func(r chi.Router) {
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Delete("/admin/rbac/roles/{id}", m.rbacHandler.DeleteRole)
+	})
+}
+
+// ── JWT Manager Implementation ──
+
+// jwtManagerImpl implements service.JWTManager using HMAC-SHA256.
+type jwtManagerImpl struct {
+	secret []byte
+}
+
+func (m *jwtManagerImpl) GenerateToken(claims jwt.MapClaims, expiration time.Duration) (string, error) {
+	now := time.Now()
+	claims["exp"] = now.Add(expiration).Unix()
+	claims["iat"] = now.Unix()
+	claims["nbf"] = now.Unix()
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(m.secret)
+}
+
+func (m *jwtManagerImpl) VerifyToken(tokenString string) (*jwt.Token, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return m.secret, nil
+	})
+}
+
+func (m *jwtManagerImpl) ExtractClaims(tokenString string) (jwt.MapClaims, error) {
+	token, err := m.VerifyToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+	return claims, nil
+}
+
+// Compile-time interface check
+var _ service.JWTManager = (*jwtManagerImpl)(nil)

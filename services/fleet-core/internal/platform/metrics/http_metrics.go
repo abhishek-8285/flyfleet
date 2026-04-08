@@ -10,7 +10,7 @@ import (
 
 	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
 
-	"github.com/flyfleet/fleet-core-service/internal/middleware" // for GetTraceID
+	"github.com/flyfleet/fleet-core/internal/middleware" // for GetTraceID
 )
 
 // statusWriter captures response status code (local copy, as middleware.StatusWriter is unexported)

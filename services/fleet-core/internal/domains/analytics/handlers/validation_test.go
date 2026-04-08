@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

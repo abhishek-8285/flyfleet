@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/metrics"
-	"github.com/flyfleet/fleet-core-service/internal/domains/tracking/models"
-	platformmetrics "github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
+	platformmetrics "github.com/flyfleet/fleet-core/internal/platform/metrics"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"

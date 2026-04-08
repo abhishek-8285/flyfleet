@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/governance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 )

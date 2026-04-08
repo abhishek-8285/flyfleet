@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/utils"
+	"github.com/flyfleet/fleet-core/internal/domains/india/models"
+	"github.com/flyfleet/fleet-core/internal/domains/india/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )

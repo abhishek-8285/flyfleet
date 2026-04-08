@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

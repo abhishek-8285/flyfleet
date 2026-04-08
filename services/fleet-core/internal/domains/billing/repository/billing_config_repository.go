@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/cache"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/email"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/queue"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/storage"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/cache"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/email"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/pdf"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/queue"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/storage"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

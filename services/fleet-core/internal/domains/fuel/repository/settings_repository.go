@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 )
 
 type SettingsRepository interface {

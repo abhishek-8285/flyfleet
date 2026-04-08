@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

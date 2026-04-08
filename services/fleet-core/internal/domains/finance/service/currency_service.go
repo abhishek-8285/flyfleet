@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/repository"
 )
 
 type CurrencyService struct {

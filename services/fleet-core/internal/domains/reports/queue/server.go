@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/reports/client"
-	"github.com/flyfleet/fleet-core-service/internal/domains/reports/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/reports/client"
+	"github.com/flyfleet/fleet-core/internal/domains/reports/repository"
 	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
 )

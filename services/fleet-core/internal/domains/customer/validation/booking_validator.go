@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"github.com/flyfleet/fleet-core-service/internal/domains/customer/models"
+	"github.com/flyfleet/fleet-core/internal/domains/customer/models"
 )
 
 // BookingValidator provides utility validation functions

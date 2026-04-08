@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/support/service"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)

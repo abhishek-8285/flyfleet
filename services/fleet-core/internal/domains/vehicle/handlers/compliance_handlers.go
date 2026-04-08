@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/vehicle/service"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

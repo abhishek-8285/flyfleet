@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
 )
 
 // ============================================

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )

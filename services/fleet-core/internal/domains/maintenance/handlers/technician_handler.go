@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/maintenance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/maintenance/service"
 )
 
 type TechnicianHandler struct {

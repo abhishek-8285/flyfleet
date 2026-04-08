@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/customer/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/customer/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/customer/service"
+	"github.com/flyfleet/fleet-core/internal/domains/customer/models"
+	"github.com/flyfleet/fleet-core/internal/domains/customer/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/customer/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 )
 
 // Data structure exactly matching the provided JSON schema

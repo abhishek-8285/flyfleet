@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/fleet-platform/shared/pkg/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/service"
-	coremiddleware "github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
+	coremiddleware "github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

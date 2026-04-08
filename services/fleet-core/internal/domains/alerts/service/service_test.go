@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/alert_router"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/preference_engine"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/template_engine"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/alert_router"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/preference_engine"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/template_engine"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

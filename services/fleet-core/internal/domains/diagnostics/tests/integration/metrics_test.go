@@ -6,7 +6,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/metrics"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/metrics"
 	"github.com/stretchr/testify/assert"
 )
 

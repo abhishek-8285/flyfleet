@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations/models"
+	"github.com/flyfleet/fleet-core/internal/domains/integrations/models"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"go.uber.org/zap"

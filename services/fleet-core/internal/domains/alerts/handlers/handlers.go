@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/dto"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/service"
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/dto"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/service"
+	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"

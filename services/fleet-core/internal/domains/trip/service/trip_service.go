@@ -11,13 +11,13 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	emergencyRepo "github.com/flyfleet/fleet-core-service/internal/domains/emergency/repository"
-	tripmetrics "github.com/flyfleet/fleet-core-service/internal/domains/trip"
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/trip/repository"
-	"github.com/flyfleet/fleet-core-service/internal/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
-	"github.com/flyfleet/fleet-core-service/internal/platform/metrics"
+	emergencyRepo "github.com/flyfleet/fleet-core/internal/domains/emergency/repository"
+	tripmetrics "github.com/flyfleet/fleet-core/internal/domains/trip"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/models"
+	"github.com/flyfleet/fleet-core/internal/domains/trip/repository"
+	"github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/platform/metrics"
 )
 
 // TripServiceInterface defines the interface for trip service

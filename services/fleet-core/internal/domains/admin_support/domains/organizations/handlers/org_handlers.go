@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/organizations/service"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"

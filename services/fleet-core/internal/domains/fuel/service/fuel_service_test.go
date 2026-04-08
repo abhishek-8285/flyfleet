@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 )
 
 func TestFuelService_Creation(t *testing.T) {

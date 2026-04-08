@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/alerts/models"
+	"github.com/flyfleet/fleet-core/internal/domains/alerts/models"
 )
 
 type mockProvider struct {

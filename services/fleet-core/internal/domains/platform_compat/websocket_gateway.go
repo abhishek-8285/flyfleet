@@ -3,7 +3,7 @@ package platform_compat
 import (
 	"encoding/json"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/platform_compat/service"
+	"github.com/flyfleet/fleet-core/internal/domains/platform_compat/service"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"

@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/integrations/models"
+	"github.com/flyfleet/fleet-core/internal/domains/integrations/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"

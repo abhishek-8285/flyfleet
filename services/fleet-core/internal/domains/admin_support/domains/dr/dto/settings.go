@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/flyfleet/fleet-core-service/internal/domains/admin_support/domains/dr/models"
+	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/models"
 )
 
 // DRTestSettingsDTO represents DR test configuration settings

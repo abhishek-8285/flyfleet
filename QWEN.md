@@ -2,38 +2,59 @@
 
 ## Project Overview
 
-FlyFleet is a comprehensive, enterprise-grade fleet management platform built as a microservices architecture. It provides end-to-end fleet management capabilities with advanced security features, role-based access control (RBAC), and integration with Indian government systems (FASTag, e-way bills).
+FlyFleet is a comprehensive, enterprise-grade fleet management platform built as a **modular monolith** architecture. It provides end-to-end fleet management capabilities with advanced security features, role-based access control (RBAC), and integration with Indian government systems (FASTag, e-way bills).
 
 ### Architecture
 
-**Backend**: Go (Golang) microservices (16 active services)
-- **auth-service** (Port 8080) - Authentication, MFA, RBAC, security
-- **fleet-core-service** (Port 8084) - Core fleet operations
-- **tracking-service** (Port 8082) - GPS tracking, telemetry
-- **web-bff** (Port 8081) - Backend-for-frontend aggregator
-- **alert-service** (Port 8085) - Alerts and notifications
-- **billing-service** (Port 8087) - Billing and payments
-- **reports-service** (Port 8083) - Reporting and analytics
-- **governance-service** (Port 8088) - Governance and compliance
-- **analytics-service** (Port 8089) - Business intelligence
-- **integrations-service** (Port 8090) - Third-party integrations
-- **settings-service** (Port 8091) - User and org settings
-- **maintenance-service** (Port 8092) - Maintenance scheduling
-- **vehicle-service** (Port 8093) - Vehicle management
-- **driver-service** (Port 8094) - Driver management
-- **trip-service** (Port 8095) - Trip planning and tracking
-- **india-integration-service** - Indian government integrations
+**Backend**: Go (Golang) modular monolith — single deployable with clear internal domain boundaries
+- **fleet-core** (Port 8084) — **The Monolith** — single binary containing all business domains
+  - 27 internal domains: auth, tracking, geofencing, vehicle, driver, trip, billing, maintenance, alerts, analytics, governance, reports, settings, integrations, india, compliance, finance, emergency, admin_support, diagnostics, monitoring, route, fuel, customer, video, platform_compat, optimization
+  - Each domain follows hexagonal architecture: handlers → service → repository → models
+  - Shared infrastructure: middleware (JWKS auth, RBAC, tenant context, rate limit, CORS), platform observability, event bus
+- **auth-service** (Port 8080) — Standalone auth service (being consolidated into fleet-core as `domains/iam/`)
+  - 74 endpoints: login, refresh tokens, RBAC, MFA, sessions, user CRUD, invitations, password reset
+  - 7 handlers, 8 services, 6 repositories, email providers (SendGrid/SMTP/NoOp)
+- **web-bff** (Port 8081) — Backend-for-Frontend aggregator (React dashboard ↔ fleet-core)
+
+**Archived Services** (in `services/_archive/` — no longer deployed):
+- tracking-service, vehicle-service, driver-service, trip-service, billing-service, maintenance-service
+- alert-service, analytics-service, reports-service, governance-service, settings-service
+- integrations-service, india-integration-service, admin-support-service, fleet-ml-service, ingestion-service, optimization-service, worker-service
 
 **Frontend**: React + TypeScript + Tailwind CSS
-- **dashboard-web** - Main admin dashboard
-- **landing-page** - Marketing site
-- **mobile** - Mobile applications
+- **dashboard-web** — Main admin dashboard
+- **landing-page** — Marketing site
+- **mobile** — Mobile applications
 
 **Infrastructure**:
 - **Database**: PostgreSQL with TimescaleDB (time-series data)
 - **Cache**: Redis
 - **Message Queue**: NATS JetStream
 - **Containerization**: Docker & Docker Compose
+
+### Modular Monolith Structure
+
+```
+services/fleet-core/                    ← Single deployable
+├── cmd/main.go                         ← Single entry point, Chi router
+├── internal/
+│   ├── domains/                        ← 27 business domains
+│   │   ├── auth/                       ← Legacy auth v2 (being deprecated)
+│   │   ├── tracking/                   ← GPS telemetry, live location
+│   │   ├── geofencing/                 ← Spatial zones, entry/exit events
+│   │   ├── vehicle/                    ← Vehicle lifecycle
+│   │   ├── driver/                     ← Driver management
+│   │   ├── billing/                    ← Invoicing, payments, PDF
+│   │   ├── maintenance/                ← Preventive/corrective scheduling
+│   │   ├── trip/                       ← Trip planning, state machine
+│   │   └── ...                         ← (19 more domains)
+│   ├── middleware/                     ← Shared: JWKS auth, RBAC, tenant, rate limit
+│   ├── platform/                       ← Observability, EventBus, metrics
+│   └── pkg/                            ← Shared utilities
+├── migrations/                         ← Database migrations
+├── go.mod / go.sum
+└── Dockerfile                          ← Single container
+```
 
 ### Key Features
 
@@ -86,29 +107,34 @@ cp .env.example .env
 # Edit .env with your credentials
 # Set POSTGRES_PASSWORD and JWT_SECRET
 
-# Start all services
+# Start all services (fleet-core monolith + infra)
 docker-compose up -d
 
 # Check service health
 docker-compose ps
 
 # View logs
-docker-compose logs -f auth-service
+docker-compose logs -f fleet-core
 ```
 
 ### Manual Development Setup
 
 ```bash
-# Build all Go services
-cd services/microservices/auth-service && go build ./...
-cd services/fleet-core-service && go build ./...
-# ... repeat for other services
+# Build the monolith
+cd services/fleet-core && go build ./...
+
+# Build auth-service (standalone, being consolidated)
+cd services/auth-service && go build ./...
 
 # Run database migrations
 ./migrate.sh
 
-# Start individual service
-cd services/microservices/auth-service
+# Start fleet-core monolith
+cd services/fleet-core
+go run cmd/main.go
+
+# Start auth-service (separate process)
+cd services/auth-service
 go run cmd/main.go
 ```
 
@@ -189,8 +215,11 @@ make runtime-integration-gate
 ### Testing
 
 ```bash
-# Run service tests
-cd services/microservices/auth-service && go test ./...
+# Run fleet-core tests (all domains)
+cd services/fleet-core && go test ./...
+
+# Run auth-service tests
+cd services/auth-service && go test ./...
 
 # Run integration tests
 ./scripts/verify_all.sh
@@ -203,23 +232,31 @@ cd services/microservices/auth-service && go test ./...
 
 ### Code Organization
 
-**Go Services Structure**:
+**Modular Monolith Domain Structure**:
 ```
-services/{service-name}/
-├── cmd/
-│   └── main.go           # Application entry point
+services/fleet-core/internal/domains/{domain-name}/
+├── handlers/         # HTTP handlers (adapters)
+├── service/          # Business logic
+├── repository/       # Data access layer (implements interfaces)
+├── models/           # Domain entities
+└── *.go              # Domain-specific files (metrics, module.go, etc.)
+```
+
+**Auth-Service Structure** (being consolidated):
+```
+services/auth-service/
+├── cmd/main.go           # Entry point (will be removed after consolidation)
 ├── internal/
-│   ├── config/           # Configuration loading
-│   ├── database/         # Database connection
-│   ├── handlers/         # HTTP handlers
-│   ├── middleware/       # HTTP middleware
-│   ├── models/           # Data models
-│   ├── repository/       # Data access layer
-│   └── service/          # Business logic
-├── migrations/           # Database migrations
-├── Dockerfile
-├── go.mod
-└── config.toml
+│   ├── handlers/         # HTTP handlers (→ domains/iam/handlers/)
+│   ├── service/          # Business logic (→ domains/iam/service/)
+│   ├── repository/       # Data access (→ domains/iam/repository/)
+│   ├── models/           # Domain models (→ domains/iam/models/)
+│   ├── email/            # Email providers (→ domains/iam/email/)
+│   ├── middleware/       # (subsumed by fleet-core middleware)
+│   ├── redis/            # (subsumed by fleet-core shared pool)
+│   └── nats/             # (subsumed by fleet-core EventBus)
+├── migrations/           # DB migrations (merged into fleet-core/)
+└── Dockerfile            # (will be removed after consolidation)
 ```
 
 **Frontend Structure**:
@@ -293,25 +330,13 @@ apps/dashboard-web/
 
 ## API Endpoints Summary
 
-The system exposes approximately **535 API endpoints** across all services:
+The system exposes approximately **182 API endpoints** across active services:
 
-- **auth-service**: 74 endpoints
-- **fleet-core-service**: 104 endpoints
-- **web-bff**: 181 endpoints
-- **tracking-service**: 9 endpoints
-- **alert-service**: 8 endpoints
-- **billing-service**: 13 endpoints
-- **reports-service**: 11 endpoints
-- **governance-service**: 10 endpoints
-- **analytics-service**: 43 endpoints
-- **integrations-service**: 4 endpoints
-- **settings-service**: 12 endpoints
-- **maintenance-service**: 18 endpoints
-- **vehicle-service**: 25 endpoints
-- **driver-service**: 19 endpoints
-- **trip-service**: 17 endpoints
+- **fleet-core**: ~104 endpoints (27 domains)
+- **auth-service**: ~74 endpoints (IAM domain, being consolidated)
+- **web-bff**: ~4 endpoints (passthrough/aggregator)
 
-See `api_spec.json` and `openapi.yaml` for detailed API documentation.
+*Note: The original 535 endpoints included archived microservices now consolidated into fleet-core.*
 
 ## Configuration
 
@@ -344,29 +369,35 @@ FLEET_CORE_SERVICE_PORT=8084
 
 ```
 flyfleet/
-├── apps/                    # Frontend applications
-│   ├── dashboard-web/      # Admin dashboard
-│   ├── landing-page/       # Marketing site
-│   └── mobile/             # Mobile apps
-├── services/               # Go microservices
-│   ├── auth-service/
-│   ├── fleet-core-service/
-│   └── ...
-├── packages/               # Shared packages
-│   ├── common/            # Common Go packages
-│   ├── config/            # Configuration packages
-│   └── ui-components/     # Shared React components
-├── infrastructure/         # Infrastructure code
-│   ├── ci-cd/             # CI/CD pipelines
-│   ├── database/          # Database migrations
-│   ├── docker/            # Dockerfiles
-│   ├── k8s/               # Kubernetes manifests
-│   ├── monitoring/        # Monitoring setup
-│   └── terraform/         # Terraform configs
-├── docs/                   # Documentation
-├── scripts/                # Utility scripts
-├── backups/                # Database backups
-└── firmware/               # IoT device firmware
+├── apps/                          # Frontend applications
+│   ├── dashboard-web/             # Admin dashboard (React)
+│   ├── landing-page/              # Marketing site
+│   └── mobile/                    # Mobile apps
+├── services/                      # Backend
+│   ├── fleet-core/                # ← THE MONOLITH (single deployable)
+│   │   ├── internal/domains/      # 27 business domains
+│   │   ├── internal/middleware/   # Shared: auth, RBAC, tenant
+│   │   ├── internal/platform/     # Observability, EventBus
+│   │   └── cmd/main.go            # Single entry point
+│   ├── auth-service/              # ← Being consolidated into fleet-core/domains/iam/
+│   ├── _archive/                  # Archived microservices (DO NOT MODIFY)
+│   └── monolith/                  # Scaffold (empty)
+├── packages/                      # Shared packages
+│   ├── common/                    # Common Go packages
+│   ├── config/                    # Configuration packages
+│   └── ui-components/             # Shared React components
+├── infrastructure/                # Infrastructure code
+│   ├── ci-cd/                     # CI/CD pipelines
+│   ├── database/                  # Database migrations
+│   ├── docker/                    # Dockerfiles
+│   ├── k8s/                       # Kubernetes manifests
+│   ├── monitoring/                # Monitoring setup
+│   └── terraform/                 # Terraform configs
+├── docs/                          # Documentation
+├── scripts/                       # Utility scripts
+├── backups/                       # Database backups
+├── product-spec/                  # Product specifications
+└── firmware/                      # IoT device firmware
 ```
 
 ## Quality Gates
@@ -396,3 +427,11 @@ The project includes comprehensive quality gates:
 - Deployment Guide: `docs/deployment/`
 - Security Docs: `docs/security/`
 - Operations Guide: `docs/operations/`
+- Product Specs: `product-spec/`
+
+## Qwen Added Memories
+- **FlyFleet is a MODULAR MONOLITH**, not microservices. Single deployable: `services/fleet-core/` with 27 internal domains.
+- **Auth-service is being consolidated** into fleet-core as `domains/iam/`. All 74 auth endpoints are functional.
+- **NEVER create new parallel domains** — always extend existing domain modules. E.g., tracking code lives in `internal/domains/tracking/`, not a new directory.
+- Key existing tracking files: `domains/tracking/service/ingestion_service.go`, `telemetry_query_service.go`, `repository/live_cache_repository.go`, `repository/telemetry_repository.go`, `handlers/tracking_query_handler.go`, `ingest_handler.go`.
+- **`_archive/` is READ-ONLY** — contains deprecated microservice code. Never modify.

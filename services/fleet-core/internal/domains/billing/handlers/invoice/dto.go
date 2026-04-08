@@ -3,7 +3,7 @@ package invoice
 import (
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/domain/invoice"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/domain/invoice"
 )
 
 type CreateInvoiceRequest struct {

@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/utils"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/utils"
 	"github.com/google/uuid"
 )
 

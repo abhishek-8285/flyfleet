@@ -1,0 +1,333 @@
+package handlers
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"math"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gofrs/uuid/v5"
+	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"github.com/flyfleet/fleet-core/internal/database"
+	"github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/tracking/models"
+	"github.com/flyfleet/fleet-core/internal/tracking/repository"
+)
+
+// WebSocketHandler manages real-time position push to dashboard clients.
+type WebSocketHandler struct {
+	redis       *redis.Client
+	logger      *zap.Logger
+	jwtSecret   string
+	upgrader    websocket.Upgrader
+	vehicleRepo repository.VehicleRepositoryer
+	liveCache   repository.LiveCacher
+
+	mu      sync.RWMutex
+	clients map[string][]*WSClient // orgID → clients
+}
+
+// WSClient represents a single WebSocket connection.
+type WSClient struct {
+	conn       *websocket.Conn
+	orgID      string
+	send       chan []byte
+	subscribed map[string]bool                // vehicle_id → bool (empty = all)
+	lastSent   map[string]*models.LiveLocation // differential push tracking
+	lastPong   time.Time                       // heartbeat health
+}
+
+func NewWebSocketHandler(
+	rdb *redis.Client,
+	jwtSecret string,
+	vehicleRepo repository.VehicleRepositoryer,
+	liveCache repository.LiveCacher,
+	logger *zap.Logger,
+) *WebSocketHandler {
+	return &WebSocketHandler{
+		redis:       rdb,
+		logger:      logger,
+		jwtSecret:   jwtSecret,
+		vehicleRepo: vehicleRepo,
+		liveCache:   liveCache,
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true // In production, restrict to known origins
+			},
+		},
+		clients: make(map[string][]*WSClient),
+	}
+}
+
+func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Authenticate via query param
+	claims, err := middleware.ValidateJWTFromQuery(r, h.jwtSecret)
+	if err != nil {
+		h.logger.Debug("ws auth failed", zap.Error(err))
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	orgID := claims.OrgID.String()
+
+	// Upgrade to WebSocket
+	conn, err := h.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		h.logger.Error("ws upgrade failed", zap.Error(err))
+		return
+	}
+
+	client := &WSClient{
+		conn:       conn,
+		orgID:      orgID,
+		send:       make(chan []byte, 256),
+		subscribed: make(map[string]bool),
+		lastSent:   make(map[string]*models.LiveLocation),
+		lastPong:   time.Now(),
+	}
+
+	h.registerClient(orgID, client)
+
+	// Send connection ack with heartbeat/position config
+	ack, _ := json.Marshal(models.WSMessage{
+		Type: models.WSMsgConnectionAck,
+		Data: map[string]interface{}{
+			"status":                      "connected",
+			"heartbeat_interval_ms":       30000,
+			"position_update_interval_ms": 5000,
+		},
+	})
+	client.send <- ack
+
+	ctx := r.Context()
+
+	// Start read/write loops and subscriptions
+	go client.writePump()
+	go h.readPump(client)
+	go h.subscribeToOrgUpdates(ctx, client)
+	go h.startHeartbeat(client)
+	go h.startPositionTicker(ctx, client)
+}
+
+func (h *WebSocketHandler) registerClient(orgID string, client *WSClient) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.clients[orgID] = append(h.clients[orgID], client)
+	h.logger.Info("ws client registered",
+		zap.String("org_id", orgID),
+		zap.Int("total_clients", len(h.clients[orgID])))
+}
+
+func (h *WebSocketHandler) unregisterClient(orgID string, client *WSClient) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	clients := h.clients[orgID]
+	for i, c := range clients {
+		if c == client {
+			h.clients[orgID] = append(clients[:i], clients[i+1:]...)
+			break
+		}
+	}
+}
+
+func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WSClient) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	// Subscribe to telemetry channel
+	telPubsub := h.redis.Subscribe(ctx, database.RedisChannelForOrg(client.orgID))
+	defer telPubsub.Close()
+	telCh := telPubsub.Channel()
+
+	// Subscribe to geofence alerts channel
+	geoPubsub := h.redis.Subscribe(ctx, fmt.Sprintf("org:%s:geofence_alerts", client.orgID))
+	defer geoPubsub.Close()
+	geoCh := geoPubsub.Channel()
+
+	for {
+		select {
+		case msg, ok := <-telCh:
+			if !ok {
+				return
+			}
+			select {
+			case client.send <- []byte(msg.Payload):
+			default:
+				h.logger.Warn("ws telemetry buffer full, dropping message",
+					zap.String("org_id", client.orgID))
+			}
+		case msg, ok := <-geoCh:
+			if !ok {
+				return
+			}
+			select {
+			case client.send <- []byte(msg.Payload):
+			default:
+				h.logger.Warn("ws geofence buffer full, dropping message",
+					zap.String("org_id", client.orgID))
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (h *WebSocketHandler) startHeartbeat(client *WSClient) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		if time.Since(client.lastPong) > 90*time.Second {
+			h.logger.Info("ws heartbeat timeout, closing connection",
+				zap.String("org_id", client.orgID))
+			client.conn.WriteControl(websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "heartbeat timeout"),
+				time.Now().Add(5*time.Second))
+			client.conn.Close()
+			return
+		}
+		client.conn.WriteMessage(websocket.PingMessage, nil)
+	}
+}
+
+func (h *WebSocketHandler) startPositionTicker(ctx context.Context, client *WSClient) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			h.pushOrgPositions(ctx, client)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (h *WebSocketHandler) pushOrgPositions(ctx context.Context, client *WSClient) {
+	orgUUID, err := uuid.FromString(client.orgID)
+	if err != nil {
+		return
+	}
+
+	vehicles, err := h.vehicleRepo.GetOrgVehicles(ctx, orgUUID)
+	if err != nil {
+		return
+	}
+
+	vehicleIDs := make([]uuid.UUID, len(vehicles))
+	for i, v := range vehicles {
+		vehicleIDs[i] = v.ID
+	}
+
+	locations, err := h.liveCache.GetBatchLiveLocations(ctx, vehicleIDs)
+	if err != nil {
+		return
+	}
+
+	for _, v := range vehicles {
+		loc, ok := locations[v.ID]
+		if !ok {
+			continue
+		}
+
+		// Differential push: only send if position changed significantly
+		if last, exists := client.lastSent[v.ID.String()]; exists {
+			if !hasSignificantChange(*last, *loc) {
+				continue
+			}
+		}
+
+		status := models.CalculateStatus(loc.Speed, loc.Ignition, loc.LastSeen)
+		msg := models.WSMessage{
+			Type: models.WSMsgPositionUpdate,
+			Data: models.PositionUpdate{
+				VehicleID: v.ID.String(),
+				Latitude:  loc.Lat,
+				Longitude: loc.Lng,
+				SpeedKmh:  loc.Speed,
+				Heading:   loc.Heading,
+				Status:    status,
+				Timestamp: loc.LastSeen.Format(time.RFC3339),
+			},
+		}
+		data, _ := json.Marshal(msg)
+		select {
+		case client.send <- data:
+			client.lastSent[v.ID.String()] = loc
+		default:
+			// Buffer full — skip, next tick will catch up
+		}
+	}
+}
+
+func hasSignificantChange(old, new models.LiveLocation) bool {
+	latDelta := math.Abs(new.Lat - old.Lat)
+	lngDelta := math.Abs(new.Lng - old.Lng)
+	speedDelta := math.Abs(new.Speed - old.Speed)
+	return latDelta > 0.0001 || lngDelta > 0.0001 || speedDelta > 2.0 || old.Status != new.Status
+}
+
+func (h *WebSocketHandler) readPump(client *WSClient) {
+	defer func() {
+		h.unregisterClient(client.orgID, client)
+		client.conn.Close()
+	}()
+
+	for {
+		_, message, err := client.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseNormalClosure) {
+				h.logger.Debug("ws unexpected close", zap.Error(err))
+			}
+			break
+		}
+
+		var wsMsg models.WSMessage
+		if err := json.Unmarshal(message, &wsMsg); err != nil {
+			continue
+		}
+
+		switch wsMsg.Type {
+		case models.WSMsgSubscribe:
+			var subReq models.SubscribeRequest
+			data, _ := json.Marshal(wsMsg.Data)
+			json.Unmarshal(data, &subReq)
+			client.subscribed = make(map[string]bool)
+			for _, vid := range subReq.VehicleIDs {
+				client.subscribed[vid] = true
+			}
+			h.logger.Debug("client subscribed to vehicles",
+				zap.String("org_id", client.orgID),
+				zap.Int("count", len(subReq.VehicleIDs)))
+
+		case models.WSMsgPing:
+			client.lastPong = time.Now()
+			pong, _ := json.Marshal(models.WSMessage{
+				Type: models.WSMsgPong,
+				Data: map[string]string{"timestamp": time.Now().UTC().Format(time.RFC3339)},
+			})
+			select {
+			case client.send <- pong:
+			default:
+			}
+		}
+	}
+}
+
+func (c *WSClient) writePump() {
+	defer c.conn.Close()
+	for msg := range c.send {
+		if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			return
+		}
+	}
+}

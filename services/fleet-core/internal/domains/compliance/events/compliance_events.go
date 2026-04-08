@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/repository"
 )
 
 type TripEventRouter interface {

@@ -7,9 +7,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
-	finTracing "github.com/flyfleet/fleet-core-service/internal/domains/finance/tracing"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/repository"
+	finTracing "github.com/flyfleet/fleet-core/internal/domains/finance/tracing"
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"

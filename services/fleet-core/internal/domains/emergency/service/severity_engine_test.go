@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/emergency/models"
+	"github.com/flyfleet/fleet-core/internal/domains/emergency/models"
 )
 
 func TestEmergencySeverityEngine_Classify(t *testing.T) {

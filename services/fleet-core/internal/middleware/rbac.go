@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/permissions"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/permissions"
 	"go.uber.org/zap"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/iam/models"
+	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

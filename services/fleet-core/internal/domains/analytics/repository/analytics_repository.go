@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"errors"
-	"github.com/flyfleet/fleet-core-service/internal/domains/analytics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/analytics/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )

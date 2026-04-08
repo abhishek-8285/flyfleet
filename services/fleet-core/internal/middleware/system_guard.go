@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/billing/models"
+	"github.com/flyfleet/fleet-core/internal/platform/billing/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

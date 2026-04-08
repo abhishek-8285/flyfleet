@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/middleware"
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/settings/service"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/middleware"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/models"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/settings/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

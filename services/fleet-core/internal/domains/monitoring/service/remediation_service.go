@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/monitoring/repository"
-	"github.com/flyfleet/fleet-core-service/internal/platform/observability"
+	"github.com/flyfleet/fleet-core/internal/domains/monitoring/models"
+	"github.com/flyfleet/fleet-core/internal/domains/monitoring/repository"
+	"github.com/flyfleet/fleet-core/internal/platform/observability"
 	"go.uber.org/zap"
 )
 

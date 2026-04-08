@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing"
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/india/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing"
+	"github.com/flyfleet/fleet-core/internal/domains/india/models"
+	"github.com/flyfleet/fleet-core/internal/domains/india/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"

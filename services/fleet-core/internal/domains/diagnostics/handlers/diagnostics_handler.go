@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/service"
 	"github.com/go-chi/chi/v5"
 )
 

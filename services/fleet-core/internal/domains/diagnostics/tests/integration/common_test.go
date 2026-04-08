@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/service"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"

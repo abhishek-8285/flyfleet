@@ -1,0 +1,1437 @@
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+Logging to file: ../../logs/fleet-core.log (rotation: 100MB x 10 files, keep 30 days)
+2026-03-29T13:33:03.756Z	INFO	cmd/main.go:348	Configuration loaded	{"db_url": "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable", "port": "8084"}
+2026-03-29T13:33:03.879Z	INFO	messaging/nats.go:58	Connected to NATS with JetStream	{"url": "nats://localhost:4222"}
+2026-03-29T13:33:03.915Z	INFO	cache/redis.go:42	Connected to Redis cache	{"addr": "localhost:6379"}
+2026-03-29T13:33:03.935Z	WARN	cmd/main.go:741	Failed to start websocket gateway	{"error": "nats: no stream matches subject"}
+2026-03-29T13:33:03.942Z	INFO	workers/governance_retention_worker.go:27	Starting Governance Retention Worker (Daily schedule)
+2026-03-29T13:33:03.942Z	INFO	workers/governance_expiry_worker.go:27	Starting Governance Expiry Worker
+2026-03-29T13:33:03.946Z	INFO	workers/governance_retention_worker.go:44	Running daily governance retention enforcement
+2026-03-29T13:33:03.959Z	INFO	cmd/main.go:1214	✅ Billing storage set to Local Disk.
+2026-03-29T13:33:03.963Z	INFO	cmd/main.go:1367	✅ Billing storage set to Local Disk.
+2026-03-29T13:33:03.963Z	INFO	workers/india_compliance_worker.go:31	IndiaComplianceWorker started
+2026-03-29T13:33:03.963Z	INFO	workers/india_compliance_worker.go:51	IndiaComplianceWorker: starting compliance scan
+2026-03-29T13:33:03.963Z	INFO	cmd/main.go:1834	Starting fleet-core-service	{"port": "8084"}
+2026-03-29T13:33:03.963Z	INFO	cmd/main.go:1399	✅ Billing Domain initialized with Isolation Shield.
+2026-03-29T13:33:03.964Z	INFO	service/telemetry_worker.go:37	Starting telemetry worker
+2026-03-29T13:33:03.964Z	INFO	service/telemetry_worker.go:63	Subscribed to fleet.telemetry.gps
+2026-03-29T13:33:03.963Z	INFO	engine/geofence_engine.go:88	Starting geofence engine...
+2026-03-29T13:33:03.965Z	INFO	engine/geofence_engine.go:120	Geofence engine started	{"subject": "fleet.telemetry.gps"}
+2026-03-29T13:33:04.070Z	INFO	workers/india_compliance_worker.go:103	IndiaComplianceWorker: scan completed
+2026-03-29T13:33:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:13.855Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:13.855Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:33:13.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 13:33:22 [localhost/D0hPm9REEX-000001] "GET http://localhost:8084/health HTTP/1.1" from [::1]:57962 - 404 19B in 66.154µs
+2026-03-29T13:33:23.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:23.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:23.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:33:23.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:33:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:33:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:33:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:43.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:33:43.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 13:33:48 [localhost/D0hPm9REEX-000002] "GET http://localhost:8084/healthz HTTP/1.1" from [::1]:56680 - 200 49B in 8.256231ms
+2026-03-29T13:33:53.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:53.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:33:53.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:33:53.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:34:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 28.653538ms
+2026-03-29T13:34:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:13.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:13.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:13.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:34:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:23.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:34:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:34:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:43.852Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:43.854Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:43.856Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.778769ms
+2026/03/29 13:34:49 [2a51f175-7d17-455d-902a-7179fddb7026] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 1321B in 257.457769ms
+2026/03/29 13:34:49 [2cf7b735-3411-4484-bc05-16e82a706ece] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 1321B in 162.619462ms
+2026-03-29T13:34:49.450Z	INFO	middleware/jwks_auth.go:166	KID not found, attempting on-demand JWKS refresh	{"kid": "7dcf07cc-4d81-4163-ad3e-bc05ccb0d66c"}
+2026/03/29 13:34:49 [localhost/D0hPm9REEX-000003] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:39252 - 200 456B in 4.762462ms
+2026-03-29T13:34:49.472Z	INFO	middleware/jwks_auth.go:112	JWKS keys refreshed	{"count": 1}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.380308ms
+[PERF-ALERT] RLS BeforeAcquire overhead: 8.499ms
+2026/03/29 13:34:49 [trace-63d68556-8ac0-429e-b9b7-ec971c75d3ca] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 438.154µs
+2026/03/29 13:34:49 [trace-352408e5-6dec-466a-a49a-7f5e76b83cc2] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 483B in 85.069231ms
+2026/03/29 13:34:49 [trace-344c3cc1-7c1d-41f1-8924-3c7400a5e1df] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 536B in 112.923µs
+2026/03/29 13:34:50 [trace-82a86ad7-2408-4297-b641-c0394fd28640] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 207.385µs
+2026/03/29 13:34:50 [trace-709ceff4-0699-4779-9a67-f9a6ff9699da] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 536B in 85.308µs
+2026/03/29 13:34:50 [trace-1ac047c0-2353-48fe-9a40-fae079bc5225] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 483B in 22.531616ms
+2026/03/29 13:34:50 [trace-75997ce8-cadd-4f61-b3d4-1e639ed67361] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 365.846µs
+2026/03/29 13:34:50 [trace-2e3420ac-682b-451e-9756-7d65ac16275c] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 537.615µs
+2026/03/29 13:34:50 [trace-26627c00-37b3-46a4-84e2-d34b31e1ce4f] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 2.225231ms
+2026/03/29 13:34:50 [trace-20541bbd-9609-4c7c-a80f-c7955a9de2e6] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 452.23µs
+2026/03/29 13:34:51 [trace-f5ee64e7-c37f-4c29-b414-21c526d11253] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 346.462µs
+2026/03/29 13:34:51 [trace-cbcd62be-cd06-4f75-b476-8f9db0240382] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 326.077µs
+2026/03/29 13:34:51 [trace-09e4aa13-9cc9-4dea-a0de-b115e3f7a083] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 326.461µs
+2026/03/29 13:34:51 [trace-3f454073-6528-4c62-813e-fa15ca85c2dc] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 2409:40d0:100c:2411:8000:: - 200 627B in 373.923µs
+2026-03-29T13:34:53.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:34:53.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:34:53.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:34:53.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:35:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:03.836Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:35:13.862Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:13.875Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:13.876Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:13.876Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 13.151077ms
+2026/03/29 13:35:16 [trace-77330dba-7cac-4412-998e-c23d23dac25d] "POST http://localhost:8084/api/v1/auth/resolve-orgs HTTP/1.1" from 103.226.91.181 - 200 21B in 64.615692ms
+2026-03-29T13:35:22.262Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.io"}
+2026-03-29T13:35:22.282Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.io", "db": "fleet_db"}
+2026-03-29T13:35:22.309Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.io", "role": "super_admin"}
+2026-03-29T13:35:22.310Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.io", "userID": "bac1a01c-8d57-43fe-903d-1f716697c73d"}
+2026/03/29 13:35:22 [trace-8b2d9446-bbec-4956-b894-451f0bab060a] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 103.226.91.181 - 200 1321B in 424.049846ms
+2026-03-29T13:35:23.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:23.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:23.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:23.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 13:35:25 [2906dcd0-ece0-437c-a759-b96ba3499b4a] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 103.226.91.181 - 200 1321B in 27.546077ms
+2026/03/29 13:35:25 [0b953acf-4c03-4793-be3c-4b4b3ad497be] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 103.226.91.181 - 200 1321B in 42.854846ms
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.115077ms
+2026/03/29 13:35:25 [trace-ac1d32d4-e941-4d29-9674-c43442922ac5] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 103.226.91.181 - 200 483B in 26.114384ms
+2026/03/29 13:35:25 [trace-19687735-2c07-44ca-b6a9-f97f3d7de62e] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 103.226.91.181 - 200 483B in 14.084307ms
+2026/03/29 13:35:25 [trace-928ee711-ed0e-4290-ba58-f0f78f7239fa] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 103.226.91.181 - 200 536B in 327.077µs
+2026/03/29 13:35:25 [trace-62748f81-fd4c-4610-a215-35e593d4a5b1] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 284µs
+2026/03/29 13:35:25 [trace-acd8119c-6eb8-442d-b488-e78a7b104bbb] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 103.226.91.181 - 200 536B in 196.308µs
+2026/03/29 13:35:25 [trace-299c2fab-9491-444f-95c8-579f04790073] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 159µs
+2026/03/29 13:35:25 [trace-fef2ccbb-c784-4918-8d94-933f9a92da24] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 100.308µs
+2026/03/29 13:35:25 [trace-c8dc5627-55b5-48a3-a278-710882a33e03] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 178.846µs
+2026/03/29 13:35:25 [trace-4868d37d-9cfb-4745-8ecd-974d30bd0059] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 174.077µs
+2026/03/29 13:35:26 [trace-536d095b-4149-408c-8ecd-15cefd7f8406] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 133.846µs
+2026/03/29 13:35:26 [trace-be19beba-cdb9-4924-8a69-0320ca3c9681] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 265.538µs
+2026/03/29 13:35:26 [trace-d671e9f5-1333-48e1-9f85-01a498538de5] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 327.615µs
+2026/03/29 13:35:27 [trace-98fe12de-e672-4190-bc69-b24321ade4cb] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 214.231µs
+2026/03/29 13:35:27 [trace-926a7477-b7a2-4c4d-9d61-dfe936c9b8d7] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 432.077µs
+2026-03-29T13:35:33.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:33.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:33.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:33.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:35:43.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:43.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:43.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:43.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:35:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:35:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:35:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:35:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:36:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 13:36:12 [trace-448f35b2-fccd-4525-920e-dcfa4d5bd84a] "POST http://localhost:8084/api/v1/auth/resolve-orgs HTTP/1.1" from 103.226.91.181 - 200 21B in 15.820846ms
+2026-03-29T13:36:13.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:36:21.694Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.io"}
+2026-03-29T13:36:21.697Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.io", "db": "fleet_db"}
+2026-03-29T13:36:21.705Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.io", "role": "super_admin"}
+2026-03-29T13:36:21.705Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.io", "userID": "bac1a01c-8d57-43fe-903d-1f716697c73d"}
+2026/03/29 13:36:21 [trace-4471b535-8ff6-4f00-92f6-931f0c111b81] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 103.226.91.181 - 200 1321B in 232.236538ms
+2026-03-29T13:36:23.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:36:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:33.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 7.481ms
+2026/03/29 13:36:34 [f3faa3c3-dc38-4f07-9506-25efcc43944b] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 103.226.91.181 - 200 1320B in 68.956923ms
+2026/03/29 13:36:34 [84d1ca5e-ba26-470d-9c11-4f317a21480d] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 103.226.91.181 - 200 1320B in 69.675077ms
+2026/03/29 13:36:34 [trace-a58dbd20-04e9-4fe1-8d0f-51a6133092cb] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 103.226.91.181 - 200 482B in 26.418769ms
+2026/03/29 13:36:34 [trace-2fc95ce3-8803-4b71-aab0-b87d3d14c5dc] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 108.077µs
+2026/03/29 13:36:34 [trace-c9512646-920d-48bf-b297-545b15098db8] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 103.226.91.181 - 200 536B in 2.707077ms
+2026/03/29 13:36:34 [trace-a4fc5618-f676-485f-9e88-3e0bccabbb2d] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 103.226.91.181 - 200 482B in 21.990692ms
+2026/03/29 13:36:35 [trace-62526758-9a4c-4c4e-8bf2-d46c4d70ea48] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 319.308µs
+2026/03/29 13:36:35 [trace-a8433d44-90fe-43c1-8c54-d3b400eb0a0a] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 103.226.91.181 - 200 536B in 307.692µs
+2026/03/29 13:36:35 [trace-19839f4f-958c-436f-9a95-105d311ca604] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 230.154µs
+2026/03/29 13:36:35 [trace-f76afb69-a9b8-454b-8f44-0a6ab599419c] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 396µs
+2026/03/29 13:36:35 [trace-94a320f5-ee99-4a95-be8b-a3bb1bf72ab4] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 121µs
+2026/03/29 13:36:36 [trace-f87c49ea-3635-4caa-91ca-0e6be942d65d] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 201.846µs
+2026/03/29 13:36:36 [trace-9111e299-0a25-42fa-8172-b9ced375d940] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 417.231µs
+2026/03/29 13:36:36 [trace-e3704c18-dd24-47a0-a959-a5f61594eed0] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 178.231µs
+2026/03/29 13:36:36 [trace-39833cfa-fe3a-40d8-8cf5-f3739fa3928d] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 193.231µs
+2026/03/29 13:36:37 [trace-b74c187a-b0e3-42ef-9df1-a85b252c7989] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 103.226.91.181 - 200 627B in 340.616µs
+2026-03-29T13:36:43.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:43.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:43.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:43.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:36:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:36:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:36:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:36:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:13.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:13.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:23.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:33.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:33.852Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:33.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:43.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:43.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:43.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:43.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:37:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:37:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:37:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:37:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:38:03.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:03.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:03.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 7.991923ms
+2026-03-29T13:38:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:38:23.849Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:23.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:23.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:23.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:38:33.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:33.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:33.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:33.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:38:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:38:53.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:38:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:38:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:38:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:39:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:03.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 15.549ms
+2026-03-29T13:39:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:13.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:13.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:13.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:39:23.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:23.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:23.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:23.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:39:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:39:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:43.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:43.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:43.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:39:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:39:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:39:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:39:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:40:03.840Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:03.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 37.446846ms
+2026-03-29T13:40:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:13.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:13.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:13.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:40:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:40:33.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:40:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:43.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:43.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:40:53.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:40:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:40:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:40:53.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:41:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:03.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:03.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:03.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 16.505539ms
+2026-03-29T13:41:13.848Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:13.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:13.852Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:13.852Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:41:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:23.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:23.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:41:33.840Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:33.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:33.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:33.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:41:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:43.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:43.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:43.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:41:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:41:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:41:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:41:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:42:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:03.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.177923ms
+2026-03-29T13:42:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:42:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:23.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:42:33.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:33.860Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:33.861Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:33.861Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:42:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:43.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:43.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:42:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:42:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:42:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:42:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:43:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:03.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:03.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:03.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 28.919154ms
+2026-03-29T13:43:13.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:13.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:13.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:13.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:43:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:23.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:23.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:43:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:33.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:33.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:33.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:43:43.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:43.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:43.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:43.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:43:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:43:53.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:43:53.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:43:53.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:03.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:03.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:13.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:13.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:23.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:23.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:23.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:33.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:33.853Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:33.855Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:33.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:43.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:43.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:43.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:44:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:44:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:44:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:44:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:45:03.861Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:03.864Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:03.865Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:03.865Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 15.175769ms
+2026-03-29T13:45:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:13.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:13.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:45:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:45:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:45:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:45:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:45:53.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:45:53.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:45:53.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:46:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.644308ms
+2026-03-29T13:46:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:13.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:13.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:13.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:46:23.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:23.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:23.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:23.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:46:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:33.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:33.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:33.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:46:43.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:43.852Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:43.853Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:43.853Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:46:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:46:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:46:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:46:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:47:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:03.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.807923ms
+2026-03-29T13:47:13.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:13.891Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:13.892Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:13.892Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:47:23.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:23.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:23.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:23.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 13:47:27 [localhost/D0hPm9REEX-000004] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:40934 - 200 456B in 49.785846ms
+2026/03/29 13:47:27 [localhost/D0hPm9REEX-000005] "GET http://localhost:8084/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:40936 - 404 19B in 175.154µs
+2026-03-29T13:47:33.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:33.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:33.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:47:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:47:53.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:47:53.854Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:47:53.854Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:47:53.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:03.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:03.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:13.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:13.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:23.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:23.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:33.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:33.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:43.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:43.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:48:53.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:48:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:48:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:48:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:49:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:03.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 12.930692ms
+2026-03-29T13:49:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:13.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:13.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:13.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:49:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:23.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:23.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:23.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:49:33.849Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:33.852Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:33.853Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:33.853Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:49:43.848Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:43.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:43.853Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:43.853Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:49:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:49:53.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:49:53.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:49:53.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:50:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 7.036923ms
+2026-03-29T13:50:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:50:23.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:23.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:50:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:50:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:43.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:43.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:50:53.849Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:50:53.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:50:53.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:50:53.852Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:51:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:03.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:03.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:03.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 12.712308ms
+2026-03-29T13:51:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:13.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:13.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:13.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:51:23.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:23.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:23.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:23.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:51:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:51:43.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:43.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:43.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:43.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:51:53.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:51:53.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:51:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:51:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:52:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:03.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 8.464538ms
+2026-03-29T13:52:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:13.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:13.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:13.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:52:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:52:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:33.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:33.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:33.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:52:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:43.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:43.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:52:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:52:53.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:52:53.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:52:53.854Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:53:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:03.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 8.382077ms
+2026-03-29T13:53:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:13.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:13.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:13.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:53:23.840Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:23.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:23.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:23.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:53:33.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:33.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:33.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:33.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:53:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:43.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:43.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:53:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:53:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:53:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:53:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:54:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 7.512693ms
+2026-03-29T13:54:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:13.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:13.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:54:23.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:23.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:23.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:23.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:54:33.852Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:33.854Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:33.854Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:33.854Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:54:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:43.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:43.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:54:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:54:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:54:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:54:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:03.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:13.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:13.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:23.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:33.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:55:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:55:53.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:55:53.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:55:53.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:56:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.679308ms
+2026-03-29T13:56:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:13.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:13.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:13.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:56:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:23.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:23.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:23.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:56:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:56:43.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:43.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:43.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:43.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:56:53.847Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:56:53.854Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:56:53.854Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:56:53.854Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:57:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:03.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 23.382384ms
+2026-03-29T13:57:13.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:13.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:13.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:13.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:57:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:57:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:57:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:43.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:43.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:57:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:57:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:57:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:57:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:58:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:03.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:03.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 21.535077ms
+2026-03-29T13:58:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:13.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:13.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:13.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:58:23.864Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:23.892Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:23.892Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:23.893Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:58:33.856Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:33.870Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:33.870Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:33.870Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:58:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:43.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:58:53.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:58:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:58:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:58:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:03.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:13.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:13.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:13.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:13.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:23.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:23.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:33.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:43.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:43.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:43.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T13:59:53.856Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T13:59:53.892Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T13:59:53.893Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T13:59:53.893Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:00:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:03.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:03.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:03.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 42.883384ms
+2026-03-29T14:00:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:00:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:00:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:00:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:43.883Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:43.884Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:43.884Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:00:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:00:53.864Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:00:53.865Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:00:53.865Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:01:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:03.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.088923ms
+2026-03-29T14:01:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:13.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:13.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:13.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:01:23.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:23.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:23.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:23.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:01:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:01:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:01:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:01:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:01:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:01:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:02:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:03.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:03.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:03.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 14.782231ms
+2026-03-29T14:02:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:13.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:13.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:02:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:23.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:23.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:23.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:02:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:02:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:43.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:43.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:02:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:02:53.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:02:53.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:02:53.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:03:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 2, "idle": 0, "max": 10}
+2026-03-29T14:03:03.841Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:03.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.197616ms
+2026-03-29T14:03:13.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:03:13.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:13.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:03:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:03:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:23.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:03:33.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:33.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:03:33.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:33.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:03:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:03:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:03:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:03:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:03:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 5}
+2026-03-29T14:03:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:03.836Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:03.836Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:13.858Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:13.858Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:13.858Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:23.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:33.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:33.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:04:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:04:53.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:04:53.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:04:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:05:03.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:03.885Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:03.885Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:03.885Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 27.016846ms
+2026-03-29T14:05:13.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:13.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:13.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:13.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:05:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:05:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:33.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:33.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:33.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:05:43.885Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:43.910Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:43.911Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:43.912Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:05:53.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:05:53.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:05:53.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:05:53.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:06:03.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:03.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:03.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:03.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 45.999154ms
+2026-03-29T14:06:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:13.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:13.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:06:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:23.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:23.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:06:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:06:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:06:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 10}
+2026-03-29T14:06:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:06:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:06:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:03.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:13.864Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:13.878Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:13.878Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:13.878Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:23.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:23.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:23.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:43.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:43.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:07:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:07:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:07:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:08:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:03.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:03.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 21.163076ms
+2026-03-29T14:08:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:13.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:13.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:08:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:23.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:08:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:08:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:43.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:43.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:08:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:08:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:08:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:03.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:23.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:23.858Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:23.859Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:23.859Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:09:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:53.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:09:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:09:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:10:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:03.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:03.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:03.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 49.49877ms
+2026-03-29T14:10:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:10:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.038846ms
+2026/03/29 14:10:32 [localhost/D0hPm9REEX-000006] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:52886 - 200 456B in 45.019462ms
+2026/03/29 14:10:32 [localhost/D0hPm9REEX-000007] "GET http://localhost:8084/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:52896 - 404 19B in 181.154µs
+2026-03-29T14:10:33.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:33.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:33.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:33.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:10:43.847Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:43.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:43.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:43.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:10:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:53.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:10:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:10:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:03.845Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:03.877Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:03.877Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:03.877Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:13.859Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:13.877Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:13.878Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:13.878Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:23.857Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:23.881Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:23.886Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:23.886Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:33.940Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:34.067Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:34.067Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:34.067Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:11:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:53.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:11:53.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:11:53.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:12:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:03.848Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:03.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:03.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 67.951769ms
+2026-03-29T14:12:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:13.868Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:13.868Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:13.868Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:12:23.878Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:23.905Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:23.905Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:23.905Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 9.399307ms
+2026/03/29 14:12:31 [localhost/D0hPm9REEX-000008] "GET http://localhost:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:58560 - 200 456B in 42.431308ms
+2026-03-29T14:12:33.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:33.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:33.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:33.838Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:12:43.871Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:43.893Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:43.893Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:43.893Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:12:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:53.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:12:53.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:12:53.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:13:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 23.69877ms
+2026-03-29T14:13:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:13.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:13.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:13:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:23.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:13:33.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:33.863Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:33.864Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:33.864Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:13:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:43.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:43.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:43.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:13:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:13:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:13:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:14:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:03.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:03.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:03.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 29.004615ms
+2026-03-29T14:14:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:14:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:23.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:23.849Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:23.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:14:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:14:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:43.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:43.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:43.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:14:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:14:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:14:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:15:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:03.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:03.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.445615ms
+2026-03-29T14:15:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:15:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:23.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:23.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:23.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:15:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:15:43.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:43.854Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:43.855Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:43.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:15:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:15:53.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:15:53.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:03.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:03.841Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:13.849Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:13.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:13.850Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:23.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:23.850Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:23.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:33.850Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:33.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:33.853Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:43.847Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:43.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:16:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:53.881Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:16:53.882Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:16:53.882Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:03.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:03.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:03.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:03.848Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:23.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:33.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:33.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:43.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:43.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:43.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:43.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:17:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:17:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:17:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:03.837Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:03.837Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:03.837Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:23.847Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:33.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:33.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:18:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:18:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:18:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:03.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:03.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:03.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:13.855Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:13.855Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:13.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:23.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:23.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:43.845Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:43.847Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:43.848Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:43.849Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:19:53.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:53.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:19:53.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:19:53.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:20:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:03.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 41.869539ms
+2026-03-29T14:20:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:13.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:13.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:13.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:20:23.865Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:23.887Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:23.888Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:23.888Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:20:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:33.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:20:43.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:43.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:20:53.844Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:53.846Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:20:53.846Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:20:53.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:21:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:03.840Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:03.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:03.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 11.008077ms
+2026-03-29T14:21:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:13.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:21:23.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:23.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:21:33.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:21:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:43.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:43.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:21:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:53.854Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:21:53.855Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:21:53.855Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:03.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:03.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:23.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:23.852Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:23.852Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:33.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:33.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:33.846Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:22:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:53.885Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:22:53.886Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:22:53.886Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:23:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:23:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:13.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:23:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:23.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:23.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:23:33.884Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:33.915Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:33.916Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:33.916Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.256ms
+2026/03/29 14:23:37 [localhost/D0hPm9REEX-000009] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:54774 - 200 456B in 32.176616ms
+2026/03/29 14:23:37 [localhost/D0hPm9REEX-000010] "GET http://localhost:8084/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:54776 - 404 19B in 141.923µs
+2026-03-29T14:23:43.837Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:43.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:43.838Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:43.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:23:53.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:53.851Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:23:53.851Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:23:53.851Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:24:03.859Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:03.880Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:03.880Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:03.881Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 46.798461ms
+2026-03-29T14:24:13.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:13.857Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:13.857Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:13.858Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:24:23.865Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:23.891Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:23.891Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:23.892Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.83877ms
+2026/03/29 14:24:24 [localhost/D0hPm9REEX-000011] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:37492 - 200 456B in 38.030769ms
+2026/03/29 14:24:24 [localhost/D0hPm9REEX-000012] "GET http://localhost:8084/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:37506 - 404 19B in 65µs
+2026-03-29T14:24:33.921Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.172ms
+2026/03/29 14:24:33 [localhost/D0hPm9REEX-000013] "GET http://127.0.0.1:8084/api/v1/auth/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:39184 - 200 456B in 17.876693ms
+2026-03-29T14:24:33.976Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:33.976Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:33.977Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026/03/29 14:24:34 [localhost/D0hPm9REEX-000014] "GET http://localhost:8084/.well-known/jwks.json HTTP/1.1" from 127.0.0.1:39200 - 404 19B in 307.692µs
+2026-03-29T14:24:43.839Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:43.842Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:24:52.208Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.io"}
+[PERF-ALERT] RLS BeforeAcquire overhead: 6.511077ms
+2026-03-29T14:24:52.232Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.io", "db": "fleet_db"}
+2026-03-29T14:24:52.314Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.io", "role": "super_admin"}
+2026-03-29T14:24:52.315Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.io", "userID": "bac1a01c-8d57-43fe-903d-1f716697c73d"}
+2026/03/29 14:24:52 [localhost/D0hPm9REEX-000015] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from [::1]:32996 - 200 1320B in 486.321846ms
+[PERF-ALERT] RLS BeforeAcquire overhead: 5.457ms
+2026/03/29 14:24:52 [localhost/D0hPm9REEX-000016] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from [::1]:33002 - 200 483B in 64.943385ms
+2026-03-29T14:24:53.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:24:53.839Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:24:53.840Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:24:53.840Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:03.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:03.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:03.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:13.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:13.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:13.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:23.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:23.845Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:23.845Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:23.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:33.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:33.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:33.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:33.845Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:43.843Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:43.843Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:25:53.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:25:53.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:25:53.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:25:53.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:26:03.836Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:26:03.838Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:26:03.839Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:26:03.839Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:26:13.843Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:26:13.844Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:26:13.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:26:13.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:26:23.842Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:26:23.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:26:23.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:26:23.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:26:33.838Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:26:33.841Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:26:33.842Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:26:33.842Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}
+2026-03-29T14:26:43.841Z	INFO	cmd/main.go:389	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 10}
+2026-03-29T14:26:43.843Z	INFO	cmd/main.go:402	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 1, "max": 10}
+2026-03-29T14:26:43.844Z	INFO	cmd/main.go:406	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 0, "max": 5}
+2026-03-29T14:26:43.844Z	INFO	cmd/main.go:410	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 5}

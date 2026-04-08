@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/repository"
 	"go.uber.org/zap"
 )
 

@@ -3,8 +3,8 @@ package service
 import (
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/diagnostics/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/models"
+	"github.com/flyfleet/fleet-core/internal/domains/diagnostics/repository"
 )
 
 type HealthState string

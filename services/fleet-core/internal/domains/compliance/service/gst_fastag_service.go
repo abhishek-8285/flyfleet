@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/compliance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/compliance/models"
 	"github.com/google/uuid"
 )
 

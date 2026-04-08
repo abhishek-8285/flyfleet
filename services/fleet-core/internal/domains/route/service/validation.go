@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/route/models"
+	"github.com/flyfleet/fleet-core/internal/domains/route/models"
 )
 
 // RouteValidationEngine defines the interface for validating route assignments

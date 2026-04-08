@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/platform/billing/models"
-	iam_middleware "github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware"
+	"github.com/flyfleet/fleet-core/internal/platform/billing/models"
+	iam_middleware "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
