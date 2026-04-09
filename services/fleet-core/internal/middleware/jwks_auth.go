@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/gofrs/uuid/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
@@ -52,6 +53,13 @@ func JWKSAuthGate(jwtSecret string, logger *zap.Logger) func(http.Handler) http.
 			ctx := context.WithValue(r.Context(), CtxUserID, claims.UserID)
 			ctx = context.WithValue(ctx, CtxOrgID, claims.OrgID)
 			ctx = context.WithValue(ctx, CtxUserRoles, claims.Roles)
+			// Set tenant context keys for TenantMiddleware compatibility
+			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, claims.OrgID.String())
+			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, claims.OrgID.String())
+			// Set IAM handler string keys (profile handler reads "user_id" string key)
+			ctx = context.WithValue(ctx, "user_id", claims.UserID.String())
+			ctx = context.WithValue(ctx, "org_id", claims.OrgID.String())
+			ctx = context.WithValue(ctx, "role", claims.Roles)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

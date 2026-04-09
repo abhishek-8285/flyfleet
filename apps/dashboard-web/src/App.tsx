@@ -195,7 +195,9 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   const token = useSelector((state: RootState) => state.auth.token);
   const { isLoading } = useAuth();
   if (isLoading) return <LoadingSpinner />;
-  return token ? <>{children}</> : <Navigate to="/login" replace />;
+  // Fallback to localStorage for token during page refresh recovery
+  const hasToken = !!token || !!localStorage.getItem('access_token');
+  return hasToken ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const DynamicAdminLayout: React.FC = () => {

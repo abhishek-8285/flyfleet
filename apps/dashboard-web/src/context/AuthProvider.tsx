@@ -46,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       ) || []),
     } as User;
     store.dispatch(setReduxUser(userWithPermissions));
+    // Persist for page refresh survival
+    localStorage.setItem('user_data', JSON.stringify(userWithPermissions));
     return userWithPermissions;
   };
 
@@ -89,6 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       store.dispatch(setReduxUser(userData));
       setUser(userData);
+
+      // Persist user data for session recovery on page reload
+      localStorage.setItem('user_data', JSON.stringify(userData));
+
       return userData;
     } catch (err) {
       console.error("Failed to fetch full profile:", err);
@@ -102,79 +108,108 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setAuthError(null);
       try {
         console.log('[AuthProvider] Starting auth initialization...');
-        
-        // 1. Try standard session refresh
-        const response = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
-        const token = response.token || response.access_token;
-        const orgIdFromResponse = response.user?.org_id;
-        
-        console.log('[AuthProvider] Refresh response:', { 
-          hasToken: !!token, 
-          orgIdFromResponse,
-          localStorageOrgId: localStorage.getItem('org_id')
-        });
-        
-        if (token) {
-          store.dispatch(setToken(token));
-        }
 
-        // CRITICAL FIX: Store org_id from refresh response BEFORE calling fetchProfile
-        if (orgIdFromResponse) {
-          localStorage.setItem('org_id', orgIdFromResponse);
-          console.log('[AuthProvider] Stored org_id from refresh:', orgIdFromResponse);
-        } else {
-          console.warn('[AuthProvider] Refresh succeeded but no org_id in response');
-        }
-
-        // Fix 3: No redundant double-hydration. hydrateUser on refresh is only
-        // for quick Redux population; fetchProfile is the authoritative source.
-        // We skip the intermediate hydrateUser call to avoid two renders with
-        // stale/partial data.
-        try {
-          await fetchProfile();
-          console.log('[AuthProvider] Auth initialization complete');
-        } catch (profileErr) {
-          // Fix 6: fetchProfile failed after a valid refresh — surface the error
-          console.error("AuthProvider: Profile fetch failed after refresh:", profileErr);
-          setAuthError("Could not load your profile. Please try refreshing.");
-          store.dispatch(setToken(null));
-          store.dispatch(setReduxUser(null));
-          setUser(null);
-        }
-      } catch (err) {
-        // 2. Refresh failed — try Dev Auto-Login if in development
-        if (import.meta.env.DEV) {
+        // 1. Try localStorage token recovery first (fastest path on page refresh)
+        const savedToken = localStorage.getItem('access_token');
+        const savedUser = localStorage.getItem('user_data');
+        if (savedToken) {
+          console.log('[AuthProvider] Found saved token, recovering session');
+          store.dispatch(setToken(savedToken));
+          if (savedUser) {
+            try {
+              const parsedUser = JSON.parse(savedUser);
+              if (parsedUser.id) {
+                store.dispatch(setReduxUser(parsedUser));
+                setUser(parsedUser);
+                console.log('[AuthProvider] Session recovered from localStorage');
+              }
+            } catch (e) {
+              console.warn('[AuthProvider] Failed to parse saved user data');
+            }
+          }
+          // Verify token is still valid by fetching profile
           try {
-            // Fix 1: Dev email comes from env var so each dev can use their own account
+            await fetchProfile();
+            console.log('[AuthProvider] Auth initialization complete');
+            setIsLoading(false);
+            return;
+          } catch (profileErr) {
+            console.warn('[AuthProvider] Saved token expired, attempting refresh');
+          }
+        }
+
+        // 2. Token expired — try refresh
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          try {
+            const response = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken });
+            const token = response.data?.token || response.data?.access_token;
+            const orgIdFromResponse = response.data?.user?.org_id;
+
+            if (token) {
+              store.dispatch(setToken(token));
+              localStorage.setItem('access_token', token);
+              if (response.data?.refresh_token) {
+                localStorage.setItem('refresh_token', response.data.refresh_token);
+              }
+              if (orgIdFromResponse) {
+                localStorage.setItem('org_id', orgIdFromResponse);
+              }
+
+              await fetchProfile();
+              console.log('[AuthProvider] Session refreshed successfully');
+              setIsLoading(false);
+              return;
+            }
+          } catch (refreshErr) {
+            console.warn('[AuthProvider] Refresh failed, clearing tokens');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_data');
+          }
+        }
+
+        // 3. Try Dev Auto-Login if in development (only once per session)
+        if (import.meta.env.DEV && !sessionStorage.getItem('flyfleet_dev_autologin_attempted')) {
+          try {
+            sessionStorage.setItem('flyfleet_dev_autologin_attempted', 'true');
             const devEmail =
-              import.meta.env.VITE_DEV_LOGIN_EMAIL || "org_admin@delta.io";
-            console.log(`AuthProvider: Attempting Dev Auto-Login as ${devEmail}...`);
-            // Use axios directly to bypass apiClient interceptors
-            // Note: dev-login endpoint removed, using standard login instead
+              import.meta.env.VITE_DEV_LOGIN_EMAIL || "admin@delta.io";
+            console.log(`[AuthProvider] Dev Auto-Login as ${devEmail}`);
             const devResponse = await axios.post(
               "/api/v1/auth/login",
-              { email: devEmail, password: "Fleet_password123", org_id: "" },
-              { withCredentials: true }
+              { email: devEmail, password: "Fleet_password123", org_id: "550e8400-e29b-41d4-a716-446655440000" },
+              { withCredentials: false }
             ) as any;
             const devToken = devResponse.data?.token || devResponse.data?.access_token;
             if (devToken) {
               store.dispatch(setToken(devToken));
+              localStorage.setItem('access_token', devToken);
+              if (devResponse.data?.refresh_token) {
+                localStorage.setItem('refresh_token', devResponse.data.refresh_token);
+              }
               if (devResponse.data?.user) {
                 hydrateUser(devResponse.data);
-                // Store org_id from response
                 if (devResponse.data.user?.org_id) {
                   localStorage.setItem('org_id', devResponse.data.user.org_id);
                 }
               }
               await fetchProfile();
-              return; // Success!
+              console.log('[AuthProvider] Dev auto-login complete');
+              setIsLoading(false);
+              return;
             }
           } catch (devErr) {
             console.error("AuthProvider: Dev Auto-Login failed:", devErr);
           }
         }
 
-        // 3. Fallback: No valid session
+        // 4. No valid session
+        console.log('[AuthProvider] No valid session');
+        store.dispatch(setToken(null));
+        store.dispatch(setReduxUser(null));
+        setUser(null);
+      } catch (err) {
         console.error("AuthProvider: Session hydration failed:", err);
         store.dispatch(setToken(null));
         store.dispatch(setReduxUser(null));
@@ -189,16 +224,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Fix 4: Apply theme to the DOM immediately when login() is called manually
   const login = (token: string, refreshToken: string, userData: User) => {
-    console.log('[AuthProvider] login() called with:', { 
-      hasToken: !!token, 
+    console.log('[AuthProvider] login() called with:', {
+      hasToken: !!token,
       userOrgId: userData?.org_id,
       currentLocalStorageOrgId: localStorage.getItem('org_id')
     });
-    
+
     store.dispatch(setToken(token));
     store.dispatch(setReduxUser(userData));
     setUser(userData);
-    
+
     // CRITICAL FIX: Ensure org_id is stored in localStorage immediately
     if (userData?.org_id) {
       localStorage.setItem('org_id', userData.org_id);
@@ -206,7 +241,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     } else {
       console.error('[AuthProvider] login() called without org_id in userData!');
     }
-    
+
+    // Persist tokens for session recovery across page reloads
+    localStorage.setItem('access_token', token);
+    if (refreshToken) {
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+
     if (userData.theme) {
       applyTheme(userData.theme);
     }
@@ -221,6 +262,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     store.dispatch(setToken(null));
     store.dispatch(setReduxUser(null));
     setUser(null);
+    // Clear persisted tokens
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
+    localStorage.removeItem('org_id');
     window.location.href = "/login";
   };
 
@@ -228,27 +274,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const setOrganization = async (orgId: string) => {
     localStorage.setItem("org_id", orgId);
     try {
-      // Step A: Trigger a session refresh with the new org_id.
-      // This ensures the backend issues a new JWT with the correct org_id claim immediately.
-      const refreshResponse = await apiClient.post("/auth/refresh", {}, { withCredentials: true }) as any;
-      const newToken = refreshResponse.token || refreshResponse.access_token;
+      // Trigger a session refresh with the new org_id
+      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshResponse = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken });
+      const newToken = refreshResponse.data?.token || refreshResponse.data?.access_token;
       if (newToken) {
         store.dispatch(setToken(newToken));
-        if (refreshResponse.user) {
-          hydrateUser(refreshResponse);
+        localStorage.setItem('access_token', newToken);
+        if (refreshResponse.data?.refresh_token) {
+          localStorage.setItem('refresh_token', refreshResponse.data.refresh_token);
+        }
+        if (refreshResponse.data?.user) {
+          hydrateUser(refreshResponse.data);
         }
       }
-      
-      // Step B: Re-fetch the authoritative profile (scoped to the new org)
+
+      // Re-fetch the authoritative profile (scoped to the new org)
       await fetchProfile();
     } catch (err: any) {
-      // If the switch fails, clear the invalid org_id so we don't get stuck in a loop
       console.warn("setOrganization: org switch failed, clearing org_id and falling back:", err);
       localStorage.removeItem("org_id");
-      
-      // If it's a 403/401, the apiClient might have already handled it, but we'll force a reload
-      // to ensure state is clean from the default organization perspective.
-      if (err.status === 403 || err.status === 401) {
+
+      if (err.response?.status === 403 || err.response?.status === 401) {
         window.location.href = "/";
       } else {
         window.location.reload();

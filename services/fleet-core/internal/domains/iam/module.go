@@ -23,14 +23,14 @@ import (
 // Module wires together the IAM domain: repositories, services, and handlers.
 // It exposes RegisterPublicRoutes and RegisterAuthRoutes to attach all 74 auth endpoints to a chi router.
 type Module struct {
-	// Handlers
-	authHandler    *handlers.AuthHandler
-	profileHandler *handlers.ProfileHandler
-	sessionHandler *handlers.SessionHandler
-	userHandler    *handlers.UserHandler
-	inviteHandler  *handlers.InviteHandler
-	rbacHandler    *handlers.RBACHandler
-	mfaHandler     *handlers.MFAHandler
+	// Handlers (exported for cross-domain route wiring)
+	AuthHandler    *handlers.AuthHandler
+	ProfileHandler *handlers.ProfileHandler
+	SessionHandler *handlers.SessionHandler
+	UserHandler    *handlers.UserHandler
+	InviteHandler  *handlers.InviteHandler
+	RBACHandler    *handlers.RBACHandler
+	MFAHandler     *handlers.MFAHandler
 
 	// Services (exposed for cross-domain calls)
 	AuthService     *service.AuthService
@@ -86,13 +86,13 @@ func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg c
 	mfaHandler := handlers.NewMFAHandler(mfaSvc, logger)
 
 	return &Module{
-		authHandler:    authHandler,
-		profileHandler: profileHandler,
-		sessionHandler: sessionHandler,
-		userHandler:    userHandler,
-		inviteHandler:  inviteHandler,
-		rbacHandler:    rbacHandler,
-		mfaHandler:     mfaHandler,
+		AuthHandler:    authHandler,
+		ProfileHandler: profileHandler,
+		SessionHandler: sessionHandler,
+		UserHandler:    userHandler,
+		InviteHandler:  inviteHandler,
+		RBACHandler:    rbacHandler,
+		MFAHandler:     mfaHandler,
 		AuthService:     authSvc,
 		SessionService:  sessionSvc,
 		RBACService:     rbacSvc,
@@ -111,19 +111,19 @@ func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg c
 // These endpoints do not require JWT middleware — the caller should NOT apply auth middleware.
 // This method expects to be called within an r.Route("/api/v1", ...) block.
 func (m *Module) RegisterPublicRoutes(r chi.Router, logger *zap.Logger) {
-	r.Post("/auth/identify", m.authHandler.Identify)
-	r.Post("/auth/login", m.authHandler.Login)
-	r.Post("/auth/forgot-password", m.authHandler.ForgotPassword)
-	r.Post("/auth/register", m.authHandler.Register)
-	r.Post("/auth/mfa/verify", m.authHandler.VerifyMFA)
-	r.Post("/auth/refresh", m.authHandler.Refresh)
-	r.Post("/auth/reset-password", m.authHandler.ResetPassword)
-	r.Post("/auth/verify-email", m.authHandler.VerifyEmail)
-	r.Get("/auth/invite/{token}", m.inviteHandler.ValidateInviteToken)
-	r.Post("/auth/invite/accept", m.inviteHandler.AcceptInvite)
+	r.Post("/auth/identify", m.AuthHandler.Identify)
+	r.Post("/auth/login", m.AuthHandler.Login)
+	r.Post("/auth/forgot-password", m.AuthHandler.ForgotPassword)
+	r.Post("/auth/register", m.AuthHandler.Register)
+	r.Post("/auth/mfa/verify", m.AuthHandler.VerifyMFA)
+	r.Post("/auth/refresh", m.AuthHandler.Refresh)
+	r.Post("/auth/reset-password", m.AuthHandler.ResetPassword)
+	r.Post("/auth/verify-email", m.AuthHandler.VerifyEmail)
+	r.Get("/auth/invite/{token}", m.InviteHandler.ValidateInviteToken)
+	r.Post("/auth/invite/accept", m.InviteHandler.AcceptInvite)
 
 	// Frontend compatibility aliases
-	r.Post("/auth/resolve-orgs", m.authHandler.Identify)
+	r.Post("/auth/resolve-orgs", m.AuthHandler.Identify)
 }
 
 // RegisterAuthRoutes attaches all authenticated IAM endpoints to the given chi router.
@@ -132,88 +132,88 @@ func (m *Module) RegisterPublicRoutes(r chi.Router, logger *zap.Logger) {
 // This method expects to be called within an r.Route("/api/v1", ...) block.
 func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 	// Auth
-	r.Post("/auth/logout", m.authHandler.Logout)
-	r.Post("/auth/change-password", m.authHandler.ChangePassword)
-	r.Get("/auth/password-policy", m.authHandler.GetPolicy)
-	r.Post("/auth/orgs/{orgId}/switch", m.authHandler.SwitchOrg)
-	r.Get("/auth/orgs", m.authHandler.ListOrgs)
+	r.Post("/auth/logout", m.AuthHandler.Logout)
+	r.Post("/auth/change-password", m.AuthHandler.ChangePassword)
+	r.Get("/auth/password-policy", m.AuthHandler.GetPolicy)
+	r.Post("/auth/orgs/{orgId}/switch", m.AuthHandler.SwitchOrg)
+	r.Get("/auth/orgs", m.AuthHandler.ListOrgs)
 
 	// Profile
-	r.Get("/auth/profile", m.profileHandler.GetProfile)
-	r.Put("/auth/profile", m.profileHandler.UpdateProfile)
+	r.Get("/auth/profile", m.ProfileHandler.GetProfile)
+	r.Put("/auth/profile", m.ProfileHandler.UpdateProfile)
 
 	// Sessions
-	r.Get("/auth/sessions", m.sessionHandler.ListSessions)
-	r.Delete("/auth/sessions/{id}", m.sessionHandler.RevokeSession)
-	r.Delete("/auth/sessions/all", m.sessionHandler.RevokeAllSessions)
+	r.Get("/auth/sessions", m.SessionHandler.ListSessions)
+	r.Delete("/auth/sessions/{id}", m.SessionHandler.RevokeSession)
+	r.Delete("/auth/sessions/all", m.SessionHandler.RevokeAllSessions)
 
 	// MFA
-	r.Post("/auth/mfa/setup/totp", m.mfaHandler.SetupTOTP)
-	r.Post("/auth/mfa/setup/totp/verify", m.mfaHandler.VerifyTOTP)
-	r.Post("/auth/mfa/disable", m.mfaHandler.DisableMFA)
-	r.Get("/auth/mfa/backup-codes", m.mfaHandler.GetBackupCodes)
+	r.Post("/auth/mfa/setup/totp", m.MFAHandler.SetupTOTP)
+	r.Post("/auth/mfa/setup/totp/verify", m.MFAHandler.VerifyTOTP)
+	r.Post("/auth/mfa/disable", m.MFAHandler.DisableMFA)
+	r.Get("/auth/mfa/backup-codes", m.MFAHandler.GetBackupCodes)
 
 	// Admin - User management (requires user:read)
 	// TODO: Replace PermReadVehicles with a proper PermReadUsers IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
-		r.Get("/admin/users", m.userHandler.ListUsers)
-		r.Get("/admin/users/{id}", m.userHandler.GetUser)
-		r.Get("/admin/users/{id}/audit-log", m.userHandler.GetUserAuditLog)
+		r.Get("/admin/users", m.UserHandler.ListUsers)
+		r.Get("/admin/users/{id}", m.UserHandler.GetUser)
+		r.Get("/admin/users/{id}/audit-log", m.UserHandler.GetUserAuditLog)
 	})
 
 	// Admin - User status update (requires user:write)
 	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
-		r.Put("/admin/users/{id}/status", m.userHandler.UpdateStatus)
+		r.Put("/admin/users/{id}/status", m.UserHandler.UpdateStatus)
 	})
 
 	// Admin - User delete (requires user:delete)
 	// TODO: Replace PermWriteVehicles with a proper PermDeleteUsers IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
-		r.Delete("/admin/users/{id}", m.userHandler.DeleteUser)
+		r.Delete("/admin/users/{id}", m.UserHandler.DeleteUser)
 	})
 
 	// Admin - Invitations (requires user:write)
 	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
-		r.Post("/admin/users/invite", m.inviteHandler.CreateInvite)
-		r.Post("/admin/users/invite/{id}/resend", m.inviteHandler.ResendInvite)
-		r.Delete("/admin/users/invite/{id}", m.inviteHandler.RevokeInvite)
+		r.Post("/admin/users/invite", m.InviteHandler.CreateInvite)
+		r.Post("/admin/users/invite/{id}/resend", m.InviteHandler.ResendInvite)
+		r.Delete("/admin/users/invite/{id}", m.InviteHandler.RevokeInvite)
 	})
 
 	// Admin - RBAC reads (requires role:read)
 	// TODO: Replace PermReadVehicles with a proper PermReadRoles IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
-		r.Get("/admin/rbac/roles", m.rbacHandler.ListRoles)
-		r.Get("/admin/rbac/matrix", m.rbacHandler.GetPermissionMatrix)
-		r.Get("/admin/rbac/permissions", m.rbacHandler.ListAllPermissions)
-		r.Get("/admin/rbac/users/{id}/roles", m.rbacHandler.GetUserRoles)
-		r.Get("/admin/rbac/users/{id}/permissions", m.rbacHandler.GetUserPermissions)
+		r.Get("/admin/rbac/roles", m.RBACHandler.ListRoles)
+		r.Get("/admin/rbac/matrix", m.RBACHandler.GetPermissionMatrix)
+		r.Get("/admin/rbac/permissions", m.RBACHandler.ListAllPermissions)
+		r.Get("/admin/rbac/users/{id}/roles", m.RBACHandler.GetUserRoles)
+		r.Get("/admin/rbac/users/{id}/permissions", m.RBACHandler.GetUserPermissions)
 	})
 
 	// Admin - RBAC writes (requires role:write)
 	// TODO: Replace PermWriteVehicles with a proper PermWriteRoles IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
-		r.Post("/admin/rbac/roles", m.rbacHandler.CreateRole)
-		r.Put("/admin/rbac/roles/{id}", m.rbacHandler.UpdateRole)
-		r.Post("/admin/rbac/roles/{id}/clone", m.rbacHandler.CloneRole)
-		r.Put("/admin/rbac/roles/{id}/permissions", m.rbacHandler.UpdateRolePermissions)
-		r.Post("/admin/rbac/users/assign", m.rbacHandler.AssignRole)
-		r.Post("/admin/rbac/users/assign/bulk", m.rbacHandler.BulkAssignRole)
-		r.Delete("/admin/rbac/users/unassign", m.rbacHandler.UnassignRole)
+		r.Post("/admin/rbac/roles", m.RBACHandler.CreateRole)
+		r.Put("/admin/rbac/roles/{id}", m.RBACHandler.UpdateRole)
+		r.Post("/admin/rbac/roles/{id}/clone", m.RBACHandler.CloneRole)
+		r.Put("/admin/rbac/roles/{id}/permissions", m.RBACHandler.UpdateRolePermissions)
+		r.Post("/admin/rbac/users/assign", m.RBACHandler.AssignRole)
+		r.Post("/admin/rbac/users/assign/bulk", m.RBACHandler.BulkAssignRole)
+		r.Delete("/admin/rbac/users/unassign", m.RBACHandler.UnassignRole)
 	})
 
 	// Admin - RBAC deletes (requires role:delete)
 	// TODO: Replace PermWriteVehicles with a proper PermDeleteRoles IAM permission
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
-		r.Delete("/admin/rbac/roles/{id}", m.rbacHandler.DeleteRole)
+		r.Delete("/admin/rbac/roles/{id}", m.RBACHandler.DeleteRole)
 	})
 }
 

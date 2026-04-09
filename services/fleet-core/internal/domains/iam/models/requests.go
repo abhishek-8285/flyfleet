@@ -185,6 +185,7 @@ type ProfileResponse struct {
 	ID            uuid.UUID   `json:"id"`
 	Email         string      `json:"email"`
 	Name          string      `json:"name"`
+	Role          string      `json:"role"`
 	Phone         string      `json:"phone,omitempty"`
 	AvatarURL     string      `json:"avatar_url,omitempty"`
 	MFAEnabled    bool        `json:"mfa_enabled"`

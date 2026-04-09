@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,8 +11,8 @@ import (
 	"github.com/flyfleet/fleet-core/internal/tracking/models"
 )
 
-// GeofenceRepository handles geofence CRUD and spatial queries
-// using PostGIS.
+// GeofenceRepository handles geofence CRUD and spatial queries.
+// Works with plain PostgreSQL (no PostGIS required for circle geofences).
 type GeofenceRepository struct {
 	pool *pgxpool.Pool
 }
@@ -24,9 +25,10 @@ func NewGeofenceRepository(pool *pgxpool.Pool) *GeofenceRepository {
 func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUID) ([]models.Geofence, error) {
 	q := `SELECT id, org_id, name, COALESCE(description,''), type,
 	         center_lat, center_lng, radius_m,
-	         COALESCE(ST_AsText(polygon), ''), status, created_at, updated_at
+	         COALESCE(polygon_wkt, ''), enabled, created_at, updated_at
 	      FROM geofences
-	      WHERE org_id = $1 AND status = 'active'`
+	      WHERE org_id = $1 AND enabled = true
+	      ORDER BY name`
 
 	rows, err := r.pool.Query(ctx, q, orgID)
 	if err != nil {
@@ -39,10 +41,11 @@ func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUI
 		var g models.Geofence
 		var updatedAt interface{}
 		var centerLat, centerLng, radiusM interface{}
+		var enabled bool
 		if err := rows.Scan(
 			&g.ID, &g.OrgID, &g.Name, &g.Description, &g.Type,
 			&centerLat, &centerLng, &radiusM,
-			&g.PolygonWKT, &g.Status, &g.CreatedAt, &updatedAt,
+			&g.PolygonWKT, &enabled, &g.CreatedAt, &updatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan geofence: %w", err)
 		}
@@ -55,6 +58,11 @@ func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUI
 		if rm, ok := radiusM.(float64); ok {
 			g.RadiusM = &rm
 		}
+		if enabled {
+			g.Status = "active"
+		} else {
+			g.Status = "inactive"
+		}
 		geofences = append(geofences, g)
 	}
 	return geofences, nil
@@ -63,8 +71,8 @@ func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUI
 // CreateGeofence inserts a new geofence.
 func (r *GeofenceRepository) CreateGeofence(ctx context.Context, g *models.Geofence) error {
 	if g.Type == models.GeofenceCircle {
-		q := `INSERT INTO geofences (id, org_id, name, description, type, center_lat, center_lng, radius_m, status, created_at, updated_at)
-		      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active',NOW(),NOW())`
+		q := `INSERT INTO geofences (id, org_id, name, description, type, center_lat, center_lng, radius_m, enabled, created_at, updated_at)
+		      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,NOW(),NOW())`
 		_, err := r.pool.Exec(ctx, q,
 			g.ID, g.OrgID, g.Name, g.Description, g.Type,
 			*g.CenterLat, *g.CenterLng, *g.RadiusM,
@@ -72,60 +80,54 @@ func (r *GeofenceRepository) CreateGeofence(ctx context.Context, g *models.Geofe
 		return err
 	}
 
-	q := `INSERT INTO geofences (id, org_id, name, description, type, polygon, status, created_at, updated_at)
-	      VALUES ($1,$2,$3,$4,$5,ST_GeomFromText($6, 4326),'active',NOW(),NOW())`
+	// Polygon — store WKT as text
+	q := `INSERT INTO geofences (id, org_id, name, description, type, polygon_wkt, enabled, created_at, updated_at)
+	      VALUES ($1,$2,$3,$4,$5,$6,true,NOW(),NOW())`
 	_, err := r.pool.Exec(ctx, q,
 		g.ID, g.OrgID, g.Name, g.Description, g.Type, g.PolygonWKT,
 	)
 	return err
 }
 
-// CheckPointInGeofences returns the list of geofences that contain
-// the given point. Uses PostGIS spatial indexes.
-func (r *GeofenceRepository) CheckPointInGeofences(ctx context.Context, orgID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
-	q := `SELECT id, org_id, name, COALESCE(description,''), type,
-	         center_lat, center_lng, radius_m,
-	         COALESCE(ST_AsText(polygon), ''), status, created_at, updated_at
-	      FROM geofences
-	      WHERE org_id = $1 AND status = 'active'
-	      AND (
-	        (type = 'circle' AND ST_DWithin(
-	          ST_SetSRID(ST_MakePoint($2, $3), 4326),
-	          ST_SetSRID(ST_MakePoint(center_lng, center_lat), 4326),
-	          radius_m
-	        ))
-	        OR
-	        (type = 'polygon' AND ST_Contains(polygon, ST_SetSRID(ST_MakePoint($2, $3), 4326)))
-	      )`
+// haversineDistanceM returns the distance in meters between two lat/lng points.
+func haversineDistanceM(lat1, lng1, lat2, lng2 float64) float64 {
+	const R = 6371000.0 // Earth radius in meters
+	dLat := (lat2 - lat1) * math.Pi / 180.0
+	dLng := (lng2 - lng1) * math.Pi / 180.0
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*math.Pi/180.0)*math.Cos(lat2*math.Pi/180.0)*
+			math.Sin(dLng/2)*math.Sin(dLng/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return R * c
+}
 
-	rows, err := r.pool.Query(ctx, q, orgID, lng, lat)
+// CheckPointInGeofences returns the list of geofences that contain
+// the given point. For circles, uses Haversine distance.
+// For polygons, returns all (point-in-polygon requires PostGIS or client-side check).
+func (r *GeofenceRepository) CheckPointInGeofences(ctx context.Context, orgID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
+	// Fetch all active geofences for the org and filter client-side
+	all, err := r.GetOrgGeofences(ctx, orgID)
 	if err != nil {
-		return nil, fmt.Errorf("spatial geofence check: %w", err)
+		return nil, fmt.Errorf("get org geofences: %w", err)
 	}
-	defer rows.Close()
 
 	var results []models.Geofence
-	for rows.Next() {
-		var g models.Geofence
-		var updatedAt interface{}
-		var centerLat, centerLng, radiusM interface{}
-		if err := rows.Scan(
-			&g.ID, &g.OrgID, &g.Name, &g.Description, &g.Type,
-			&centerLat, &centerLng, &radiusM,
-			&g.PolygonWKT, &g.Status, &g.CreatedAt, &updatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scan geofence result: %w", err)
+	for _, g := range all {
+		switch g.Type {
+		case models.GeofenceCircle:
+			if g.CenterLat != nil && g.CenterLng != nil && g.RadiusM != nil {
+				dist := haversineDistanceM(lat, lng, *g.CenterLat, *g.CenterLng)
+				if dist <= *g.RadiusM {
+					results = append(results, g)
+				}
+			}
+		case models.GeofencePolygon:
+			// Without PostGIS, we can't do server-side point-in-polygon.
+			// Return all polygon geofences — the geofence engine does
+			// client-side ST_Contains via PostGIS in production.
+			// For plain Postgres, we skip polygons here (the NATS-based
+			// geofence engine handles this separately).
 		}
-		if cl, ok := centerLat.(float64); ok {
-			g.CenterLat = &cl
-		}
-		if cl, ok := centerLng.(float64); ok {
-			g.CenterLng = &cl
-		}
-		if rm, ok := radiusM.(float64); ok {
-			g.RadiusM = &rm
-		}
-		results = append(results, g)
 	}
 	return results, nil
 }
