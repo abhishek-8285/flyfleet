@@ -54,6 +54,27 @@ func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		Permissions:   []string{},
 	}
 
+	// Fetch user's organizations (includes role per org)
+	orgs, err := h.userRepo.GetOrganizations(r.Context(), userID)
+	if err != nil {
+		h.log.Warn("failed to get user organizations", zap.Error(err))
+	} else {
+		resp.Organizations = orgs
+		// Set current_org to first org and extract role
+		if len(orgs) > 0 {
+			resp.CurrentOrg = &orgs[0]
+			resp.Role = orgs[0].Role
+		}
+	}
+
+	// Fallback role from JWT claims
+	if resp.Role == "" {
+		resp.Role = GetRole(r)
+	}
+
+	// Compute permissions based on role (admin gets everything, others get defaults)
+	resp.Permissions = computePermissionsForRole(resp.Role)
+
 	if user.LastLoginAt != nil {
 		ts := user.LastLoginAt.Format("2006-01-02T15:04:05Z")
 		resp.LastLoginAt = &ts
@@ -102,4 +123,50 @@ func (h *ProfileHandler) writeError(w http.ResponseWriter, status int, code stri
 		RequestID: correlationID,
 	}
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// computePermissionsForRole returns a list of permission strings for the given role.
+func computePermissionsForRole(role string) []string {
+	switch role {
+	case "admin", "super_admin", "org_admin":
+		return []string{
+			"vehicle:read", "vehicle:create", "vehicle:update", "vehicle:delete",
+			"driver:read", "driver:create", "driver:update", "driver:delete",
+			"trip:read", "trip:create", "trip:update", "trip:delete",
+			"user:read", "user:create", "user:update", "user:delete",
+			"system:read", "system:update",
+			"reports:read", "reports:export",
+			"settings:read", "settings:update",
+			"alert:read", "alert:manage",
+			"finance:read", "finance:manage",
+		}
+	case "fleet_manager":
+		return []string{
+			"vehicle:read", "vehicle:create", "vehicle:update",
+			"driver:read", "driver:create", "driver:update",
+			"trip:read", "trip:create", "trip:update",
+			"user:read",
+			"system:read",
+			"reports:read", "reports:export",
+			"alert:read", "alert:manage",
+		}
+	case "dispatcher":
+		return []string{
+			"vehicle:read",
+			"driver:read",
+			"trip:read", "trip:create", "trip:update",
+			"user:read",
+			"system:read",
+			"reports:read",
+			"alert:read",
+		}
+	default:
+		return []string{
+			"vehicle:read",
+			"driver:read",
+			"trip:read",
+			"system:read",
+			"reports:read",
+		}
+	}
 }

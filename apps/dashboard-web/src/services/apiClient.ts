@@ -17,9 +17,16 @@ const apiClient = axios.create({
 // Request Interceptor: Attach Auth Token and Org ID
 apiClient.interceptors.request.use(
   (config) => {
-    // SECURITY: Token from Redux store (in-memory only), not localStorage
+    // Try Redux store first, fall back to localStorage (survives page refresh)
     const state = store.getState();
-    const token = state.auth.token;
+    let token = state.auth.token;
+    if (!token) {
+      token = localStorage.getItem('access_token');
+      // Re-hydrate Redux state if we recovered from localStorage
+      if (token) {
+        store.dispatch(setToken(token));
+      }
+    }
     // Get org_id from localStorage (user preference, not security-critical)
     let orgId = localStorage.getItem('org_id');
 
@@ -126,15 +133,16 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Refresh using cookie-based flow (no token in body needed)
-        // Use direct axios with credentials to send refresh cookie
+        // Refresh using the stored refresh_token from localStorage
+        const refreshToken = localStorage.getItem('refresh_token');
+        const orgId = localStorage.getItem('org_id');
         const res = await axios.post(
           `${API_URL}/auth/refresh`,
-          {}, // empty body
+          { refresh_token: refreshToken },
           {
-            withCredentials: true,
             headers: {
-              'X-Org-ID': localStorage.getItem('org_id') || '',
+              'Content-Type': 'application/json',
+              'X-Org-ID': orgId || '',
             },
           }
         );
@@ -142,8 +150,12 @@ apiClient.interceptors.response.use(
         const newToken = res.data?.token || res.data?.access_token;
 
         if (newToken) {
-          // SECURITY: Store token in Redux (memory only), NOT localStorage
           store.dispatch(setToken(newToken));
+          // Persist for page refresh survival
+          localStorage.setItem('access_token', newToken);
+          if (res.data?.refresh_token) {
+            localStorage.setItem('refresh_token', res.data.refresh_token);
+          }
 
           // Update user data if returned
           if (res.data?.user) {

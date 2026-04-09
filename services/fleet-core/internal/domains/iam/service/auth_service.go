@@ -298,6 +298,12 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	if err != nil {
 		return nil, err
 	}
+
+	// If orgID is empty, auto-select the user's first (or primary) organization
+	if orgID == "" && len(orgs) > 0 {
+		orgID = orgs[0].ID.String()
+	}
+
 	var orgName string
 	var userRole string
 	for _, o := range orgs {
@@ -309,6 +315,10 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	}
 
 	// Compute permissions
+	if orgID == "" {
+		s.log.Warn("no_organization_for_user", zap.String("user_id", user.ID.String()))
+		return nil, errors.New("no_organization")
+	}
 	orgUUID, err := uuid.Parse(orgID)
 	if err != nil {
 		s.log.Warn("invalid_org_id_in_login", zap.String("org_id", orgID))

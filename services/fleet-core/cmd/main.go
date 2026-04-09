@@ -133,51 +133,62 @@ func main() {
 	})
 
 	// --- API Routes ---
+
+	// 1. IAM public routes (no auth)
+	if iamModule != nil {
+		r.Route("/api/v1", func(r chi.Router) {
+			iamModule.RegisterPublicRoutes(r, logger)
+		})
+	}
+
+	// Menu endpoints (static, no auth needed for sidebar)
+	menuHandler := handlers.NewMenuHandler()
+	r.Get("/api/v1/ui/menus/*", menuHandler.ServeHTTP)
+
+	// UI config / strings stubs (frontend falls back to defaults)
+	uiConfigHandler := handlers.NewUIConfigHandler()
+	uiStringsHandler := handlers.NewUIStringsHandler()
+	r.Get("/api/v1/ui/global_config", uiConfigHandler.ServeHTTP)
+	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
+
+	// Dashboard stub endpoints
+	dashboardHandler := handlers.NewDashboardHandler()
+	r.Get("/api/v1/dashboard/overview", dashboardHandler.ServeHTTP)
+	r.Get("/api/v1/dashboard/data", dashboardHandler.ServeHTTP)
+
+	// Refresh endpoint (uses refresh_token from body, not JWT)
+	if iamModule != nil {
+		r.Post("/api/v1/auth/refresh", iamModule.AuthHandler.Refresh)
+	}
+
+	// 2. All authenticated API routes
 	r.Group(func(r chi.Router) {
-		// All API routes require authentication
 		r.Use(middleware.JWKSAuthGate(cfg.JWTSecret, logger))
 		r.Use(middleware.TenantMiddleware(logger))
 
-		api := chi.NewRouter()
-
-		// IAM routes (public + authenticated) — registered BEFORE the auth gate
-		// because login/register/etc. must be public
+		// Authenticated IAM routes (profile, logout, etc.)
 		if iamModule != nil {
-			// Public IAM routes (no auth required)
-			r.Route("/api/v1", func(r chi.Router) {
-				iamModule.RegisterPublicRoutes(r, logger)
-			})
-
-			// Authenticated IAM routes (JWT required — already gated by outer JWKSAuthGate)
-			r.Route("/api/v1", func(r chi.Router) {
-				iamModule.RegisterAuthRoutes(r, logger)
-			})
+			r.Get("/api/v1/auth/profile", iamModule.ProfileHandler.GetProfile)
+			r.Put("/api/v1/auth/profile", iamModule.ProfileHandler.UpdateProfile)
+			r.Post("/api/v1/auth/logout", iamModule.AuthHandler.Logout)
 		}
 
-		// Tracking endpoints (always enabled if feature flag is on)
+		// Tracking endpoints
 		if cfg.Flags.VehicleMapEnabled {
-			// POST /api/v1/telemetry — GPS position ingest
-			api.Post("/v1/telemetry", ingestHandler.ServeHTTP)
+			r.Post("/api/v1/telemetry", ingestHandler.ServeHTTP)
+			r.Get("/api/v1/vehicles/locations", locationsHandler.ServeHTTP)
 
-			// GET /api/v1/vehicles/locations — bulk org vehicle positions
-			api.Get("/v1/vehicles/locations", locationsHandler.ServeHTTP)
-
-			// GET /api/v1/vehicles/{id}/telemetry/history — 24h history
 			if cfg.Flags.HistoryTrail {
-				api.Get("/v1/vehicles/{id}/telemetry/history", historyHandler.ServeHTTP)
+				r.Get("/api/v1/vehicles/{id}/telemetry/history", historyHandler.ServeHTTP)
 			}
 
-			// WebSocket /ws/telemetry — real-time position push
 			if cfg.Flags.RealTimeUpdates {
-				api.Get("/ws/telemetry", wsHandler.ServeHTTP)
+				r.Get("/ws/telemetry", wsHandler.ServeHTTP)
 			}
 
-			// GET/POST /api/v1/geofences — geofence management
-			api.Get("/v1/geofences", geofenceHandler.ServeHTTP)
-			api.Post("/v1/geofences", geofenceHandler.ServeHTTP)
+			r.Get("/api/v1/geofences", geofenceHandler.ServeHTTP)
+			r.Post("/api/v1/geofences", geofenceHandler.ServeHTTP)
 		}
-
-		r.Mount("/api", api)
 	})
 
 	// --- Start HTTP Server ---

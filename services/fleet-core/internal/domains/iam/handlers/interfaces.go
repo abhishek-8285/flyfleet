@@ -81,6 +81,7 @@ type mfaService interface {
 type userRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error
+	GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error)
 }
 
 // Compile-time: real services satisfy interfaces

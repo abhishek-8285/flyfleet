@@ -222,3 +222,27 @@ func (r *UserRepository) MarkEmailVerified(ctx context.Context, id uuid.UUID) er
 	)
 	return err
 }
+
+// GetOrganizations returns all organizations the user belongs to.
+func (r *UserRepository) GetOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT o.id, o.name, uo.role
+		FROM user_organizations uo
+		JOIN organizations o ON uo.org_id = o.id
+		WHERE uo.user_id = $1 AND uo.is_active = true
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orgs []models.OrgInfo
+	for rows.Next() {
+		var org models.OrgInfo
+		if err := rows.Scan(&org.ID, &org.Name, &org.Role); err != nil {
+			continue
+		}
+		orgs = append(orgs, org)
+	}
+	return orgs, nil
+}

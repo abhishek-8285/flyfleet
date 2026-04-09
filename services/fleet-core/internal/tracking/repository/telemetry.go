@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -72,10 +73,12 @@ func (r *TelemetryRepository) GetLatestByVehicle(ctx context.Context, vehicleID 
 }
 
 // GetHistoryBucket returns downsampled telemetry for a vehicle within
-// a time range, using TimescaleDB time_bucket for intelligent resolution.
+// a time range. Uses TimescaleDB time_bucket if available, falls back
+// to plain PostgreSQL epoch-based bucketing.
 func (r *TelemetryRepository) GetHistoryBucket(ctx context.Context, vehicleID uuid.UUID,
 	start, end time.Time, bucketInterval string) ([]models.TelemetryEvent, error) {
 
+	// Try TimescaleDB time_bucket first
 	q := fmt.Sprintf(`
 		SELECT
 			time_bucket('%s', time) AS bucket_time,
@@ -94,7 +97,30 @@ func (r *TelemetryRepository) GetHistoryBucket(ctx context.Context, vehicleID uu
 
 	rows, err := r.pool.Query(ctx, q, vehicleID, start, end)
 	if err != nil {
-		return nil, fmt.Errorf("query history bucket: %w", err)
+		// Fallback: plain PostgreSQL using epoch-based bucketing
+		bucketSecs := parseBucketInterval(bucketInterval)
+		if bucketSecs <= 0 {
+			bucketSecs = 60 // default 60 seconds
+		}
+		q = `
+			SELECT
+				to_timestamp(floor(extract(epoch from time) / $4) * $4) AS bucket_time,
+				AVG(latitude)  AS latitude,
+				AVG(longitude) AS longitude,
+				AVG(speed_kmh) AS speed_kmh,
+				AVG(heading)   AS heading,
+				BOOL_OR(ignition) AS ignition,
+				MAX(speed_kmh) AS max_speed
+			FROM telemetry_points
+			WHERE vehicle_id = $1
+			  AND time >= $2
+			  AND time <= $3
+			GROUP BY bucket_time
+			ORDER BY bucket_time`
+		rows, err = r.pool.Query(ctx, q, vehicleID, start, end, bucketSecs)
+		if err != nil {
+			return nil, fmt.Errorf("query history bucket: %w", err)
+		}
 	}
 	defer rows.Close()
 
@@ -117,6 +143,32 @@ func (r *TelemetryRepository) GetHistoryBucket(ctx context.Context, vehicleID uu
 		points = append(points, p)
 	}
 	return points, nil
+}
+
+// parseBucketInterval converts a bucket interval string to seconds.
+// Examples: "10 seconds" → 10, "5 minutes" → 300, "1 hour" → 3600
+func parseBucketInterval(interval string) int64 {
+	interval = strings.ToLower(strings.TrimSpace(interval))
+	// Extract number and unit
+	var secs int64
+	var num int64
+	var unit string
+	fmt.Sscanf(interval, "%d %s", &num, &unit)
+	// Handle plural/singular
+	unit = strings.TrimSuffix(unit, "s")
+	switch unit {
+	case "second":
+		secs = num
+	case "minute":
+		secs = num * 60
+	case "hour":
+		secs = num * 3600
+	case "day":
+		secs = num * 86400
+	default:
+		secs = 60
+	}
+	return secs
 }
 
 // GetBatchLatest returns the latest telemetry point for each vehicle
