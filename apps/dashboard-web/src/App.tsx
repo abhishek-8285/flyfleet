@@ -6,7 +6,7 @@ import { SOSOverlay } from "./components/common/SOSOverlay";
 import { CustomerPortalLayout } from "./components/layout/CustomerPortalLayout";
 import { GlobalAdminLayout } from "./components/layout/GlobalAdminLayout";
 import SupportLayout from "./components/support/SupportLayout";
-import { AuthProvider, useAuth } from "./context/AuthProvider";
+import { AuthProvider } from "./context/AuthProvider";
 import { RBACProvider } from "./context/RBACProvider";
 import AddFuelLog from "./pages/AddFuelLog";
 import { AddOrganization } from "./pages/admin/AddOrganization";
@@ -186,25 +186,57 @@ const SLAReport = lazy(() => import("./pages/monitoring/SLAReport"));
 const SystemHealth = lazy(() => import("./pages/monitoring/SystemHealth"));
 const AuthError = lazy(() => import("./pages/AuthError"));
 
-// Fix 1: Guard against redirect to /login during initial auth hydration.
-// Without isLoading check, token=null during refresh causes a flash-redirect before
-// the session is restored from the refresh cookie.
+// Redux is the single source of truth for auth state.
+// Fallback to localStorage during page refresh recovery.
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const token = useSelector((state: RootState) => state.auth.token);
-  const { isLoading } = useAuth();
+  const isLoading = useSelector((state: RootState) => state.auth.loading);
   if (isLoading) return <LoadingSpinner />;
-  // Fallback to localStorage for token during page refresh recovery
   const hasToken = !!token || !!localStorage.getItem('access_token');
   return hasToken ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const DynamicAdminLayout: React.FC = () => {
-  const { user } = useAuth();
-  const role = (user?.role_id || user?.role || "").toLowerCase();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const isLoading = useSelector((state: RootState) => state.auth.loading);
+  const token = useSelector((state: RootState) => state.auth.token);
 
-  if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager") {
+  if (isLoading) return <LoadingSpinner />;
+
+  const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
+  const hasToken = !!token || !!localStorage.getItem('access_token');
+
+  // If we have a token but no user data, it's a stale/corrupted session.
+  // Clear it and force login to prevent silent dashboard redirects.
+  if (!effectiveUser && hasToken) {
+    console.warn('[DynamicAdminLayout] Stale session: token exists but user is missing. Redirecting to login.');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_data');
+    store.dispatch(setToken(null));
+    store.dispatch(setReduxUser(null));
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!effectiveUser && !hasToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const role = (effectiveUser?.role_id || effectiveUser?.role || "").toLowerCase();
+
+  // Allow all admin-level roles including global_admin, system_admin, and any role containing "admin"
+  if (
+    role === "super_admin" ||
+    role === "admin" ||
+    role === "support" ||
+    role === "org_admin" ||
+    role === "fleet_manager" ||
+    role === "global_admin" ||
+    role === "system_admin" ||
+    role.includes("admin")
+  ) {
     return <GlobalAdminLayout />;
   }
 

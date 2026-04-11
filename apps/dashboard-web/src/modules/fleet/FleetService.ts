@@ -1,9 +1,11 @@
 import { WorkerManager } from "../../workers/utils/WorkerManager";
 import { Vehicle } from "./types";
+import apiClient from "../../services/apiClient";
 
 /**
  * FleetService: Bridge between UI and OperationalWorker.
  * Handles hyperscale search and filtering requests.
+ * Falls back to REST API when the worker is not available.
  */
 class FleetService {
   private worker: WorkerManager | Worker | null = null;
@@ -26,23 +28,81 @@ class FleetService {
 
   /**
    * Performs a high-performance search using the operational worker.
+   * Falls back to REST API when worker is not available OR returns empty.
    */
   async searchVehicles(
     query: string,
     filters?: Record<string, string>,
   ): Promise<any[]> {
-    if (!this.worker) return [];
+    // If worker is available, try it first for fast client-side search
+    if (this.worker) {
+      const workerResults = await new Promise<any[]>((resolve) => {
+        this.pendingSearchResolver = resolve;
+        // Timeout after 2 seconds to avoid hanging
+        const timeout = setTimeout(() => {
+          this.pendingSearchResolver = null;
+          resolve([]);
+        }, 2000);
 
-    return new Promise((resolve) => {
-      this.pendingSearchResolver = resolve;
-      this.worker?.postMessage(
-        {
-          type: "SEARCH",
-          payload: { query, filters },
+        const origResolver = this.pendingSearchResolver;
+        this.pendingSearchResolver = (results: any[]) => {
+          clearTimeout(timeout);
+          origResolver?.(results);
+        };
+
+        this.worker?.postMessage(
+          {
+            type: "SEARCH",
+            payload: { query, filters },
+          },
+          [],
+        );
+      });
+
+      // If worker returned results, use them
+      if (workerResults.length > 0) {
+        return workerResults;
+      }
+      // Worker had no results — fall through to REST API
+    }
+
+    // Fallback: fetch vehicles from REST API
+    try {
+      const response = await apiClient.get("/admin/vehicles", {
+        params: {
+          page: 1,
+          size: 100,
+          ...(query ? { search: query } : {}),
+          ...(filters?.status ? { status: filters.status } : {}),
+          ...(filters?.org ? { org_id: filters.org } : {}),
         },
-        [],
-      );
-    });
+      }) as any;
+
+      // Support multiple response shapes:
+      // 1. Stub handler: { data: [...] }
+      // 2. Vehicle domain: { vehicles: [...], total, page, limit }
+      // 3. Direct array: [...]
+      const raw = response?.data ?? response;
+      const vehicles = Array.isArray(raw)
+        ? raw
+        : raw?.vehicles
+        || raw?.data
+        || [];
+
+      return vehicles.map((v: any) => ({
+        id: v.id,
+        name: v.name || v.registration || v.plate_number || `Asset ${v.id?.substring(0, 8)}`,
+        status: (v.status || "ACTIVE").toUpperCase(),
+        lastUpdate: v.updated_at || v.last_update || v.last_seen || new Date().toISOString(),
+        metadata: {
+          capacity: v.capacity || v.metadata?.capacity,
+        },
+        ...v,
+      }));
+    } catch (error) {
+      console.error("[FleetService] REST API fallback failed:", error);
+      return [];
+    }
   }
 
   /**
@@ -59,16 +119,42 @@ class FleetService {
   }
 
   async getFilterMetadata(): Promise<{ orgs: string[]; statuses: string[] }> {
-    if (!this.worker) return { orgs: [], statuses: [] };
+    // If worker is available, use it
+    if (this.worker) {
+      return new Promise((resolve) => {
+        const handler = (e: any) => {
+          window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
+          resolve(e.detail);
+        };
+        window.addEventListener("VEHICLE_FILTER_METADATA", handler);
+        this.worker?.postMessage({ type: "GET_FILTER_METADATA" }, []);
+      });
+    }
 
-    return new Promise((resolve) => {
-      const handler = (e: any) => {
-        window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
-        resolve(e.detail);
-      };
-      window.addEventListener("VEHICLE_FILTER_METADATA", handler);
-      this.worker?.postMessage({ type: "GET_FILTER_METADATA" }, []);
-    });
+    // Fallback: derive metadata from API response
+    try {
+      const response = await apiClient.get("/admin/vehicles", {
+        params: { page: 1, size: 100 },
+      }) as any;
+
+      // Support multiple response shapes
+      const raw = response?.data ?? response;
+      const vehicles = Array.isArray(raw)
+        ? raw
+        : raw?.vehicles || raw?.data || [];
+
+      const orgSet = new Set<string>();
+      const statusSet = new Set<string>();
+      vehicles.forEach((v: any) => {
+        if (v.org_id) orgSet.add(String(v.org_id));
+        if (v.org_name) orgSet.add(v.org_name);
+        if (v.status) statusSet.add(v.status);
+      });
+      return { orgs: Array.from(orgSet), statuses: Array.from(statusSet) };
+    } catch (error) {
+      console.error("[FleetService] getFilterMetadata REST fallback failed:", error);
+      return { orgs: [], statuses: [] };
+    }
   }
 }
 

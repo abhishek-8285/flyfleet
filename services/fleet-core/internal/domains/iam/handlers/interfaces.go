@@ -59,6 +59,7 @@ type userService interface {
 	ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error)
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string, actorID uuid.UUID) error
+	UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error
 	DeleteUser(ctx context.Context, userID uuid.UUID, actorID uuid.UUID) error
 	GetUserAuditLog(ctx context.Context, userID uuid.UUID, limit int) ([]models.AuditLog, error)
 }
@@ -81,6 +82,7 @@ type mfaService interface {
 type userRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error
+	UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error
 	GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error)
 }
 

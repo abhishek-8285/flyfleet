@@ -9,11 +9,12 @@ import {
     ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthProvider";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { api } from "../../services/api";
 
 const EvidenceExport: React.FC = () => {
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [exports, setExports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);

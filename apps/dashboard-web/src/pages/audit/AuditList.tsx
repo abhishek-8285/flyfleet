@@ -9,11 +9,12 @@ import {
     UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthProvider";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { api } from "../../services/api";
 
 const AuditList: React.FC = () => {
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [uiStrings, setUiStrings] = useState<any>(null);

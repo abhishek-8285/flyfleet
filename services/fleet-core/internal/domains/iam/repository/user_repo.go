@@ -27,12 +27,13 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
 		       created_at, updated_at
 		FROM users WHERE email = $1`, email).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -50,12 +51,13 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
 		       created_at, updated_at
 		FROM users WHERE id = $1`, id).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -126,6 +128,18 @@ func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, name, 
 	_, err := r.pool.Exec(ctx,
 		"UPDATE users SET name = COALESCE(NULLIF($1, ''), name), phone = COALESCE(NULLIF($2, ''), phone), avatar_url = COALESCE(NULLIF($3, ''), avatar_url), updated_at = NOW() WHERE id = $4",
 		name, phone, avatarURL, id,
+	)
+	return err
+}
+
+func (r *UserRepository) UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE users SET
+			sidebar_collapsed = COALESCE($1, sidebar_collapsed),
+			language = COALESCE($2, language),
+			updated_at = NOW()
+		WHERE id = $3`,
+		sidebarCollapsed, language, id,
 	)
 	return err
 }

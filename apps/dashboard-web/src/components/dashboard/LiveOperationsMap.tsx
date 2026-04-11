@@ -167,7 +167,7 @@ export const LiveOperationsMap: React.FC<LiveOperationsMapProps> = ({
           </button>
         </div>
         <div className="absolute bottom-1 left-1 px-2 py-1 bg-surface-darker/80 text-[10px] text-text-muted rounded backdrop-blur">
-          © OpenMapTiles | Source: GIS Data
+          © OpenStreetMap contributors | © FlyFleet
         </div>
       </div>
     </div>

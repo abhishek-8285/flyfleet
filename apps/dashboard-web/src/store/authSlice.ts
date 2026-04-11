@@ -6,7 +6,7 @@ const initialState: AuthState = {
   user: null,
   token: null, // SECURITY: No localStorage - token stored in memory only
   isAuthenticated: false,
-  loading: false,
+  loading: true, // Start true so app always waits for proper hydration
   error: null,
 };
 
@@ -49,6 +49,9 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<User | null>) => {
       state.user = action.payload;
     },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -90,5 +93,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError, setToken, setUser } = authSlice.actions;
+export const { clearError, setToken, setUser, setLoading } = authSlice.actions;
 export default authSlice.reducer;

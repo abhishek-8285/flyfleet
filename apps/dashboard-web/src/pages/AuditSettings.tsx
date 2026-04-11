@@ -9,12 +9,13 @@ import {
     ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthProvider";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { api } from "../services/api";
 
 const AuditSettings: React.FC = () => {
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

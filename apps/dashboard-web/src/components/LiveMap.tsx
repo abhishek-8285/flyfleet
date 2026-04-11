@@ -118,8 +118,8 @@ const LiveMap: React.FC<LiveMapProps> = ({
       className="shadow-lg border border-gray-200 dark:border-gray-700"
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; Google Maps'
+        url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN"
       />
 
       {/* Clusters for Vehicles */}

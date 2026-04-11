@@ -26,19 +26,19 @@ const (
 func JWKSAuthGate(jwtSecret string, logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var tokenStr string
+
+			// Try Authorization header first
 			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				http.Error(w, `{"error":"missing authorization header"}`, http.StatusUnauthorized)
-				return
+			if authHeader != "" {
+				tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+				if tokenStr == authHeader {
+					http.Error(w, `{"error":"invalid authorization format"}`, http.StatusUnauthorized)
+					return
+				}
 			}
 
-			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenStr == authHeader {
-				http.Error(w, `{"error":"invalid authorization format"}`, http.StatusUnauthorized)
-				return
-			}
-
-			// For WebSocket connections, also check query param
+			// Fall back to query param (used for WebSocket connections)
 			if tokenStr == "" {
 				tokenStr = r.URL.Query().Get("token")
 			}

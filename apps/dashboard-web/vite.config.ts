@@ -13,6 +13,8 @@ const securityHeadersPlugin = () => ({
     // Build CSP based on environment
     // Production: No unsafe-inline for scripts (XSS protection)
     // Development: Allow unsafe-inline for HMR and React DevTools
+    // frame-ancestors and X-Frame-Options can only be set via HTTP headers, not <meta>
+    // They are set via server.headers below
     let csp = [
       "default-src 'self'",
       // Scripts: production forbids inline scripts, dev allows for HMR
@@ -23,18 +25,15 @@ const securityHeadersPlugin = () => ({
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fonts
       "font-src 'self' https://fonts.gstatic.com",
-      // Images and media
-      "img-src 'self' data: https:",
+      // Images and media (includes tile servers)
+      "img-src 'self' data: https: http://localhost:3000",
       // Connections (API, WebSocket, analytics)
-      "connect-src 'self' http://localhost:8084 https://us.i.posthog.com",
-      // Prevent framing
-      "frame-ancestors 'none'",
+      "connect-src 'self' http://localhost:8084 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com",
     ].join('; ');
 
     const tags = [
       `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
       `<meta http-equiv="X-Content-Type-Options" content="nosniff">`,
-      `<meta http-equiv="X-Frame-Options" content="DENY">`,
       `<meta http-equiv="X-XSS-Protection" content="1; mode=block">`,
       `<meta name="referrer" content="strict-origin-when-cross-origin">`
     ].join('\n      ');
@@ -66,9 +65,24 @@ export default defineConfig({
   server: {
     port: 3000,
     allowedHosts: true,
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "frame-ancestors 'none'",
+    },
     proxy: {
+      '/api/v1/ws': {
+        target: 'ws://localhost:8084',
+        ws: true,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/v1\/ws/, '/ws/telemetry'),
+      },
       '/api': {
         target: 'http://localhost:8084',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8084',
+        ws: true,
         changeOrigin: true,
       },
       '/auth': {

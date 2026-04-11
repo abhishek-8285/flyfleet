@@ -33,6 +33,12 @@ const MapEngine: React.FC<MapEngineProps> = ({
       },
       center: center,
       zoom: zoom,
+      maxBounds: [
+        [68.1766, 6.7521],  // Southwest India
+        [97.3953, 35.5042], // Northeast India
+      ] as [[number, number], [number, number]],
+      minZoom: 4,
+      maxZoom: 18,
     });
 
     map.current.on("load", () => {

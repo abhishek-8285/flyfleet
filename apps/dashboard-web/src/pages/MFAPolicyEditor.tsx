@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import SecurityFooter from "../components/SecurityFooter";
 import SecuritySidebar from "../components/SecuritySidebar";
-import { useAuth } from "../context/AuthProvider";
 import { useUIStrings } from "../hooks/useUIStrings";
 import api from "../services/api";
 
 const MFAPolicyEditor: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [policy, setPolicy] = useState<any>({
     require_mfa: false,
     allowed_methods: ["totp"],

@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { useAuth } from "../context/AuthProvider";
@@ -12,7 +14,8 @@ const OrgSelection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { uiStrings } = useUIStrings("auth_extended");
-  const { user, setOrganization } = useAuth();
+  const { setOrganization } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
 

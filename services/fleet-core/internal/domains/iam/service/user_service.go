@@ -143,3 +143,28 @@ func (s *UserService) GetUserAuditLog(ctx context.Context, userID uuid.UUID, lim
 	}
 	return s.auditRepo.GetUserAuditLog(ctx, userID, limit)
 }
+
+// UpdateUserPreferences updates user UI preferences (sidebar state, language).
+func (s *UserService) UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
+	if err := s.userRepo.UpdatePreferences(ctx, userID, sidebarCollapsed, language); err != nil {
+		return err
+	}
+
+	s.auditRepo.Log(ctx, models.AuditLog{
+		UserID:   actorID,
+		Action:   "user.preferences_updated",
+		Resource: "user",
+		Data: map[string]interface{}{
+			"target_user_id":    userID.String(),
+			"sidebar_collapsed": sidebarCollapsed,
+			"language":          language,
+		},
+	})
+
+	s.log.Info("user_preferences_updated",
+		zap.String("user_id", userID.String()),
+		zap.Bool("sidebar_collapsed", sidebarCollapsed != nil && *sidebarCollapsed),
+		zap.String("actor_id", actorID.String()),
+	)
+	return nil
+}

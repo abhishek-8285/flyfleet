@@ -73,15 +73,25 @@ export const getWsUrl = (): string => {
 
 class TelemetryService {
   private socket: WebSocket | null = null;
-  private url: string = getWsUrl();
   private reconnectAttempts: number = 0;
   private buffer: any[] = [];
   private batchInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private shouldReconnect: boolean = true;
 
   connect() {
     if (this.socket) return;
 
-    this.socket = new WebSocket(this.url);
+    const state = store.getState() as RootState;
+    const token = state.auth.token || "";
+    if (!token) {
+      console.warn("TelemetryService: No token found, skipping connection");
+      return;
+    }
+
+    this.shouldReconnect = true;
+    const url = getWsUrl();
+    this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
       console.log("Telemetry WebSocket connected");
@@ -117,8 +127,6 @@ class TelemetryService {
         } else if (data.type === "OVERVIEW_UPDATE") {
           // Update full dashboard overview
           store.dispatch(fetchStatsSuccess(data.payload.stats));
-          // Note: timeline and alerts updates would need separate actions
-          // For now, we'll rely on EVENT_PUSH for those
         }
       } catch (err) {
         console.error("Failed to parse WebSocket message", err);
@@ -126,17 +134,23 @@ class TelemetryService {
     };
 
     this.socket.onclose = () => {
-      console.log("Telemetry WebSocket disconnected. Reconnecting...");
       this.socket = null;
       this.stopBatchProcessing();
 
+      if (!this.shouldReconnect) {
+        console.log("Telemetry WebSocket closed intentionally.");
+        return;
+      }
+
+      console.log("Telemetry WebSocket disconnected. Reconnecting...");
       this.reconnectAttempts++;
       const backoff = Math.min(
         1000 * Math.pow(2, this.reconnectAttempts),
         30000,
       ); // Exponential backoff capped at 30s
 
-      setTimeout(() => this.connect(), backoff);
+      if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = setTimeout(() => this.connect(), backoff);
     };
 
     this.socket.onerror = (error) => {
@@ -166,6 +180,11 @@ class TelemetryService {
   }
 
   disconnect() {
+    this.shouldReconnect = false;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     if (this.socket) {
       this.socket.close();
       this.socket = null;

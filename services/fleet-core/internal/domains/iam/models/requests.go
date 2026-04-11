@@ -77,6 +77,11 @@ type UpdateUserStatusRequest struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+type UpdateUserPreferencesRequest struct {
+	SidebarCollapsed *bool   `json:"sidebar_collapsed,omitempty"`
+	Language         *string `json:"language,omitempty"`
+}
+
 type CreateRoleRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`

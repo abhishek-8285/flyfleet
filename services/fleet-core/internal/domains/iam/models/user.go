@@ -31,6 +31,8 @@ type User struct {
 	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
 	LastLoginIP     string     `json:"-"`
 	PermissionMask  int64      `json:"-"`
+	SidebarCollapsed bool      `json:"sidebar_collapsed"`
+	Language        string     `json:"language"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 }

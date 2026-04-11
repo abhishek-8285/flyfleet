@@ -18,11 +18,19 @@ class TelemetryWebSocket {
     private readonly BASE_DELAY = 1000;
     private token: string = '';
     private orgId: string = '';
+    private reconnectTimeout: NodeJS.Timeout | null = null;
+    private shouldReconnect: boolean = true;
 
     connect(token: string, orgId: string) {
+        if (!token || !orgId) {
+            console.warn('TelemetryWebSocket: Missing token or orgId, skipping connection');
+            return;
+        }
+
         this.token = token;
         this.orgId = orgId;
         this.reconnectAttempts = 0;
+        this.shouldReconnect = true;
 
         const wsUrl = `${this.getWsBaseUrl()}/ws/telemetry?token=${token}&org_id=${orgId}`;
         this.ws = new WebSocket(wsUrl);
@@ -64,7 +72,11 @@ class TelemetryWebSocket {
 
     private handleClose() {
         store.dispatch(setWsConnected(false));
-        this.scheduleReconnect();
+        if (this.shouldReconnect) {
+            this.scheduleReconnect();
+        } else {
+            console.log('TelemetryWebSocket closed intentionally.');
+        }
     }
 
     private handleError(error: Event) {
@@ -83,7 +95,8 @@ class TelemetryWebSocket {
         this.reconnectAttempts++;
         store.dispatch(setWsReconnectAttempts(this.reconnectAttempts));
 
-        setTimeout(() => {
+        if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = setTimeout(() => {
             this.connect(this.token, this.orgId);
         }, delay);
     }
@@ -102,7 +115,9 @@ class TelemetryWebSocket {
             } catch (error) {
                 console.error('Polling failed:', error);
             }
-            setTimeout(poll, 10000);
+            if (this.shouldReconnect) {
+                setTimeout(poll, 10000);
+            }
         };
         poll();
     }
@@ -113,6 +128,11 @@ class TelemetryWebSocket {
     }
 
     disconnect() {
+        this.shouldReconnect = false;
+        if (this.reconnectTimeout) {
+            clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = null;
+        }
         if (this.ws) {
             this.ws.close();
             this.ws = null;

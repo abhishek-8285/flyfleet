@@ -151,6 +151,12 @@ func main() {
 	r.Get("/api/v1/ui/global_config", uiConfigHandler.ServeHTTP)
 	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
 
+	// Admin stub endpoints (drivers, vehicles, columns)
+	adminHandler := handlers.NewAdminHandler()
+	r.Get("/api/v1/admin/drivers", adminHandler.ServeHTTP)
+	r.Get("/api/v1/admin/vehicles", adminHandler.ServeHTTP)
+	r.Get("/api/v1/ui/settings/columns", adminHandler.ServeHTTP)
+
 	// Dashboard stub endpoints
 	dashboardHandler := handlers.NewDashboardHandler()
 	r.Get("/api/v1/dashboard/overview", dashboardHandler.ServeHTTP)

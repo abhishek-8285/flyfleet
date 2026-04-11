@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { useAuth } from "../context/AuthProvider";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { api } from "../services/api";
 
@@ -22,7 +23,7 @@ interface MFAException {
 }
 
 const MFAUserSecurity: React.FC = () => {
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [lockedUsers, setLockedUsers] = useState<LockedUser[]>([]);
   const [exceptions, setExceptions] = useState<MFAException[]>([]);
   const [loading, setLoading] = useState(true);
