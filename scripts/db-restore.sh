@@ -5,12 +5,21 @@
 set -e
 
 DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5433}"
-DB_USER="${DB_USER:-fleet_user}"
-DB_PASSWORD="${DB_PASSWORD:-fleet_password}"
+DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-fleet_db}"
 
-export PGPASSWORD=$DB_PASSWORD
+DB_SUPER_USER="${DB_SUPER_USER:-$(whoami)}"
+DB_SUPER_PASS="${DB_SUPER_PASS:-}"
+DB_USER="${DB_USER:-fleet_user}"
+DB_PASSWORD="${DB_PASSWORD:-fleet_password}"
+
+if [ -n "$DB_SUPER_PASS" ]; then
+    export PGPASSWORD="$DB_SUPER_PASS"
+    RESTORE_USER="$DB_SUPER_USER"
+else
+    export PGPASSWORD="$DB_PASSWORD"
+    RESTORE_USER="$DB_USER"
+fi
 
 BACKUP_FILE="${1:-}"
 
@@ -51,7 +60,7 @@ fi
 
 echo ""
 echo "Step 1/3: Dropping existing tables..."
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$RESTORE_USER" -d "$DB_NAME" -c "
 DO \$\$
 DECLARE
     r RECORD;
@@ -65,7 +74,7 @@ echo "✓ Tables dropped"
 
 echo ""
 echo "Step 2/3: Restoring schema + data..."
-gunzip -c "$BACKUP_FILE" | psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" 2>&1 | tail -5
+gunzip -c "$BACKUP_FILE" | psql -h "$DB_HOST" -p "$DB_PORT" -U "$RESTORE_USER" -d "$DB_NAME" 2>&1 | tail -5
 echo "✓ Restore complete"
 
 echo ""
