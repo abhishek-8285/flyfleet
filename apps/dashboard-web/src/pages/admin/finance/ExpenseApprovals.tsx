@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../store";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import apiClient from "../../../services/apiClient";
-import { useAuth } from "../../../context/AuthProvider";
 
 interface ExpenseReport {
   id: string;
@@ -18,7 +19,7 @@ const ExpenseApprovals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { uiStrings } = useUIStrings("finance");
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const loadReports = async () => {
     setLoading(true);

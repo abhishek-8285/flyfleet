@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import {
     Area,
     AreaChart,
@@ -14,7 +16,6 @@ import {
 } from "recharts";
 import SecurityFooter from "../components/SecurityFooter";
 import SecuritySidebar from "../components/SecuritySidebar";
-import { useAuth } from "../context/AuthProvider";
 import api from "../services/api";
 
 // Fix for Recharts TS2786 with React 18
@@ -30,7 +31,7 @@ const YAxisAny = YAxis as any;
 
 const MFACenter: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [policy, setPolicy] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
   const [trend, setTrend] = useState<any[]>([]);

@@ -14,6 +14,8 @@ import MapEngine from "../../modules/map/MapEngine";
 import { MapErrorBoundary } from "../../modules/map/components/MapErrorBoundary";
 import { useTelemetryStream } from "../../modules/map/hooks/useTelemetryStream";
 import { PointCloudLayer } from "../../modules/map/layers/PointCloudLayer";
+import { InstancedVehicleLayer } from "../../modules/map/layers/InstancedVehicleLayer";
+import { ClusterLayer } from "../../modules/map/layers/ClusterLayer";
 import {
     addRouteLayers,
     clearRoutes,
@@ -120,22 +122,22 @@ const ControlTower: React.FC = () => {
   const [workerHealth, setWorkerHealth] = React.useState<any[]>([]);
   const monitorRef = useRef<WorkerMonitor | null>(null);
 
-  // Initialize the layers once
+  // Initialize the layers dynamically when buffers are ready and map is loaded
   useEffect(() => {
-    if (renderBufferSabs.length > 0) {
+    if (renderBufferSabs.length > 0 && mapRef.current && !(mapRef.current as any)._destroyed) {
       if (!instancedLayerRef.current) {
-        const {
-          InstancedVehicleLayer,
-        } = require("../../modules/map/layers/InstancedVehicleLayer");
         const shards = renderBufferSabs.map((sab) => new Float32Array(sab));
         instancedLayerRef.current = new InstancedVehicleLayer(shards);
+        
+        // Check if map already has the layer to prevent double-adding
+        if (!mapRef.current.getLayer(instancedLayerRef.current.id)) {
+           mapRef.current.addLayer(instancedLayerRef.current);
+        }
       }
       if (!clusterLayerRef.current) {
-        const {
-          ClusterLayer,
-        } = require("../../modules/map/layers/ClusterLayer");
         const clusterLayer = new ClusterLayer("cluster-layer");
         clusterLayerRef.current = clusterLayer;
+        clusterLayerRef.current.onAdd(mapRef.current);
       }
     }
   }, [renderBufferSabs]);
@@ -279,13 +281,23 @@ const ControlTower: React.FC = () => {
     addVehicleLayers(map);
     addRouteLayers(map);
 
-    if (instancedLayerRef.current) {
+    // Always create fresh layer instances for a new map to prevent WebGL context sharing errors
+    if (renderBufferSabs.length > 0) {
+      const shards = renderBufferSabs.map((sab) => new Float32Array(sab));
+      instancedLayerRef.current = new InstancedVehicleLayer(shards);
       map.addLayer(instancedLayerRef.current);
     }
-    if (clusterLayerRef.current) {
-      clusterLayerRef.current.onAdd(map);
-    }
-  }, []);
+    
+    clusterLayerRef.current = new ClusterLayer("cluster-layer");
+    clusterLayerRef.current.onAdd(map);
+
+    map.on('remove', () => {
+       // Clean up refs when the map is destroyed so they don't hold stale WebGL resources
+       mapRef.current = null;
+       instancedLayerRef.current = null;
+       clusterLayerRef.current = null;
+    });
+  }, [renderBufferSabs]);
 
   // Update map markers when telemetry state changes (Markers only)
   useEffect(() => {
@@ -315,7 +327,7 @@ const ControlTower: React.FC = () => {
   // Event-driven Instanced Layer Updates (Zero-Churn)
   useEffect(() => {
     const handleDirtySlots = (e: any) => {
-      if (instancedLayerRef.current && mapRef.current) {
+      if (instancedLayerRef.current && mapRef.current && !(mapRef.current as any)._destroyed) {
         const shards = renderBufferSabs.map((sab) => new Float32Array(sab));
         instancedLayerRef.current.updateData(shards, e.detail);
         mapRef.current.triggerRepaint();
@@ -354,7 +366,7 @@ const ControlTower: React.FC = () => {
       if (pointCloudLayerRef.current) {
         pointCloudLayerRef.current.setFocusedVehicle(pickingId);
       }
-      if (mapRef.current) {
+      if (mapRef.current && !(mapRef.current as any)._destroyed) {
         mapRef.current.flyTo({ center: [lng, lat], zoom: 16, duration: 2000 });
       }
     };

@@ -147,6 +147,38 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, map[string]string{"message": "user_deleted"})
 }
 
+// UpdatePreferences updates user UI preferences (sidebar state, language).
+// PUT /api/v1/admin/users/{id}/preferences
+func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userID, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_id", "Invalid user ID format", r)
+		return
+	}
+
+	var req models.UpdateUserPreferencesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
+		return
+	}
+
+	if req.SidebarCollapsed == nil && req.Language == nil {
+		h.writeError(w, http.StatusBadRequest, "missing_fields", "At least one preference field must be provided", r)
+		return
+	}
+
+	actorID := GetUserIDUUID(r)
+
+	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, req.SidebarCollapsed, req.Language, actorID); err != nil {
+		h.log.Error("failed to update user preferences", zap.Error(err), zap.String("user_id", idStr))
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to update user preferences", r)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, map[string]string{"message": "preferences_updated"})
+}
+
 // GetUserAuditLog returns the audit log for a specific user.
 // GET /api/v1/admin/users/{id}/audit-log
 func (h *UserHandler) GetUserAuditLog(w http.ResponseWriter, r *http.Request) {

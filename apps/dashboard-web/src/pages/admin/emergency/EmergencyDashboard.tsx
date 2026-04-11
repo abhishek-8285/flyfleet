@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import React, { useEffect, useState } from "react";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import { useWebSocket } from "../../../hooks/useWebSocket";
+import { getWsUrl } from "../../../services/telemetryService";
 import apiClient from "../../../services/apiClient";
 
 interface SOSIncident {
@@ -31,9 +32,7 @@ const EmergencyDashboard: React.FC = () => {
   const [incidents, setIncidents] = useState<SOSIncident[]>([]);
   const [loading, setLoading] = useState(true);
   const { uiStrings } = useUIStrings("emergency_admin");
-  const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const wsUrl = `${wsProtocol}://${window.location.host}/api/v1/ws`;
-  const { lastMessage, isConnected } = useWebSocket(wsUrl);
+  const { lastMessage, isConnected } = useWebSocket(getWsUrl());
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {

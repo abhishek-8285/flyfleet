@@ -329,7 +329,7 @@ export function DataGrid<T extends { id: string | number }>({
               </tr>
             </thead>
             <tbody className="divide-y divide-border-color">
-              {data.map((row) => (
+              {columns.length > 0 && data.map((row) => (
                 <tr
                   key={row.id}
                   className="hover:bg-surface-light/10 transition-colors"
@@ -346,13 +346,20 @@ export function DataGrid<T extends { id: string | number }>({
                   ))}
                 </tr>
               ))}
-              {data.length === 0 && (
+              {columns.length > 0 && data.length === 0 && (
                 <tr>
                   <td
                     colSpan={columns.length}
                     className="px-6 py-8 text-center text-text-muted italic"
                   >
                     No records found
+                  </td>
+                </tr>
+              )}
+              {columns.length === 0 && (
+                <tr>
+                  <td colSpan={1} className="px-6 py-8 text-center text-text-muted italic">
+                    Loading columns...
                   </td>
                 </tr>
               )}

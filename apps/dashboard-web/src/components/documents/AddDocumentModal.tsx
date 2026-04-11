@@ -1,7 +1,8 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import apiClient from "../../services/api";
-import { useAuth } from "../../context/AuthProvider";
 
 interface AddDocumentModalProps {
   vehicleId: string;
@@ -17,7 +18,7 @@ const AddDocumentModal: React.FC<AddDocumentModalProps> = ({
   onSuccess,
 }) => {
   const { uiStrings } = useUIStrings("documents");
-  const { user } = useAuth(); // Needed to check role
+  const user = useSelector((state: RootState) => state.auth.user);
 
 
   const [formData, setFormData] = useState({

@@ -16,6 +16,15 @@ export const useWebSocket = (url: string) => {
 
         const connect = () => {
             if (!isMounted) return;
+            
+            // Don't connect if there's no token in the URL
+            const urlObj = new URL(url.startsWith('ws') ? url.replace('ws', 'http') : url);
+            const token = urlObj.searchParams.get('token');
+            if (!token) {
+                console.warn('useWebSocket: No token provided in URL, skipping connection');
+                return;
+            }
+
             const socket = new WebSocket(url);
 
             socket.onopen = () => {

@@ -167,6 +167,7 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 	r.Group(func(r chi.Router) {
 		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
 		r.Put("/admin/users/{id}/status", m.UserHandler.UpdateStatus)
+		r.Put("/admin/users/{id}", m.UserHandler.UpdatePreferences)
 	})
 
 	// Admin - User delete (requires user:delete)

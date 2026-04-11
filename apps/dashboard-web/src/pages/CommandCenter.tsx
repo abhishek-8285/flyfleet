@@ -11,12 +11,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import LiveMap from "../components/LiveMap";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { getWsUrl } from "../services/telemetryService";
 import { Alert, Vehicle } from "../types";
 
 const CommandCenter: React.FC = () => {
-  const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const wsUrl = `${wsProtocol}://${window.location.host}/api/v1/ws`;
-  const { lastMessage, isConnected } = useWebSocket(wsUrl);
+  const { lastMessage, isConnected } = useWebSocket(getWsUrl());
   const { uiStrings } = useUIStrings("command_center");
 
   const [vehicles, setVehicles] = useState<Record<string, Vehicle>>({});

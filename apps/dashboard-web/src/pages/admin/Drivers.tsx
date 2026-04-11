@@ -35,7 +35,10 @@ export const Drivers: React.FC = () => {
   useEffect(() => {
     apiClient
       .get("/ui/settings/columns")
-      .then((res: any) => setColumns(res.data))
+      .then((res: any) => {
+        const cols = res?.drivers || [];
+        setColumns(cols);
+      })
       .catch((err) => console.error(err));
   }, []);
 

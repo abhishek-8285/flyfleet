@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { useAuth } from "../../context/AuthProvider";
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 export const GlobalAdminSidebar: React.FC = () => {
   const location = useLocation();
-  const { user, toggleSidebar } = useAuth();
+  const { toggleSidebar } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const { uiStrings } = useUIStrings("layout_sidebar");
   const collapsed = user?.sidebar_collapsed ?? false;
 
@@ -15,13 +18,17 @@ export const GlobalAdminSidebar: React.FC = () => {
     );
   };
 
-  const [menuItems, setMenuitems] = useState<any[]>([]);
-  useEffect(() => {
-    fetch("/api/v1/ui/menus/menuItems")
-      .then((res) => res.json())
-      .then((data) => setMenuitems(data))
-      .catch((err) => console.error(err));
-  }, []);
+  const [menuItems, setMenuitems] = useState<any[]>([
+    { title: "Dashboard", path: "/admin", icon: "dashboard", items: [] },
+    { title: "Control Tower", path: "/admin/control-tower", icon: "satellite_alt", items: [] },
+    { title: "Dispatch", path: "/admin/dispatch", icon: "support_agent", items: [] },
+    { title: "Vehicles", path: "/admin/vehicles", icon: "directions_car", items: [] },
+    { title: "Drivers", path: "/admin/drivers", icon: "badge", items: [] },
+    { title: "Trips", path: "/admin/trips", icon: "route", items: [] },
+    { title: "Maintenance", path: "/admin/maintenance/work-orders", icon: "build", items: [] },
+    { title: "Finance", path: "/admin/finance/fuel", icon: "attach_money", items: [] },
+    { title: "Settings", path: "/admin/organizations", icon: "settings", items: [] },
+  ]);
 
   return (
     <aside

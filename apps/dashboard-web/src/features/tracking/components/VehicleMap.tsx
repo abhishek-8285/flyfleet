@@ -23,9 +23,9 @@ export const VehicleMap: React.FC = () => {
                 sources: {
                     'osm-tiles': {
                         type: 'raster',
-                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tiles: ['https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN'],
                         tileSize: 256,
-                        attribution: '© OpenStreetMap contributors'
+                        attribution: '© Google Maps'
                     }
                 },
                 layers: [{
@@ -42,7 +42,6 @@ export const VehicleMap: React.FC = () => {
 
         // Add navigation controls
         mapRef.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-
         return () => {
             mapRef.current?.remove();
         };

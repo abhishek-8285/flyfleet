@@ -55,7 +55,7 @@ export class ClusterLayer {
       layout: {
         "text-field": ["get", "count"],
         "text-size": 12,
-        "text-font": ["Inter Bold"],
+        "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
       },
       paint: {
         "text-color": "#ffffff",
@@ -65,7 +65,7 @@ export class ClusterLayer {
   }
 
   updateData(h3Counts: [string, number][]) {
-    if (!this.map) return;
+    if (!this.map || (this.map as any)._destroyed) return;
 
     const features = h3Counts.map(([cell, count]) => {
       const boundary = cellToBoundary(cell, true); // [[lng, lat], ...]

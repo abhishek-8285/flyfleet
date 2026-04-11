@@ -16,6 +16,8 @@ import {
 import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import { AuthProvider, useAuth } from "../context/AuthProvider";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 
 import { RBACProvider } from "../context/RBACProvider";
 import { vi } from "vitest";
@@ -33,7 +35,8 @@ vi.mock("../services/apiClient", () => ({
 import apiClient from "../services/apiClient";
 
 const PreferencesReadout: React.FC = () => {
-  const { user, isLoading } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const isLoading = useSelector((state: RootState) => state.auth.loading);
   if (isLoading) return <div data-testid="loading">Loading...</div>;
   return (
     <div>

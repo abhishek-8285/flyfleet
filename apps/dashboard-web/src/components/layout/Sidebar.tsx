@@ -15,6 +15,8 @@ import {
 } from "@heroicons/react/24/outline"; // Assuming heroicons is installed, or use alternatives
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../store";
 import { useAuth } from "../../context/AuthProvider";
 import { useRBAC } from "../../context/RBACProvider";
 import { useUIStrings } from "../../hooks/useUIStrings";
@@ -46,7 +48,8 @@ const IconMap: Record<string, React.ElementType> = {
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { can } = useRBAC();
-  const { user, logout, toggleSidebar } = useAuth();
+  const { logout, toggleSidebar } = useAuth();
+  const user = useSelector((state: RootState) => state.auth.user);
   const { uiStrings } = useUIStrings("layout_sidebar");
   // Derive collapsed state from global context (DB-backed), fall back to false
   const collapsed = user?.sidebar_collapsed ?? false;

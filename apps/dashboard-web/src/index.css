@@ -252,3 +252,17 @@ code {
   font-family:
     source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
+
+/* Prevent Dark Mode extensions (like Dark Reader or Lemur Browser night mode) from inverting the map boundary */
+.india-boundary-line,
+path.india-boundary-line,
+.leaflet-overlay-pane path.india-boundary-line {
+  stroke: #1a1a1a !important;
+  fill: none !important;
+  /* Use a strong dark drop-shadow. Even if the stroke is inverted to white, the shadow stays dark and outlines it. */
+  filter: drop-shadow(0px 0px 2px rgba(0, 0, 0, 1)) drop-shadow(0px 0px 1px rgba(0, 0, 0, 1)) !important;
+  mix-blend-mode: normal !important;
+  color-scheme: light only !important;
+}
+
+

@@ -14,7 +14,7 @@ const apiClient = axios.create({
   withCredentials: true, // Send refresh cookie automatically
 });
 
-// Request Interceptor: Attach Auth Token and Org ID
+// Request Interceptor: Attach Auth Token, User, and Org ID
 apiClient.interceptors.request.use(
   (config) => {
     // Try Redux store first, fall back to localStorage (survives page refresh)
@@ -27,6 +27,24 @@ apiClient.interceptors.request.use(
         store.dispatch(setToken(token));
       }
     }
+
+    // Also recover user from localStorage if Redux doesn't have it yet
+    // This is critical for race-condition-free page refresh
+    if (!state.auth.user) {
+      const savedUser = localStorage.getItem('user_data');
+      if (savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          if (parsedUser?.id) {
+            store.dispatch(setUser(parsedUser));
+            console.log('[apiClient] Recovered user from localStorage');
+          }
+        } catch (e) {
+          console.warn('[apiClient] Failed to parse saved user data');
+        }
+      }
+    }
+
     // Get org_id from localStorage (user preference, not security-critical)
     let orgId = localStorage.getItem('org_id');
 

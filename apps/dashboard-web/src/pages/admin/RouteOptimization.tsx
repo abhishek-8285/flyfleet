@@ -12,13 +12,17 @@ import React, { useEffect, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import { api } from "../../services/api";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 
-// Fix Leaflet icon issue
+// Fix leaflet icon issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
+
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
-  iconUrl: require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
 });
 
 // Types
@@ -268,8 +272,8 @@ const RouteOptimization: React.FC = () => {
                   className="z-0"
                 >
                   <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; Google Maps'
+                    url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN"
                   />
                   {/* Render Markers and Routes if result exists */}
                   {selectedRequest.result?.routes?.map(
