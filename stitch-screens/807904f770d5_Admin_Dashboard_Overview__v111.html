@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Granular MFA Rule Editor V2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "primary-light": "#e0f0ff",
+                        "background-light": "#f6f7f8",
+                        "surface-white": "#ffffff",
+                        "border-color": "#e2e8f0",
+                        "text-main": "#1e293b",
+                        "text-muted": "#64748b",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #137fec;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background-light text-text-main font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#0b1219] border-r border-[#1e293b] flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#16202a] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#16202a] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#16202a] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#16202a] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-[#16202a] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-[#1e293b]">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-[#1e293b]" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-slate-500 truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-slate-400 hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-light overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-white flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<h2 class="text-text-main text-lg font-bold">MFA Policy Configuration</h2>
+<p class="text-[11px] text-text-muted mt-0.5">Policy Editor • v2.4.1</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-xs text-text-muted bg-yellow-50 px-3 py-1.5 rounded border border-yellow-200">
+<span class="material-symbols-outlined text-warning text-sm">info</span>
+<span>Changes require admin approval</span>
+</div>
+<div class="h-6 w-px bg-border-color"></div>
+<button class="px-4 py-2 bg-surface-white hover:bg-slate-50 text-text-muted border border-border-color text-xs font-semibold rounded transition-colors">
+                    Discard
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Policy
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar bg-[#f8fafc]">
+<div class="mb-6 border-b border-border-color">
+<nav aria-label="Tabs" class="-mb-px flex space-x-8">
+<a class="border-transparent text-text-muted hover:text-text-main hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+                        MFA Methods
+                    </a>
+<a class="border-primary text-primary whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+                        Enforcement
+                    </a>
+<a class="border-transparent text-text-muted hover:text-text-main hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">devices</span>
+                        Device Trust
+                    </a>
+<a class="border-transparent text-text-muted hover:text-text-main hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">rule_folder</span>
+                        Exemptions
+                    </a>
+</nav>
+</div>
+<div class="max-w-6xl mx-auto space-y-6">
+<div class="bg-surface-white rounded-xl border border-border-color shadow-sm overflow-hidden">
+<div class="p-5 border-b border-border-color bg-slate-50 flex justify-between items-center">
+<div>
+<h3 class="text-text-main font-bold text-sm">Conditional Enforcement Rules</h3>
+<p class="text-xs text-text-muted mt-1">Define logic for when MFA challenges are triggered.</p>
+</div>
+<button class="text-primary text-xs font-medium hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">add</span> Add Rule
+                        </button>
+</div>
+<div class="p-6 space-y-4">
+<div class="bg-slate-50 border border-border-color rounded-lg p-4 relative group">
+<div class="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+<button class="p-1 hover:bg-white rounded text-text-muted"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="p-1 hover:bg-white rounded text-danger"><span class="material-symbols-outlined text-sm">delete</span></button>
+</div>
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="px-2 py-1 bg-blue-100 text-primary rounded text-[10px] font-bold uppercase tracking-wide">IF</span>
+</div>
+<div class="flex-1 space-y-3">
+<div class="flex items-center gap-2 flex-wrap">
+<div class="bg-white border border-border-color px-3 py-1.5 rounded text-sm text-text-main shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-sm">public</span>
+                                            User IP Location
+                                        </div>
+<span class="text-xs font-semibold text-text-muted">IS NOT IN</span>
+<div class="bg-white border border-border-color px-3 py-1.5 rounded text-sm text-primary font-medium shadow-sm flex items-center gap-2 bg-primary/5 border-primary/20">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                                            {{GEO_REGION_HOME}}
+                                        </div>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-1 bg-slate-200 text-slate-600 rounded text-[10px] font-bold uppercase tracking-wide">AND</span>
+</div>
+<div class="flex items-center gap-2 flex-wrap">
+<div class="bg-white border border-border-color px-3 py-1.5 rounded text-sm text-text-main shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-sm">schedule</span>
+                                            Time of Day
+                                        </div>
+<span class="text-xs font-semibold text-text-muted">IS OUTSIDE</span>
+<div class="bg-white border border-border-color px-3 py-1.5 rounded text-sm text-text-main shadow-sm">
+                                            Business Hours (09:00 - 18:00)
+                                        </div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-border-color flex items-start gap-4">
+<div class="mt-1">
+<span class="px-2 py-1 bg-red-100 text-danger rounded text-[10px] font-bold uppercase tracking-wide">THEN</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-text-main">Enforce</span>
+<div class="bg-white border border-border-color px-3 py-1.5 rounded text-sm text-text-main font-medium shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-500 text-sm">fingerprint</span>
+                                        High Assurance MFA (FIDO2 / Biometric)
+                                    </div>
+</div>
+</div>
+</div>
+<div class="border-2 border-dashed border-border-color rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-text-muted">add_circle</span>
+</div>
+<h4 class="text-sm font-medium text-text-main">Create New Logic Rule</h4>
+<p class="text-xs text-text-muted">Combine triggers like IP, Device, Time, and Risk Score</p>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-white rounded-xl border border-border-color shadow-sm">
+<div class="p-5 border-b border-border-color">
+<div class="flex items-center justify-between">
+<h3 class="text-text-main font-bold text-sm">Enforcement Timeline</h3>
+<span class="material-symbols-outlined text-text-muted text-sm cursor-help" title="Allows users to skip MFA setup until the specified date.">help</span>
+</div>
+</div>
+<div class="p-6">
+<label class="block text-xs font-medium text-text-main mb-2">Grace Period Deadline</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-lg">calendar_month</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border border-border-color rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Select a date..." type="text" value="Nov 15, 2023"/>
+</div>
+<p class="mt-2 text-[11px] text-text-muted">
+                                Users created before this date will be prompted to set up MFA but not forced until the deadline expires.
+                            </p>
+<div class="mt-4 pt-4 border-t border-border-color">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-xs font-medium text-text-main">Force Setup on Next Login</span>
+<span class="text-[10px] text-text-muted">Ignore grace period for high-risk users</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-white rounded-xl border border-border-color shadow-sm">
+<div class="p-5 border-b border-border-color bg-primary/5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">devices</span>
+<h3 class="text-text-main font-bold text-sm">Device Trust Settings</h3>
+</div>
+<div class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Active</div>
+</div>
+</div>
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<div>
+<span class="block text-sm font-medium text-text-main">Remember Device</span>
+<span class="block text-xs text-text-muted mt-0.5">Allow users to trust their current browser</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between text-xs text-text-muted mb-1">
+<span>Trust Duration</span>
+<span class="font-bold text-primary">30 Days</span>
+</div>
+<input class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary" max="90" min="7" type="range" value="30"/>
+<div class="flex justify-between text-[10px] text-text-muted px-1">
+<span>7 Days</span>
+<span>30 Days</span>
+<span>90 Days</span>
+</div>
+</div>
+<div class="mt-6 p-3 bg-yellow-50 border border-yellow-100 rounded-lg flex gap-3">
+<span class="material-symbols-outlined text-warning text-lg shrink-0">warning</span>
+<div class="text-xs text-yellow-800">
+<span class="font-bold">Security Note:</span> Extending trust beyond 30 days increases risk of session hijacking.
+                                </div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-6">
+<div class="p-4 bg-white rounded-lg border border-border-color shadow-sm">
+<div class="text-xs text-text-muted uppercase font-semibold">Active Rules</div>
+<div class="text-2xl font-bold text-text-main mt-1">12</div>
+</div>
+<div class="p-4 bg-white rounded-lg border border-border-color shadow-sm">
+<div class="text-xs text-text-muted uppercase font-semibold">Affected Users</div>
+<div class="text-2xl font-bold text-text-main mt-1">1,240</div>
+</div>
+<div class="p-4 bg-white rounded-lg border border-border-color shadow-sm">
+<div class="text-xs text-text-muted uppercase font-semibold">Est. Challenges / Day</div>
+<div class="text-2xl font-bold text-text-main mt-1">~450</div>
+</div>
+<div class="p-4 bg-white rounded-lg border border-border-color shadow-sm">
+<div class="text-xs text-text-muted uppercase font-semibold">Risk Coverage</div>
+<div class="text-2xl font-bold text-emerald-600 mt-1">94%</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-white border-t border-border-color px-6 py-3 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Security Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Last Policy Update: <span class="text-text-main">Oct 24, 10:00 AM</span></span>
+<span>By: <span class="text-text-main">Alex Morgan</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

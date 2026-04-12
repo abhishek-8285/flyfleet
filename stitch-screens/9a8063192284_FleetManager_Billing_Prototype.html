@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetManager Billing Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        body {
+            background-color: #0b1219; /* Force dark bg to match design */
+        }
+    </style>
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-dark text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            
+            const isActive = (path) => {
+                return location.pathname === path ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white';
+            };
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Main Module</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') && !isActive('/invoices') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Dashboard</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Finance & Billing</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') || isActive('/invoice/new') || isActive('/invoice/edit') || isActive('/invoice/detail') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">receipt_long</span>
+                            <span className="text-sm font-medium">Invoices</span>
+                        </Link>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">credit_card</span>
+                            <span className="text-sm font-medium">Transactions</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">account_balance_wallet</span>
+                            <span className="text-sm font-medium">Wallets</span>
+                        </a>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Reporting</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">bar_chart</span>
+                            <span className="text-sm font-medium">Revenue Reports</span>
+                        </a>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Configuration</div>
+                        <Link to="/settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/settings') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">settings</span>
+                            <span className="text-sm font-medium">Billing Settings</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Billing Manager</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = ({ version = "2.1" }) => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                <span>© 2023 Enterprise Fleet Manager. Billing Module V{version}</span>
+                <div className="flex items-center gap-4">
+                    <span>System Status: <span className="text-success">Operational</span></span>
+                    <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Screens ---
+
+        const InvoiceList = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <span className="hover:text-white cursor-pointer transition-colors">Billing</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white">Invoices</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Invoice List</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input className="bg-surface-dark border border-border-color text-sm text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button className="p-2 bg-surface-dark border border-border-color hover:bg-border-color text-text-muted hover:text-white rounded transition-colors" title="Filter">
+                                    <span className="material-symbols-outlined text-[20px]">filter_list</span>
+                                </button>
+                                <div className="h-8 w-[1px] bg-border-color"></div>
+                                <button onClick={() => navigate('/invoice/new')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    Add Invoice
+                                </button>
+                            </div>
+                        </header>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-white">receipt</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Invoiced (MTD)</div>
+                                    <div className="text-2xl font-bold text-white">$1,245,890</div>
+                                    <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[12px]">trending_up</span>
+                                        +12.5% vs last month
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">pending_actions</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Pending Payment</div>
+                                    <div className="text-2xl font-bold text-warning">$182,400</div>
+                                    <div className="text-[10px] text-text-muted mt-1">45 invoices open</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-warning h-full" style={{width: '35%'}}></div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-danger">event_busy</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Overdue Amount</div>
+                                    <div className="text-2xl font-bold text-danger">$42,150</div>
+                                    <div className="text-[10px] text-danger mt-1">Requires immediate action</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-danger h-full" style={{width: '12%'}}></div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">check_circle</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Paid Invoices</div>
+                                    <div className="text-2xl font-bold text-success">1,840</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Last 30 days</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-16rem)]">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                                            All Invoices
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded text-[10px] bg-border-color text-text-muted font-mono">Total: 2,453</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select className="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
+                                            <option>All Statuses</option>
+                                            <option>Paid</option>
+                                            <option>Pending</option>
+                                            <option>Overdue</option>
+                                        </select>
+                                        <select className="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
+                                            <option>This Month</option>
+                                            <option>Last Month</option>
+                                            <option>Last Quarter</option>
+                                        </select>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Export CSV">
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Refresh">
+                                            <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-auto custom-scrollbar">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="sticky top-0 z-10 bg-surface-darker">
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+                                                <th className="px-4 py-3 font-semibold w-10">
+                                                    <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                                </th>
+                                                <th className="px-4 py-3 font-semibold">Invoice ID</th>
+                                                <th className="px-4 py-3 font-semibold">Customer Name</th>
+                                                <th className="px-4 py-3 font-semibold">Billing Period</th>
+                                                <th className="px-4 py-3 font-semibold text-right">Total Amount</th>
+                                                <th className="px-4 py-3 font-semibold text-center">Currency</th>
+                                                <th className="px-4 py-3 font-semibold">Due Date</th>
+                                                <th className="px-4 py-3 font-semibold text-center">Status</th>
+                                                <th className="px-4 py-3 font-semibold w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm divide-y divide-border-color">
+                                            {/* Example Rows with links */}
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-4 py-3">
+                                                    <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline" onClick={() => navigate('/invoice/detail')}>INV-2023-001</td>
+                                                <td className="px-4 py-3 font-medium text-white">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold">AL</div>
+                                                        Acme Logistics
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+                                                <td className="px-4 py-3 text-white font-medium text-right">$4,250.00</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase tracking-wide">PAID</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={(e) => {e.stopPropagation(); navigate('/invoice/edit')}} className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-4 py-3">
+                                                    <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline" onClick={() => navigate('/invoice/detail')}>INV-2023-002</td>
+                                                <td className="px-4 py-3 font-medium text-white">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px] font-bold">GT</div>
+                                                        Global Transport Inc.
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+                                                <td className="px-4 py-3 text-white font-medium text-right">$12,890.50</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wide">PENDING</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={(e) => {e.stopPropagation(); navigate('/invoice/edit')}} className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-3 border-t border-border-color flex items-center justify-between bg-surface-darker">
+                                    <span className="text-xs text-text-muted">Showing 1 to 2 of 2,453 entries</span>
+                                    <div className="flex items-center gap-1">
+                                        <button className="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white disabled:opacity-50">Previous</button>
+                                        <button className="px-2 py-1 text-xs rounded bg-primary text-white font-medium">1</button>
+                                        <button className="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const AddInvoice = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <nav className="flex items-center text-sm text-text-muted">
+                                    <Link to="/" className="hover:text-white transition-colors">Billing</Link>
+                                    <span className="material-symbols-outlined text-xs mx-2">chevron_right</span>
+                                    <span className="text-white font-medium">New Invoice</span>
+                                </nav>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} className="px-4 py-2 border border-border-color text-text-muted hover:text-white hover:bg-surface-dark rounded text-xs font-semibold transition-colors">
+                                    Cancel
+                                </button>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    Create Invoice
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto space-y-6">
+                                <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+                                    <section className="bg-surface-dark rounded-xl border border-border-color p-6">
+                                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
+                                            <div className="w-8 h-8 rounded-full bg-surface-darker flex items-center justify-center border border-border-color text-primary">
+                                                <span className="material-symbols-outlined text-sm">description</span>
+                                            </div>
+                                            <h2 className="text-white text-base font-semibold">Invoice Basics</h2>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-medium text-text-muted uppercase tracking-wide">Customer Name</label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                        <span className="material-symbols-outlined text-[18px]">person</span>
+                                                    </span>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded pl-10 pr-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 outline-none transition-all" placeholder="Select customer..." type="text"/>
+                                                </div>
+                                            </div>
+                                            {/* ... more form fields from original html ... */}
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-medium text-text-muted uppercase tracking-wide">Organization ID</label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                        <span className="material-symbols-outlined text-[18px]">domain</span>
+                                                    </span>
+                                                    <input className="w-full bg-surface-darker/50 border border-border-color/50 rounded pl-10 pr-3 py-2.5 text-sm text-text-muted cursor-not-allowed outline-none" readOnly type="text" value="ORG-8821-XJ"/>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-medium text-text-muted uppercase tracking-wide">Invoice Date</label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                        <span className="material-symbols-outlined text-[18px]">calendar_today</span>
+                                                    </span>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded pl-10 pr-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="date" defaultValue="2023-10-25"/>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="block text-xs font-medium text-text-muted uppercase tracking-wide">Due Date</label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                        <span className="material-symbols-outlined text-[18px]">event_available</span>
+                                                    </span>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded pl-10 pr-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="date"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    
+                                    <section className="bg-surface-dark rounded-xl border border-border-color p-6">
+                                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border-color">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-surface-darker flex items-center justify-center border border-border-color text-primary">
+                                                    <span className="material-symbols-outlined text-sm">list</span>
+                                                </div>
+                                                <h2 className="text-white text-base font-semibold">Line Items</h2>
+                                            </div>
+                                            <button className="text-primary text-xs font-medium hover:text-primary-dark flex items-center gap-1" type="button">
+                                                <span className="material-symbols-outlined text-sm">add</span> Add Item
+                                            </button>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="hidden md:grid grid-cols-12 gap-4 px-2 text-xs font-medium text-text-muted uppercase tracking-wide">
+                                                <div className="col-span-5">Description</div>
+                                                <div className="col-span-2 text-right">Qty</div>
+                                                <div className="col-span-2 text-right">Price</div>
+                                                <div className="col-span-2 text-right">Tax %</div>
+                                                <div className="col-span-1"></div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start bg-surface-darker p-3 rounded-lg border border-border-color group">
+                                                <div className="md:col-span-5 space-y-1">
+                                                    <input className="w-full bg-surface-dark border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Item description" type="text" defaultValue="Fleet Maintenance - Oct 2023"/>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <input className="w-full bg-surface-dark border border-border-color rounded px-3 py-2 text-sm text-white text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="1"/>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <div className="relative">
+                                                        <span className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-text-muted text-xs">$</span>
+                                                        <input className="w-full bg-surface-dark border border-border-color rounded pl-6 pr-3 py-2 text-sm text-white text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="1250.00"/>
+                                                    </div>
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <div className="relative">
+                                                        <input className="w-full bg-surface-dark border border-border-color rounded pl-3 pr-6 py-2 text-sm text-white text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="8.5"/>
+                                                        <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-text-muted text-xs">%</span>
+                                                    </div>
+                                                </div>
+                                                <div className="md:col-span-1 flex justify-center pt-2">
+                                                    <button className="text-text-muted hover:text-danger transition-colors" type="button">
+                                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </form>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const InvoiceDetail = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div className="flex flex-col">
+                                    <div className="flex items-center text-xs text-text-muted gap-2 mb-1">
+                                        <Link to="/" className="hover:text-white cursor-pointer">Billing</Link>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white font-medium">INV-2023-08942</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold flex items-center gap-3">
+                                        Invoice #INV-2023-08942
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/30">
+                                            Payment Due
+                                        </span>
+                                    </h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/invoice/edit')} className="px-3 py-2 bg-surface-dark hover:bg-surface-darker text-text-muted hover:text-white border border-border-color text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Invoice
+                                </button>
+                                <button className="px-3 py-2 bg-surface-dark hover:bg-surface-darker text-text-muted hover:text-white border border-border-color text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Download PDF
+                                </button>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">credit_card</span>
+                                    Record Payment
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="text-text-muted text-xs font-medium uppercase">Total Amount</div>
+                                        <span className="material-symbols-outlined text-text-muted/50">attach_money</span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-white">$12,458.00</div>
+                                    <div className="text-[10px] text-text-muted mt-1">USD • Net 30 Terms</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="text-text-muted text-xs font-medium uppercase">Amount Paid</div>
+                                        <span className="material-symbols-outlined text-text-muted/50">payments</span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-success">$4,000.00</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-success h-full" style={{width: '32%'}}></div>
+                                    </div>
+                                    <div className="text-[10px] text-text-muted mt-1">32% Paid</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="text-text-muted text-xs font-medium uppercase">Current Status</div>
+                                        <span className="material-symbols-outlined text-text-muted/50">info</span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-warning">Partial</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Pending remaining balance</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="text-text-muted text-xs font-medium uppercase">Due Date</div>
+                                        <span className="material-symbols-outlined text-text-muted/50">calendar_today</span>
+                                    </div>
+                                    <div className="text-2xl font-bold text-danger">Oct 31, 2023</div>
+                                    <div className="text-[10px] text-danger mt-1">Due in 5 days</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="border-b border-border-color">
+                                        <nav aria-label="Tabs" className="-mb-px flex space-x-6">
+                                            <a className="border-primary text-primary whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+                                                <span className="material-symbols-outlined text-[18px]">description</span>
+                                                Invoice Overview
+                                            </a>
+                                            <a className="border-transparent text-text-muted hover:text-white hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+                                                <span className="material-symbols-outlined text-[18px]">history</span>
+                                                Payment History
+                                                <span className="bg-surface-dark border border-border-color text-xs rounded-full px-2 py-0.5 ml-1">2</span>
+                                            </a>
+                                        </nav>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div className="p-6">
+                                            <div className="grid grid-cols-2 gap-x-8 gap-y-6 mb-8">
+                                                <div>
+                                                    <h3 className="text-xs font-semibold text-text-muted uppercase mb-1">Bill To</h3>
+                                                    <p className="text-white font-medium">Acme Logistics Corp.</p>
+                                                    <p className="text-sm text-text-muted mt-1">
+                                                        1200 Logistics Way, Suite 400<br/>
+                                                        Atlanta, GA 30301<br/>
+                                                        United States
+                                                    </p>
+                                                    <p className="text-sm text-primary mt-2">billing@acmelogistics.com</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <h3 className="text-xs font-semibold text-text-muted uppercase mb-1">Invoice Details</h3>
+                                                    <div className="flex justify-end gap-4 mt-2">
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-text-muted">Issue Date</p>
+                                                            <p className="text-sm text-white font-medium">Oct 01, 2023</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-text-muted">Billing Period</p>
+                                                            <p className="text-sm text-white font-medium">Sep 01 - Sep 30</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <h3 className="text-sm font-semibold text-white mb-4">Line Items</h3>
+                                            <div className="overflow-x-auto rounded-lg border border-border-color mb-6">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-surface-darker/50 text-xs text-text-muted uppercase tracking-wider border-b border-border-color">
+                                                            <th className="px-4 py-3 font-semibold">Description</th>
+                                                            <th className="px-4 py-3 font-semibold text-right">Qty</th>
+                                                            <th className="px-4 py-3 font-semibold text-right">Rate</th>
+                                                            <th className="px-4 py-3 font-semibold text-right">Amount</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="text-sm">
+                                                        <tr className="border-b border-border-color hover:bg-surface-darker/20">
+                                                            <td className="px-4 py-3">
+                                                                <div className="text-white font-medium">Fleet SaaS Subscription - Enterprise</div>
+                                                                <div className="text-xs text-text-muted">Monthly access for up to 500 vehicles</div>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-text-muted">1</td>
+                                                            <td className="px-4 py-3 text-right text-text-muted">$8,500.00</td>
+                                                            <td className="px-4 py-3 text-right text-white font-medium">$8,500.00</td>
+                                                        </tr>
+                                                        <tr className="border-b border-border-color hover:bg-surface-darker/20">
+                                                            <td className="px-4 py-3">
+                                                                <div className="text-white font-medium">GPS Telematics Module</div>
+                                                                <div className="text-xs text-text-muted">Real-time tracking add-on per vehicle</div>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right text-text-muted">450</td>
+                                                            <td className="px-4 py-3 text-right text-text-muted">$5.00</td>
+                                                            <td className="px-4 py-3 text-right text-white font-medium">$2,250.00</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div className="flex justify-end">
+                                                <div className="w-64 space-y-2">
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-text-muted">Subtotal</span>
+                                                        <span className="text-white font-medium">$12,458.00</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-text-muted">Tax (0%)</span>
+                                                        <span className="text-white font-medium">$0.00</span>
+                                                    </div>
+                                                    <div className="border-t border-border-color my-2"></div>
+                                                    <div className="flex justify-between text-base">
+                                                        <span className="text-white font-bold">Total Due</span>
+                                                        <span className="text-white font-bold">$12,458.00</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-xl">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">business</span>
+                                                Organization Context
+                                            </h3>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded bg-primary/20 text-primary flex items-center justify-center font-bold text-sm border border-primary/30">
+                                                    AL
+                                                </div>
+                                                <div>
+                                                    <div className="text-white font-medium text-sm">Acme Logistics Corp.</div>
+                                                    <div className="text-xs text-text-muted">Enterprise Tier</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const EditInvoice = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center text-xs text-text-muted mb-1">
+                                    <Link to="/" className="hover:text-white transition-colors">Billing</Link>
+                                    <span className="mx-2">/</span>
+                                    <Link to="/" className="hover:text-white transition-colors">Invoices</Link>
+                                    <span className="mx-2">/</span>
+                                    <span className="text-primary font-medium">INV-2023-001</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">Edit Invoice</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/invoice/detail')} className="px-4 py-2 bg-surface-dark hover:bg-border-color border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/invoice/detail')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Update Invoice
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                            Invoice Details
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
+                                            Status: Pending Payment
+                                        </span>
+                                    </div>
+                                    <div className="p-6">
+                                        <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="col-span-1">
+                                                <label className="block text-xs font-medium text-text-muted mb-1.5">Invoice Number <span className="text-danger">*</span></label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span className="material-symbols-outlined text-text-muted text-[16px]">tag</span>
+                                                    </div>
+                                                    <input className="bg-surface-darker border border-border-color text-sm text-text-muted rounded-lg block w-full pl-9 p-2.5 cursor-not-allowed focus:ring-0 focus:border-border-color" readOnly type="text" value="INV-2023-001"/>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-1">
+                                                <label className="block text-xs font-medium text-text-muted mb-1.5">Customer / Account <span className="text-danger">*</span></label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span className="material-symbols-outlined text-text-muted text-[16px]">business</span>
+                                                    </div>
+                                                    <select className="bg-surface-darker border border-border-color text-sm text-white rounded-lg block w-full pl-9 p-2.5 focus:ring-1 focus:ring-primary focus:border-primary appearance-none">
+                                                        <option selected>Acme Logistics Corp.</option>
+                                                        <option>Global Shipping Inc.</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            {/* ... more fields ... */}
+                                        </form>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-text-muted text-[18px]">list</span>
+                                            Line Items
+                                        </h3>
+                                        <button className="text-primary text-xs hover:text-primary-light flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[14px]">add</span>
+                                            Add Item
+                                        </button>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                    <th className="px-4 py-3 font-semibold w-12">#</th>
+                                                    <th className="px-4 py-3 font-semibold">Service / Product</th>
+                                                    <th className="px-4 py-3 font-semibold w-24 text-right">Qty</th>
+                                                    <th className="px-4 py-3 font-semibold w-32 text-right">Unit Price</th>
+                                                    <th className="px-4 py-3 font-semibold w-32 text-right">Total</th>
+                                                    <th className="px-4 py-3 font-semibold w-12"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                <tr className="border-b border-border-color group hover:bg-surface-darker/30 transition-colors">
+                                                    <td className="px-4 py-3 text-text-muted text-xs">1</td>
+                                                    <td className="px-4 py-3">
+                                                        <input className="bg-transparent border-0 text-white w-full p-0 focus:ring-0 placeholder-text-muted/50 text-sm" type="text" defaultValue="Standard Fleet Maintenance - Heavy Duty"/>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <input className="bg-surface-darker border border-border-color rounded px-2 py-1 text-white w-16 text-right text-xs focus:ring-1 focus:ring-primary focus:border-primary" type="number" defaultValue="3"/>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <input className="bg-surface-darker border border-border-color rounded px-2 py-1 text-white w-24 text-right text-xs focus:ring-1 focus:ring-primary focus:border-primary" type="number" defaultValue="1200.00"/>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right text-white font-medium">$3,600.00</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button className="text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const Settings = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <span>Billing</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white">Settings</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Billing Configuration</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                    <span className="text-xs text-text-muted font-medium">Auto-Invoicing</span>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input defaultChecked className="sr-only peer" type="checkbox" />
+                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                    </label>
+                                </div>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-12 gap-6 mb-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">account_balance</span>
+                                                Tax Configuration
+                                            </h3>
+                                            <span className="text-[10px] bg-surface-darker text-text-muted px-2 py-1 rounded border border-border-color">Global Policy ID: #TAX-2023-Q4</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-surface-darker rounded border border-border-color">
+                                                <label className="block text-xs font-medium text-text-muted mb-1.5">Default Tax Rate (%)</label>
+                                                <div className="relative">
+                                                    <input className="w-full bg-surface-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="20.00"/>
+                                                    <span className="absolute right-3 top-2 text-text-muted text-xs">%</span>
+                                                </div>
+                                                <p className="text-[10px] text-text-muted mt-2">Applied to all standard service items unless overridden.</p>
+                                            </div>
+                                            <div className="p-4 bg-surface-darker rounded border border-border-color">
+                                                <label className="block text-xs font-medium text-text-muted mb-1.5">Tax Region</label>
+                                                <select className="w-full bg-surface-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                    <option selected>European Union (VAT)</option>
+                                                    <option>North America (Sales Tax)</option>
+                                                </select>
+                                                <p className="text-[10px] text-text-muted mt-2">Determines the calculation logic for tax line items.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                            <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">currency_exchange</span>
+                                                Default Currency
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Base Currency</label>
+                                                    <select className="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                        <option selected>USD - US Dollar</option>
+                                                        <option>EUR - Euro</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                            <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-warning text-[18px]">schedule</span>
+                                                Late Payment Rules
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Grace Period (Days)</label>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="14"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                                Invoice Template Settings
+                                            </h3>
+                                            <button className="text-primary text-xs hover:underline">Preview</button>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="aspect-[210/297] bg-white rounded border border-border-color p-4 relative overflow-hidden group cursor-pointer hover:border-primary transition-colors">
+                                                <div className="absolute inset-0 bg-surface-darker/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <span className="bg-surface-dark text-white text-xs px-3 py-1.5 rounded-full border border-border-color shadow-lg">Edit Layout</span>
+                                                </div>
+                                                <div className="flex justify-between mb-4">
+                                                    <div className="w-16 h-8 bg-gray-200 rounded"></div>
+                                                </div>
+                                                <div className="space-y-2 mb-4">
+                                                    <div className="w-32 h-2 bg-gray-100 rounded"></div>
+                                                </div>
+                                                <div className="w-full h-24 bg-gray-50 rounded mb-2 border border-dashed border-gray-200"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Component with Routing ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<InvoiceList />} />
+                        <Route path="/invoice/new" element={<AddInvoice />} />
+                        <Route path="/invoice/detail" element={<InvoiceDetail />} />
+                        <Route path="/invoice/edit" element={<EditInvoice />} />
+                        <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

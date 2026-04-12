@@ -105,6 +105,7 @@ func (h *TripHandler) RegisterRoutes(r chi.Router) {
 	r.Get("/stats", h.GetStats)
 	r.Get("/stats/drivers", h.GetDriverStats)
 	r.Get("/stats/trips", h.GetTripStats)
+	r.Get("/customers", h.GetTripCustomers)
 
 	// Offer Routes
 	r.Get("/offers", h.GetDriverOffers)
@@ -204,14 +205,16 @@ func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	filter := models.TripListFilter{
-		OrgID:     orgID,
-		Status:    query.Get("status"),
-		VehicleID: query.Get("vehicle_id"),
-		DriverID:  query.Get("driver_id"),
-		From:      query.Get("from"),
-		To:        query.Get("to"),
-		OrderBy:   query.Get("order_by"),
-		OrderDir:  query.Get("order_dir"),
+		OrgID:        orgID,
+		Status:       query.Get("status"),
+		TripType:     query.Get("trip_type"),
+		VehicleID:    query.Get("vehicle_id"),
+		DriverID:     query.Get("driver_id"),
+		CustomerName: query.Get("customer_name"),
+		From:         query.Get("from"),
+		To:           query.Get("to"),
+		OrderBy:      query.Get("order_by"),
+		OrderDir:     query.Get("order_dir"),
 	}
 
 	if pageStr := query.Get("page"); pageStr != "" {
@@ -648,6 +651,24 @@ func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writeJSONResponse(w, http.StatusOK, stats)
+}
+
+// GetTripCustomers returns distinct customer names for filter dropdown
+func (h *TripHandler) GetTripCustomers(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == "" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
+		return
+	}
+
+	customers, err := h.service.GetTripCustomers(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("failed to get trip customers", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"customers": customers})
 }
 
 // GetStats godoc

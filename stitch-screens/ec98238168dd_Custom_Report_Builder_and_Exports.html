@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Custom Report Builder - Admin Portal</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101922",
+              "surface-dark": "#1a2632",
+              "surface-light": "#233648",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for sidebar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #324d67; 
+        }
+        
+        /* Drag placeholder pattern */
+        .drag-pattern {
+            background-image: radial-gradient(#324d67 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Left Sidebar (Navigation) -->
+<div class="w-64 flex-shrink-0 border-r border-[#233648] bg-[#111a22] flex flex-col justify-between p-4 hidden md:flex">
+<div class="flex flex-col gap-6">
+<!-- User Profile / App Header -->
+<div class="flex gap-3 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-[#233648]" data-alt="Abstract gradient avatar representing user profile" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAtZbF_TaTIClN7jdFthAZsQm6W0doMqGRQQSk2na9ZyWhrme3bXwMiH9Sc4pVPu0a8AXZscVfYpYSm_HqS_TLRO6FrIox3kqmFsCy7IwIURkGemz_JMSzBt2FUhK6bABGjsfp8L7nvzuxt5zpCzhlmU1cbaBgw63GMNi6V0cmC1cQNXx8w0lJ59w7474S6rThSO71vMNSxO6ha5Qp77m_HWi903FF9XSGxWpV8K7KiKAG07PUjD8giKExbtV0WLmGbf_c9qJoyYzQ");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-medium leading-normal">Admin Portal</h1>
+<p class="text-[#92adc9] text-xs font-normal leading-normal">Fleet Management</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+<p class="text-sm font-medium leading-normal">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">map</span>
+<p class="text-sm font-medium leading-normal">Fleet Map</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/20 text-primary border border-primary/20" href="#">
+<span class="material-symbols-outlined text-[24px] fill-1">description</span>
+<p class="text-sm font-medium leading-normal">Reports</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">group</span>
+<p class="text-sm font-medium leading-normal">Drivers</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+<p class="text-sm font-medium leading-normal">Settings</p>
+</a>
+</div>
+</div>
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal hover:bg-blue-600 transition-colors">
+<span class="material-symbols-outlined mr-2 text-[20px]">add</span>
+<span class="truncate">New Report</span>
+</button>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- Header & Top Actions -->
+<header class="flex-shrink-0 border-b border-[#233648] bg-[#111a22] px-6 py-4">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2 mb-4 items-center">
+<a class="text-[#92adc9] text-sm font-medium hover:text-white" href="#">Reports</a>
+<span class="text-[#92adc9] text-sm font-medium">/</span>
+<a class="text-[#92adc9] text-sm font-medium hover:text-white" href="#">Custom Builder</a>
+<span class="text-[#92adc9] text-sm font-medium">/</span>
+<span class="text-white text-sm font-medium">New Report</span>
+</div>
+<!-- Page Title & Actions -->
+<div class="flex flex-wrap justify-between items-end gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<h2 class="text-white text-2xl font-bold leading-tight">Custom Report Builder</h2>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 uppercase tracking-wide">Draft</span>
+</div>
+<p class="text-[#92adc9] text-sm font-normal">Design your analytics view by dragging fields onto the canvas.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-[#233648] hover:bg-[#324d67] text-white text-sm font-medium transition-colors border border-[#324d67]">
+<span class="material-symbols-outlined mr-2 text-[18px]">save</span>
+                        Save Template
+                    </button>
+<!-- Export Button triggers modal (conceptually) -->
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-primary hover:bg-blue-600 text-white text-sm font-medium transition-colors shadow-lg shadow-blue-900/20">
+<span class="material-symbols-outlined mr-2 text-[18px]">download</span>
+                        Export Data
+                    </button>
+</div>
+</div>
+</header>
+<!-- Builder Interface -->
+<div class="flex flex-1 overflow-hidden">
+<!-- LEFT PANEL: Data Palette -->
+<aside class="w-80 flex flex-col border-r border-[#233648] bg-surface-dark custom-scrollbar overflow-y-auto z-10">
+<div class="p-4 border-b border-[#233648]">
+<h3 class="text-white font-medium mb-3">Data Fields</h3>
+<!-- Search Bar -->
+<div class="flex w-full items-center rounded-lg bg-[#233648] border border-[#324d67] h-10 px-3 focus-within:border-primary transition-colors">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">search</span>
+<input class="w-full bg-transparent border-none text-white text-sm ml-2 placeholder-[#92adc9] focus:ring-0 p-0" placeholder="Search metrics..."/>
+</div>
+</div>
+<!-- Draggable Groups -->
+<div class="p-4 flex flex-col gap-6">
+<!-- Group 1 -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between text-[#92adc9] text-xs font-bold uppercase tracking-wider">
+<span>Vehicle Performance</span>
+<span class="material-symbols-outlined text-[16px]">expand_less</span>
+</div>
+<div class="grid grid-cols-1 gap-2">
+<div class="group flex items-center gap-3 p-3 rounded bg-[#233648] hover:bg-[#324d67] border border-[#324d67] cursor-grab active:cursor-grabbing transition-all hover:border-primary/50">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">drag_indicator</span>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Fuel Consumption</span>
+<span class="text-[#92adc9] text-[10px]">Liters / 100km</span>
+</div>
+<span class="ml-auto material-symbols-outlined text-primary text-[20px]">local_gas_station</span>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded bg-[#233648] hover:bg-[#324d67] border border-[#324d67] cursor-grab active:cursor-grabbing transition-all hover:border-primary/50">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">drag_indicator</span>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Idle Time</span>
+<span class="text-[#92adc9] text-[10px]">Total Hours</span>
+</div>
+<span class="ml-auto material-symbols-outlined text-primary text-[20px]">timer</span>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded bg-[#233648] hover:bg-[#324d67] border border-[#324d67] cursor-grab active:cursor-grabbing transition-all hover:border-primary/50">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">drag_indicator</span>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Odometer</span>
+<span class="text-[#92adc9] text-[10px]">Total Distance (km)</span>
+</div>
+<span class="ml-auto material-symbols-outlined text-primary text-[20px]">speed</span>
+</div>
+</div>
+</div>
+<!-- Group 2 -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between text-[#92adc9] text-xs font-bold uppercase tracking-wider">
+<span>Trip Data</span>
+<span class="material-symbols-outlined text-[16px]">expand_less</span>
+</div>
+<div class="grid grid-cols-1 gap-2">
+<div class="group flex items-center gap-3 p-3 rounded bg-[#233648] hover:bg-[#324d67] border border-[#324d67] cursor-grab active:cursor-grabbing transition-all hover:border-primary/50">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">drag_indicator</span>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Driver Score</span>
+<span class="text-[#92adc9] text-[10px]">Safety Rating</span>
+</div>
+<span class="ml-auto material-symbols-outlined text-green-400 text-[20px]">verified</span>
+</div>
+<div class="group flex items-center gap-3 p-3 rounded bg-[#233648] hover:bg-[#324d67] border border-[#324d67] cursor-grab active:cursor-grabbing transition-all hover:border-primary/50">
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">drag_indicator</span>
+<div class="flex flex-col">
+<span class="text-white text-sm font-medium">Harsh Braking</span>
+<span class="text-[#92adc9] text-[10px]">Event Count</span>
+</div>
+<span class="ml-auto material-symbols-outlined text-red-400 text-[20px]">warning</span>
+</div>
+</div>
+</div>
+<!-- Group 3 -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between text-[#92adc9] text-xs font-bold uppercase tracking-wider">
+<span>Cost Analysis</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- RIGHT PANEL: Canvas -->
+<main class="flex-1 bg-[#0f151b] overflow-y-auto custom-scrollbar p-6">
+<!-- Canvas Config Bar -->
+<div class="flex flex-col md:flex-row gap-4 mb-6 items-end">
+<div class="flex flex-col flex-1 gap-2 min-w-[200px]">
+<label class="text-[#92adc9] text-xs font-medium uppercase">Report Title</label>
+<input class="w-full bg-[#111a22] border border-[#324d67] rounded-lg h-10 px-3 text-white text-sm focus:border-primary focus:ring-0" type="text" value="Q3 Fleet Efficiency Analysis"/>
+</div>
+<div class="flex flex-col flex-1 gap-2 min-w-[200px]">
+<label class="text-[#92adc9] text-xs font-medium uppercase">Date Range</label>
+<div class="relative">
+<input class="w-full bg-[#111a22] border border-[#324d67] rounded-lg h-10 pl-3 pr-10 text-white text-sm focus:border-primary focus:ring-0" type="text" value="Oct 1, 2023 - Dec 31, 2023"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-[#92adc9] text-[20px]">calendar_today</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-[#92adc9] text-xs font-medium uppercase">Visualization</label>
+<div class="flex bg-[#111a22] p-1 rounded-lg border border-[#324d67]">
+<button class="size-8 flex items-center justify-center rounded bg-[#233648] text-white shadow-sm">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">show_chart</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">pie_chart</span>
+</button>
+<button class="size-8 flex items-center justify-center rounded text-[#92adc9] hover:bg-[#233648] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">table_chart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Visualization Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
+<!-- Chart Card 1: Line Chart -->
+<div class="col-span-1 lg:col-span-2 bg-[#1a2632] border border-[#233648] rounded-xl p-5 shadow-lg relative group">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-white text-lg font-semibold">Fuel Usage Trend</h3>
+<p class="text-[#92adc9] text-xs">Comparison vs. Previous Period</p>
+</div>
+<div class="flex gap-2">
+<button class="p-1.5 rounded-md hover:bg-[#233648] text-[#92adc9] hover:text-white">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+<button class="p-1.5 rounded-md hover:bg-[#233648] text-[#92adc9] hover:text-red-400">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Simulated Chart Visual -->
+<div class="h-64 w-full flex items-end gap-2 px-4 relative">
+<!-- Background Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between px-4 pb-0 pointer-events-none">
+<div class="w-full h-px bg-[#324d67]/30"></div>
+<div class="w-full h-px bg-[#324d67]/30"></div>
+<div class="w-full h-px bg-[#324d67]/30"></div>
+<div class="w-full h-px bg-[#324d67]/30"></div>
+<div class="w-full h-px bg-[#324d67]/30"></div>
+</div>
+<!-- Chart Data Points (Simulated Line/Area) -->
+<div class="w-full h-full absolute inset-0 pt-6 px-4">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 100 50">
+<!-- Gradient Area -->
+<defs>
+<lineargradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#137fec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#137fec" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,40 Q10,35 20,20 T40,25 T60,10 T80,30 T100,20 V50 H0 Z" fill="url(#chartGradient)"></path>
+<!-- Line -->
+<path d="M0,40 Q10,35 20,20 T40,25 T60,10 T80,30 T100,20" fill="none" stroke="#137fec" stroke-linecap="round" stroke-width="0.8"></path>
+<!-- Dashed Compare Line -->
+<path d="M0,45 Q10,40 20,30 T40,35 T60,25 T80,40 T100,35" fill="none" stroke="#92adc9" stroke-dasharray="2,2" stroke-opacity="0.5" stroke-width="0.5"></path>
+</svg>
+</div>
+</div>
+<div class="flex justify-between text-[#92adc9] text-[10px] mt-2 px-4">
+<span>Oct 1</span>
+<span>Oct 15</span>
+<span>Nov 1</span>
+<span>Nov 15</span>
+<span>Dec 1</span>
+<span>Dec 31</span>
+</div>
+</div>
+<!-- Chart Card 2: Top Drivers (Bar) -->
+<div class="col-span-1 bg-[#1a2632] border border-[#233648] rounded-xl p-5 shadow-lg relative">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-white text-lg font-semibold">Top Idling Drivers</h3>
+<p class="text-[#92adc9] text-xs">Total hours &gt; 0km/h</p>
+</div>
+<button class="p-1.5 rounded-md hover:bg-[#233648] text-[#92adc9]">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Bar Item -->
+<div class="flex items-center gap-3">
+<span class="text-[#92adc9] text-xs w-24 truncate">J. Doe</span>
+<div class="flex-1 h-3 bg-[#233648] rounded-full overflow-hidden">
+<div class="h-full bg-red-500 rounded-full" style="width: 85%"></div>
+</div>
+<span class="text-white text-xs font-bold w-8 text-right">12h</span>
+</div>
+<!-- Bar Item -->
+<div class="flex items-center gap-3">
+<span class="text-[#92adc9] text-xs w-24 truncate">M. Smith</span>
+<div class="flex-1 h-3 bg-[#233648] rounded-full overflow-hidden">
+<div class="h-full bg-orange-400 rounded-full" style="width: 65%"></div>
+</div>
+<span class="text-white text-xs font-bold w-8 text-right">8.5h</span>
+</div>
+<!-- Bar Item -->
+<div class="flex items-center gap-3">
+<span class="text-[#92adc9] text-xs w-24 truncate">A. Johnson</span>
+<div class="flex-1 h-3 bg-[#233648] rounded-full overflow-hidden">
+<div class="h-full bg-yellow-400 rounded-full" style="width: 45%"></div>
+</div>
+<span class="text-white text-xs font-bold w-8 text-right">6h</span>
+</div>
+<!-- Bar Item -->
+<div class="flex items-center gap-3">
+<span class="text-[#92adc9] text-xs w-24 truncate">B. Wayne</span>
+<div class="flex-1 h-3 bg-[#233648] rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 30%"></div>
+</div>
+<span class="text-white text-xs font-bold w-8 text-right">4h</span>
+</div>
+</div>
+</div>
+<!-- Drop Zone / Empty State -->
+<div class="col-span-1 h-full min-h-[250px] rounded-xl border-2 border-dashed border-[#324d67] bg-[#111a22]/50 flex flex-col items-center justify-center gap-3 hover:border-primary/50 hover:bg-[#233648]/20 transition-all cursor-pointer drag-pattern">
+<div class="size-12 rounded-full bg-[#233648] flex items-center justify-center text-[#92adc9]">
+<span class="material-symbols-outlined text-[24px]">add_chart</span>
+</div>
+<div class="text-center">
+<p class="text-white text-sm font-medium">Add Visualization</p>
+<p class="text-[#92adc9] text-xs">Drag data fields here</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Export Modal (Overlay Simulation) -->
+<!-- This section is absolutely positioned to simulate the requested modal functionality without JS toggling -->
+<div class="absolute bottom-6 right-6 z-50 bg-[#1a2632] border border-[#324d67] rounded-xl shadow-2xl w-80 p-0 overflow-hidden flex flex-col animate-bounce-in">
+<div class="bg-[#233648] px-4 py-3 flex justify-between items-center border-b border-[#324d67]">
+<h4 class="text-white text-sm font-bold">Export Report</h4>
+<button class="text-[#92adc9] hover:text-white">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<div class="p-4 flex flex-col gap-3">
+<p class="text-[#92adc9] text-xs mb-1">Select format for "Q3 Efficiency":</p>
+<button class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#233648] group transition-colors border border-transparent hover:border-[#324d67]">
+<div class="size-8 rounded bg-red-500/10 text-red-500 flex items-center justify-center border border-red-500/20 group-hover:bg-red-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">PDF Document</span>
+<span class="text-[#92adc9] text-[10px]">Best for presentation</span>
+</div>
+</button>
+<button class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#233648] group transition-colors border border-transparent hover:border-[#324d67]">
+<div class="size-8 rounded bg-green-500/10 text-green-500 flex items-center justify-center border border-green-500/20 group-hover:bg-green-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">table_view</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">Excel (XLSX)</span>
+<span class="text-[#92adc9] text-[10px]">Includes raw data</span>
+</div>
+</button>
+<button class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#233648] group transition-colors border border-transparent hover:border-[#324d67]">
+<div class="size-8 rounded bg-blue-500/10 text-blue-500 flex items-center justify-center border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">code</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="text-white text-sm font-medium">CSV</span>
+<span class="text-[#92adc9] text-[10px]">Comma separated values</span>
+</div>
+</button>
+</div>
+<div class="bg-[#111a22] p-3 border-t border-[#324d67] flex justify-end">
+<button class="text-white text-xs font-bold bg-primary hover:bg-blue-600 px-4 py-2 rounded-lg transition-colors">
+                    Download
+                </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

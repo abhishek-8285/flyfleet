@@ -27,8 +27,8 @@ const securityHeadersPlugin = () => ({
       "font-src 'self' https://fonts.gstatic.com",
       // Images and media (includes tile servers)
       "img-src 'self' data: https: http://localhost:3000",
-      // Connections (API, WebSocket, analytics)
-      "connect-src 'self' http://localhost:8084 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com",
+      // Connections (API, WebSocket, analytics, geocoding, IP geolocation)
+      "connect-src 'self' http://localhost:8084 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com",
     ].join('; ');
 
     const tags = [

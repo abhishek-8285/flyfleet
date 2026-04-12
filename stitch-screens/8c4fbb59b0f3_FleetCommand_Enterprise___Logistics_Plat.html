@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetCommand Enterprise - Logistics Platform</title>
+
+    <!-- Essential Scripts & Styles -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f65bd",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#192633",
+                        "border-dark": "#233648",
+                        "text-secondary": "#92adc9",
+                        "error": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.375rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(19, 127, 236, 0.15) 0%, rgba(19, 127, 236, 0) 70%);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 0; pointer-events: none;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .mobile-frame {
+            border: 8px solid #233648;
+            border-radius: 32px;
+            background: #192633;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .toggle-checkbox:checked { right: 0; border-color: #137fec; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #137fec; }
+        summary::-webkit-details-marker { display:none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate } = ReactRouterDOM;
+
+        // --- Mock Data Constants ---
+        const PRODUCT_NAME = "FleetCommand";
+        const COMPANY_NAME = "Enterprise Haulage";
+        const PHONE_NUMBER = "800-555-0123";
+        const CLIENT_NAME = "LogisticPro";
+
+        // --- Layout Wrapper ---
+        const PageLayout = ({ children, hideNav = false }) => {
+            return (
+                <div class="min-h-screen transition-colors duration-200">
+                    {children}
+                </div>
+            );
+        };
+
+        // --- Screen 4: Landing Page ---
+        const LandingPage = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="relative">
+                    {/* Top Bar */}
+                    <div className="fixed top-0 w-full z-[60] bg-[#0f65bd] text-white text-sm font-medium h-10 flex items-center justify-center shadow-md">
+                        <div className="max-w-[1440px] w-full px-4 md:px-10 flex justify-between items-center">
+                            <div className="flex items-center gap-2 text-xs md:text-sm opacity-90">
+                                <span className="material-symbols-outlined !text-lg">verified_user</span>
+                                <span className="hidden sm:inline">Enterprise-grade security compliant (SOC2, ISO 27001)</span>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <a className="flex items-center gap-2 hover:text-white text-blue-100 transition-colors font-bold" href={`tel:+1${PHONE_NUMBER}`}>
+                                    <span className="material-symbols-outlined !text-lg">call</span>
+                                    Talk to Sales: +1 {PHONE_NUMBER}
+                                </a>
+                                <div className="h-4 w-px bg-white/20 hidden md:block"></div>
+                                <div className="hidden md:flex items-center gap-1 cursor-pointer hover:text-white text-blue-100 group relative">
+                                    <span className="material-symbols-outlined !text-lg">language</span>
+                                    <span className="text-xs font-bold">US (EN)</span>
+                                    <span className="material-symbols-outlined !text-sm">expand_more</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <header className="fixed top-10 z-50 w-full border-b border-slate-200 dark:border-border-dark bg-white/80 dark:bg-[#111a22]/80 backdrop-blur-md">
+                        <div className="px-4 md:px-10 flex h-16 items-center justify-between max-w-[1440px] mx-auto">
+                            <div className="flex items-center gap-4 text-slate-900 dark:text-white">
+                                <span className="material-symbols-outlined !text-3xl text-primary">local_shipping</span>
+                                <h2 className="text-lg font-bold leading-tight tracking-tight">{PRODUCT_NAME}</h2>
+                            </div>
+                            <nav className="hidden md:flex flex-1 justify-center gap-8">
+                                <a className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Success Stories</a>
+                                <a className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Platform</a>
+                                <a className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Apps</a>
+                                <a className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Pricing</a>
+                                <a className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Security</a>
+                            </nav>
+                            <div className="flex gap-4 items-center">
+                                <Link to="/login" className="hidden sm:flex h-9 items-center justify-center rounded-lg px-4 border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white text-sm font-bold hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors">
+                                    Login
+                                </Link>
+                                <button onClick={() => navigate('/login')} className="flex h-9 items-center justify-center rounded-lg px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold transition-colors shadow-lg shadow-primary/25">
+                                    Start Free Trial
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="pt-26">
+                        <section className="relative w-full py-24 mt-10 text-center">
+                            <div className="glow-effect"></div>
+                            <div className="max-w-[1280px] mx-auto px-4 relative z-10">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs font-bold uppercase mb-6">
+                                    Enterprise Grade Security & Reliability
+                                </div>
+                                <h1 className="text-4xl md:text-7xl font-black mb-6 text-slate-900 dark:text-white">
+                                    The Trust Standard for <br/>
+                                    <span className="text-primary">Enterprise Fleets</span>
+                                </h1>
+                                <p className="text-slate-600 dark:text-text-secondary text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                                    Secure, scalable, and compliant fleet management for logistics leaders. Reduce costs and mitigate risk with 99.9% uptime SLA.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+                                    <button className="h-12 px-8 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2">
+                                        Request Demo <span className="material-symbols-outlined">arrow_forward</span>
+                                    </button>
+                                    <button className="h-12 px-8 rounded-lg border border-slate-300 dark:border-border-dark bg-white dark:bg-surface-dark hover:bg-slate-50 text-slate-900 dark:text-white font-bold flex items-center justify-center gap-2 group">
+                                        <span className="material-symbols-outlined text-primary">play_circle</span> Watch Product Tour
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                        {/* Footer and other sections could follow... keeping it concise to match navigation flow */}
+                    </main>
+                    <footer className="p-10 text-center text-slate-400 text-sm">
+                        © 2024 {COMPANY_NAME}. All rights reserved.
+                    </footer>
+                </div>
+            );
+        };
+
+        // --- Screen 6: Admin Login ---
+        const LoginPage = () => {
+            const navigate = useNavigate();
+            const [email, setEmail] = useState("");
+            const [isError, setIsError] = useState(false);
+
+            const handleSignIn = () => {
+                if (email.includes("@")) {
+                    navigate('/mfa');
+                } else {
+                    setIsError(true);
+                }
+            };
+
+            return (
+                <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-[480px]">
+                        <div className="mb-8 flex justify-center">
+                            <div className="h-16 w-16 bg-primary/10 rounded-xl flex items-center justify-center">
+                                <span className="material-symbols-outlined text-primary text-4xl">local_shipping</span>
+                            </div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-slate-100 dark:border-gray-800 overflow-hidden">
+                            <div className="p-8 sm:p-10">
+                                <div className="text-center mb-8">
+                                    <h2 className="text-slate-900 dark:text-white text-2xl font-bold mb-2">Sign in to {PRODUCT_NAME}</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm">Enter your credentials to access the fleet dashboard.</p>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Email Address</label>
+                                        <input 
+                                            className={`h-12 rounded-lg bg-slate-50 dark:bg-gray-800 border ${isError ? 'border-red-500' : 'border-slate-200 dark:border-gray-700'} px-4 focus:ring-2 focus:ring-primary/20 outline-none`}
+                                            placeholder="name@company.com" 
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                        />
+                                        {isError && <p className="text-red-500 text-xs mt-1">Please enter a valid email address.</p>}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex justify-between items-center">
+                                            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Password</label>
+                                            <a className="text-xs text-primary font-bold" href="#">Forgot password?</a>
+                                        </div>
+                                        <input className="h-12 rounded-lg bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 px-4 focus:ring-2 focus:ring-primary/20 outline-none" type="password" placeholder="••••••••" />
+                                    </div>
+                                    <button onClick={handleSignIn} className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg shadow-sm transition-all">
+                                        Sign In
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-gray-800/50 p-4 text-center border-t dark:border-gray-800">
+                                <p className="text-xs text-slate-500">Need help? <a className="text-primary hover:underline" href="#">Contact Support</a></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 1/3/5: MFA Verification ---
+        const MFAPage = () => {
+            const navigate = useNavigate();
+            const [code, setCode] = useState(["4", "9", "", "", "", ""]);
+            const [loading, setLoading] = useState(false);
+
+            const handleVerify = () => {
+                setLoading(true);
+                setTimeout(() => {
+                    navigate('/org-select');
+                }, 1500);
+            };
+
+            return (
+                <div className="flex h-screen w-full flex-row">
+                    <div className="hidden lg:flex lg:w-5/12 bg-slate-900 relative flex-col justify-between p-12 text-white shrink-0">
+                        <div className="absolute inset-0">
+                            <img className="h-full w-full object-cover opacity-40 mix-blend-overlay" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2aPcpw8W8c3s3eaQfCYN4U_of9XoWYKr2kXvn6NgF9RZUYg9fwpGGwEoV8EPQ5lKGgF3vbPT_HFbtf903pr6o2_ijTKJZnQnnX0X_yxDj8sPbR7kuBxZYJszUM3GO8IM7vF-snZZGdHXzf1IarUEDwBimwj_2wHIBIXfihQBimTBouR4BllIw7kxuxG27npeceWsLVNgCZS2Lkk2ABL9xWmSeJfKBBgd2C63wSngKX75WWNWP32ESoWwkjoOdSheugEfWYWQcV3k" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40"></div>
+                        </div>
+                        <div className="relative z-10 flex items-center gap-3">
+                            <span className="material-symbols-outlined text-white text-3xl">local_shipping</span>
+                            <span className="text-2xl font-bold tracking-tight">{PRODUCT_NAME}</span>
+                        </div>
+                        <div className="relative z-10 max-w-md">
+                            <h2 className="text-3xl font-bold mb-4">Orchestrate your entire logistics network.</h2>
+                            <p className="text-slate-300 text-lg leading-relaxed mb-8">Gain real-time visibility, optimize delivery routes, and manage driver compliance.</p>
+                        </div>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center bg-white dark:bg-background-dark">
+                        <div className="w-full max-w-[480px] px-6 py-12 text-center">
+                            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20 mb-6 border border-blue-100 dark:border-blue-800">
+                                <span className="material-symbols-outlined text-primary text-3xl">lock_person</span>
+                            </div>
+                            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Two-Factor Authentication</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">Enter the 6-digit code from your <strong>Authenticator App</strong>.</p>
+                            
+                            <div className="flex justify-between gap-3 mb-6">
+                                {code.map((digit, idx) => (
+                                    <input 
+                                        key={idx} 
+                                        className="h-14 w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-center text-2xl font-bold text-slate-900 dark:text-white focus:border-primary outline-none"
+                                        maxLength="1"
+                                        value={digit}
+                                        autoFocus={idx === 2}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-8 justify-center">
+                                <input id="trust" type="checkbox" className="rounded text-primary focus:ring-primary h-4 w-4" />
+                                <label htmlFor="trust" className="text-sm font-medium text-slate-600 dark:text-slate-300">Trust this device for 30 days</label>
+                            </div>
+
+                            <button onClick={handleVerify} disabled={loading} className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg flex items-center justify-center gap-2">
+                                {loading && <span className="material-symbols-outlined animate-spin">progress_activity</span>}
+                                {loading ? 'Verifying...' : 'Verify Code'}
+                            </button>
+
+                            <div className="mt-6 flex justify-between px-2 text-sm">
+                                <button className="text-slate-500 font-medium">Cancel</button>
+                                <span className="text-slate-400">Resend code in 00:24</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 2/8: Org Selection ---
+        const OrgSelectPage = () => {
+            const navigate = useNavigate();
+            const [selected, setSelected] = useState(1);
+            const [loading, setLoading] = useState(false);
+
+            const handleEnterDashboard = () => {
+                setLoading(true);
+                setTimeout(() => navigate('/'), 2000);
+            };
+
+            const organizations = [
+                { id: 1, name: "Acme Logistics Corp", role: "Fleet Manager", lastUsed: true, icon: "local_shipping" },
+                { id: 2, name: "Global Freight Inc.", role: "Viewer", lastUsed: false, icon: "flight" },
+                { id: 3, name: "Speedy Delivery Co.", role: "Admin", lastUsed: false, icon: "warehouse" },
+                { id: 4, name: "Maritime Transport Ltd.", role: "Fleet Analyst", lastUsed: false, icon: "anchor" }
+            ];
+
+            return (
+                <div className="min-h-screen bg-background-light dark:bg-background-dark">
+                    <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4 sticky top-0 z-10">
+                        <div className="flex items-center gap-4">
+                            <span className="material-symbols-outlined text-primary text-3xl">local_shipping</span>
+                            <h2 className="text-slate-900 dark:text-white text-lg font-bold">Enterprise Fleet</h2>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="hidden md:flex flex-col items-end">
+                                <span className="text-sm font-medium text-slate-900 dark:text-white">Alex Morgan</span>
+                                <Link to="/login" className="text-xs text-slate-500 hover:text-primary">Sign Out</Link>
+                            </div>
+                            <div className="size-10 rounded-full border border-slate-200 bg-cover bg-center" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDiz935bW9cl_ZosyVWrMe-txmastPVTUSYTI3EXj2jEKTTa0W3slVdLkXVNgUxjdO8V7U9LkBxlCf732n-aPi7um1gcyB3ITljtp7U_yoAwqVt4knKXaBzb1SNtd5qf6SO6JXRqAJ_09nUveVSXneawUpbbmSewcABSUgPsC9bYYuXjq4nyFYD6Ac9wfaHgBjqUoJvaHbF7DCNVEJACO73_peVHTkc1vqhowZxO3QVyzn9AXuSfniYkjLyKTAcbSiOzNBkH24SFJE")'}}></div>
+                        </div>
+                    </header>
+
+                    <main className="flex justify-center py-8 px-4">
+                        <div className="w-full max-w-[800px] flex flex-col">
+                            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                                <div className="p-8 pb-4">
+                                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">Select Organization</h1>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm">Choose an organization to proceed to your dashboard.</p>
+                                </div>
+
+                                <div className="px-8 py-2">
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-3 top-3 text-slate-400">search</span>
+                                        <input className="w-full h-12 rounded-lg bg-slate-50 dark:bg-slate-800 border-none pl-11 text-sm focus:ring-2 focus:ring-primary" placeholder="Search organizations..." />
+                                    </div>
+                                </div>
+
+                                <div className="p-8 space-y-3">
+                                    {organizations.map(org => (
+                                        <label 
+                                            key={org.id} 
+                                            onClick={() => setSelected(org.id)}
+                                            className={`group relative flex cursor-pointer items-center gap-4 rounded-xl border p-4 transition-all ${selected === org.id ? 'border-primary bg-blue-50/30 dark:bg-blue-900/10 ring-1 ring-primary' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary/50'}`}
+                                        >
+                                            <input type="radio" checked={selected === org.id} readOnly className="h-5 w-5 text-primary border-slate-300 dark:bg-slate-700" />
+                                            <div className="flex grow flex-col">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-slate-900 dark:text-white font-semibold">{org.name}</span>
+                                                    {org.lastUsed && <span className="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded font-bold">LAST USED</span>}
+                                                </div>
+                                                <p className="text-slate-500 dark:text-slate-400 text-sm">{org.role}</p>
+                                            </div>
+                                            <span className="material-symbols-outlined text-slate-400">chevron_right</span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                <div className="border-t dark:border-slate-800 p-4 px-8 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                                    <p className="text-sm text-slate-500">Showing <span className="font-bold text-slate-900 dark:text-white">4</span> of 12 results</p>
+                                    <div className="flex gap-1">
+                                        <button className="h-8 w-8 flex items-center justify-center border rounded text-slate-400"><span className="material-symbols-outlined text-sm">chevron_left</span></button>
+                                        <button className="h-8 w-8 flex items-center justify-center border rounded bg-primary text-white font-bold text-sm">1</button>
+                                        <button className="h-8 w-8 flex items-center justify-center border rounded text-slate-600">2</button>
+                                        <button className="h-8 w-8 flex items-center justify-center border rounded text-slate-400"><span className="material-symbols-outlined text-sm">chevron_right</span></button>
+                                    </div>
+                                </div>
+
+                                <div className="p-6 sm:px-8 border-t dark:border-slate-800 flex justify-end">
+                                    <button onClick={handleEnterDashboard} disabled={loading} className="w-full sm:w-auto h-12 px-8 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg shadow-sm flex items-center justify-center gap-2">
+                                        {loading && <span className="material-symbols-outlined animate-spin">progress_activity</span>}
+                                        {loading ? 'Entering...' : 'Enter Dashboard'}
+                                        {!loading && <span className="material-symbols-outlined">arrow_forward</span>}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Component with MemoryRouter ---
+        const App = () => {
+            return (
+                <MemoryRouter initialEntries={['/']}>
+                    <PageLayout>
+                        <Routes>
+                            <Route path="/" element={<LandingPage />} />
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/mfa" element={<MFAPage />} />
+                            <Route path="/org-select" element={<OrgSelectPage />} />
+                        </Routes>
+                    </PageLayout>
+                    
+                    {/* Persistent Chat Button (from Screen 4) */}
+                    <div className="fixed bottom-6 right-6 z-[60]">
+                        <button className="bg-primary hover:bg-primary-dark text-white px-6 py-4 rounded-full shadow-2xl shadow-primary/40 transition-transform hover:scale-105 flex items-center gap-3 font-bold text-base group">
+                            <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-400"></span>
+                            </span>
+                            Chat with an Expert
+                            <span className="material-symbols-outlined ml-1">chat</span>
+                        </button>
+                    </div>
+                </MemoryRouter>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>

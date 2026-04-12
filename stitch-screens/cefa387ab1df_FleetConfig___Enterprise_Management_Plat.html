@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetConfig - Enterprise Management Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .code-editor-lines {
+            counter-reset: line;
+        }
+        .code-editor-line::before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 2em;
+            margin-right: 1em;
+            color: #4b5563;
+            text-align: right;
+            user-select: none;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #137fec;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 0 4px rgba(19, 127, 236, 0.2);
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #233648;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path ? "bg-primary/10 text-primary border-l-4 border-primary" : "text-text-muted hover:bg-border-color hover:text-white transition-colors border-l-4 border-transparent";
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">settings_suggest</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetConfig</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Global Settings</div>
+                        
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/')}`}>
+                            <span className="material-symbols-outlined">tune</span>
+                            <span className="text-sm font-medium">Platform Config</span>
+                        </Link>
+                        
+                        <Link to="/feature-flags" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/feature-flags')}`}>
+                            <span className="material-symbols-outlined">flag</span>
+                            <span className="text-sm font-medium">Feature Flags</span>
+                        </Link>
+
+                         <Link to="/localization" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/localization')}`}>
+                            <span className="material-symbols-outlined">language</span>
+                            <span className="text-sm font-medium">Localization</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Communication</div>
+
+                         <Link to="/templates" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/templates')}`}>
+                            <span className="material-symbols-outlined">mail</span>
+                            <span className="text-sm font-medium">Templates</span>
+                        </Link>
+
+                        <Link to="/notifications" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/notifications')}`}>
+                            <span className="material-symbols-outlined">notifications_active</span>
+                            <span className="text-sm font-medium">Channels</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security & Limits</div>
+
+                        <Link to="/limits" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/limits')}`}>
+                             <span className="material-symbols-outlined">shield_lock</span>
+                            <span className="text-sm font-medium">Policies & Limits</span>
+                        </Link>
+
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- Screens ---
+
+        const PlatformConfig = () => (
+            <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+                            <span>System Settings</span>
+                            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                            <span className="text-primary">Platform Config</span>
+                        </div>
+                        <h2 className="text-white text-lg font-bold">Global Platform Configuration</h2>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button className="px-4 py-2 bg-surface-dark hover:bg-border-color text-text-muted hover:text-white border border-border-color text-xs font-semibold rounded transition-colors">
+                            Cancel
+                        </button>
+                        <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Save Configuration
+                        </button>
+                    </div>
+                </header>
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                            <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-[18px]">branding_watermark</span>
+                                    General Branding
+                                </h3>
+                                <span className="text-[10px] text-text-muted uppercase tracking-wide">Public Facing</span>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
+                                <div className="md:col-span-4">
+                                    <label className="block text-xs font-medium text-text-muted mb-2">Platform Logo</label>
+                                    <div className="border-2 border-dashed border-border-color rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-surface-darker transition-colors cursor-pointer group">
+                                        <div className="w-16 h-16 bg-surface-darker rounded mb-3 flex items-center justify-center border border-border-color group-hover:border-primary/50 transition-colors">
+                                            <span className="material-symbols-outlined text-3xl text-text-muted group-hover:text-primary">upload_file</span>
+                                        </div>
+                                        <p className="text-xs text-white font-medium">Click to upload</p>
+                                        <p className="text-[10px] text-text-muted mt-1">SVG, PNG or JPG (max 2MB)</p>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-8 space-y-5">
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">System Name</label>
+                                        <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600" type="text" defaultValue="Enterprise Fleet Manager"/>
+                                        <p className="text-[10px] text-text-muted mt-1">This name will appear in emails and browser tabs.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">Support Email Contact</label>
+                                        <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600" type="email" defaultValue="support@fleetmanager.inc"/>
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-4">
+                                        <div className="flex items-center h-5">
+                                            <input className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-surface-dark focus:ring-primary" id="whitelabel" type="checkbox"/>
+                                        </div>
+                                        <div className="text-xs">
+                                            <label className="font-medium text-white" htmlFor="whitelabel">Enable White-label Mode</label>
+                                            <p className="text-text-muted">Removes all vendor branding from the footer.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                            <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-[18px]">public</span>
+                                    Regional Defaults
+                                </h3>
+                                <span className="text-[10px] text-text-muted uppercase tracking-wide">System Wide</span>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div>
+                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Default Timezone</label>
+                                    <div className="relative">
+                                        <select className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                            <option>(UTC-05:00) Eastern Time (US & Canada)</option>
+                                            <option>(UTC+00:00) London</option>
+                                            <option>(UTC+01:00) Berlin, Paris</option>
+                                            <option>(UTC+08:00) Singapore</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                                            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Default Currency</label>
+                                    <div className="relative">
+                                        <select className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                            <option>USD ($)</option>
+                                            <option>EUR (€)</option>
+                                            <option>GBP (£)</option>
+                                            <option>JPY (¥)</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                                            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-text-muted mb-1.5">System Language</label>
+                                    <div className="relative">
+                                        <select className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+                                            <option>English (US)</option>
+                                            <option>Spanish</option>
+                                            <option>French</option>
+                                            <option>German</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                                            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-3 pt-2 border-t border-border-color mt-2">
+                                    <div className="flex items-start gap-3">
+                                        <span className="material-symbols-outlined text-warning text-[20px] mt-0.5">info</span>
+                                        <div>
+                                            <p className="text-xs text-white font-medium">Note on regional settings</p>
+                                            <p className="text-[11px] text-text-muted mt-0.5">Changing these defaults will affect new users. Existing users will retain their current preferences unless a forced reset is applied.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                            <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-[18px]">mail</span>
+                                    Communication Settings
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                                    <span className="text-[10px] text-text-muted uppercase tracking-wide font-semibold">SMTP Connected</span>
+                                </div>
+                            </div>
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="md:col-span-1 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">Email Sender Name</label>
+                                        <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600" type="text" defaultValue="Fleet Security Team"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">From Address</label>
+                                        <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder-gray-600" type="email" defaultValue="noreply@fleet-system.com"/>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-1 space-y-4">
+                                    <div className="p-4 bg-surface-darker rounded border border-border-color">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-xs font-semibold text-white">SMTP Configuration</h4>
+                                            <button className="text-[10px] text-primary hover:underline">Edit Credentials</button>
+                                        </div>
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="text-text-muted">Host</span>
+                                                <span className="text-white font-mono">smtp.sendgrid.net</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-text-muted">Port</span>
+                                                <span className="text-white font-mono">587</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-text-muted">Encryption</span>
+                                                <span className="text-white font-mono">TLS</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-2 border-t border-border-color pt-4 flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <input defaultChecked className="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-surface-dark" type="checkbox"/>
+                                        <span className="text-xs text-text-muted">Send copy of all system alerts to admins</span>
+                                    </div>
+                                    <button className="px-3 py-1.5 bg-surface-darker border border-border-color hover:bg-border-color text-white text-xs rounded transition-colors flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[14px]">send</span>
+                                        Test Connection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="rounded-lg bg-blue-500/5 border border-blue-500/20 p-4 flex items-start gap-3">
+                            <span className="material-symbols-outlined text-primary mt-0.5">verified_user</span>
+                            <div>
+                                <h4 className="text-sm font-medium text-white">Configuration Sync Active</h4>
+                                <p className="text-xs text-text-muted mt-1">
+                                    Settings are automatically synchronized across all 12 regional nodes. Last sync completed 2 minutes ago via Web BFF.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                    <span>© 2023 Enterprise Fleet Manager. Config Module V2.0</span>
+                    <div className="flex items-center gap-4">
+                        <span>API Status: <span className="text-success">Connected</span></span>
+                        <span>Server Time: <span className="font-mono text-white">14:38 UTC</span></span>
+                    </div>
+                </footer>
+            </main>
+        );
+
+        const FeatureFlags = () => (
+            <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h2 className="text-white text-lg font-bold">Feature Flags Control Hub</h2>
+                            <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5 uppercase tracking-wide font-medium">
+                                <span>System Settings</span>
+                                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                <span className="text-white">Feature Flags</span>
+                            </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                            Live: Production
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="relative">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                            <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" placeholder="Search flag keys..." type="text"/>
+                        </div>
+                        <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[16px]">add</span>
+                            Create Flag
+                        </button>
+                    </div>
+                </header>
+                <div className="flex flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-4 gap-4 mb-6">
+                            <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase text-text-muted font-bold">Active Flags</div>
+                                    <div className="text-xl font-bold text-white">48</div>
+                                </div>
+                                <span className="material-symbols-outlined text-primary text-2xl">toggle_on</span>
+                            </div>
+                            <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase text-text-muted font-bold">Stale Flags</div>
+                                    <div className="text-xl font-bold text-warning">7</div>
+                                </div>
+                                <span className="material-symbols-outlined text-warning text-2xl">history_toggle_off</span>
+                            </div>
+                            <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase text-text-muted font-bold">Global Scope</div>
+                                    <div className="text-xl font-bold text-white">32</div>
+                                </div>
+                                <span className="material-symbols-outlined text-text-muted text-2xl">public</span>
+                            </div>
+                            <div className="bg-surface-dark rounded border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] uppercase text-text-muted font-bold">Experiments (Beta)</div>
+                                    <div className="text-xl font-bold text-indigo-400">5</div>
+                                </div>
+                                <span className="material-symbols-outlined text-indigo-400 text-2xl">science</span>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-230px)]">
+                            <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <div className="flex items-center gap-3">
+                                    <button className="text-xs font-semibold text-white border-b-2 border-primary pb-0.5">All Flags</button>
+                                    <button className="text-xs font-medium text-text-muted hover:text-white transition-colors pb-0.5">My Flags</button>
+                                    <button className="text-xs font-medium text-text-muted hover:text-white transition-colors pb-0.5">Recent</button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white flex items-center gap-1 text-[10px] border border-border-color">
+                                        <span className="material-symbols-outlined text-[14px]">filter_list</span>
+                                        Filter
+                                    </button>
+                                    <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                        <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-auto custom-scrollbar">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 z-10">
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker shadow-sm">
+                                            <th className="px-4 py-3 font-semibold w-1/4">Flag Key</th>
+                                            <th className="px-4 py-3 font-semibold w-1/3">Description</th>
+                                            <th className="px-4 py-3 font-semibold w-1/6">Scope</th>
+                                            <th className="px-4 py-3 font-semibold w-1/6">Tags</th>
+                                            <th className="px-4 py-3 font-semibold text-right w-1/12">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm divide-y divide-border-color">
+                                        {[
+                                            { key: 'enable_new_dashboard_v2', desc: 'Enables the React-based dashboard overhaul for enterprise users.', scope: 'Org-Level', tag: 'Beta', active: false },
+                                            { key: 'global_maintenance_mode', desc: 'Puts the entire fleet platform into read-only maintenance mode.', scope: 'Global', tag: 'Critical', active: false },
+                                            { key: 'feature_chat_support', desc: 'Enables Intercom widget for premium tier customers.', scope: 'Org-Level', tag: '', active: true },
+                                            { key: 'api_rate_limit_strict', desc: 'Enforces strict 100 req/min limit on public API endpoints.', scope: 'Global', tag: 'Ops', active: true },
+                                            { key: 'experimental_route_opt', desc: 'AI-driven route optimization engine v3.0.', scope: 'Org-Level', tag: 'Beta', active: false },
+                                            { key: 'ui_dark_mode_default', desc: 'Forces dark mode as default for all new user signups.', scope: 'Global', tag: 'UI/UX', active: true },
+                                            { key: 'legacy_report_export', desc: 'Maintains support for CSV exports in the legacy format.', scope: 'Global', tag: 'Deprecated', active: true },
+                                        ].map((flag, idx) => (
+                                            <tr key={idx} className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-mono text-xs text-primary font-medium tracking-tight">{flag.key}</span>
+                                                        <span className="text-[10px] text-text-muted mt-0.5">Updated recently</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">{flag.desc}</td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-1.5 text-xs text-white">
+                                                        <span className="material-symbols-outlined text-[14px] text-indigo-400">domain</span>
+                                                        {flag.scope}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    {flag.tag && (
+                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wide">
+                                                            {flag.tag}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" defaultChecked={flag.active} className="sr-only peer" />
+                                                        <div className="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="px-4 py-2 border-t border-border-color bg-surface-darker flex justify-between items-center text-xs text-text-muted">
+                                <span>Showing 7 of 48 flags</span>
+                                <div className="flex gap-2">
+                                    <button className="px-2 py-1 hover:bg-surface-dark rounded disabled:opacity-50" disabled>Prev</button>
+                                    <button className="px-2 py-1 hover:bg-surface-dark rounded text-white">1</button>
+                                    <button className="px-2 py-1 hover:bg-surface-dark rounded">2</button>
+                                    <button className="px-2 py-1 hover:bg-surface-dark rounded">3</button>
+                                    <button className="px-2 py-1 hover:bg-surface-dark rounded">Next</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <aside className="w-80 bg-surface-darker border-l border-border-color flex flex-col z-20">
+                        <div className="p-4 border-b border-border-color bg-[#111a22]">
+                            <h3 className="text-white text-sm font-bold flex items-center gap-2">
+                                <span className="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                                Recent Flag Changes
+                            </h3>
+                            <p className="text-[10px] text-text-muted mt-1">Audit log for last 24 hours</p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+                            <div className="relative pl-4 border-l border-border-color ml-2 space-y-4 py-2">
+                                <div className="relative">
+                                    <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-success border-2 border-surface-darker"></div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] text-text-muted font-mono">14:32 UTC • Alex Morgan</span>
+                                        <div className="bg-surface-dark border border-border-color rounded p-2.5 shadow-sm">
+                                            <div className="text-xs font-medium text-white mb-1">enable_new_dashboard_v2</div>
+                                            <div className="flex items-center gap-2 text-[10px]">
+                                                <span className="text-text-muted">Global Scope</span>
+                                                <span className="material-symbols-outlined text-[10px] text-text-muted">arrow_forward</span>
+                                                <span className="text-success font-bold">Enabled</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="relative">
+                                    <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-text-muted border-2 border-surface-darker"></div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] text-text-muted font-mono">13:15 UTC • Sarah Chen</span>
+                                        <div className="bg-surface-dark border border-border-color rounded p-2.5 shadow-sm">
+                                            <div className="text-xs font-medium text-white mb-1">feature_chat_support</div>
+                                            <div className="text-[10px] text-text-muted">
+                                                Updated description and added "Beta" tag.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </main>
+        );
+
+        const Templates = () => {
+            const [showModal, setShowModal] = useState(false);
+
+            return (
+                <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden relative">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold">Email & SMS Templates</h2>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[11px] text-text-muted">SYSTEM SETTINGS</span>
+                                    <span className="text-[11px] text-text-muted">/</span>
+                                    <span className="text-[11px] text-primary font-medium">TEMPLATES</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">add</span>
+                                Create New Template
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+                            <div className="col-span-1 lg:col-span-3">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="relative flex-1 max-w-md">
+                                            <span className="material-symbols-outlined absolute left-3 top-2.5 text-text-muted text-[18px]">search</span>
+                                            <input className="bg-surface-darker border border-border-color text-sm text-white rounded-lg pl-10 pr-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search templates..." type="text"/>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <select className="bg-surface-darker text-sm text-text-muted border border-border-color rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                                <option>All Types</option>
+                                                <option>Email</option>
+                                                <option>SMS</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="text-text-muted text-sm font-medium">
+                                        Showing <span className="text-white font-bold">12</span> templates
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-1">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between h-full">
+                                    <div>
+                                        <div className="text-[10px] text-text-muted uppercase font-bold tracking-wider mb-1">Total Delivery Rate</div>
+                                        <div className="text-2xl font-bold text-success">99.8%</div>
+                                    </div>
+                                    <div className="w-10 h-10 rounded bg-success/10 flex items-center justify-center text-success">
+                                        <span className="material-symbols-outlined">mark_email_read</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                            <th className="px-6 py-4 font-semibold w-32">Template ID</th>
+                                            <th className="px-6 py-4 font-semibold w-24">Type</th>
+                                            <th className="px-6 py-4 font-semibold">Subject / Description</th>
+                                            <th className="px-6 py-4 font-semibold w-48 text-right">Last Updated</th>
+                                            <th className="px-6 py-4 font-semibold w-16"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        <tr onClick={() => setShowModal(true)} className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                            <td className="px-6 py-4 text-text-muted font-mono text-xs">tpl_001_welcome</td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                                    <span className="material-symbols-outlined text-[14px]">mail</span> Email
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-white font-medium mb-0.5">Welcome to FleetSecurity</div>
+                                                <div className="text-xs text-text-muted">Onboarding email for new admin accounts.</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="text-white">Oct 24, 2023</div>
+                                                <div className="text-xs text-text-muted">by Alex Morgan</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="text-text-muted hover:text-white p-2 rounded hover:bg-surface-darker transition-colors opacity-0 group-hover:opacity-100">
+                                                    <span className="material-symbols-outlined">edit_square</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                         <tr onClick={() => setShowModal(true)} className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                            <td className="px-6 py-4 text-text-muted font-mono text-xs">tpl_002_mfa_otp</td>
+                                            <td className="px-6 py-4">
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                    <span className="material-symbols-outlined text-[14px]">sms</span> SMS
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-white font-medium mb-0.5">Your FleetSecurity Verification Code</div>
+                                                <div className="text-xs text-text-muted">Standard OTP delivery message.</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="text-white">Oct 20, 2023</div>
+                                                <div className="text-xs text-text-muted">by System</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="text-text-muted hover:text-white p-2 rounded hover:bg-surface-darker transition-colors opacity-0 group-hover:opacity-100">
+                                                    <span className="material-symbols-outlined">edit_square</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {showModal && (
+                        <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+                            <div className="bg-surface-dark w-full max-w-4xl h-[85vh] rounded-xl border border-border-color shadow-2xl flex flex-col overflow-hidden animate-fade-in-up">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-border-color bg-surface-darker">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400">
+                                            <span className="material-symbols-outlined text-xl">mail</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white">Edit Template</h3>
+                                            <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                                                <span className="font-mono text-primary">tpl_001_welcome</span>
+                                                <span>•</span>
+                                                <span>Last edited by Alex Morgan</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => setShowModal(false)} className="text-text-muted hover:text-white p-2 rounded-full hover:bg-surface-dark transition-colors">
+                                            <span className="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 flex overflow-hidden">
+                                    <div className="flex-1 flex flex-col border-r border-border-color">
+                                        <div className="p-4 border-b border-border-color space-y-4 bg-surface-dark">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-text-muted uppercase mb-1.5">Subject Line</label>
+                                                <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="text" defaultValue="Welcome to FleetSecurity {{user.first_name}}"/>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 bg-[#0d1117] overflow-auto custom-scrollbar font-mono text-sm p-4 relative">
+                                            <div className="code-editor-lines text-text-muted/50 leading-6">
+                                                <div className="code-editor-line"><span className="text-indigo-400">&lt;!DOCTYPE html&gt;</span></div>
+                                                <div className="code-editor-line"><span className="text-indigo-400">&lt;html&gt;</span></div>
+                                                <div className="code-editor-line"><span className="text-indigo-400">&lt;body</span> <span className="text-emerald-400">style</span>=<span className="text-orange-300">"font-family: Arial, sans-serif;"</span><span className="text-indigo-400">&gt;</span></div>
+                                                <div className="code-editor-line pl-4"><span className="text-indigo-400">&lt;div</span> <span className="text-emerald-400">class</span>=<span className="text-orange-300">"container"</span><span className="text-indigo-400">&gt;</span></div>
+                                                <div className="code-editor-line pl-8"><span className="text-indigo-400">&lt;h1&gt;</span>Welcome, <span className="text-yellow-300">{'{{user.first_name}}'}</span>!<span className="text-indigo-400">&lt;/h1&gt;</span></div>
+                                                <div className="code-editor-line pl-8"><span className="text-indigo-400">&lt;p&gt;</span>Your account has been successfully created.<span className="text-indigo-400">&lt;/p&gt;</span></div>
+                                                <div className="code-editor-line pl-8"><span className="text-indigo-400">&lt;p&gt;</span>Please click below to verify:<span className="text-indigo-400">&lt;/p&gt;</span></div>
+                                                <div className="code-editor-line pl-8"><span className="text-indigo-400">&lt;a</span> <span className="text-emerald-400">href</span>=<span className="text-orange-300">"{'{{verification_link}}'}"</span><span className="text-indigo-400">&gt;</span>Verify Account<span className="text-indigo-400">&lt;/a&gt;</span></div>
+                                                <div className="code-editor-line pl-4"><span className="text-indigo-400">&lt;/div&gt;</span></div>
+                                                <div className="code-editor-line"><span className="text-indigo-400">&lt;/body&gt;</span></div>
+                                                <div className="code-editor-line"><span className="text-indigo-400">&lt;/html&gt;</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="w-72 bg-surface-dark flex flex-col flex-shrink-0">
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                                            <div>
+                                                <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Available Variables</h4>
+                                                <div className="space-y-2">
+                                                    {['user.first_name', 'user.last_name', 'company.name', 'verification_link'].map(v => (
+                                                        <div key={v} className="bg-surface-darker p-2 rounded border border-border-color hover:border-primary/50 cursor-pointer transition-colors group">
+                                                            <div className="text-[11px] text-primary font-mono group-hover:text-primary-light">{'{{' + v + '}}'}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="px-6 py-4 border-t border-border-color bg-surface-darker flex items-center justify-end gap-3">
+                                    <button onClick={() => setShowModal(false)} className="px-4 py-2 text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded shadow-lg shadow-primary/20 transition-colors">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </main>
+            );
+        };
+
+        const NotificationChannels = () => (
+            <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 text-[10px] text-text-muted font-mono tracking-wide uppercase mb-0.5">
+                                <span className="hover:text-white cursor-pointer">System Settings</span>
+                                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                <span className="text-primary font-bold">Notification Channels</span>
+                            </div>
+                            <h2 className="text-white text-lg font-bold">Channel Configuration</h2>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                            System Healthy
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Save Changes
+                        </button>
+                    </div>
+                </header>
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-lg">
+                                <span className="material-symbols-outlined text-primary text-2xl">mail</span>
+                            </div>
+                            <div>
+                                <div className="text-text-muted text-xs font-medium uppercase">Email Status</div>
+                                <div className="text-white font-bold text-lg flex items-center gap-2">
+                                    Active
+                                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                                </div>
+                                <div className="text-[10px] text-text-muted">via SendGrid API</div>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                            <div className="p-3 bg-indigo-500/10 rounded-lg">
+                                <span className="material-symbols-outlined text-indigo-500 text-2xl">sms</span>
+                            </div>
+                            <div>
+                                <div className="text-text-muted text-xs font-medium uppercase">SMS Status</div>
+                                <div className="text-white font-bold text-lg flex items-center gap-2">
+                                    Active
+                                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                                </div>
+                                <div className="text-[10px] text-text-muted">via Twilio Gateway</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-12 gap-6">
+                        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-text-muted">mail</span>
+                                        <h3 className="text-white text-sm font-semibold">Email Gateway Configuration</h3>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] font-bold text-success uppercase tracking-wider bg-success/10 px-2 py-0.5 rounded border border-success/20">Connected</span>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input defaultChecked className="sr-only peer" type="checkbox"/>
+                                            <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-2 gap-6 mb-4">
+                                        <div className="col-span-2 md:col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Provider</label>
+                                            <select className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                <option>SendGrid</option>
+                                                <option>Amazon SES</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-span-2 md:col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">API Region</label>
+                                            <select className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                <option>us-east-1</option>
+                                                <option>us-west-2</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">API Key</label>
+                                            <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-3 py-2 pr-10 focus:ring-1 focus:ring-primary focus:border-primary outline-none font-mono" type="password" defaultValue="SG.zX9s8...******************"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                         <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color">
+                                <div className="p-4 border-b border-border-color">
+                                    <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted">speed</span>
+                                        Rate Limiting
+                                    </h3>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="text-sm font-medium text-white">Global Rate Limit</div>
+                                            <div className="text-[10px] text-text-muted">Max notifications per user/hour</div>
+                                        </div>
+                                        <div className="w-20">
+                                            <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-2 py-1 text-right focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="50"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        );
+
+        const Localization = () => (
+            <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h2 className="text-white text-lg font-bold">Regional Localization Settings</h2>
+                            <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5">
+                                <span className="hover:text-white cursor-pointer">SYSTEM SETTINGS</span>
+                                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                <span className="text-white font-medium">LOCALIZATION</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Save Configuration
+                        </button>
+                    </div>
+                </header>
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div className="grid grid-cols-12 gap-6">
+                        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[18px]">translate</span>
+                                        Active Languages
+                                    </h3>
+                                </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <label className="flex items-start gap-3 p-3 rounded bg-surface-darker border border-border-color hover:border-primary/50 cursor-pointer transition-colors group">
+                                            <input defaultChecked className="mt-1 rounded border-border-color bg-background-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm font-medium text-white group-hover:text-primary transition-colors">English (US)</span>
+                                                    <span className="text-[10px] text-success bg-success/10 px-1.5 rounded">DEFAULT</span>
+                                                </div>
+                                                <span className="text-xs text-text-muted">en-US</span>
+                                            </div>
+                                        </label>
+                                        <label className="flex items-start gap-3 p-3 rounded bg-surface-darker border border-border-color hover:border-primary/50 cursor-pointer transition-colors group">
+                                            <input defaultChecked className="mt-1 rounded border-border-color bg-background-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between">
+                                                    <span className="text-sm font-medium text-white group-hover:text-primary transition-colors">Spanish (ES)</span>
+                                                </div>
+                                                <span className="text-xs text-text-muted">es-ES</span>
+                                            </div>
+                                        </label>
+                                        <div className="flex items-center justify-center p-3 rounded border border-dashed border-border-color hover:bg-surface-darker hover:text-white text-text-muted cursor-pointer transition-colors text-xs font-medium gap-2">
+                                            <span className="material-symbols-outlined text-[16px]">add</span>
+                                            Add Language Pack
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden sticky top-6">
+                                <div className="p-4 border-b border-border-color bg-surface-darker/50">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[18px]">visibility</span>
+                                        Live Preview
+                                    </h3>
+                                </div>
+                                <div className="p-5 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] uppercase text-text-muted font-bold tracking-wider mb-1">Date Display</p>
+                                            <p className="text-xl font-medium text-white">Oct 24, 2023</p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded bg-surface-darker border border-border-color flex items-center justify-center text-text-muted">
+                                            <span className="material-symbols-outlined">today</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        );
+
+        const PoliciesLimits = () => (
+            <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 text-[11px] text-text-muted uppercase font-bold tracking-wider mb-0.5">
+                                <span>System Settings</span>
+                                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                <span className="text-primary">Limits</span>
+                            </div>
+                            <h2 className="text-white text-lg font-bold">System Limits & Retention Policies</h2>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Apply Changes
+                        </button>
+                    </div>
+                </header>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                    <div className="grid grid-cols-12 gap-6">
+                        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[18px]">speed</span>
+                                        API Rate Limiting
+                                    </h3>
+                                    <span className="text-[10px] text-text-muted uppercase font-mono bg-surface-darker px-2 py-1 rounded border border-border-color">Global Config</span>
+                                </div>
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="col-span-2">
+                                        <label className="flex justify-between text-xs font-medium text-text-muted mb-2">
+                                            <span>Global Request Limit (per minute)</span>
+                                            <span className="text-white font-mono">10,000 req/min</span>
+                                        </label>
+                                        <input className="w-full h-2 bg-border-color rounded-lg appearance-none cursor-pointer" max="50000" min="1000" step="1000" type="range" defaultValue="10000"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-1.5">Burst Allowance</label>
+                                        <div className="relative">
+                                            <input className="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="500"/>
+                                            <span className="absolute right-3 top-2.5 text-xs text-text-muted">reqs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[18px]">history_toggle_off</span>
+                                        Data Retention Periods
+                                    </h3>
+                                </div>
+                                <div className="p-0">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="bg-surface-darker/30 text-xs text-text-muted uppercase">
+                                            <tr>
+                                                <th className="px-6 py-3 font-medium">Data Type</th>
+                                                <th className="px-6 py-3 font-medium">Retention Period</th>
+                                                <th className="px-6 py-3 font-medium">Action After Expiry</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-color">
+                                            <tr>
+                                                <td className="px-6 py-4 text-sm text-white">System Audit Logs</td>
+                                                <td className="px-6 py-4">
+                                                    <select className="bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-1 w-32">
+                                                        <option>1 Year</option>
+                                                        <option>3 Years</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4 text-xs text-text-muted">Archive to Cold Storage</td>
+                                            </tr>
+                                            <tr>
+                                                <td className="px-6 py-4 text-sm text-white">User Activity History</td>
+                                                <td className="px-6 py-4">
+                                                    <select className="bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-1 w-32">
+                                                        <option>180 Days</option>
+                                                        <option>1 Year</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4 text-xs text-text-muted">Permanently Delete</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                <h3 className="text-white text-sm font-semibold mb-4">Security Summary</h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between p-3 rounded bg-surface-darker border border-border-color border-l-4 border-l-success">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-white">Rate Limits</span>
+                                            <span className="text-[10px] text-text-muted">Optimal configuration</span>
+                                        </div>
+                                        <span className="material-symbols-outlined text-success text-lg">check_circle</span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 rounded bg-surface-darker border border-border-color border-l-4 border-l-warning">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-white">Retention Policy</span>
+                                            <span className="text-[10px] text-text-muted">Log retention is short</span>
+                                        </div>
+                                        <span className="material-symbols-outlined text-warning text-lg">warning</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        );
+
+        const App = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <Routes>
+                        <Route path="/" element={<PlatformConfig />} />
+                        <Route path="/feature-flags" element={<FeatureFlags />} />
+                        <Route path="/templates" element={<Templates />} />
+                        <Route path="/notifications" element={<NotificationChannels />} />
+                        <Route path="/localization" element={<Localization />} />
+                        <Route path="/limits" element={<PoliciesLimits />} />
+                    </Routes>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(
+            <MemoryRouter>
+                <App />
+            </MemoryRouter>
+        );
+    </script>
+</body>
+</html>

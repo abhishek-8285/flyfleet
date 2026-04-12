@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - MFA Configuration Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        /* React Router active link styling helper */
+        .nav-link.active {
+            background-color: rgba(19, 127, 236, 0.1);
+            color: #137fec;
+            border-left: 4px solid #137fec;
+        }
+        .nav-link:not(.active) {
+            border-left: 4px solid transparent;
+        }
+    </style>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            
+            // Helper to determine active state
+            const isActive = (path) => location.pathname === path ? "bg-primary/10 text-primary active" : "text-text-muted hover:bg-border-color hover:text-white";
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+                        
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/')}`}>
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Overview</span>
+                        </Link>
+                        
+                        <Link to="/policy/edit" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/policy/edit')}`}>
+                            <span className="material-symbols-outlined">tune</span>
+                            <span className="text-sm font-medium">MFA Configuration</span>
+                        </Link>
+
+                        <Link to="/overrides" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/overrides')}`}>
+                            <span className="material-symbols-outlined">domain</span>
+                            <span className="text-sm font-medium">Org Overrides</span>
+                        </Link>
+                         <Link to="/exceptions" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors nav-link ${isActive('/exceptions')}`}>
+                            <span className="material-symbols-outlined">rule_folder</span>
+                            <span className="text-sm font-medium">Exceptions</span>
+                        </Link>
+
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer">
+                            <span className="material-symbols-outlined">troubleshoot</span>
+                            <span className="text-sm font-medium">Audit Logs</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer">
+                            <span className="material-symbols-outlined">warning</span>
+                            <span className="text-sm font-medium">Threat Alerts</span>
+                        </a>
+
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer">
+                            <span className="material-symbols-outlined">group</span>
+                            <span className="text-sm font-medium">Directory</span>
+                        </a>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = () => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 mt-auto flex-shrink-0">
+                <span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+                <div className="flex items-center gap-4">
+                    <span>Encryption: <span className="text-success">AES-256</span></span>
+                    <span>System Status: <span className="text-success">Operational</span></span>
+                    <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Page: Dashboard Overview ---
+
+        const Dashboard = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-white text-lg font-bold">MFA Configuration Dashboard</h2>
+                                    <p className="text-[11px] text-text-muted mt-0.5">Enterprise Fleet Management • Security Policy Settings</p>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                                    Configuration Mode
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-text-muted">Last updated:</span>
+                                    <span className="text-xs text-white font-mono">Today, 09:42 AM</span>
+                                </div>
+                                <button onClick={() => navigate('/policy/edit')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Policy
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-white">description</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Policy Version</div>
+                                    <div className="text-2xl font-bold text-white">v2.4.1</div>
+                                    <div className="text-[10px] text-text-muted flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                        Effective since Oct 20
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-primary">gavel</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Enforcement Mode</div>
+                                    <div className="text-2xl font-bold text-primary">Adaptive</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Risk-based challenges</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-primary h-full" style={{width: '100%'}}></div>
+                                    </div>
+                                </div>
+                                <div onClick={() => navigate('/exceptions')} className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group cursor-pointer hover:border-primary/50 transition-colors">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">rule_folder</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Exceptions</div>
+                                    <div className="text-2xl font-bold text-warning">12</div>
+                                    <div className="text-[10px] text-text-muted mt-1">VIP & Service Accounts</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">check_circle</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Global Status</div>
+                                    <div className="text-2xl font-bold text-success">Active</div>
+                                    <div className="text-[10px] text-text-muted mt-1">System healthy</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 lg:col-span-2">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">password</span>
+                                            Authentication Methods
+                                        </h3>
+                                        <button onClick={() => navigate('/policy/edit')} className="text-primary text-xs hover:underline">Configure Methods</button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-surface-darker p-4 rounded border border-border-color flex flex-col items-center justify-center gap-3 group hover:border-primary/50 transition-colors cursor-pointer">
+                                            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-2xl">smartphone</span>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-white font-medium text-sm">Authenticator App</div>
+                                                <div className="text-xs text-text-muted">TOTP (RFC 6238)</div>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-success/10 text-success text-[10px] font-bold rounded border border-success/20">ENABLED</span>
+                                        </div>
+                                        <div className="bg-surface-darker p-4 rounded border border-border-color flex flex-col items-center justify-center gap-3 group hover:border-primary/50 transition-colors cursor-pointer">
+                                            <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-2xl">sms</span>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-white font-medium text-sm">SMS Delivery</div>
+                                                <div className="text-xs text-text-muted">One-time code</div>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-warning/10 text-warning text-[10px] font-bold rounded border border-warning/20">FALLBACK</span>
+                                        </div>
+                                        <div className="bg-surface-darker p-4 rounded border border-border-color flex flex-col items-center justify-center gap-3 group hover:border-primary/50 transition-colors cursor-pointer">
+                                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-2xl">usb</span>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-white font-medium text-sm">FIDO2 / WebAuthn</div>
+                                                <div className="text-xs text-text-muted">Hardware Key</div>
+                                            </div>
+                                            <span className="px-2 py-0.5 bg-success/10 text-success text-[10px] font-bold rounded border border-success/20">PREFERRED</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5 flex-1">
+                                        <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-danger text-[18px]">lock_clock</span>
+                                            Lockout Policy
+                                        </h3>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center border-b border-border-color pb-3">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-text-muted">Max Failed Attempts</span>
+                                                    <span className="text-sm font-medium text-white">5 Attempts</span>
+                                                </div>
+                                                <span className="material-symbols-outlined text-text-muted">refresh</span>
+                                            </div>
+                                            <div className="flex justify-between items-center border-b border-border-color pb-3">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-text-muted">Lockout Duration</span>
+                                                    <span className="text-sm font-medium text-white">30 Minutes</span>
+                                                </div>
+                                                <span className="material-symbols-outlined text-text-muted">timer</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-text-muted">Auto-Unlock</span>
+                                                    <span className="text-sm font-medium text-success">Enabled</span>
+                                                </div>
+                                                <div className="relative inline-flex items-center cursor-pointer">
+                                                    <div className="w-8 h-4 bg-success rounded-full">
+                                                        <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <h3 className="text-white text-sm font-semibold mb-3 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-warning text-[18px]">hourglass_top</span>
+                                            Grace Period
+                                        </h3>
+                                        <div className="flex items-center justify-between bg-surface-darker p-3 rounded border border-border-color">
+                                            <div>
+                                                <div className="text-xs text-text-muted">New User Setup Window</div>
+                                                <div className="text-lg font-bold text-white">72 Hours</div>
+                                            </div>
+                                            <div className="h-8 w-8 rounded-full border-2 border-warning/30 border-t-warning flex items-center justify-center animate-spin">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">domain</span>
+                                        Organization Overrides
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <input className="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search fleets..." type="text"/>
+                                        <button onClick={() => navigate('/overrides')} className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                            <span className="material-symbols-outlined text-[18px]">add</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-4 py-3 font-semibold">Fleet Name</th>
+                                                <th className="px-4 py-3 font-semibold">Policy Status</th>
+                                                <th className="px-4 py-3 font-semibold">User Count</th>
+                                                <th className="px-4 py-3 font-semibold">Override Reason</th>
+                                                <th className="px-4 py-3 font-semibold">Last Modified</th>
+                                                <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">NA</div>
+                                                    North America Logistics
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                        STRICT
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted">1,240</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Regulatory Compliance (SOC2)</td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">Oct 24, 2023</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={() => navigate('/overrides')} className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[16px]">edit</span></button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded bg-indigo-500/20 text-indigo-500 flex items-center justify-center text-[10px] font-bold">EU</div>
+                                                    EuroTrans Fleet
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-surface-light/10 text-text-muted border border-border-color">
+                                                        DEFAULT
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted">856</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">-</td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">Sep 12, 2023</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={() => navigate('/overrides')} className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[16px]">edit</span></button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded bg-warning/20 text-warning flex items-center justify-center text-[10px] font-bold">AP</div>
+                                                    APAC Distribution
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                                        OPTIONAL
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted">2,100</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">Pilot Program Phase 1</td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">Oct 01, 2023</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={() => navigate('/overrides')} className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[16px]">edit</span></button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 font-medium text-white flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded bg-danger/20 text-danger flex items-center justify-center text-[10px] font-bold">SA</div>
+                                                    South America Ops
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                        STRICT
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted">420</td>
+                                                <td className="px-4 py-3 text-text-muted text-xs">High Risk Zone</td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">Oct 15, 2023</td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button onClick={() => navigate('/overrides')} className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[16px]">edit</span></button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Page: Edit Policy ---
+
+        const EditPolicy = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-white text-lg font-bold">Edit MFA Policy</h2>
+                                    <p className="text-[11px] text-text-muted mt-0.5">Security Command Center • Policy Management</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} className="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Policy
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[20px]">policy</span>
+                                        <h3 className="text-white font-semibold text-sm">Global Policy Settings</h3>
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <label className="text-sm font-medium text-white block">Global MFA Enabled</label>
+                                                    <p className="text-xs text-text-muted mt-1">Master switch for organization-wide MFA</p>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input defaultChecked type="checkbox" className="sr-only peer"/>
+                                                    <div className="w-11 h-6 bg-surface-darker border border-border-color peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary/20 peer-checked:after:bg-primary peer-checked:border-primary/50"></div>
+                                                </label>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-white block mb-2">Enforcement Mode</label>
+                                                <div className="relative">
+                                                    <select className="w-full bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 appearance-none">
+                                                        <option value="required">Required (Strict)</option>
+                                                        <option value="optional">Optional (User Opt-in)</option>
+                                                        <option value="disabled">Disabled (Audit Only)</option>
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                                        <span className="material-symbols-outlined text-text-muted">expand_more</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-text-muted mt-1.5 flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px] text-warning">info</span>
+                                                    Users will be forced to setup MFA on next login
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-white block mb-3">Allowed Methods</label>
+                                                <div className="space-y-3 bg-surface-darker p-4 rounded-lg border border-border-color">
+                                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                                        <input defaultChecked type="checkbox" className="w-4 h-4 rounded border-border-color bg-surface-dark text-primary focus:ring-offset-surface-darker focus:ring-primary"/>
+                                                        <span className="text-sm text-text-muted group-hover:text-white transition-colors">Authenticator App (TOTP)</span>
+                                                        <span className="ml-auto text-[10px] bg-success/10 text-success border border-success/20 px-1.5 py-0.5 rounded">RECOMMENDED</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                                        <input defaultChecked type="checkbox" className="w-4 h-4 rounded border-border-color bg-surface-dark text-primary focus:ring-offset-surface-darker focus:ring-primary"/>
+                                                        <span className="text-sm text-text-muted group-hover:text-white transition-colors">SMS / Text Message</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                                        <input type="checkbox" className="w-4 h-4 rounded border-border-color bg-surface-dark text-primary focus:ring-offset-surface-darker focus:ring-primary"/>
+                                                        <span className="text-sm text-text-muted group-hover:text-white transition-colors">Hardware Security Key (FIDO2)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className="text-sm font-medium text-white block mb-2">Lockout Threshold</label>
+                                                <div className="relative">
+                                                    <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5" type="number" defaultValue="5" min="1" max="10"/>
+                                                    <span className="absolute right-3 top-2.5 text-xs text-text-muted">Attempts</span>
+                                                </div>
+                                                <p className="text-xs text-text-muted mt-1.5">Number of failed attempts before temporary lockout.</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-white block mb-2">Lockout Duration</label>
+                                                <div className="relative">
+                                                    <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5" type="number" defaultValue="30" min="5" step="5"/>
+                                                    <span className="absolute right-3 top-2.5 text-xs text-text-muted">Minutes</span>
+                                                </div>
+                                                <p className="text-xs text-text-muted mt-1.5">Time to wait before retrying after lockout.</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-white block mb-2">Session Duration</label>
+                                                <div className="relative">
+                                                    <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5" type="number" defaultValue="7" min="1" max="90"/>
+                                                    <span className="absolute right-3 top-2.5 text-xs text-text-muted">Days</span>
+                                                </div>
+                                                <p className="text-xs text-text-muted mt-1.5">Trusted device expiration period.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-warning text-[20px]">timer</span>
+                                        <h3 className="text-white font-semibold text-sm">Implementation Grace Period</h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex items-start gap-6">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div>
+                                                        <label className="text-sm font-medium text-white block">Grace Period Enabled</label>
+                                                        <p className="text-xs text-text-muted mt-1">Allow users to skip MFA setup temporarily</p>
+                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input defaultChecked type="checkbox" className="sr-only peer"/>
+                                                        <div className="w-11 h-6 bg-surface-darker border border-border-color peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-warning/20 peer-checked:after:bg-warning peer-checked:border-warning/50"></div>
+                                                    </label>
+                                                </div>
+                                                <div className="border-t border-border-color pt-4 mt-4">
+                                                    <label className="text-sm font-medium text-white block mb-2">Grace Period Duration</label>
+                                                    <div className="flex gap-4">
+                                                        <div className="relative w-full md:w-1/2">
+                                                            <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5" type="number" defaultValue="14" min="1" max="30"/>
+                                                            <span className="absolute right-3 top-2.5 text-xs text-text-muted">Days</span>
+                                                        </div>
+                                                        <div className="flex-1 flex items-center text-xs text-text-muted bg-surface-darker/50 p-2 rounded border border-border-color border-dashed">
+                                                            <span className="material-symbols-outlined text-[16px] mr-2">calendar_month</span>
+                                                            Deadline: Nov 14, 2023 for new users
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-danger/5 rounded-xl border border-danger/20 overflow-hidden">
+                                    <div className="p-4 flex gap-4">
+                                        <span className="material-symbols-outlined text-danger shrink-0">warning</span>
+                                        <div>
+                                            <h3 className="text-danger font-semibold text-sm mb-1">Policy Modification Warning</h3>
+                                            <p className="text-xs text-text-muted">Changing the enforcement mode from "Optional" to "Required" will immediately invalidate sessions for users who have not set up MFA. Ensure communication has been sent out before saving.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Page: Exceptions List ---
+
+        const ExceptionsList = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col justify-center">
+                                <nav className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                    <span onClick={() => navigate('/')} className="hover:text-white cursor-pointer transition-colors">MFA Center</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span onClick={() => navigate('/policy/edit')} className="hover:text-white cursor-pointer transition-colors">Configuration</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-white font-medium">Exceptions</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">MFA Exceptions Management</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    Add Exception
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-warning text-[18px]">verified_user</span>
+                                        Exception Entities
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative">
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted">
+                                                <span className="material-symbols-outlined text-[16px]">search</span>
+                                            </span>
+                                            <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/60" placeholder="Search exceptions..." type="text"/>
+                                        </div>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-transparent hover:border-border-color">
+                                            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-transparent hover:border-border-color">
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto flex-1">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-6 py-3 font-semibold w-1/5">Entity Name</th>
+                                                <th className="px-6 py-3 font-semibold w-1/6">Entity Type</th>
+                                                <th className="px-6 py-3 font-semibold w-1/3">Reason for Exception</th>
+                                                <th className="px-6 py-3 font-semibold w-1/6">Date Added</th>
+                                                <th className="px-6 py-3 font-semibold text-right w-1/6">Status</th>
+                                                <th className="px-4 py-3 w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm divide-y divide-border-color">
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">SV</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">ServiceAccount_V2</div>
+                                                            <div className="text-[10px] text-text-muted">service.v2@fleet.internal</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                        <span className="material-symbols-outlined text-[12px]">smart_toy</span> User (Service)
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs leading-relaxed">
+                                                    Legacy API integration requires non-interactive authentication. MFA bypass approved by SecOps.
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs font-mono">Oct 20, 2023</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">ACTIVE</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-xs font-bold">LB</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Legacy_Backoffice</div>
+                                                            <div className="text-[10px] text-text-muted">Role Group</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                        <span className="material-symbols-outlined text-[12px]">badge</span> Role
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs leading-relaxed">
+                                                    Temporary exemption for backoffice staff during hardware token migration. Expires Nov 15.
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs font-mono">Oct 15, 2023</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">EXPIRING SOON</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold">DK</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">David Kim</div>
+                                                            <div className="text-[10px] text-text-muted">david.kim@fleet.com</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                        <span className="material-symbols-outlined text-[12px]">person</span> User
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs leading-relaxed">
+                                                    Lost hardware key while traveling. Emergency bypass granted for 24h.
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs font-mono">Oct 24, 2023</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">REVOKED</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">BT</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Build_Team_Alpha</div>
+                                                            <div className="text-[10px] text-text-muted">build.alpha@fleet.internal</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                        <span className="material-symbols-outlined text-[12px]">smart_toy</span> User (Service)
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs leading-relaxed">
+                                                    CI/CD Pipeline runner account. Requires programmatic access without 2FA challenge.
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs font-mono">Sep 01, 2023</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">ACTIVE</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                             <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">K</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Kiosk_Displays</div>
+                                                            <div className="text-[10px] text-text-muted">Role Group</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                        <span className="material-symbols-outlined text-[12px]">badge</span> Role
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs leading-relaxed">
+                                                    Public facing display units in lobby. Read-only access, IP restricted instead of MFA.
+                                                </td>
+                                                <td className="px-6 py-3 text-text-muted text-xs font-mono">Aug 12, 2023</td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">ACTIVE</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker flex items-center justify-between">
+                                    <div className="text-xs text-text-muted">
+                                        Showing <span className="text-white font-medium">1-5</span> of <span className="text-white font-medium">12</span> exceptions
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1 px-2 rounded border border-border-color text-text-muted text-xs hover:bg-surface-dark transition-colors disabled:opacity-50" disabled>Previous</button>
+                                        <button className="p-1 px-2 rounded border border-border-color text-white bg-surface-dark text-xs hover:bg-surface-dark transition-colors">1</button>
+                                        <button className="p-1 px-2 rounded border border-transparent text-text-muted text-xs hover:bg-surface-dark transition-colors">2</button>
+                                        <button className="p-1 px-2 rounded border border-transparent text-text-muted text-xs hover:bg-surface-dark transition-colors">3</button>
+                                        <button className="p-1 px-2 rounded border border-border-color text-text-muted text-xs hover:bg-surface-dark transition-colors">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Page: Overrides List ---
+
+        const OverridesList = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-white text-lg font-bold">Organization MFA Overrides</h2>
+                                    <p className="text-[11px] text-text-muted mt-0.5">MFA Security Module • Override Management</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center bg-surface-dark border border-border-color rounded-md">
+                                    <span className="material-symbols-outlined text-text-muted pl-3 text-lg">search</span>
+                                    <input className="bg-transparent border-none text-sm text-white focus:ring-0 placeholder-text-muted/70 w-64" placeholder="Search organization..." type="text"/>
+                                </div>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add_moderator</span>
+                                    Create Override
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="mb-6 grid grid-cols-4 gap-4">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Overrides</div>
+                                        <div className="text-2xl font-bold text-white">24</div>
+                                    </div>
+                                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                                        <span className="material-symbols-outlined">rule_settings</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Strict Policies</div>
+                                        <div className="text-2xl font-bold text-success">15</div>
+                                    </div>
+                                    <div className="p-2 bg-success/10 rounded-lg text-success">
+                                        <span className="material-symbols-outlined">security</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Lockout Exceptions</div>
+                                        <div className="text-2xl font-bold text-warning">8</div>
+                                    </div>
+                                    <div className="p-2 bg-warning/10 rounded-lg text-warning">
+                                        <span className="material-symbols-outlined">lock_open</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Pending Reviews</div>
+                                        <div className="text-2xl font-bold text-danger">3</div>
+                                    </div>
+                                    <div className="p-2 bg-danger/10 rounded-lg text-danger">
+                                        <span className="material-symbols-outlined">rate_review</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                        Organization List
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white flex items-center gap-1 px-3 border border-border-color bg-surface-dark text-xs">
+                                            <span className="material-symbols-outlined text-[16px]">filter_list</span>
+                                            Filter
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white flex items-center gap-1 px-3 border border-border-color bg-surface-dark text-xs">
+                                            <span className="material-symbols-outlined text-[16px]">download</span>
+                                            Export
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-5 py-3 font-semibold w-[35%]">Organization Name</th>
+                                                <th className="px-5 py-3 font-semibold w-[20%]">Policy Level</th>
+                                                <th className="px-5 py-3 font-semibold w-[20%]">Lockout Rule (Override)</th>
+                                                <th className="px-5 py-3 font-semibold w-[15%]">Last Updated</th>
+                                                <th className="px-5 py-3 font-semibold text-right w-[10%]">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary border border-primary/30 text-xs font-bold">GL</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Global Logistics Corp</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-8821</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-success/10 text-success border border-success/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                        Stricter
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">3 Attempts / 60 Min</span>
+                                                        <span className="text-[10px] text-text-muted">Standard: 5 / 30m</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Oct 24, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-orange-500/20 flex items-center justify-center text-orange-500 border border-orange-500/30 text-xs font-bold">AT</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Atlantic Transports</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-1029</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-surface-darker text-text-muted border border-border-color">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-text-muted"></span>
+                                                        Standard
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">No Override</span>
+                                                        <span className="text-[10px] text-text-muted">Follows Global Policy</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Sep 12, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-500 border border-indigo-500/30 text-xs font-bold">PF</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Pacific Freight Ltd</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-3392</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-success/10 text-success border border-success/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                        Stricter
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">FIDO2 Required</span>
+                                                        <span className="text-[10px] text-text-muted">Override: Auth Method</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Oct 20, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-teal-500/20 flex items-center justify-center text-teal-500 border border-teal-500/30 text-xs font-bold">NE</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">Northern Express</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-9912</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-warning/10 text-warning border border-warning/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                                        Relaxed
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">10 Attempts / 24h</span>
+                                                        <span className="text-[10px] text-text-muted">Legacy System Support</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Oct 02, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-purple-500/20 flex items-center justify-center text-purple-500 border border-purple-500/30 text-xs font-bold">SW</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">SouthWest Haulers</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-4451</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-surface-darker text-text-muted border border-border-color">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-text-muted"></span>
+                                                        Standard
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">No Override</span>
+                                                        <span className="text-[10px] text-text-muted">Follows Global Policy</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Sep 30, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-5 py-3 text-white">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded bg-rose-500/20 flex items-center justify-center text-rose-500 border border-rose-500/30 text-xs font-bold">EC</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">EastCoast Logistics</div>
+                                                            <div className="text-[11px] text-text-muted">ID: ORG-7721</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-success/10 text-success border border-success/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                        Stricter
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-white text-xs">2 Attempts / 15 Min</span>
+                                                        <span className="text-[10px] text-text-muted">High Security Zone</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted text-xs">Oct 22, 2023</td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <button className="text-text-muted hover:text-primary transition-colors text-xs font-medium px-3 py-1.5 rounded hover:bg-surface-darker border border-transparent hover:border-border-color">Edit</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker flex items-center justify-between">
+                                    <span className="text-xs text-text-muted">Showing 1-6 of 24 organizations</span>
+                                    <div className="flex items-center gap-2">
+                                        <button className="px-3 py-1 rounded border border-border-color text-text-muted text-xs hover:bg-surface-dark hover:text-white disabled:opacity-50">Previous</button>
+                                        <button className="px-3 py-1 rounded border border-border-color text-text-muted text-xs hover:bg-surface-dark hover:text-white">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Shell & Routing ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/policy/edit" element={<EditPolicy />} />
+                        <Route path="/exceptions" element={<ExceptionsList />} />
+                        <Route path="/overrides" element={<OverridesList />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

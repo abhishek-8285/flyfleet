@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Unified Global Search Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .search-shortcut {
+            font-family: monospace;
+            border: 1px solid #233648;
+            background: #16202a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #92adc9;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Platform</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="text-sm font-medium">Global Search</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-20 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20 gap-8">
+<div class="flex flex-col">
+<div class="flex items-center text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">
+<span>Platform</span>
+<span class="mx-2">/</span>
+<span class="text-primary">Global Search</span>
+</div>
+<h2 class="text-white text-lg font-bold">Unified Search</h2>
+</div>
+<div class="flex-1 max-w-3xl">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input autofocus="" class="block w-full pl-12 pr-12 py-3 bg-surface-dark border border-border-color rounded-lg text-sm text-white placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-lg" placeholder="Search for vehicles, drivers, trips, or alerts..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+<span class="search-shortcut">/</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-text-muted hover:text-white hover:bg-surface-dark rounded-lg transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border border-surface-darker"></span>
+</button>
+<button class="p-2 text-text-muted hover:text-white hover:bg-surface-dark rounded-lg transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<aside class="w-80 bg-surface-dark border-r border-border-color flex-shrink-0 overflow-y-auto custom-scrollbar p-6">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-sm font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">filter_alt</span>
+                            Faceted Filters
+                        </h3>
+<button class="text-[10px] text-primary hover:text-primary-dark uppercase font-bold tracking-wider">Reset All</button>
+</div>
+<div class="space-y-6">
+<div class="space-y-3">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Entity Type</label>
+<div class="space-y-2">
+<label class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+<input checked="" class="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-muted">directions_car</span>
+                                        Vehicles
+                                    </div>
+<span class="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">124</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+<input checked="" class="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-muted">person</span>
+                                        Drivers
+                                    </div>
+<span class="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">48</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+<input class="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-muted">route</span>
+                                        Trips
+                                    </div>
+<span class="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">892</span>
+</label>
+<label class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+<input class="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+<div class="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px] text-text-muted">notifications_active</span>
+                                        Alerts
+                                    </div>
+<span class="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">15</span>
+</label>
+</div>
+</div>
+<div class="h-px bg-border-color"></div>
+<div class="space-y-3">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Date Range</label>
+<select class="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range</option>
+</select>
+</div>
+<div class="h-px bg-border-color"></div>
+<div class="space-y-3">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Organization</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[16px]">business</span>
+</span>
+<input class="w-full bg-surface-darker border border-border-color rounded pl-9 pr-3 py-2 text-sm text-white placeholder-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter by org..." type="text"/>
+</div>
+<div class="max-h-32 overflow-y-auto custom-scrollbar space-y-1 mt-2">
+<div class="px-2 py-1.5 text-xs text-white bg-surface-darker rounded border border-border-color flex justify-between cursor-pointer hover:border-primary">
+<span>Logistics North</span>
+<span class="text-primary font-bold">✓</span>
+</div>
+<div class="px-2 py-1.5 text-xs text-text-muted hover:text-white hover:bg-surface-darker rounded cursor-pointer transition-colors">
+<span>East Coast Fleet</span>
+</div>
+<div class="px-2 py-1.5 text-xs text-text-muted hover:text-white hover:bg-surface-darker rounded cursor-pointer transition-colors">
+<span>Global Transport</span>
+</div>
+</div>
+</div>
+<div class="h-px bg-border-color"></div>
+<div class="space-y-3">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Status</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1 rounded-full text-[10px] font-medium bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors">Active</button>
+<button class="px-3 py-1 rounded-full text-[10px] font-medium bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 transition-colors">Warning</button>
+<button class="px-3 py-1 rounded-full text-[10px] font-medium bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 transition-colors">Critical</button>
+<button class="px-3 py-1 rounded-full text-[10px] font-medium bg-surface-darker text-text-muted border border-border-color hover:text-white hover:border-white transition-colors">Inactive</button>
+</div>
+</div>
+</div>
+</aside>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-background-dark">
+<div class="flex flex-col gap-4 mb-6">
+<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<span class="text-xs font-semibold text-text-muted uppercase tracking-wider mr-2 whitespace-nowrap">Recent:</span>
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-dark border border-border-color text-xs text-text-muted hover:text-white hover:border-primary transition-colors whitespace-nowrap">
+<span class="material-symbols-outlined text-[14px]">history</span>
+                                "Ford Transit"
+                            </button>
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-dark border border-border-color text-xs text-text-muted hover:text-white hover:border-primary transition-colors whitespace-nowrap">
+<span class="material-symbols-outlined text-[14px]">history</span>
+                                "Driver John Doe"
+                            </button>
+<div class="w-px h-4 bg-border-color mx-2"></div>
+<span class="text-xs font-semibold text-text-muted uppercase tracking-wider mr-2 whitespace-nowrap">Saved:</span>
+<button class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap">
+<span class="material-symbols-outlined text-[14px]">bookmark</span>
+                                Critical Alerts (Last 24h)
+                            </button>
+</div>
+<div class="flex justify-between items-end border-b border-border-color pb-2">
+<div>
+<h3 class="text-white font-bold text-lg">Search Results</h3>
+<p class="text-xs text-text-muted">Found <span class="text-white font-medium">172</span> matches for query</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-text-muted">Sort by:</span>
+<select class="bg-surface-dark border border-border-color rounded px-2 py-1 text-xs text-white focus:ring-1 focus:ring-primary outline-none">
+<option>Relevance</option>
+<option>Date (Newest)</option>
+<option>Date (Oldest)</option>
+</select>
+</div>
+</div>
+</div>
+<div class="space-y-4 max-w-5xl">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-primary/50 transition-colors group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-primary/30 transition-colors">
+<span class="material-symbols-outlined text-primary">directions_car</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">Vehicle</span>
+<span class="text-xs text-text-muted font-mono">ID: V-2023-8841</span>
+<span class="w-1 h-1 rounded-full bg-text-muted"></span>
+<span class="text-xs text-success flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                            Active
+                                        </span>
+</div>
+<h4 class="text-white font-semibold text-base mb-1 group-hover:text-primary transition-colors">Ford Transit Connect - Unit 42</h4>
+<p class="text-sm text-text-muted line-clamp-2">
+                                        Assigned to <span class="text-white font-medium">Logistics North</span> division. Currently located at <span class="text-white">Warehouse B, Sector 4</span>. Last maintenance check completed on Oct 12, 2023. Telemetry indicates normal operation.
+                                    </p>
+<div class="mt-3 flex items-center gap-4 text-xs text-text-muted">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> San Francisco, CA</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">speed</span> 0 km/h (Parked)</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">battery_charging_full</span> 12.4V</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2 self-center">
+<button class="px-3 py-1.5 bg-surface-darker hover:bg-primary hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                        Open Detail
+                                        <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-primary/50 transition-colors group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-indigo-500/30 transition-colors">
+<span class="material-symbols-outlined text-indigo-500">person</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">Driver</span>
+<span class="text-xs text-text-muted font-mono">ID: D-9921</span>
+<span class="w-1 h-1 rounded-full bg-text-muted"></span>
+<span class="text-xs text-warning flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                            On Break
+                                        </span>
+</div>
+<h4 class="text-white font-semibold text-base mb-1 group-hover:text-indigo-400 transition-colors">Michael Chen</h4>
+<p class="text-sm text-text-muted line-clamp-2">
+                                        Senior Driver, <span class="text-white">East Coast Fleet</span>. Operating <span class="text-white">Volvo VNL 860</span>. Current shift started 4h 30m ago. Compliance status: Green.
+                                    </p>
+<div class="mt-3 flex items-center gap-4 text-xs text-text-muted">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">badge</span> License Valid</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">star</span> 4.9 Rating</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">phone</span> +1 (555) 012-3456</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2 self-center">
+<button class="px-3 py-1.5 bg-surface-darker hover:bg-indigo-600 hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                        Open Detail
+                                        <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-danger/50 transition-colors group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-danger"></div>
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-danger/30 transition-colors">
+<span class="material-symbols-outlined text-danger">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-danger/10 text-danger border border-danger/20">Alert</span>
+<span class="text-xs text-text-muted font-mono">ID: A-7732</span>
+<span class="text-xs text-text-muted ml-auto">2 mins ago</span>
+</div>
+<h4 class="text-white font-semibold text-base mb-1 group-hover:text-danger transition-colors">Harsh Braking Event Detected</h4>
+<p class="text-sm text-text-muted line-clamp-2">
+                                        Triggered by vehicle <span class="text-white">V-2023-8841</span> at Highway 101 Junction. G-Force exceeded threshold (0.8g). Camera footage available for review.
+                                    </p>
+<div class="mt-3 flex items-center gap-4 text-xs text-text-muted">
+<span class="flex items-center gap-1 text-danger"><span class="material-symbols-outlined text-[14px]">priority_high</span> High Severity</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">videocam</span> Clip Ready</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2 self-center">
+<button class="px-3 py-1.5 bg-surface-darker hover:bg-danger hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                        Open Detail
+                                        <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-emerald-500/50 transition-colors group cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-emerald-500/30 transition-colors">
+<span class="material-symbols-outlined text-emerald-500">route</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Trip</span>
+<span class="text-xs text-text-muted font-mono">ID: T-4451-X</span>
+<span class="w-1 h-1 rounded-full bg-text-muted"></span>
+<span class="text-xs text-emerald-500 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            In Progress
+                                        </span>
+</div>
+<h4 class="text-white font-semibold text-base mb-1 group-hover:text-emerald-400 transition-colors">Route 66 Delivery - Batch #4</h4>
+<p class="text-sm text-text-muted line-clamp-2">
+                                        Origin: <span class="text-white">Chicago Hub</span> -&gt; Destination: <span class="text-white">St. Louis Distribution Center</span>. ETA: 14:30 CST. Currently on schedule.
+                                    </p>
+<div class="mt-3 flex items-center gap-4 text-xs text-text-muted">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">distance</span> 245 mi remaining</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> 3h 15m elapsed</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2 self-center">
+<button class="px-3 py-1.5 bg-surface-darker hover:bg-emerald-600 hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                        Open Detail
+                                        <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 flex justify-center pb-8">
+<button class="px-4 py-2 bg-surface-darker border border-border-color text-sm text-text-muted hover:text-white hover:border-primary rounded-lg transition-colors">
+                            Load More Results
+                        </button>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+<span>© 2023 Enterprise Fleet Manager. Global Search Module V2.0</span>
+<div class="flex items-center gap-4">
+<span>Index Status: <span class="text-success">Synced</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Disaster Recovery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .timeline-step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 100%;
+            height: 2px;
+            background: #233648;
+            z-index: 1;
+        }
+        .timeline-step:last-child::after {
+            display: none;
+        }
+        .timeline-step.completed::after {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = ({ activePage }) => {
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Infrastructure</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors`}>
+                            <span className="material-symbols-outlined">storage</span>
+                            <span className="text-sm font-medium">Resources</span>
+                        </Link>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Disaster Recovery</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors`}>
+                            <span className="material-symbols-outlined">settings_backup_restore</span>
+                            <span className="text-sm font-medium">Backup Sets</span>
+                        </Link>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${activePage === 'restores' ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white transition-colors'}`}>
+                            <span className="material-symbols-outlined">history_toggle_off</span>
+                            <span className="text-sm font-medium">Restore Operations</span>
+                        </Link>
+                        
+                        {activePage === 'restores' && (
+                            <div className="mt-8 border-t border-border-color pt-6 px-3">
+                                <div className="text-[10px] font-bold uppercase text-text-muted tracking-[0.1em] mb-4">Operations Filters</div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[11px] text-text-muted block mb-2">Restore Status</label>
+                                        <select className="w-full bg-surface-dark border border-border-color rounded px-3 py-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none">
+                                            <option>All Statuses</option>
+                                            <option>Pending</option>
+                                            <option>Running</option>
+                                            <option>Completed</option>
+                                            <option>Failed</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-text-muted block mb-2">Date Range</label>
+                                        <select className="w-full bg-surface-dark border border-border-color rounded px-3 py-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none">
+                                            <option>Last 24 Hours</option>
+                                            <option>Last 7 Days</option>
+                                            <option>Last 30 Days</option>
+                                            <option>Custom Range</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-text-muted block mb-2">Backup Type</label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked className="rounded border-border-color bg-surface-dark text-primary focus:ring-primary" type="checkbox"/>
+                                                <span className="text-xs text-text-muted group-hover:text-white">FULL</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked className="rounded border-border-color bg-surface-dark text-primary focus:ring-primary" type="checkbox"/>
+                                                <span className="text-xs text-text-muted group-hover:text-white">INCREMENTAL</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">DR Manager</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = ({ stats = [] }) => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                <span>© 2023 Enterprise Fleet Manager. DR Module V2.4</span>
+                <div className="flex items-center gap-4">
+                    {stats.map((stat, i) => (
+                        <span key={i}>{stat.label}: <span className={stat.colorClass || 'text-primary'}>{stat.value}</span></span>
+                    ))}
+                    <span>Server Time: <span className="font-mono text-white uppercase">{new Date().toLocaleTimeString('en-US', { hour12: false, timeZone: 'UTC' })} UTC</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Screen Components ---
+
+        const RestoreOperations = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activePage="restores" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider mb-0.5">
+                                    <span>Infrastructure</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span>Disaster Recovery</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-primary font-bold">Restore Operations</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold leading-tight">Restore Operations Screen</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative group">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded-lg pl-9 pr-3 py-2 w-72 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button 
+                                    onClick={() => navigate('/initiate')}
+                                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                                    Initiate Restore
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="p-6 pb-0">
+                            <div className="grid grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center text-primary">
+                                        <span className="material-symbols-outlined">sync</span>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-text-muted uppercase">Active Restores</div>
+                                        <div className="text-xl font-bold text-white">4</div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded bg-success/10 flex items-center justify-center text-success">
+                                        <span className="material-symbols-outlined">check_circle</span>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-text-muted uppercase">Success Rate</div>
+                                        <div className="text-xl font-bold text-white">99.2%</div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded bg-danger/10 flex items-center justify-center text-danger">
+                                        <span className="material-symbols-outlined">error</span>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-text-muted uppercase">Failed (24h)</div>
+                                        <div className="text-xl font-bold text-white">1</div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded bg-warning/10 flex items-center justify-center text-warning">
+                                        <span className="material-symbols-outlined">timer</span>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-bold text-text-muted uppercase">Avg. Duration</div>
+                                        <div className="text-xl font-bold text-white">42m</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-hidden px-6 pb-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/30">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                        Active and Past Operations
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar flex-1">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="sticky top-0 z-10">
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker">
+                                                <th className="px-6 py-4 font-semibold">Restore ID</th>
+                                                <th className="px-6 py-4 font-semibold">Backup ID</th>
+                                                <th className="px-6 py-4 font-semibold">Type</th>
+                                                <th className="px-6 py-4 font-semibold">Start Time</th>
+                                                <th className="px-6 py-4 font-semibold">Status</th>
+                                                <th className="px-6 py-4 font-semibold text-right">Duration</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr 
+                                                className="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer"
+                                                onClick={() => navigate('/detail')}
+                                            >
+                                                <td className="px-6 py-4 font-mono text-xs text-primary">RES-88219-X4</td>
+                                                <td className="px-6 py-4 font-mono text-xs text-text-muted">BCK-5521-X9</td>
+                                                <td className="px-6 py-4">
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-border-color text-white">FULL</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-text-muted whitespace-nowrap">2023-11-24 14:20:05</td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                        <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                        RUNNING
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-text-muted font-mono">00:15:22</td>
+                                            </tr>
+                                            {[
+                                                {id: 'RES-9427-SQ', bck: 'BCK-1029-Y4', type: 'INCREMENTAL', time: '2023-11-24 13:45:12', status: 'COMPLETED', duration: '00:08:44', statusColor: 'success'},
+                                                {id: 'RES-9426-FS', bck: 'BCK-8812-Z2', type: 'FULL', time: '2023-11-24 12:10:33', status: 'FAILED', duration: '01:12:05', statusColor: 'danger'},
+                                                {id: 'RES-9425-KD', bck: 'BCK-4491-M1', type: 'INCREMENTAL', time: '2023-11-24 11:30:00', status: 'PENDING', duration: '--:--:--', statusColor: 'warning'},
+                                                {id: 'RES-9424-TR', bck: 'BCK-2210-P7', type: 'FULL', time: '2023-11-24 10:15:45', status: 'COMPLETED', duration: '02:30:11', statusColor: 'success'},
+                                                {id: 'RES-9423-PL', bck: 'BCK-9904-S3', type: 'INCREMENTAL', time: '2023-11-24 09:40:22', status: 'COMPLETED', duration: '00:05:15', statusColor: 'success'},
+                                            ].map((row) => (
+                                                <tr key={row.id} className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                    <td className="px-6 py-4 font-mono text-xs text-primary">{row.id}</td>
+                                                    <td className="px-6 py-4 font-mono text-xs text-text-muted">{row.bck}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.type === 'FULL' ? 'bg-border-color text-white' : 'bg-border-color/50 text-text-muted'}`}>{row.type}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-text-muted whitespace-nowrap">{row.time}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-${row.statusColor}/10 text-${row.statusColor} border border-${row.statusColor}/20`}>
+                                                            {row.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-text-muted font-mono">{row.duration}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker/30 flex items-center justify-between">
+                                    <div className="text-xs text-text-muted">Showing 1 to 6 of 142 operations</div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="px-3 py-1 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:bg-border-color transition-colors">Previous</button>
+                                        <button className="px-3 py-1 bg-primary text-xs text-white rounded">1</button>
+                                        <button className="px-3 py-1 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:bg-border-color transition-colors">2</button>
+                                        <button className="px-3 py-1 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:bg-border-color transition-colors">3</button>
+                                        <button className="px-3 py-1 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:bg-border-color transition-colors">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer stats={[
+                            {label: 'API Endpoint', value: '/dr/restores'},
+                            {label: 'System Health', value: 'Stable', colorClass: 'text-success'}
+                        ]} />
+                    </main>
+                </div>
+            );
+        };
+
+        const InitiateRestore = () => {
+            const navigate = useNavigate();
+            const [confirmText, setConfirmText] = useState('');
+            
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activePage="initiate" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest font-semibold mb-1">
+                                    <Link to="/" className="hover:text-primary transition-colors">Restore Operations</Link>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary">Initiate</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold leading-tight">Initiate System Restore</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} className="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button 
+                                    disabled={confirmText !== 'RESTORE'}
+                                    onClick={() => navigate('/detail')}
+                                    className={`px-4 py-2 bg-danger hover:bg-red-600 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-danger/20 ${confirmText !== 'RESTORE' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">dangerous</span>
+                                    Start Full System Restore
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto space-y-8">
+                                <section className="space-y-4">
+                                    <div className="flex items-center justify-between border-b border-border-color pb-2">
+                                        <div className="flex items-center gap-2 text-primary">
+                                            <span className="material-symbols-outlined text-xl">database</span>
+                                            <h3 className="font-semibold text-white uppercase tracking-wider text-sm">Restore Point Selection</h3>
+                                        </div>
+                                        <div className="relative">
+                                            <input className="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-2 w-72 pl-9 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search backups by ID..." type="text"/>
+                                            <span className="material-symbols-outlined absolute left-2.5 top-2.5 text-text-muted text-[18px]">search</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-surface-darker/50 text-xs text-text-muted uppercase tracking-wider border-b border-border-color">
+                                                    <th className="px-6 py-4 font-semibold w-12 text-center">Select</th>
+                                                    <th className="px-6 py-4 font-semibold">Snapshot ID</th>
+                                                    <th className="px-6 py-4 font-semibold">Creation Date</th>
+                                                    <th className="px-6 py-4 font-semibold">Size</th>
+                                                    <th className="px-6 py-4 font-semibold">Type</th>
+                                                    <th className="px-6 py-4 font-semibold text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                {[
+                                                    {id: 'SNAP-20231024-001', date: 'Oct 24, 2023 04:00:00 UTC', size: '1.4 TB', type: 'Incremental', status: 'VALID', checked: true},
+                                                    {id: 'SNAP-20231023-001', date: 'Oct 23, 2023 04:00:00 UTC', size: '1.4 TB', type: 'Incremental', status: 'VALID'},
+                                                    {id: 'SNAP-20231022-001', date: 'Oct 22, 2023 04:00:00 UTC', size: '4.2 TB', type: 'Full Backup', status: 'VALID'},
+                                                    {id: 'SNAP-20231021-001', date: 'Oct 21, 2023 04:00:00 UTC', size: '1.3 TB', type: 'Incremental', status: 'CORRUPT', disabled: true},
+                                                ].map((snap) => (
+                                                    <tr key={snap.id} className={`border-b border-border-color transition-colors ${snap.disabled ? 'opacity-60 bg-danger/5' : 'hover:bg-primary/5 cursor-pointer'}`}>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <input 
+                                                                defaultChecked={snap.checked} 
+                                                                disabled={snap.disabled}
+                                                                className={`w-4 h-4 text-primary bg-surface-darker border-border-color focus:ring-primary focus:ring-offset-surface-darker ${snap.disabled ? 'cursor-not-allowed' : ''}`} 
+                                                                name="restore_point" 
+                                                                type="radio"
+                                                            />
+                                                        </td>
+                                                        <td className="px-6 py-4 font-mono text-xs text-white">{snap.id}</td>
+                                                        <td className="px-6 py-4 text-text-muted">{snap.date}</td>
+                                                        <td className="px-6 py-4 text-text-muted">{snap.size}</td>
+                                                        <td className="px-6 py-4 text-text-muted">{snap.type}</td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${snap.status === 'VALID' ? 'bg-success/10 text-success border border-success/20' : 'bg-danger/10 text-danger border border-danger/20'}`}>
+                                                                {snap.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                        <div className="p-4 bg-surface-darker/30 border-t border-border-color text-center">
+                                            <button className="text-xs text-primary font-medium hover:underline" type="button">View 12 More Recent Backups</button>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-primary border-b border-border-color pb-2">
+                                            <span className="material-symbols-outlined text-xl">tune</span>
+                                            <h3 className="font-semibold text-white uppercase tracking-wider text-sm">Configuration</h3>
+                                        </div>
+                                        <div className="bg-surface-dark rounded-xl border border-border-color p-6 space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-semibold text-text-muted uppercase">Target Environment</label>
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {['PROD', 'STAGING', 'UAT'].map((env) => (
+                                                        <label key={env} className="cursor-pointer">
+                                                            <input className="sr-only peer" name="env" type="radio" value={env.toLowerCase()} defaultChecked={env === 'STAGING'}/>
+                                                            <div className={`p-3 text-center rounded-lg border border-border-color bg-surface-darker peer-checked:border-${env === 'PROD' ? 'danger' : env === 'STAGING' ? 'primary' : 'success'} peer-checked:bg-${env === 'PROD' ? 'danger' : env === 'STAGING' ? 'primary' : 'success'}/10 peer-checked:text-${env === 'PROD' ? 'danger' : env === 'STAGING' ? 'primary' : 'success'} transition-all`}>
+                                                                <div className="text-xs font-bold">{env}</div>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <p className="text-[10px] text-text-muted italic">Warning: PROD restore will cause system downtime.</p>
+                                            </div>
+                                            <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-medium text-white">Pre-Restore Integrity Check</span>
+                                                    <span className="text-[11px] text-text-muted">Validate all blocks before overwriting target</span>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input defaultChecked className="sr-only peer" type="checkbox" value=""/>
+                                                    <div className="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 text-primary border-b border-border-color pb-2">
+                                            <span className="material-symbols-outlined text-xl">verified_user</span>
+                                            <h3 className="font-semibold text-white uppercase tracking-wider text-sm">Confirmation</h3>
+                                        </div>
+                                        <div className="bg-surface-dark rounded-xl border border-border-color p-6 space-y-6">
+                                            <div className="bg-danger/10 border border-danger/30 rounded-lg p-4 flex gap-3">
+                                                <span className="material-symbols-outlined text-danger">warning</span>
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-danger uppercase mb-1">Critical: System Overwrite Warning</h4>
+                                                    <p className="text-xs text-text-muted leading-relaxed">
+                                                        Initiating a restore will permanently overwrite current data on the target environment. This action is <span className="text-white font-bold underline">irreversible</span> once the process starts.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-semibold text-text-muted uppercase">Verification Step 1</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" required type="checkbox"/>
+                                                        <span className="text-xs text-white">I confirm I have selected the correct restore point.</span>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-semibold text-text-muted uppercase">Verification Step 2</label>
+                                                    <input 
+                                                        value={confirmText}
+                                                        onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                                                        className="w-full bg-surface-darker border border-border-color text-xs text-white rounded px-3 py-2.5 focus:ring-1 focus:ring-danger focus:border-danger outline-none" 
+                                                        placeholder="Type RESTORE to confirm" 
+                                                        type="text"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                        <Footer stats={[
+                            {label: 'Backup Integrity', value: 'Verified', colorClass: 'text-success'},
+                            {label: 'Current Node', value: 'DR-WEST-04'}
+                        ]} />
+                    </main>
+                </div>
+            );
+        };
+
+        const OperationDetail = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activePage="restores" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center text-[10px] text-text-muted uppercase tracking-widest font-semibold mb-0.5">
+                                    <Link to="/" className="hover:text-primary transition-colors">Restores</Link>
+                                    <span className="mx-2 text-border-color">/</span>
+                                    <span className="text-white">RES-88219-X4</span>
+                                </nav>
+                                <div className="flex items-center gap-4">
+                                    <h2 className="text-white text-lg font-bold">Operation Detail View</h2>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                                        Running
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button className="px-4 py-2 border border-border-color hover:bg-surface-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Download Report
+                                </button>
+                                <button 
+                                    onClick={() => navigate('/')}
+                                    className="px-4 py-2 bg-danger/10 border border-danger/30 hover:bg-danger/20 text-danger text-xs font-semibold rounded flex items-center gap-2 transition-colors"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">cancel</span>
+                                    Cancel Operation
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Restore Type</div>
+                                    <div className="text-xl font-bold text-white">Full Database Recovery</div>
+                                    <div className="text-[10px] text-primary flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[12px]">database</span>
+                                        SQL_PROD_CLUSTER_01
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Duration</div>
+                                    <div className="text-xl font-bold text-white">00:42:12</div>
+                                    <div className="text-[10px] text-text-muted mt-1 flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-[12px]">timer</span>
+                                        Started at 14:02:44 UTC
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Final Status</div>
+                                    <div className="text-xl font-bold text-warning">IN_PROGRESS</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Step 3 of 4: Validation</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Initiated By</div>
+                                    <div className="text-xl font-bold text-white">System (Auto)</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Schedule: NIGHTLY_RECOVERY_TEST</div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-8 mb-6">
+                                        <h3 className="text-white text-sm font-semibold mb-8 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">account_tree</span>
+                                            Progress Timeline
+                                        </h3>
+                                        <div className="relative flex items-center justify-between px-4">
+                                            <div className="flex flex-col items-center z-10 w-1/4 relative timeline-step completed">
+                                                <div className="w-10 h-10 rounded-full bg-success text-white flex items-center justify-center border-4 border-background-dark mb-3">
+                                                    <span className="material-symbols-outlined">check</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-white">Initialization</span>
+                                                <span className="text-[10px] text-text-muted mt-1">Completed (00:02:15)</span>
+                                            </div>
+                                            <div className="flex flex-col items-center z-10 w-1/4 relative timeline-step completed">
+                                                <div className="w-10 h-10 rounded-full bg-success text-white flex items-center justify-center border-4 border-background-dark mb-3">
+                                                    <span className="material-symbols-outlined">check</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-white">Extraction</span>
+                                                <span className="text-[10px] text-text-muted mt-1">Completed (00:28:40)</span>
+                                            </div>
+                                            <div className="flex flex-col items-center z-10 w-1/4 relative timeline-step">
+                                                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center border-4 border-background-dark mb-3 ring-2 ring-primary/30">
+                                                    <span className="material-symbols-outlined animate-pulse">settings_ethernet</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-white">Validation</span>
+                                                <span className="text-[10px] text-primary mt-1">Running (In Progress)</span>
+                                            </div>
+                                            <div className="flex flex-col items-center z-10 w-1/4 relative timeline-step">
+                                                <div className="w-10 h-10 rounded-full bg-border-color text-text-muted flex items-center justify-center border-4 border-background-dark mb-3">
+                                                    <span className="material-symbols-outlined">flag</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-text-muted">Completion</span>
+                                                <span className="text-[10px] text-text-muted mt-1">Pending</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-12">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                                Operation Logs
+                                            </h3>
+                                            <div className="flex items-center gap-2">
+                                                <div className="relative">
+                                                    <span className="material-symbols-outlined absolute left-2.5 top-1.5 text-text-muted text-[18px]">search</span>
+                                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search logs..." type="text"/>
+                                                </div>
+                                                <select className="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 outline-none focus:ring-1 focus:ring-primary">
+                                                    <option>All Levels</option>
+                                                    <option>Info</option>
+                                                    <option>Warning</option>
+                                                    <option>Error</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto custom-scrollbar bg-surface-darker/30">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="sticky top-0 z-10 border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/80 backdrop-blur-sm">
+                                                        <th className="px-4 py-3 font-semibold">Timestamp</th>
+                                                        <th className="px-4 py-3 font-semibold">Level</th>
+                                                        <th className="px-4 py-3 font-semibold">Module</th>
+                                                        <th className="px-4 py-3 font-semibold">Message</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="text-xs font-mono">
+                                                    {[
+                                                        {time: '14:44:52.102', level: 'INFO', mod: 'VALIDATOR', msg: 'Starting integrity check for data block range 0x4F00...'},
+                                                        {time: '14:42:01.884', level: 'INFO', mod: 'EXTRACTOR', msg: 'Extraction phase completed. Total size: 2.4TB.'},
+                                                        {time: '14:38:15.221', level: 'WARN', mod: 'NETWORK', msg: 'Minor latency spike detected on storage node peer B. Retrying packet...', warning: true},
+                                                        {time: '14:15:22.001', level: 'INFO', mod: 'CORE', msg: 'Snapshot metadata verified. Point-in-time: 2023-10-24 02:00:00 UTC.'},
+                                                        {time: '14:05:10.455', level: 'INFO', mod: 'INIT', msg: 'Session initialized. Worker allocated: DR-WORKER-04.'},
+                                                        {time: '14:02:44.000', level: 'INFO', mod: 'SYSTEM', msg: 'Restore operation RES-88219-X4 triggered by scheduler.'},
+                                                    ].map((log, i) => (
+                                                        <tr key={i} className="border-b border-border-color/50 hover:bg-surface-darker transition-colors">
+                                                            <td className="px-4 py-2.5 text-text-muted">{log.time}</td>
+                                                            <td className="px-4 py-2.5"><span className={log.warning ? 'text-warning' : 'text-primary'}>{log.level}</span></td>
+                                                            <td className="px-4 py-2.5 text-text-muted">{log.mod}</td>
+                                                            <td className={`px-4 py-2.5 ${log.warning ? 'text-warning' : 'text-white'}`}>{log.msg}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer stats={[
+                            {label: 'Endpoint', value: 'GET /dr/restores/88219-X4'},
+                            {label: 'Encryption', value: 'AES-256', colorClass: 'text-success'}
+                        ]} />
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<RestoreOperations />} />
+                        <Route path="/initiate" element={<InitiateRestore />} />
+                        <Route path="/detail" element={<OperationDetail />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>

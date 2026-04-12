@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetCommand - Admin Dashboard Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .tooltip-trigger:hover .tooltip-content {
+            display: block;
+        }
+        .dropdown-open {
+            display: block !important;
+        }
+        .map-popup-arrow {
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            margin-left: -6px;
+            width: 12px;
+            height: 12px;
+            background: #111a22;
+            border-bottom: 1px solid #233648;
+            border-right: 1px solid #233648;
+            transform: rotate(45deg);
+        }
+        .custom-checkbox:checked {
+            background-color: #137fec;
+            border-color: #137fec;
+        }
+    </style>
+    
+    <!-- React Scripts -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const navigate = useNavigate();
+            const isActive = (path) => location.pathname === path;
+            const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">local_shipping</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetCommand</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Menu</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Dashboard</span>
+                        </Link>
+                        <Link to="/map" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/map') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">map</span>
+                            <span className="text-sm font-medium">Live Map</span>
+                        </Link>
+                        <Link to="/fleet" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/fleet') || isActive('/vehicle/301') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">directions_car</span>
+                            <span className="text-sm font-medium">Fleet</span>
+                        </Link>
+                        <Link to="/drivers" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/drivers') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">badge</span>
+                            <span className="text-sm font-medium">Drivers</span>
+                        </Link>
+                        <Link to="/maintenance" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/maintenance') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">build</span>
+                            <span className="text-sm font-medium">Maintenance</span>
+                        </Link>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Analytics</div>
+                        <Link to="/reports" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">analytics</span>
+                            <span className="text-sm font-medium">Reports</span>
+                        </Link>
+                        <Link to="/history" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">history</span>
+                            <span className="text-sm font-medium">History</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="relative cursor-pointer" onClick={() => setIsProfileOpen(!isProfileOpen)}>
+                            <div className="flex items-center gap-3 w-full text-left">
+                                <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")' }}></div>
+                                <div className="flex flex-col overflow-hidden flex-1">
+                                    <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                    <span className="text-xs text-text-muted truncate">Admin</span>
+                                </div>
+                                <span className="material-symbols-outlined text-text-muted">{isProfileOpen ? 'expand_more' : 'expand_less'}</span>
+                            </div>
+                            {isProfileOpen && (
+                            <div className="absolute bottom-full left-0 mb-2 w-full bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 overflow-hidden">
+                                <div className="p-2 space-y-1">
+                                    <a href="#" className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors">
+                                        <span className="material-symbols-outlined text-[18px]">person</span>
+                                        My Profile
+                                    </a>
+                                    <a href="#" className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors">
+                                        <span className="material-symbols-outlined text-[18px]">settings_suggest</span>
+                                        Org. Settings
+                                    </a>
+                                    <div className="border-t border-border-color p-2">
+                                        <a href="#" className="flex items-center gap-2 px-3 py-2 rounded text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">logout</span>
+                                            Logout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            )}
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const TopBar = ({ title }) => {
+            const [isSearchOpen, setIsSearchOpen] = useState(false);
+            const [isNotifOpen, setIsNotifOpen] = useState(false);
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const navigate = useNavigate();
+
+            return (
+                <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-white text-lg font-bold">{title}</h2>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="relative hidden md:block group z-40">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                <span className="material-symbols-outlined text-[20px]">search</span>
+                            </span>
+                            <input 
+                                className="bg-border-color text-white text-sm rounded-lg pl-10 pr-10 py-2 w-64 border-none focus:ring-1 focus:ring-primary placeholder-text-muted transition-all group-focus-within:w-96" 
+                                placeholder="Search vehicles, drivers..." 
+                                type="text"
+                                onFocus={() => setIsSearchOpen(true)}
+                                onBlur={() => setTimeout(() => setIsSearchOpen(false), 200)}
+                            />
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <kbd className="hidden sm:inline-block h-5 px-1.5 border border-[#334d66] rounded font-sans text-[10px] font-medium text-text-muted flex items-center justify-center min-w-[20px]">/</kbd>
+                            </div>
+                            {isSearchOpen && (
+                                <div className="absolute top-full left-0 mt-2 w-96 bg-surface-dark border border-border-color rounded-lg shadow-2xl overflow-hidden z-50">
+                                    <div className="p-2">
+                                        <div className="text-xs font-semibold text-text-muted px-3 py-2 uppercase tracking-wider">Vehicles (3)</div>
+                                        <Link to="/vehicle/301" className="flex items-center justify-between px-3 py-2 hover:bg-border-color rounded group cursor-pointer">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+                                                    <span className="material-symbols-outlined text-sm">directions_car</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-white group-hover:text-primary">Vehicle #301</p>
+                                                    <p className="text-xs text-text-muted">Active • I-95 South</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] text-text-muted border border-border-color px-1.5 rounded">Enter</span>
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setIsNotifOpen(!isNotifOpen)}
+                                    className={`relative p-2 text-white bg-border-color rounded-full transition-colors hover:bg-primary hover:text-white ${isNotifOpen ? 'bg-primary text-white' : ''}`}>
+                                    <span className="material-symbols-outlined">notifications</span>
+                                    <span className="absolute top-2 right-2 size-2.5 bg-red-500 rounded-full border-2 border-surface-darker"></span>
+                                </button>
+                                {isNotifOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-80 bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 overflow-hidden">
+                                    <div className="p-3 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/20">3 New</span>
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                        <div className="p-3 border-b border-border-color/50 hover:bg-surface-darker transition-colors cursor-pointer group/item">
+                                            <div className="flex gap-3">
+                                                <div className="mt-1.5 w-2 h-2 rounded-full bg-red-500 flex-shrink-0 animate-pulse"></div>
+                                                <div>
+                                                    <p className="text-sm text-white font-medium group-hover/item:text-primary transition-colors">Critical Engine Alert</p>
+                                                    <p className="text-xs text-text-muted mt-0.5">Vehicle #301 - Coolant Temp High</p>
+                                                    <p className="text-[10px] text-text-muted mt-1">2 mins ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 border-b border-border-color/50 hover:bg-surface-darker transition-colors cursor-pointer group/item">
+                                            <div className="flex gap-3">
+                                                <div className="mt-1.5 w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0"></div>
+                                                <div>
+                                                    <p className="text-sm text-white font-medium group-hover/item:text-primary transition-colors">Maintenance Due</p>
+                                                    <p className="text-xs text-text-muted mt-0.5">Vehicle #104 scheduled service</p>
+                                                    <p className="text-[10px] text-text-muted mt-1">1 hour ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 hover:bg-surface-darker transition-colors cursor-pointer group/item">
+                                            <div className="flex gap-3">
+                                                <div className="mt-1.5 w-2 h-2 rounded-full bg-primary flex-shrink-0"></div>
+                                                <div>
+                                                    <p className="text-sm text-white font-medium group-hover/item:text-primary transition-colors">Route Optimization</p>
+                                                    <p className="text-xs text-text-muted mt-0.5">New route available for #442</p>
+                                                    <p className="text-[10px] text-text-muted mt-1">3 hours ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-2 border-t border-border-color bg-surface-darker text-center">
+                                        <button className="text-xs text-primary hover:text-white transition-colors">Mark all as read</button>
+                                    </div>
+                                </div>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <button 
+                                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                                    className={`p-2 text-text-muted hover:text-white hover:bg-border-color rounded-full transition-colors flex items-center justify-center ${isSettingsOpen ? 'bg-primary text-white' : ''}`}>
+                                    <span className="material-symbols-outlined pointer-events-none">settings</span>
+                                </button>
+                                {isSettingsOpen && (
+                                    <div className="absolute top-full right-0 mt-2 w-56 bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 overflow-hidden">
+                                        <div className="p-2 space-y-1">
+                                            <div className="px-3 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">System</div>
+                                            <button title="Display Settings" className="w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left">
+                                                <span className="material-symbols-outlined text-[18px]">display_settings</span>
+                                                Display
+                                            </button>
+                                            <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left">
+                                                <span className="material-symbols-outlined text-[18px]">notifications_active</span>
+                                                Notifications
+                                            </button>
+                                            <div className="border-t border-border-color my-1"></div>
+                                            <button className="w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left">
+                                                <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                                                Manage Users
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+
+        const CommonFooter = () => (
+             <footer className="mt-4 text-center text-xs text-[#64748b] pb-6 flex flex-col items-center gap-1 bg-background-dark">
+                <span>© 2023 Enterprise Fleet Manager. All rights reserved.</span>
+                <span className="text-[10px]">v2.4.1 | Server Time: <span className="font-mono">14:02 UTC</span></span>
+            </footer>
+        )
+
+        // --- Pages ---
+
+        const DashboardOverview = () => {
+            const navigate = useNavigate();
+            const [dateRange, setDateRange] = useState('today');
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Dashboard Overview" />
+                        <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                        <select 
+                                            value={dateRange}
+                                            onChange={(e) => setDateRange(e.target.value)}
+                                            className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+                                            <option value="today">Today: Oct 24</option>
+                                            <option value="week">Last 7 Days</option>
+                                            <option value="custom">Custom Range</option>
+                                        </select>
+                                        <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">calendar_today</span>
+                                    </div>
+                                    {dateRange === 'custom' && (
+                                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                                            <input type="date" className="bg-surface-dark border border-border-color text-white text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary [color-scheme:dark]" />
+                                            <span className="text-text-muted text-xs">to</span>
+                                            <input type="date" className="bg-surface-dark border border-border-color text-white text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary [color-scheme:dark]" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <select className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+                                        <option>Global Fleet Ops</option>
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">domain</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 ml-auto">
+                                <div className="flex items-center gap-2 text-xs text-text-muted bg-border-color/30 px-2 py-1 rounded border border-border-color/50">
+                                    <span className="material-symbols-outlined text-[14px] text-emerald-500 animate-pulse">radio_button_checked</span>
+                                    <span>Live</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                             <div className="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto pb-6">
+                                <div className="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* KPI Cards */}
+                                    {[
+                                        { title: "Live Vehicles", value: "842", icon: "directions_bus", color: "text-primary", bg: "bg-primary/10", trend: "5%", trendColor: "text-emerald-500" },
+                                        { title: "Active Trips", value: "125", icon: "route", color: "text-purple-500", bg: "bg-purple-500/10", trend: "2%", trendColor: "text-emerald-500" },
+                                        { title: "Active Alerts", value: "3", icon: "warning", color: "text-red-500", bg: "bg-red-500/10", custom: true }
+                                    ].map((kpi, idx) => (
+                                        <div key={idx} className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+                                            <div className="flex justify-between items-start z-10 relative">
+                                                <div className="tooltip-trigger relative">
+                                                    <div className="flex items-center gap-1 mb-1 cursor-help">
+                                                        <p className="text-text-muted text-sm font-medium">{kpi.title}</p>
+                                                        <span className="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary">info</span>
+                                                    </div>
+                                                    <h3 className="text-3xl font-bold text-white tracking-tight">{kpi.value}</h3>
+                                                </div>
+                                                <div className={`p-2 ${kpi.bg} rounded-lg ${kpi.color}`}>
+                                                    <span className="material-symbols-outlined">{kpi.icon}</span>
+                                                </div>
+                                            </div>
+                                            {kpi.custom ? (
+                                                <div className="flex gap-3 mt-3">
+                                                     <Link to="/maintenance" className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                        <span className="text-xs font-semibold text-red-400">2 Critical</span>
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                <div className="mt-4 flex items-center text-sm">
+                                                    <span className={`${kpi.trendColor} font-medium flex items-center gap-1`}>
+                                                        <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                                        {kpi.trend}
+                                                    </span>
+                                                    <span className="text-[#64748b] ml-2">vs last week</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color shadow-sm flex flex-col h-[500px] overflow-hidden relative group/map">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker z-10 relative">
+                                            <h3 className="text-white font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary">public</span>
+                                                Live Fleet Map
+                                            </h3>
+                                        </div>
+                                        <div className="relative flex-1 bg-[#0f151b] overflow-hidden">
+                                             <div className="absolute inset-0 bg-cover bg-center opacity-70" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCeeeLxaUXFSywPWOUz7sSShAB3uQmjmm05fXrxnJMrtOj-77MaaA_rwghU8aFYgdEN25a4Zu_KRt4Bww_5vIegatJal2ZEZwc-jWi6kSXdQy3FKD1_7k4VpFPnvvH8JhhczyN8RmE4dQe7Igd7R_Y3Q2A8cUV3JoEubwD_1yrEB0VImkaOpvLuj7MtoMf4v4Vfp7EmLAR1LIeGUzUqVgEPm__oaIqEyfwohYrEJheP1zpnGNTy0WkwKZgcqRa3hJZyETmgEvoDzR4")' }}></div>
+                                             <div className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10" onClick={() => navigate('/map')}>
+                                                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
+                                                    <div className="w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_#137fec]"></div>
+                                                </div>
+                                            </div>
+                                             <div className="absolute bottom-1/3 right-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10" onClick={() => navigate('/vehicle/301')}>
+                                                <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center animate-bounce">
+                                                    <div className="w-3 h-3 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+                                         <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 className="text-white font-semibold">Critical Vehicle Status</h3>
+                                            <Link to="/fleet" className="text-primary hover:underline text-xs">View All</Link>
+                                        </div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-sm text-text-muted">
+                                                <thead className="bg-[#1d2936] text-xs uppercase font-medium">
+                                                    <tr>
+                                                        <th className="px-6 py-3">Vehicle ID</th>
+                                                        <th className="px-6 py-3">Status</th>
+                                                        <th className="px-6 py-3 text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-border-color">
+                                                    <tr className="hover:bg-[#1d2936] transition-colors bg-primary/5">
+                                                        <td className="px-6 py-3 font-medium text-white">#301</td>
+                                                        <td className="px-6 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">Engine Alert</span></td>
+                                                        <td className="px-6 py-3 text-right"><Link to="/vehicle/301" className="text-primary hover:text-white text-xs">Detail</Link></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                     <div className="bg-surface-dark rounded-xl p-5 border border-border-color">
+                                        <h3 className="text-white font-semibold mb-4">Quick Actions</h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Link to="/add-vehicle" className="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+                                                <span className="material-symbols-outlined mb-2 text-primary group-hover:text-white">add_circle</span>
+                                                <span className="text-sm font-medium text-white">Add Vehicle</span>
+                                            </Link>
+                                            <Link to="/drivers" className="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+                                                <span className="material-symbols-outlined mb-2 text-primary group-hover:text-white">person_add</span>
+                                                <span className="text-sm font-medium text-white">Assign Driver</span>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                     <div className="bg-surface-dark rounded-xl border border-border-color flex-1 min-h-[400px] flex flex-col">
+                                        <div className="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                            <h3 className="text-white font-semibold">Recent Activity</h3>
+                                        </div>
+                                        <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
+                                             <div className="flex gap-4 relative">
+                                                <div className="flex flex-col items-center">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary z-10 ring-4 ring-surface-dark">
+                                                        <span className="material-symbols-outlined text-[16px]">play_arrow</span>
+                                                    </div>
+                                                    <div className="w-0.5 bg-border-color h-full absolute top-8"></div>
+                                                </div>
+                                                <div className="pb-2">
+                                                    <p className="text-sm text-white font-medium">Trip Started</p>
+                                                    <p className="text-xs text-text-muted mt-0.5">Vehicle #402 left Depot C headed to Downtown.</p>
+                                                    <span className="text-[10px] text-[#64748b] mt-1 block">2 mins ago</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                             <CommonFooter />
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const AddVehicle = () => {
+             const navigate = useNavigate();
+             const [step, setStep] = useState(1);
+             const [vin, setVin] = useState("1HGCM82633A004352");
+
+             return (
+                 <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden relative h-screen">
+                    <DashboardOverview /> {/* Background */}
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="w-full max-w-2xl bg-surface-dark border border-border-color rounded-xl shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
+                             <div className="px-8 py-6 border-b border-border-color bg-surface-darker/50">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-white tracking-tight">Add New Vehicle</h2>
+                                        <p className="text-sm text-text-muted mt-1">Enter vehicle identification details.</p>
+                                    </div>
+                                    <button onClick={() => navigate('/')} className="text-text-muted hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <div className="relative flex items-center justify-between w-full max-w-md mx-auto">
+                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-border-color -z-10"></div>
+                                     {[1, 2, 3].map(s => (
+                                         <div key={s} className="flex flex-col items-center gap-2 bg-surface-dark px-2">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ring-4 ring-surface-dark shadow-sm ${s <= step ? 'bg-primary text-white' : 'bg-surface-darker border-2 border-border-color text-text-muted'}`}>
+                                                <span className="text-xs font-bold">{s}</span>
+                                            </div>
+                                        </div>
+                                     ))}
+                                </div>
+                            </div>
+                            <div className="p-8 bg-surface-dark flex-1 overflow-y-auto custom-scrollbar">
+                                <form className="space-y-6">
+                                     <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-text-muted">VIN <span className="text-red-500">*</span></label>
+                                        <input 
+                                            className="block w-full rounded-lg border-emerald-500/50 bg-surface-darker px-4 py-2.5 text-white placeholder-text-muted/50 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 sm:text-sm transition-all font-mono" 
+                                            value={vin} 
+                                            onChange={(e) => setVin(e.target.value)}
+                                            type="text"
+                                        />
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-[11px] text-emerald-500 font-medium flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                Vehicle found in NHTSA database
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3 p-3 bg-surface-darker/40 rounded-lg border border-border-color/50 border-dashed mt-2">
+                                            <div><span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold block mb-0.5">Year</span><div className="text-sm text-white font-medium">2023</div></div>
+                                            <div><span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold block mb-0.5">Make</span><div className="text-sm text-white font-medium">Honda</div></div>
+                                            <div><span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold block mb-0.5">Model</span><div className="text-sm text-white font-medium">Accord Hybrid</div></div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                         <label className="block text-sm font-medium text-text-muted">License Plate <span className="text-red-500">*</span></label>
+                                         <input className="block w-full rounded-lg border-border-color bg-surface-darker px-4 py-2.5 text-white sm:text-sm" placeholder="ABC-1234" type="text" />
+                                    </div>
+                                </form>
+                            </div>
+                            <div className="px-8 py-5 border-t border-border-color bg-surface-darker flex items-center justify-end gap-3">
+                                <button onClick={() => navigate('/')} className="px-4 py-2.5 text-sm font-medium text-text-muted hover:text-white border border-border-color rounded-lg hover:bg-surface-dark transition-colors mr-auto">Cancel</button>
+                                <button onClick={() => setStep(step < 3 ? step + 1 : 1)} className="px-6 py-2.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 flex items-center gap-2">
+                                    Next Step <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+             )
+        }
+
+        const LiveMap = () => {
+             return (
+                 <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Live Map" />
+                        <div className="flex-1 relative bg-[#0f151b] overflow-hidden">
+                             <div className="absolute inset-0 bg-cover bg-center opacity-70" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCeeeLxaUXFSywPWOUz7sSShAB3uQmjmm05fXrxnJMrtOj-77MaaA_rwghU8aFYgdEN25a4Zu_KRt4Bww_5vIegatJal2ZEZwc-jWi6kSXdQy3FKD1_7k4VpFPnvvH8JhhczyN8RmE4dQe7Igd7R_Y3Q2A8cUV3JoEubwD_1yrEB0VImkaOpvLuj7MtoMf4v4Vfp7EmLAR1LIeGUzUqVgEPm__oaIqEyfwohYrEJheP1zpnGNTy0WkwKZgcqRa3hJZyETmgEvoDzR4")' }}></div>
+                             {/* Map Controls */}
+                             <div className="absolute top-4 left-4 z-20 flex flex-col gap-3">
+                                <div className="relative shadow-lg">
+                                    <input className="bg-surface-darker border border-border-color text-white text-xs rounded pl-8 pr-3 py-2 w-48 focus:ring-1 focus:ring-primary shadow-sm placeholder-text-muted/70" placeholder="Search map area..." type="text"/>
+                                    <span className="material-symbols-outlined absolute left-2 top-1.5 text-base text-text-muted">search</span>
+                                </div>
+                            </div>
+                            
+                            {/* Vehicle Marker 1 */}
+                            <div className="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+                                <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
+                                    <div className="w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_#137fec]"></div>
+                                </div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 block bg-surface-darker text-white p-3 rounded-lg shadow-xl border border-border-color z-30 w-60">
+                                    <div className="flex justify-between items-start mb-2 border-b border-border-color pb-2">
+                                        <div>
+                                            <h4 className="font-bold text-sm">Vehicle #104</h4>
+                                            <span className="text-[10px] text-emerald-400 font-medium">● Online • 45 mph</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Link to="/vehicle/301" className="flex-1 bg-primary hover:bg-primary/90 text-white text-xs font-medium py-1.5 rounded transition-colors text-center">Profile</Link>
+                                    </div>
+                                    <div className="map-popup-arrow"></div>
+                                </div>
+                            </div>
+
+                             {/* Vehicle Marker 2 (Red) */}
+                            <div className="absolute bottom-1/3 right-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+                                <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center animate-bounce">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]"></div>
+                                </div>
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-darker text-xs text-white p-2 rounded shadow-lg whitespace-nowrap border border-border-color z-20">
+                                    <div className="font-bold text-red-400">Vehicle #301</div>
+                                    <div className="text-text-muted">Engine Temp Alert</div>
+                                    <Link to="/vehicle/301" className="text-primary hover:underline mt-1 block">Drill down</Link>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                 </div>
+             )
+        }
+
+        const VehicleDetail = () => {
+            const navigate = useNavigate();
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => navigate(-1)} className="text-text-muted hover:text-white">
+                                    <span className="material-symbols-outlined">arrow_back</span>
+                                </button>
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <h2 className="text-white text-lg font-bold">Vehicle #301</h2>
+                                        <span className="bg-emerald-500/10 text-emerald-500 text-xs px-2 py-0.5 rounded border border-emerald-500/20 font-medium">Active</span>
+                                    </div>
+                                    <p className="text-[11px] text-text-muted mt-0.5">2022 Freightliner Cascadia • VIN: 1F9E...4829</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button className="px-3 py-1.5 bg-surface-dark border border-border-color hover:bg-border-color text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Vehicle
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                             <div className="grid grid-cols-12 gap-6 h-full min-h-[600px]">
+                                <div className="col-span-12 lg:col-span-5 flex flex-col gap-6 h-full">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color shadow-sm flex flex-col flex-grow relative group/map overflow-hidden min-h-[400px]">
+                                         <div className="relative flex-1 bg-[#0f151b] overflow-hidden">
+                                            <div className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCeeeLxaUXFSywPWOUz7sSShAB3uQmjmm05fXrxnJMrtOj-77MaaA_rwghU8aFYgdEN25a4Zu_KRt4Bww_5vIegatJal2ZEZwc-jWi6kSXdQy3FKD1_7k4VpFPnvvH8JhhczyN8RmE4dQe7Igd7R_Y3Q2A8cUV3JoEubwD_1yrEB0VImkaOpvLuj7MtoMf4v4Vfp7EmLAR1LIeGUzUqVgEPm__oaIqEyfwohYrEJheP1zpnGNTy0WkwKZgcqRa3hJZyETmgEvoDzR4")' }}></div>
+                                             <div className="absolute top-[30%] left-[70%] transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+                                                <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
+                                                    <div className="w-4 h-4 bg-primary rounded-full shadow-[0_0_15px_#137fec] ring-2 ring-white"></div>
+                                                </div>
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-surface-darker text-xs text-white p-2 rounded shadow-lg whitespace-nowrap border border-border-color z-20">
+                                                    <div className="font-bold">65 mph</div>
+                                                </div>
+                                            </div>
+                                         </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-7 flex flex-col h-full gap-6">
+                                     <div className="grid grid-cols-4 gap-4">
+                                        <div className="bg-surface-dark rounded-lg p-3 border border-border-color">
+                                            <div className="text-text-muted text-[10px] uppercase font-semibold mb-1">Odometer</div>
+                                            <div className="text-xl font-bold text-white">48,291 <span className="text-xs text-text-muted font-normal">mi</span></div>
+                                        </div>
+                                         <div className="bg-surface-dark rounded-lg p-3 border border-border-color">
+                                            <div className="text-text-muted text-[10px] uppercase font-semibold mb-1">Fuel Level</div>
+                                            <div className="text-xl font-bold text-emerald-400">72%</div>
+                                        </div>
+                                     </div>
+                                     <div className="bg-surface-dark rounded-xl border border-border-color flex-1 flex flex-col overflow-hidden">
+                                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                                            <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-lg">info</span>
+                                                Vehicle Specifications
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
+                                                <div className="flex justify-between py-2 border-b border-border-color/50">
+                                                    <span className="text-sm text-text-muted">Make / Model</span>
+                                                    <span className="text-sm text-white font-medium">Freightliner Cascadia</span>
+                                                </div>
+                                            </div>
+                                             <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-lg">warning</span>
+                                                Recent Alerts
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <div className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/10 rounded-lg">
+                                                    <span className="material-symbols-outlined text-red-500 text-sm mt-0.5">error</span>
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-sm font-medium text-red-400">Engine Overheat Warning</span>
+                                                            <span className="text-xs text-text-muted">2 mins ago</span>
+                                                        </div>
+                                                        <p className="text-xs text-text-muted mt-1">Coolant temperature exceeded 220°F for &gt; 30s.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                     </div>
+                                </div>
+                             </div>
+                        </div>
+                    </main>
+                </div>
+             );
+        }
+
+        const DriversDirectory = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                     <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Driver Management" />
+                        <div className="flex-1 overflow-hidden p-6 bg-background-dark">
+                             <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full shadow-sm overflow-hidden">
+                                <div className="overflow-auto custom-scrollbar flex-1">
+                                    <table className="w-full text-left text-sm text-text-muted">
+                                        <thead className="bg-[#1d2936] text-xs uppercase font-medium sticky top-0 z-10 shadow-sm">
+                                            <tr>
+                                                <th className="px-6 py-4">Name / ID</th>
+                                                <th className="px-6 py-4">Status</th>
+                                                <th className="px-6 py-4">Current Vehicle</th>
+                                                <th className="px-6 py-4 text-center">Safety Score</th>
+                                                <th className="px-6 py-4 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-color">
+                                            <tr className="hover:bg-[#1d2936] transition-colors group">
+                                                <td className="px-6 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">JD</div>
+                                                        <div>
+                                                            <div className="font-medium text-white">John Doe</div>
+                                                            <div className="text-[10px] text-text-muted">ID: DRV-001</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Active</span>
+                                                </td>
+                                                <td className="px-6 py-3"><span className="text-white">Ford Transit #402</span></td>
+                                                <td className="px-6 py-3 text-center"><span className="text-emerald-500 font-bold">98</span></td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <button className="p-1 text-text-muted hover:text-white hover:bg-border-color rounded transition-colors"><span className="material-symbols-outlined text-[18px]">more_vert</span></button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                         <CommonFooter />
+                     </main>
+                </div>
+            )
+        }
+
+        const MaintenanceLogs = () => {
+             return (
+                 <div className="flex h-screen w-full">
+                    <Sidebar />
+                     <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Maintenance & Service Logs" />
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                             <div className="max-w-[1600px] mx-auto pb-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+                                        <div className="flex justify-between items-start z-10 relative">
+                                            <div><p className="text-text-muted text-sm font-medium mb-1">Maintenance Due</p><h3 className="text-3xl font-bold text-white tracking-tight">14</h3></div>
+                                            <div className="p-2 bg-yellow-500/10 rounded-lg text-yellow-500"><span className="material-symbols-outlined">assignment_late</span></div>
+                                        </div>
+                                    </div>
+                                     <div className="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+                                        <div className="flex justify-between items-start z-10 relative">
+                                            <div><p className="text-text-muted text-sm font-medium mb-1">Critical Issues</p><h3 className="text-3xl font-bold text-white tracking-tight">3</h3></div>
+                                            <div className="p-2 bg-red-500/10 rounded-lg text-red-500"><span className="material-symbols-outlined">car_crash</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col h-full">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 className="text-white font-semibold">Service Log Entries</h3>
+                                    </div>
+                                    <div className="overflow-x-auto custom-scrollbar flex-1">
+                                        <table className="w-full text-left text-sm text-text-muted">
+                                            <thead className="bg-[#1d2936] text-xs uppercase font-medium">
+                                                <tr>
+                                                    <th className="px-6 py-4">Vehicle</th>
+                                                    <th className="px-6 py-4">Health Status</th>
+                                                    <th className="px-6 py-4">Open Tickets</th>
+                                                    <th className="px-6 py-4 text-right">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border-color">
+                                                <tr className="hover:bg-[#1d2936] transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded bg-border-color flex items-center justify-center text-text-muted"><span className="material-symbols-outlined text-[18px]">local_shipping</span></div>
+                                                            <div><div className="text-white font-medium">Ford F-150 #301</div><div className="text-xs text-text-muted">VIN: ...8892</div></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">Critical</span></td>
+                                                    <td className="px-6 py-4"><div className="text-[10px] text-text-muted mt-0.5">Engine Overheat</div></td>
+                                                    <td className="px-6 py-4 text-right"><Link to="/vehicle/301" className="bg-primary/10 hover:bg-primary text-primary hover:text-white px-3 py-1.5 rounded text-xs font-medium transition-colors border border-primary/20">Log Service</Link></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                     </main>
+                 </div>
+             )
+        }
+
+        const FleetList = () => {
+             return (
+                 <div className="flex h-screen w-full">
+                    <Sidebar />
+                     <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Fleet Management" />
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+                                 <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-sm text-text-muted">
+                                        <thead className="bg-[#1d2936] text-xs uppercase font-medium">
+                                            <tr>
+                                                <th className="px-6 py-3">Vehicle ID</th>
+                                                <th className="px-6 py-3">Driver</th>
+                                                <th className="px-6 py-3">Status</th>
+                                                <th className="px-6 py-3 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-color">
+                                            <tr className="hover:bg-[#1d2936] transition-colors bg-primary/5">
+                                                <td className="px-6 py-3 font-medium text-white">#301</td>
+                                                <td className="px-6 py-3">M. Johnson</td>
+                                                <td className="px-6 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">Engine Alert</span></td>
+                                                <td className="px-6 py-3 text-right"><Link to="/vehicle/301" className="text-primary hover:text-white text-xs">Detail</Link></td>
+                                            </tr>
+                                            <tr className="hover:bg-[#1d2936] transition-colors">
+                                                <td className="px-6 py-3 font-medium text-white">#442</td>
+                                                <td className="px-6 py-3">S. Williams</td>
+                                                <td className="px-6 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/20">Maintenance</span></td>
+                                                <td className="px-6 py-3 text-right"><Link to="/vehicle/301" className="text-primary hover:text-white text-xs">Detail</Link></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                     </main>
+                 </div>
+             )
+        }
+
+        const ReportsPage = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Fleet Reports" />
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-[1600px] mx-auto">
+                                {[
+                                    { title: "Fuel Consumption", icon: "local_gas_station", desc: "Monthly fuel efficiency and costs analysis." },
+                                    { title: "Safety Scores", icon: "verified_user", desc: "Driver behavior and safety compliance metrics." },
+                                    { title: "Maintenance ROI", icon: "request_quote", desc: "Total cost of ownership and repair analysis." },
+                                    { title: "Utilization Report", icon: "bar_chart", desc: "Vehicle uptime and idle time distribution." },
+                                    { title: "Route Efficiency", icon: "alt_route", desc: "Planned vs actual distance and time logs." },
+                                    { title: "Carbon Footprint", icon: "eco", desc: "Fleet-wide emissions and sustainability goals." }
+                                ].map((report, idx) => (
+                                    <div key={idx} className="bg-surface-dark p-6 rounded-xl border border-border-color hover:border-primary/50 transition-all group cursor-pointer">
+                                        <div className="flex items-center gap-4 mb-4">
+                                            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-2xl">{report.icon}</span>
+                                            </div>
+                                            <h3 className="text-white font-bold">{report.title}</h3>
+                                        </div>
+                                        <p className="text-sm text-text-muted mb-4">{report.desc}</p>
+                                        <button className="text-xs font-semibold text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
+                                            Generate Report <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            <CommonFooter />
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const HistoryPage = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <TopBar title="Trip History" />
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            <div className="p-6 border-b border-border-color bg-surface-darker/50 flex flex-wrap gap-4 items-center">
+                                <div className="flex bg-surface-dark rounded border border-border-color p-1">
+                                    <button 
+                                        onClick={() => {}} 
+                                        className="px-4 py-1.5 text-xs font-medium bg-primary text-white rounded focus:outline-none"
+                                    >
+                                        List View
+                                    </button>
+                                    <button 
+                                        onClick={() => {}} 
+                                        className="px-4 py-1.5 text-xs font-medium text-text-muted hover:text-white transition-colors focus:outline-none"
+                                    >
+                                        Timeline
+                                    </button>
+                                </div>
+                                <div className="ml-auto flex gap-2">
+                                    <input type="date" className="bg-surface-dark border border-border-color text-white text-xs rounded px-3 py-1.5 [color-scheme:dark]" />
+                                    <button className="px-3 py-1.5 bg-surface-dark border border-border-color text-text-muted hover:text-white rounded text-xs">Filter</button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm text-text-muted">
+                                        <thead className="bg-[#1d2936] text-xs uppercase font-medium">
+                                            <tr>
+                                                <th className="px-6 py-4">Date</th>
+                                                <th className="px-6 py-4">Vehicle</th>
+                                                <th className="px-6 py-4">Driver</th>
+                                                <th className="px-6 py-4">Duration</th>
+                                                <th className="px-6 py-4 text-right">Route</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border-color">
+                                            {[
+                                                { date: "Oct 24, 08:30", vehicle: "#402", driver: "John Doe", duration: "4h 20m", dist: "142 mi" },
+                                                { date: "Oct 24, 07:15", vehicle: "#104", driver: "Sarah W.", duration: "2h 10m", dist: "85 mi" },
+                                                { date: "Oct 23, 14:45", vehicle: "#301", driver: "Mike R.", duration: "6h 05m", dist: "210 mi" },
+                                                { date: "Oct 23, 11:20", vehicle: "#221", driver: "Lisa K.", duration: "3h 45m", dist: "115 mi" },
+                                            ].map((trip, i) => (
+                                                <tr key={i} className="hover:bg-[#1d2936] transition-colors group cursor-pointer">
+                                                    <td className="px-6 py-4 text-white font-medium">{trip.date}</td>
+                                                    <td className="px-6 py-4">Vehicle {trip.vehicle}</td>
+                                                    <td className="px-6 py-4">{trip.driver}</td>
+                                                    <td className="px-6 py-4">{trip.duration}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <span className="text-primary text-xs hover:underline">Replay Route</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <CommonFooter />
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+
+        // --- App Component ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<DashboardOverview />} />
+                        <Route path="/add-vehicle" element={<AddVehicle />} />
+                        <Route path="/map" element={<LiveMap />} />
+                        <Route path="/vehicle/:id" element={<VehicleDetail />} />
+                        <Route path="/drivers" element={<DriversDirectory />} />
+                        <Route path="/maintenance" element={<MaintenanceLogs />} />
+                        <Route path="/fleet" element={<FleetList />} />
+                        <Route path="/reports" element={<ReportsPage />} />
+                        <Route path="/history" element={<HistoryPage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

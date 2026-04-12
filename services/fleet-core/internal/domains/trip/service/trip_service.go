@@ -53,6 +53,7 @@ type TripServiceInterface interface {
 	GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error)
 	GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error)
 	GetStats(ctx context.Context) (*models.TripStats, error)
+	GetTripCustomers(ctx context.Context, orgID string) ([]string, error)
 
 	// Telemetry
 	GetTelemetry(ctx context.Context, tripID string) ([]models.TelemetryPoint, error)
@@ -859,6 +860,16 @@ func (s *TripService) GetStats(ctx context.Context) (*models.TripStats, error) {
 		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 	return stats, nil
+}
+
+// GetTripCustomers returns distinct customer names for the filter dropdown
+func (s *TripService) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
+	customers, err := s.repo.GetTripCustomers(ctx, orgID)
+	if err != nil {
+		s.logger.Error("failed to get trip customers", zap.Error(err))
+		return nil, fmt.Errorf("failed to get trip customers: %w", err)
+	}
+	return customers, nil
 }
 
 // GetTelemetry retrieves telemetry points for a trip

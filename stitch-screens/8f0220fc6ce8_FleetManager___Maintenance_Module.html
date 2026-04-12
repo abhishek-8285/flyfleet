@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetManager - Maintenance Module</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="checkbox"]:checked {
+            background-color: #137fec;
+            border-color: #137fec;
+        }
+        input[type="checkbox"] {
+            background-color: #16202a;
+            border-color: #233648;
+        }
+        /* For settings toggle */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+    </style>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Sidebar = ({ activePage }) => {
+            const navigate = useNavigate();
+            const location = useLocation();
+
+            const isActive = (path) => {
+                if (path === '/') return location.pathname === '/';
+                return location.pathname.startsWith(path);
+            };
+
+            const linkClass = (path) => isActive(path) 
+                ? "flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary transition-colors cursor-pointer"
+                : "flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors cursor-pointer";
+
+            return (
+                <aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div class="p-6 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span class="material-symbols-outlined">directions_car</span>
+                        </div>
+                        <h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+                    </div>
+                    <nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+                        <a onClick={() => navigate('/')} class={linkClass('/dashboard')}>
+                            <span class="material-symbols-outlined">dashboard</span>
+                            <span class="text-sm font-medium">Dashboard</span>
+                        </a>
+                        <a class={linkClass('/vehicles')}>
+                            <span class="material-symbols-outlined">directions_car</span>
+                            <span class="text-sm font-medium">Vehicles</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+                        <a onClick={() => navigate('/')} class={linkClass('/')}>
+                            <span class="material-symbols-outlined">build</span>
+                            <span class="text-sm font-medium">Work Orders</span>
+                        </a>
+                         <a onClick={() => navigate('/settings')} class={linkClass('/settings')}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span class="text-sm font-medium">Settings</span>
+                        </a>
+                        <a class={linkClass('/inventory')}>
+                            <span class="material-symbols-outlined">inventory_2</span>
+                            <span class="text-sm font-medium">Parts Inventory</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Reports</div>
+                        <a class={linkClass('/reports')}>
+                            <span class="material-symbols-outlined">analytics</span>
+                            <span class="text-sm font-medium">Cost Analysis</span>
+                        </a>
+                    </nav>
+                    <div class="p-4 border-t border-border-color">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span class="text-xs text-text-muted truncate">Fleet Manager</span>
+                            </div>
+                            <button class="ml-auto text-text-muted hover:text-white">
+                                <span class="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const StatusBadge = ({ status }) => {
+            let colors = "";
+            let icon = null;
+            
+            switch (status) {
+                case 'Critical':
+                    colors = "bg-danger/10 text-danger border border-danger/20";
+                    break;
+                case 'High':
+                    colors = "bg-warning/10 text-warning border border-warning/20";
+                    break;
+                case 'Medium':
+                    colors = "bg-primary/10 text-primary border border-primary/20";
+                    break;
+                case 'Low':
+                    colors = "bg-text-muted/10 text-text-muted border border-border-color";
+                    break;
+                case 'Open':
+                    colors = "bg-background-light/10 text-text-muted border border-border-color";
+                    break;
+                case 'In Progress':
+                    colors = "bg-primary/10 text-primary border border-primary/20";
+                    icon = <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>;
+                    break;
+                case 'Completed':
+                    colors = "bg-success/10 text-success border border-success/20";
+                    break;
+                default:
+                    colors = "bg-background-light/10 text-text-muted border border-border-color";
+            }
+
+            return (
+                <span class={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium uppercase tracking-wide ${colors}`}>
+                    {icon}
+                    {status}
+                </span>
+            );
+        };
+
+        // --- Screen 1: Work Order List ---
+        const WorkOrderList = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar activePage="work-orders" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2 text-[11px] text-text-muted">
+                                    <span>Maintenance</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">Work Orders</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold mt-0.5">Work Order Management</h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input class="pl-9 pr-4 py-1.5 bg-surface-dark border border-border-color rounded text-sm text-white w-64 focus:outline-none focus:border-primary transition-colors placeholder:text-text-muted/50" placeholder="Global Search (ID, VIN, Desc)..." type="text"/>
+                                </div>
+                                <button class="p-2 text-text-muted hover:text-white hover:bg-surface-dark rounded border border-transparent hover:border-border-color transition-all relative">
+                                    <span class="material-symbols-outlined">filter_list</span>
+                                    <span class="absolute top-1.5 right-2 w-2 h-2 bg-primary rounded-full"></span>
+                                </button>
+                                <button onClick={() => navigate('/add')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[18px]">add</span>
+                                    Add Work Order
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 flex overflow-hidden">
+                            <div class="w-64 bg-surface-dark border-r border-border-color flex-shrink-0 flex flex-col overflow-y-auto custom-scrollbar p-5 gap-6 hidden md:flex">
+                                <div>
+                                    <h3 class="text-xs font-semibold text-white uppercase tracking-wider mb-3">Priority</h3>
+                                    <div class="space-y-2">
+                                        {['Critical', 'High', 'Medium', 'Low'].map((p, i) => (
+                                            <label key={i} class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded text-primary focus:ring-0 focus:ring-offset-0 bg-surface-darker border-border-color" type="checkbox"/>
+                                                <span class="text-sm text-text-muted group-hover:text-white transition-colors">{p}</span>
+                                                <span class={`ml-auto text-[10px] px-1.5 rounded ${p === 'Critical' ? 'bg-danger/10 text-danger' : p === 'High' ? 'bg-warning/10 text-warning' : p === 'Medium' ? 'bg-primary/10 text-primary' : 'bg-text-muted/10 text-text-muted'}`}>
+                                                    {Math.floor(Math.random() * 50)}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div class="w-full h-px bg-border-color"></div>
+                                <div>
+                                    <h3 class="text-xs font-semibold text-white uppercase tracking-wider mb-3">Status</h3>
+                                    <div class="space-y-2">
+                                        {['Open', 'In Progress', 'On Hold', 'Completed'].map((s, i) => (
+                                            <label key={i} class="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked={i < 2} class="rounded text-primary focus:ring-0 focus:ring-offset-0 bg-surface-darker border-border-color" type="checkbox"/>
+                                                <span class="text-sm text-text-muted group-hover:text-white transition-colors">{s}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 flex flex-col min-w-0 bg-background-dark">
+                                <div class="px-6 py-4 flex items-center justify-between border-b border-border-color bg-background-dark z-10">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm text-white font-medium">89 Work Orders</span>
+                                        <span class="w-px h-4 bg-border-color"></span>
+                                        <button class="text-xs text-text-muted hover:text-white flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">sort</span>
+                                            Sort by Date
+                                        </button>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Refresh">
+                                            <span class="material-symbols-outlined text-[18px]">refresh</span>
+                                        </button>
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Export CSV">
+                                            <span class="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                    <th class="px-4 py-3 font-semibold w-32">WO ID</th>
+                                                    <th class="px-4 py-3 font-semibold">Vehicle ID</th>
+                                                    <th class="px-4 py-3 font-semibold">Maintenance Type</th>
+                                                    <th class="px-4 py-3 font-semibold">Priority</th>
+                                                    <th class="px-4 py-3 font-semibold">Assigned To</th>
+                                                    <th class="px-4 py-3 font-semibold">Scheduled Date</th>
+                                                    <th class="px-4 py-3 font-semibold text-right">Status</th>
+                                                    <th class="px-4 py-3 font-semibold w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-sm">
+                                                <tr onClick={() => navigate('/detail')} class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                    <td class="px-4 py-3 font-mono text-xs text-primary font-medium">#WO-2938</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white font-medium">Ford Transit</span>
+                                                            <span class="text-[10px] text-text-muted">VIN: ...8X92</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-white">Brake System Overhaul</td>
+                                                    <td class="px-4 py-3"><StatusBadge status="Critical" /></td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-text-muted">MJ</div>
+                                                            <span class="text-text-muted text-xs">Mike Johnson</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Oct 24, 2023</td>
+                                                    <td class="px-4 py-3 text-right"><StatusBadge status="In Progress" /></td>
+                                                    <td class="px-4 py-3 text-right">
+                                                        <button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                
+                                                <tr onClick={() => navigate('/detail')} class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                    <td class="px-4 py-3 font-mono text-xs text-primary font-medium">#WO-2937</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white font-medium">Chevy Silverado</span>
+                                                            <span class="text-[10px] text-text-muted">VIN: ...4K21</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-white">Transmission Check</td>
+                                                    <td class="px-4 py-3"><StatusBadge status="High" /></td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-text-muted">DK</div>
+                                                            <span class="text-text-muted text-xs">David Kim</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Oct 25, 2023</td>
+                                                    <td class="px-4 py-3 text-right"><StatusBadge status="Open" /></td>
+                                                    <td class="px-4 py-3 text-right"><span class="material-symbols-outlined text-[18px] text-text-muted opacity-0 group-hover:opacity-100">more_vert</span></td>
+                                                </tr>
+                                                
+                                                <tr onClick={() => navigate('/detail')} class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                    <td class="px-4 py-3 font-mono text-xs text-primary font-medium">#WO-2934</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white font-medium">Ford F-150</span>
+                                                            <span class="text-[10px] text-text-muted">VIN: ...7P45</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-white">Battery Replacement</td>
+                                                    <td class="px-4 py-3"><StatusBadge status="Medium" /></td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-text-muted">RT</div>
+                                                            <span class="text-text-muted text-xs">Robert T.</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Oct 23, 2023</td>
+                                                    <td class="px-4 py-3 text-right"><StatusBadge status="Completed" /></td>
+                                                    <td class="px-4 py-3 text-right"><span class="material-symbols-outlined text-[18px] text-text-muted opacity-0 group-hover:opacity-100">more_vert</span></td>
+                                                </tr>
+
+                                                <tr onClick={() => navigate('/detail')} class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                    <td class="px-4 py-3 font-mono text-xs text-primary font-medium">#WO-2932</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white font-medium">Tesla Model 3</span>
+                                                            <span class="text-[10px] text-text-muted">VIN: ...1X99</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-white">Software Update & Diagnostic</td>
+                                                    <td class="px-4 py-3"><StatusBadge status="Low" /></td>
+                                                    <td class="px-4 py-3">
+                                                         <div class="flex items-center gap-2">
+                                                            <div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-text-muted">JS</div>
+                                                            <span class="text-text-muted text-xs">Jessica Smith</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Oct 22, 2023</td>
+                                                    <td class="px-4 py-3 text-right"><StatusBadge status="Completed" /></td>
+                                                    <td class="px-4 py-3 text-right"><span class="material-symbols-outlined text-[18px] text-text-muted opacity-0 group-hover:opacity-100">more_vert</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Maintenance Module V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>Server Status: <span class="text-success">Online</span></span>
+                                <span>Last Sync: <span class="font-mono text-white">10:42 AM</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Add Work Order ---
+        const AddWorkOrder = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar activePage="work-orders" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <nav aria-label="Breadcrumb" class="flex text-xs text-text-muted mb-1">
+                                    <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                                        <li class="inline-flex items-center">
+                                            <a onClick={() => navigate('/')} class="hover:text-white transition-colors cursor-pointer">Maintenance</a>
+                                        </li>
+                                        <li>
+                                            <div class="flex items-center">
+                                                <span class="material-symbols-outlined text-[12px] mx-1">chevron_right</span>
+                                                <span class="text-white font-medium">New Order</span>
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </nav>
+                                <h2 class="text-white text-lg font-bold">Add Work Order</h2>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} class="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-sm font-medium rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[18px]">add_task</span>
+                                    Create Work Order
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="max-w-4xl mx-auto space-y-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="px-6 py-4 border-b border-border-color bg-surface-darker/50 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary text-xl">build_circle</span>
+                                        <h3 class="text-white text-sm font-bold uppercase tracking-wider">Service Basics</h3>
+                                    </div>
+                                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-1.5">
+                                            <label class="block text-xs font-medium text-text-muted uppercase">Vehicle ID <span class="text-danger">*</span></label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                    <span class="material-symbols-outlined text-[18px]">directions_car</span>
+                                                </span>
+                                                <input class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-gray-600 outline-none transition-all" placeholder="e.g. V-2023-001" type="text"/>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="block text-xs font-medium text-text-muted uppercase">Maintenance Type <span class="text-danger">*</span></label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                    <span class="material-symbols-outlined text-[18px]">category</span>
+                                                </span>
+                                                <select class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 outline-none appearance-none cursor-pointer transition-all">
+                                                    <option disabled="" selected="" value="">Select Type</option>
+                                                    <option value="preventive">Preventive Maintenance</option>
+                                                    <option value="corrective">Corrective Repair</option>
+                                                    <option value="inspection">Safety Inspection</option>
+                                                    <option value="breakdown">Breakdown Service</option>
+                                                </select>
+                                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-text-muted">
+                                                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="block text-xs font-medium text-text-muted uppercase">Priority Level <span class="text-danger">*</span></label>
+                                            <div class="grid grid-cols-3 gap-3">
+                                                <label class="cursor-pointer relative">
+                                                    <input class="peer sr-only" name="priority" type="radio"/>
+                                                    <div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-success/10 peer-checked:text-success peer-checked:border-success hover:bg-surface-darker/80">Low</div>
+                                                </label>
+                                                <label class="cursor-pointer relative">
+                                                    <input checked="" class="peer sr-only" name="priority" type="radio"/>
+                                                    <div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:border-primary hover:bg-surface-darker/80">Medium</div>
+                                                </label>
+                                                <label class="cursor-pointer relative">
+                                                    <input class="peer sr-only" name="priority" type="radio"/>
+                                                    <div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-danger/10 peer-checked:text-danger peer-checked:border-danger hover:bg-surface-darker/80">High</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="block text-xs font-medium text-text-muted uppercase">Assigned Technician</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+                                                    <span class="material-symbols-outlined text-[18px]">person</span>
+                                                </span>
+                                                <select class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 outline-none appearance-none cursor-pointer transition-all">
+                                                    <option disabled="" selected="" value="">Unassigned</option>
+                                                    <option value="tech1">Mike Ross</option>
+                                                    <option value="tech2">Sarah Connor</option>
+                                                    <option value="tech3">John Doe</option>
+                                                </select>
+                                                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-text-muted">
+                                                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="px-6 py-4 border-b border-border-color bg-surface-darker/50 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary text-xl">description</span>
+                                        <h3 class="text-white text-sm font-bold uppercase tracking-wider">Description</h3>
+                                    </div>
+                                    <div class="p-6 space-y-6">
+                                        <div class="space-y-1.5">
+                                            <label class="block text-xs font-medium text-text-muted uppercase">Issue Description <span class="text-danger">*</span></label>
+                                            <textarea class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5 placeholder-gray-600 outline-none transition-all resize-none" placeholder="Detailed description of the maintenance issue..." rows="4"></textarea>
+                                            <p class="text-[10px] text-text-muted text-right">0/500 characters</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 3: Detail View ---
+        const WorkOrderDetail = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar activePage="work-orders" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <nav class="flex items-center text-xs text-text-muted mb-0.5">
+                                    <a onClick={() => navigate('/')} class="hover:text-white transition-colors cursor-pointer">Work Orders</a>
+                                    <span class="mx-2">/</span>
+                                    <span class="text-white font-medium">WO-2023-8492</span>
+                                </nav>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-white text-lg font-bold">Brake System Overhaul</h2>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/30">
+                                        Maintenance
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onClick={() => navigate('/assign-inventory')} class="px-3 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">inventory</span>
+                                    Assign Inventory
+                                </button>
+                                <button onClick={() => navigate('/edit')} class="px-3 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Work Order
+                                </button>
+                                <button class="px-4 py-2 bg-success hover:bg-emerald-600 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-success/20">
+                                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                    Close Work Order
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Current Status</div>
+                                        <div class="text-xl font-bold text-primary flex items-center gap-2">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+                                            In Progress
+                                        </div>
+                                    </div>
+                                    <div class="p-2 bg-primary/10 rounded-lg text-primary">
+                                        <span class="material-symbols-outlined text-2xl">pending_actions</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Priority</div>
+                                        <div class="text-xl font-bold text-danger">High</div>
+                                    </div>
+                                    <div class="p-2 bg-danger/10 rounded-lg text-danger">
+                                        <span class="material-symbols-outlined text-2xl">priority_high</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Est. Cost</div>
+                                        <div class="text-xl font-bold text-white">$1,245.00</div>
+                                    </div>
+                                    <div class="p-2 bg-surface-darker border border-border-color rounded-lg text-text-muted">
+                                        <span class="material-symbols-outlined text-2xl">attach_money</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Scheduled Date</div>
+                                        <div class="text-xl font-bold text-white">Oct 26, 2023</div>
+                                    </div>
+                                    <div class="p-2 bg-surface-darker border border-border-color rounded-lg text-text-muted">
+                                        <span class="material-symbols-outlined text-2xl">event</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-12 gap-6">
+                                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color p-6">
+                                        <div class="flex justify-between items-start mb-6">
+                                            <h3 class="text-white text-base font-semibold">Description of Work</h3>
+                                            <span class="text-xs text-text-muted">Created: Oct 24, 2023 by System</span>
+                                        </div>
+                                        <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+                                            Vehicle reported soft brake pedal feel and grinding noise coming from the rear axle during braking. Initial inspection suggests worn brake pads and potential rotor damage. Technician to inspect hydraulic lines for leaks, replace rear brake pads, resurface or replace rotors as necessary, and perform a full brake fluid flush.
+                                        </p>
+                                    </div>
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                        <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">handyman</span>
+                                                Parts Consumed
+                                            </h3>
+                                            <span class="text-xs text-text-muted">3 items logged</span>
+                                        </div>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                        <th class="px-4 py-3 font-semibold">Part Number</th>
+                                                        <th class="px-4 py-3 font-semibold">Description</th>
+                                                        <th class="px-4 py-3 font-semibold text-right">Qty</th>
+                                                        <th class="px-4 py-3 font-semibold text-right">Unit Cost</th>
+                                                        <th class="px-4 py-3 font-semibold text-right">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-sm">
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td class="px-4 py-3 font-mono text-xs text-primary">BP-R-2023</td>
+                                                        <td class="px-4 py-3 text-white">Rear Brake Pad Set (Ceramic)</td>
+                                                        <td class="px-4 py-3 text-white text-right">1</td>
+                                                        <td class="px-4 py-3 text-text-muted text-right">$85.00</td>
+                                                        <td class="px-4 py-3 text-white text-right">$85.00</td>
+                                                    </tr>
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td class="px-4 py-3 font-mono text-xs text-primary">BR-R-Vent</td>
+                                                        <td class="px-4 py-3 text-white">Vented Brake Rotor</td>
+                                                        <td class="px-4 py-3 text-white text-right">2</td>
+                                                        <td class="px-4 py-3 text-text-muted text-right">$120.00</td>
+                                                        <td class="px-4 py-3 text-white text-right">$240.00</td>
+                                                    </tr>
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td class="px-4 py-3 font-mono text-xs text-primary">BF-DOT4-1L</td>
+                                                        <td class="px-4 py-3 text-white">Brake Fluid DOT4 1L</td>
+                                                        <td class="px-4 py-3 text-white text-right">2</td>
+                                                        <td class="px-4 py-3 text-text-muted text-right">$15.00</td>
+                                                        <td class="px-4 py-3 text-white text-right">$30.00</td>
+                                                    </tr>
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="bg-surface-darker/30">
+                                                        <td class="px-4 py-3 text-right text-xs text-text-muted font-bold uppercase" colspan="4">Total Parts Cost</td>
+                                                        <td class="px-4 py-3 text-right text-white font-bold">$355.00</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">local_shipping</span>
+                                                Vehicle Information
+                                            </h3>
+                                        </div>
+                                        <div class="p-5 flex flex-col gap-4">
+                                            <div class="flex items-center gap-4">
+                                                <div class="w-16 h-16 bg-surface-darker rounded-lg border border-border-color flex items-center justify-center">
+                                                    <span class="material-symbols-outlined text-3xl text-text-muted">airport_shuttle</span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-white font-bold text-lg">Ford Transit 350</div>
+                                                    <div class="text-text-muted text-sm">2021 Cargo Van</div>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-3 pt-2">
+                                                <div class="flex justify-between items-center text-sm">
+                                                    <span class="text-text-muted">License Plate</span>
+                                                    <span class="text-white font-mono bg-surface-darker px-2 py-0.5 rounded border border-border-color">ABC-1234</span>
+                                                </div>
+                                                <div class="flex justify-between items-center text-sm">
+                                                    <span class="text-text-muted">VIN</span>
+                                                    <span class="text-white font-mono text-xs">1FTNE2...4928</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 4: Inventory Assignment ---
+        const InventoryAssignment = () => {
+            const navigate = useNavigate();
+            return (
+                 <div class="flex h-screen w-full">
+                    <Sidebar activePage="work-orders" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <nav class="text-[11px] text-text-muted mb-1 flex items-center gap-2">
+                                    <span onClick={() => navigate('/')} class="hover:text-white cursor-pointer">Work Orders</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span onClick={() => navigate('/detail')} class="hover:text-white cursor-pointer font-mono">WO-2023-8942</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">Inventory</span>
+                                </nav>
+                                <h2 class="text-white text-lg font-bold">Inventory Assignment</h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-surface-dark border border-border-color text-text-muted flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-warning"></span>
+                                     Status: In Progress
+                                </span>
+                                <button onClick={() => navigate('/detail')} class="p-2 text-text-muted hover:text-white transition-colors">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar flex flex-col gap-6">
+                            <div class="bg-surface-dark rounded-xl border border-border-color p-6">
+                                <div class="flex flex-col md:flex-row gap-4 items-end">
+                                    <div class="flex-1 w-full">
+                                        <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Inventory Lookup</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+                                                <span class="material-symbols-outlined">search</span>
+                                            </span>
+                                            <input class="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary placeholder-text-muted/50 transition-all shadow-sm" placeholder="Search by Part Name, SKU, or Serial Number..." type="text"/>
+                                        </div>
+                                    </div>
+                                    <button class="w-full md:w-auto px-5 py-2.5 bg-surface-darker border border-border-color hover:bg-border-color text-white text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors">
+                                        <span class="material-symbols-outlined text-[18px]">filter_list</span>
+                                        Filters
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 overflow-hidden min-h-[400px]">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary text-[18px]">fact_check</span>
+                                        Assigned Parts
+                                    </h3>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-text-muted">3 items added</span>
+                                        <button class="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 text-xs font-semibold rounded flex items-center gap-1.5 transition-colors">
+                                            <span class="material-symbols-outlined text-[16px]">add</span>
+                                            Add Part
+                                         </button>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th class="px-6 py-3 font-semibold w-1/3">Part Name</th>
+                                                <th class="px-6 py-3 font-semibold">Part Number</th>
+                                                <th class="px-6 py-3 font-semibold">Stock Location</th>
+                                                <th class="px-6 py-3 font-semibold text-center w-32">Quantity</th>
+                                                <th class="px-6 py-3 font-semibold text-right">Unit Cost</th>
+                                                <th class="px-6 py-3 font-semibold text-right">Total</th>
+                                                <th class="px-6 py-3 font-semibold w-10"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="text-sm">
+                                            <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td class="px-6 py-4">
+                                                    <div class="flex flex-col">
+                                                        <span class="font-medium text-white">Oil Filter, Heavy Duty</span>
+                                                        <span class="text-xs text-text-muted">Fram Extra Guard</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-text-muted font-mono text-xs">PH3614-HD</td>
+                                                <td class="px-6 py-4 text-text-muted text-xs">Aisle 4, Bin 12</td>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center justify-center gap-2">
+                                                        <button class="w-6 h-6 rounded flex items-center justify-center bg-surface-darker border border-border-color text-text-muted hover:text-white hover:border-primary">-</button>
+                                                        <span class="w-8 text-center text-white font-medium">1</span>
+                                                        <button class="w-6 h-6 rounded flex items-center justify-center bg-surface-darker border border-border-color text-text-muted hover:text-white hover:border-primary">+</button>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-right text-text-muted">$12.50</td>
+                                                <td class="px-6 py-4 text-right text-white font-medium">$12.50</td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <button class="text-text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="bg-surface-darker border-t border-border-color p-4 md:px-8">
+                                    <div class="flex flex-col md:flex-row justify-end items-center gap-6 md:gap-12">
+                                        <div class="flex flex-col items-end border-l border-border-color pl-8 md:pl-12">
+                                            <span class="text-xs text-primary font-bold uppercase tracking-wide">Total Parts Cost</span>
+                                            <span class="text-xl font-bold text-white">$171.25</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-3 mt-auto pt-4 border-t border-border-color/50">
+                                <button onClick={() => navigate('/detail')} class="px-6 py-2.5 bg-surface-darker border border-border-color hover:bg-border-color text-text-muted hover:text-white text-sm font-semibold rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/detail')} class="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                    Finalize Assignment
+                                </button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 5: Edit Work Order ---
+        const EditWorkOrder = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar activePage="work-orders" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <nav class="flex items-center text-xs text-text-muted mb-0.5">
+                                    <a onClick={() => navigate('/')} class="hover:text-white transition-colors cursor-pointer">Maintenance</a>
+                                    <span class="mx-2">/</span>
+                                    <a onClick={() => navigate('/')} class="hover:text-white transition-colors cursor-pointer">Work Orders</a>
+                                    <span class="mx-2">/</span>
+                                    <span class="text-white font-medium">WO-2023-8492</span>
+                                </nav>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-white text-lg font-bold">Edit Work Order</h2>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
+                                        In Progress
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onClick={() => navigate('/detail')} class="px-4 py-2 bg-transparent hover:bg-surface-dark border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/detail')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <form class="max-w-5xl mx-auto space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div class="md:col-span-2 bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">info</span>
+                                            General Information
+                                        </h3>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="col-span-1">
+                                                <label class="block text-xs font-medium text-text-muted mb-1.5">Vehicle ID *</label>
+                                                <div class="relative">
+                                                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                        <span class="material-symbols-outlined text-text-muted text-[16px]">directions_car</span>
+                                                    </span>
+                                                    <input class="bg-surface-darker border border-border-color text-white text-sm rounded block w-full pl-9 p-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/50 cursor-not-allowed opacity-75" readOnly type="text" value="V-492 (Ford Transit)"/>
+                                                </div>
+                                            </div>
+                                            <div class="col-span-2">
+                                                <label class="block text-xs font-medium text-text-muted mb-1.5">Description of Issue *</label>
+                                                <textarea class="bg-surface-darker border border-border-color text-white text-sm rounded block w-full p-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/50" rows="3" defaultValue="Driver reported unusual brake noise and vibration during deceleration on highway speeds. Check front pads and rotors."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="md:col-span-1 bg-surface-dark rounded-xl border border-border-color p-5 h-fit">
+                                        <h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                                            System Metadata
+                                        </h3>
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1">Work Order ID</label>
+                                                <div class="font-mono text-white text-sm">WO-2023-8492</div>
+                                            </div>
+                                            <div class="h-px bg-border-color w-full"></div>
+                                            <div>
+                                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1">Created By</label>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">JD</div>
+                                                    <span class="text-sm text-white">John Doe</span>
+                                                </div>
+                                                <div class="text-xs text-text-muted mt-0.5">Oct 22, 2023 at 09:15 AM</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 6: Settings ---
+        const Settings = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar activePage="settings" />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-col gap-1 flex-col">
+                                <div class="flex items-center gap-2 text-xs text-text-muted">
+                                    <span>Maintenance</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">Settings</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold">Work Order Settings</h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button class="px-3 py-2 bg-surface-dark border border-border-color hover:bg-surface-darker text-text-muted text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">history</span>
+                                    View Audit Log
+                                </button>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Active Work Orders</div>
+                                        <div class="text-2xl font-bold text-white">142</div>
+                                    </div>
+                                    <div class="size-10 rounded bg-primary/10 flex items-center justify-center text-primary">
+                                        <span class="material-symbols-outlined">assignment</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Avg Resolution Time</div>
+                                        <div class="text-2xl font-bold text-white">4.2h</div>
+                                    </div>
+                                    <div class="size-10 rounded bg-success/10 flex items-center justify-center text-success">
+                                        <span class="material-symbols-outlined">timer</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">SLA Breaches (MTD)</div>
+                                        <div class="text-2xl font-bold text-danger">3</div>
+                                    </div>
+                                    <div class="size-10 rounded bg-danger/10 flex items-center justify-center text-danger">
+                                        <span class="material-symbols-outlined">warning</span>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-text-muted text-xs font-medium uppercase mb-1">Stock Alerts</div>
+                                        <div class="text-2xl font-bold text-warning">12</div>
+                                    </div>
+                                    <div class="size-10 rounded bg-warning/10 flex items-center justify-center text-warning">
+                                        <span class="material-symbols-outlined">inventory</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-12 gap-6">
+                                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                            <div>
+                                                <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span class="material-symbols-outlined text-primary text-[18px]">category</span>
+                                                    Maintenance Type Definitions
+                                                </h3>
+                                                <p class="text-[11px] text-text-muted mt-0.5">Define categories for work orders to streamline reporting.</p>
+                                            </div>
+                                            <button class="text-xs text-primary hover:text-white transition-colors">
+                                                + Add Type
+                                            </button>
+                                        </div>
+                                        <div class="p-0">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead class="bg-surface-darker/50 text-xs text-text-muted uppercase">
+                                                    <tr>
+                                                        <th class="px-4 py-3 font-medium">Type Name</th>
+                                                        <th class="px-4 py-3 font-medium">Code</th>
+                                                        <th class="px-4 py-3 font-medium">Requires Approval</th>
+                                                        <th class="px-4 py-3 font-medium text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-sm divide-y divide-border-color">
+                                                    <tr class="group hover:bg-surface-darker/30 transition-colors">
+                                                        <td class="px-4 py-3 text-white">Preventive Maintenance</td>
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">PM-01</td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">NO</span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="text-text-muted hover:text-white"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="group hover:bg-surface-darker/30 transition-colors">
+                                                        <td class="px-4 py-3 text-white">Corrective Repair</td>
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">CR-02</td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">YES &gt; $500</span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="text-text-muted hover:text-white"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div class="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span class="material-symbols-outlined text-warning text-[18px]">timer</span>
+                                                    Priority SLA Thresholds
+                                                </h3>
+                                                <p class="text-[11px] text-text-muted mt-1">Set maximum resolution times (in hours) before escalation triggers.</p>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {['Critical (P1)', 'High (P2)', 'Normal (P3)'].map((p, i) => (
+                                                <div key={i} class="p-4 rounded-lg border border-border-color bg-surface-darker relative">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <span class={`text-xs font-bold uppercase ${i===0 ? 'text-danger' : i===1 ? 'text-warning' : 'text-success'}`}>{p}</span>
+                                                    </div>
+                                                    <label class="block text-[10px] text-text-muted mb-1">Max Resolution Time</label>
+                                                    <div class="flex items-center">
+                                                        <input class="bg-surface-dark border border-border-color text-white text-sm rounded-l px-3 py-1.5 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue={i===0 ? 4 : i===1 ? 24 : 72}/>
+                                                        <span class="bg-border-color text-text-muted text-xs px-3 py-2 rounded-r border border-l-0 border-border-color">Hrs</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                     <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div class="p-4 border-b border-border-color">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">inventory_2</span>
+                                                Inventory Stock Alerts
+                                            </h3>
+                                        </div>
+                                        <div class="p-4 space-y-4">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm text-white font-medium">Low Stock Notification</span>
+                                                    <span class="text-[10px] text-text-muted">Alert when items dip below min. quantity</span>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input checked="" class="sr-only peer" type="checkbox" value=""/>
+                                                    <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Shell & Routing ---
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<WorkOrderList />} />
+                        <Route path="/add" element={<AddWorkOrder />} />
+                        <Route path="/detail" element={<WorkOrderDetail />} />
+                        <Route path="/assign-inventory" element={<InventoryAssignment />} />
+                        <Route path="/edit" element={<EditWorkOrder />} />
+                        <Route path="/settings" element={<Settings />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

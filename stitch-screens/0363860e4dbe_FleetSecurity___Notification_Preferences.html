@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Notification Preferences Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer base {
+            body { @apply font-display; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input:checked ~ .toggle-bg {
+            @apply bg-primary;
+        }
+        input:checked ~ .toggle-dot {
+            @apply translate-x-full border-white;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden">
+    <div id="root"></div>
+
+    <!-- React and Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Mock Data ---
+        const MOCK_USERS = [
+            { id: "USR-8492", name: "Johnathan Edwards", email: "j.edwards@fleet.com", preferences: { email: true, sms: true, push: false, inApp: true }, updated: "Oct 24, 2023 14:32" },
+            { id: "USR-8493", name: "Sarah Chen", email: "s.chen@fleet.com", preferences: { email: true, sms: false, push: true, inApp: true }, updated: "Oct 24, 2023 11:15" },
+            { id: "USR-8494", name: "Marcus Valerius", email: "m.valerius@fleet.com", preferences: { email: true, sms: true, push: true, inApp: true }, updated: "Oct 23, 2023 09:44" },
+            { id: "USR-8495", name: "Eliza T. Thorne", email: "e.thorne@fleet.com", preferences: { email: false, sms: false, push: true, inApp: false }, updated: "Oct 23, 2023 08:21" },
+            { id: "USR-8496", name: "Samuel L. Jackson", email: "s.jackson@fleet.com", preferences: { email: true, sms: true, push: true, inApp: true }, updated: "Oct 22, 2023 16:55" },
+        ];
+
+        // --- Layout Components ---
+
+        const Sidebar = ({ activeSection = "monitoring" }) => {
+            const nav = useNavigate();
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3 cursor-pointer" onClick={() => nav('/')}>
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+                        <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Overview</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${activeSection === 'monitoring' ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">notifications</span>
+                            <span className="text-sm font-medium">Channel Preferences</span>
+                        </Link>
+                        <Link to="/global-settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${activeSection === 'global' ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">settings_suggest</span>
+                            <span className="text-sm font-medium">Global Settings</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+                        <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">troubleshoot</span>
+                            <span className="text-sm font-medium">Audit Logs</span>
+                        </a>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = ({ version = "V2.4.1" }) => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                <span>© 2023 Enterprise Fleet Manager. Notification Module {version}</span>
+                <div className="flex items-center gap-4">
+                    <span>API Status: <span className="text-success font-bold uppercase">Connected</span></span>
+                    <span>BFF Latency: <span className="text-success">24ms</span></span>
+                    <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Screens ---
+
+        const ListView = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activeSection="monitoring" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">
+                                    <span>Monitoring</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary">Channel Preferences</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold leading-tight">Channel Preferences</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input className="bg-surface-dark border border-border-color text-white text-xs rounded-lg pl-9 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50" placeholder="Global Search Users..." type="text"/>
+                                </div>
+                                <button className="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                                    Reset to Defaults
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+                                <div className="p-4 border-b border-border-color bg-surface-darker/30 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-white px-2 py-1 rounded bg-surface-darker border border-border-color">GET /notifications/preferences</span>
+                                        <span className="text-[10px] text-text-muted font-mono uppercase tracking-widest">Web BFF Interface</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[20px]">filter_list</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[20px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-4 py-4 font-semibold w-24">User ID</th>
+                                                <th className="px-4 py-4 font-semibold">User Name</th>
+                                                <th className="px-4 py-4 font-semibold text-center">Email</th>
+                                                <th className="px-4 py-4 font-semibold text-center">SMS</th>
+                                                <th className="px-4 py-4 font-semibold text-center">Push</th>
+                                                <th className="px-4 py-4 font-semibold text-center">In-App</th>
+                                                <th className="px-4 py-4 font-semibold">Last Updated</th>
+                                                <th className="px-4 py-4 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            {MOCK_USERS.map(user => (
+                                                <tr key={user.id} className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                    <td className="px-4 py-3.5 text-text-muted font-mono text-xs">{user.id}</td>
+                                                    <td className="px-4 py-3.5 cursor-pointer" onClick={() => navigate(`/detail/${user.id}`)}>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-white group-hover:text-primary transition-colors">{user.name}</span>
+                                                            <span className="text-[10px] text-text-muted">{user.email}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className={`material-symbols-outlined ${user.preferences.email ? 'text-success' : 'text-slate-600'} select-none`}>
+                                                            {user.preferences.email ? 'check_circle' : 'cancel'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className={`material-symbols-outlined ${user.preferences.sms ? 'text-success' : 'text-slate-600'} select-none`}>
+                                                            {user.preferences.sms ? 'check_circle' : 'cancel'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className={`material-symbols-outlined ${user.preferences.push ? 'text-success' : 'text-slate-600'} select-none`}>
+                                                            {user.preferences.push ? 'check_circle' : 'cancel'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className={`material-symbols-outlined ${user.preferences.inApp ? 'text-success' : 'text-slate-600'} select-none`}>
+                                                            {user.preferences.inApp ? 'check_circle' : 'cancel'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">{user.updated}</td>
+                                                    <td className="px-4 py-3.5 text-right">
+                                                        <button onClick={() => navigate(`/edit/${user.id}`)} className="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+                                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker/30 flex items-center justify-between text-xs text-text-muted">
+                                    <div className="flex items-center gap-4">
+                                        <span>Showing 1-5 of 1,248 Users</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1.5 border border-border-color rounded hover:bg-surface-dark disabled:opacity-30" disabled>
+                                            <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                                        </button>
+                                        <button className="w-8 h-8 rounded bg-primary text-white font-bold">1</button>
+                                        <button className="w-8 h-8 rounded hover:bg-surface-dark">2</button>
+                                        <span className="px-1">...</span>
+                                        <button className="p-1.5 border border-border-color rounded hover:bg-surface-dark">
+                                            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const DetailView = () => {
+            const navigate = useNavigate();
+            const { userId } = ReactRouterDOM.useParams();
+            const user = MOCK_USERS.find(u => u.id === userId) || MOCK_USERS[0];
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activeSection="monitoring" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest font-semibold mb-0.5">
+                                    <Link to="/" className="hover:text-primary transition-colors">Channel Preferences</Link>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-white">{user.id}</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">User Preference Detail</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="px-4 py-2 bg-surface-dark hover:bg-border-color text-white text-xs font-semibold rounded border border-border-color flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">history</span>
+                                    View History
+                                </button>
+                                <button onClick={() => navigate(`/edit/${user.id}`)} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Preferences
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-primary">mail</span>
+                                    </div>
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-2">Primary Channel</div>
+                                    <div className="text-xl font-bold text-white flex items-center gap-2">
+                                        Email
+                                        <span className="w-2 h-2 rounded-full bg-success"></span>
+                                    </div>
+                                    <div className="text-[11px] text-text-muted mt-2">Verified: {user.email}</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">check_circle</span>
+                                    </div>
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-2">System Alert Status</div>
+                                    <div className="text-xl font-bold text-success flex items-center gap-2">
+                                        Active
+                                        <span className="material-symbols-outlined text-[18px]">notifications_active</span>
+                                    </div>
+                                    <div className="text-[11px] text-text-muted mt-2">Critical path delivery enabled</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-text-muted">person_edit</span>
+                                    </div>
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-2">Last Modified By</div>
+                                    <div className="text-xl font-bold text-white flex items-center gap-2">System Admin</div>
+                                    <div className="text-[11px] text-text-muted mt-2">{user.updated}</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">checklist</span>
+                                                Notification Matrix
+                                            </h3>
+                                            <span className="text-[10px] text-text-muted font-mono bg-border-color/30 px-2 py-1 rounded">BFF: GET /preferences/{user.id}</span>
+                                        </div>
+                                        <div className="divide-y divide-border-color">
+                                            {/* Logic for showing channel status based on mock user data */}
+                                            {[
+                                                { title: 'Marketing Communications', desc: 'Product updates, newsletters, and promotional offers.', icon: 'campaign', color: 'indigo-500', enabled: user.preferences.push },
+                                                { title: 'System Notifications', desc: 'Critical platform updates, downtime alerts, and security patches.', icon: 'settings_suggest', color: 'emerald-500', enabled: true },
+                                                { title: 'Fleet Performance Alerts', desc: 'Fuel efficiency drops, maintenance schedules, and route deviations.', icon: 'local_shipping', color: 'amber-500', enabled: user.preferences.email },
+                                                { title: 'Safety & Compliance', desc: 'Driver behavior alerts and regulatory compliance deadlines.', icon: 'gpp_maybe', color: 'primary', enabled: true },
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="p-5 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+                                                    <div className="flex gap-4">
+                                                        <div className={`w-10 h-10 rounded-lg bg-${item.color}/10 flex items-center justify-center text-${item.color}`}>
+                                                            <span className="material-symbols-outlined">{item.icon}</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-medium text-white">{item.title}</h4>
+                                                            <p className="text-xs text-text-muted mt-0.5">{item.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`flex items-center px-3 py-1.5 rounded ${item.enabled ? 'bg-success/10 border border-success/20 text-success' : 'bg-danger/10 border border-danger/20 text-danger'}`}>
+                                                        <span className="material-symbols-outlined text-[16px] mr-2">{item.enabled ? 'check_circle' : 'cancel'}</span>
+                                                        <span className="text-[10px] font-bold uppercase">{item.enabled ? 'Enabled' : 'Disabled'}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div className="p-4 border-b border-border-color bg-surface-darker/50"><h3 className="text-sm font-semibold text-white">User Context</h3></div>
+                                        <div className="p-5 space-y-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full border-2 border-border-color overflow-hidden bg-surface-darker">
+                                                    <img alt="User" className="w-full h-full object-cover" src={`https://i.pravatar.cc/150?u=${user.id}`}/>
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-bold text-white">{user.name}</div>
+                                                    <div className="text-xs text-text-muted">{user.email}</div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4 pt-4 border-t border-border-color">
+                                                <div>
+                                                    <label className="text-[10px] font-bold uppercase text-text-muted tracking-widest block mb-1">Account Status</label>
+                                                    <div className="mt-1">
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/20 text-success border border-success/30">ACTIVE</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        const EditView = () => {
+            const navigate = useNavigate();
+            const { userId } = ReactRouterDOM.useParams();
+            const [user, setUser] = useState(MOCK_USERS.find(u => u.id === userId) || MOCK_USERS[0]);
+
+            const togglePref = (key) => {
+                setUser(prev => ({
+                    ...prev,
+                    preferences: { ...prev.preferences, [key]: !prev.preferences[key] }
+                }));
+            };
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activeSection="monitoring" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest mb-0.5">
+                                    <Link to="/" className="hover:text-primary transition-colors">Channel Preferences</Link>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span>Edit</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary font-bold">{user.id}</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">Edit Notification Preferences</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate(-1)} className="px-4 py-2 text-xs font-semibold text-text-muted hover:text-white transition-colors">Cancel</button>
+                                <button onClick={() => navigate(`/detail/${user.id}`)} className="px-6 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Preferences
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-2xl mx-auto space-y-8">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-5 border-b border-border-color bg-surface-darker/50">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">hub</span>
+                                            Channel Settings
+                                        </h3>
+                                        <p className="text-xs text-text-muted mt-1">Configure communication methods for {user.name}.</p>
+                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        {[
+                                            { key: 'email', label: 'Email Notifications', desc: 'Receive alerts via primary business email', icon: 'mail' },
+                                            { key: 'sms', label: 'SMS Enabled', desc: 'Standard carrier rates may apply', icon: 'sms' },
+                                            { key: 'push', label: 'Push Notifications', desc: 'Mobile app and desktop browser alerts', icon: 'notifications' },
+                                            { key: 'inApp', label: 'In-App Notifications', desc: 'Activity feed inside the fleet platform', icon: 'view_in_ar' },
+                                        ].map((item) => (
+                                            <div key={item.key} className="flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center text-primary border border-border-color">
+                                                        <span className="material-symbols-outlined">{item.icon}</span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-medium text-white">{item.label}</div>
+                                                        <p className="text-[11px] text-text-muted">{item.desc}</p>
+                                                    </div>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input checked={user.preferences[item.key]} onChange={() => togglePref(item.key)} className="sr-only peer" type="checkbox"/>
+                                                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer toggle-bg after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all toggle-dot"></div>
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-5 border-b border-border-color bg-surface-darker/50">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">category</span>
+                                            Notification Categories
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 space-y-5">
+                                        <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-medium text-white flex items-center gap-2">
+                                                    System Alerts
+                                                    <span className="bg-danger/20 text-danger text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight">Required</span>
+                                                </span>
+                                                <span className="text-[11px] text-text-muted">Critical security, maintenance, and fleet health alerts</span>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-default">
+                                                <input checked disabled className="sr-only peer" type="checkbox"/>
+                                                <div className="w-11 h-6 bg-slate-700/50 rounded-full peer toggle-bg after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/50 after:rounded-full after:h-5 after:w-5 after:transition-all toggle-dot"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer version="V2.0" />
+                    </main>
+                </div>
+            );
+        };
+
+        const GlobalSettingsView = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activeSection="global" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex text-[10px] text-text-muted mb-0.5 items-center gap-1">
+                                    <span>Channel Preferences</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary font-medium">Global Settings</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold leading-tight">System Default Preferences</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="px-3 py-1.5 bg-surface-dark border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                                    Global Reset
+                                </button>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-6xl mx-auto space-y-6">
+                                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex gap-4">
+                                    <span className="material-symbols-outlined text-primary">info</span>
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-white">Default Configuration for New Users</h4>
+                                        <p className="text-xs text-text-muted mt-1 leading-relaxed">Changes made here define the initial "System Default" state for every new user added to the platform.</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-12 gap-6">
+                                    <div className="col-span-12 lg:col-span-8 space-y-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="px-5 py-4 border-b border-border-color bg-surface-darker/30 flex justify-between items-center">
+                                                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-primary text-[20px]">hub</span>
+                                                    Standard Channels
+                                                </h3>
+                                            </div>
+                                            <div className="p-5 space-y-4">
+                                                {[
+                                                    { label: 'Email Notifications', icon: 'mail', checked: true },
+                                                    { label: 'SMS Alerts', icon: 'sms', checked: false },
+                                                    { label: 'In-App Push', icon: 'notification_important', checked: true },
+                                                ].map((channel, i) => (
+                                                    <div key={i} className="flex items-center justify-between py-3 border-b border-border-color/50 last:border-0">
+                                                        <div className="flex gap-4">
+                                                            <div className="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-text-muted">
+                                                                <span className="material-symbols-outlined">{channel.icon}</span>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm font-medium text-white">{channel.label}</div>
+                                                                <div className="text-xs text-text-muted">Global default status for new accounts.</div>
+                                                            </div>
+                                                        </div>
+                                                        <label className="relative inline-flex items-center cursor-pointer">
+                                                            <input defaultChecked={channel.checked} className="sr-only peer" type="checkbox"/>
+                                                            <div className="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-12 lg:col-span-4 space-y-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col">
+                                            <h3 className="text-white text-xs font-bold uppercase tracking-widest mb-4">Audit Stream</h3>
+                                            <div className="space-y-4">
+                                                <div className="flex gap-3">
+                                                    <div className="w-1 h-8 rounded-full bg-primary flex-shrink-0 mt-1"></div>
+                                                    <div>
+                                                        <div className="text-xs font-medium text-white">SMS Default Disabled</div>
+                                                        <div className="text-[10px] text-text-muted">By Alex Morgan • 2h ago</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer version="V2.1" />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Component ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<ListView />} />
+                        <Route path="/detail/:userId" element={<DetailView />} />
+                        <Route path="/edit/:userId" element={<EditView />} />
+                        <Route path="/global-settings" element={<GlobalSettingsView />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

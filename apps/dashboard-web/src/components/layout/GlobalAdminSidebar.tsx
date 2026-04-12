@@ -18,17 +18,29 @@ export const GlobalAdminSidebar: React.FC = () => {
     );
   };
 
+  const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
+  const role = effectiveUser?.role?.toLowerCase() || '';
+
+  /** Role-based menu visibility: which roles can see each menu item */
+  const canSee = (roles: string[]) => roles.includes('*') || roles.includes(role);
+
   const [menuItems, setMenuitems] = useState<any[]>([
-    { title: "Dashboard", path: "/admin", icon: "dashboard", items: [] },
-    { title: "Control Tower", path: "/admin/control-tower", icon: "satellite_alt", items: [] },
-    { title: "Dispatch", path: "/admin/dispatch", icon: "support_agent", items: [] },
-    { title: "Vehicles", path: "/admin/vehicles", icon: "directions_car", items: [] },
-    { title: "Drivers", path: "/admin/drivers", icon: "badge", items: [] },
-    { title: "Trips", path: "/admin/trips", icon: "route", items: [] },
-    { title: "Maintenance", path: "/admin/maintenance/work-orders", icon: "build", items: [] },
-    { title: "Finance", path: "/admin/finance/fuel", icon: "attach_money", items: [] },
-    { title: "Settings", path: "/admin/organizations", icon: "settings", items: [] },
-  ]);
+    { title: "Dashboard", path: "/admin", icon: "dashboard", roles: ["*"], items: [] },
+    { title: "Control Tower", path: "/admin/control-tower", icon: "satellite_alt", roles: ["*"], items: [] },
+    { title: "Dispatch", path: "/admin/dispatch", icon: "support_agent", roles: ["*"], items: [] },
+    { title: "Vehicles", path: "/admin/vehicles", icon: "directions_car", roles: ["*"], items: [] },
+    { title: "Drivers", path: "/admin/drivers", icon: "badge", roles: ["*"], items: [] },
+    { title: "Trips", path: "/admin/trips", icon: "route", roles: ["*"], items: [] },
+    { title: "Maintenance", path: "/admin/maintenance/work-orders", icon: "build", roles: ["*"], items: [] },
+    { title: "Finance", path: "/admin/finance/fuel", icon: "attach_money", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
+    { title: "Billing", path: "/admin/billing", icon: "receipt_long", roles: ["admin", "super_admin"], items: [] },
+    { title: "Organizations", path: "/admin/organizations", icon: "business", roles: ["admin", "super_admin"], items: [] },
+    { title: "Users", path: "/admin/users", icon: "group", roles: ["admin", "super_admin"], items: [] },
+    { title: "Reports", path: "/admin/reports", icon: "assessment", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
+    { title: "Monitoring", path: "/admin/monitoring", icon: "monitoring", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
+    { title: "Settings", path: "/admin/settings/platform", icon: "settings", roles: ["admin", "super_admin"], items: [] },
+    { title: "Support", path: "/support", icon: "headset_mic", roles: ["admin", "super_admin"], items: [] },
+  ].filter(item => canSee(item.roles)));
 
   return (
     <aside

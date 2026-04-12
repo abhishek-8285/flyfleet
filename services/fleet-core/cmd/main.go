@@ -150,6 +150,7 @@ func main() {
 	uiStringsHandler := handlers.NewUIStringsHandler()
 	r.Get("/api/v1/ui/global_config", uiConfigHandler.ServeHTTP)
 	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
+	r.Get("/api/v1/ui/misc/legal_docs", uiConfigHandler.GetLegalDocs)
 
 	// Admin stub endpoints (drivers, vehicles, columns)
 	adminHandler := handlers.NewAdminHandler()

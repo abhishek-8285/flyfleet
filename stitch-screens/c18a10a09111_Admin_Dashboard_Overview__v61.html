@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Incident Management &amp; Tracking System</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSupport</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Support Tools</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">bug_report</span>
+<span class="text-sm font-medium">Incidents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="text-sm font-medium">Tickets</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Platform Health</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">monitor_heart</span>
+<span class="text-sm font-medium">System Status</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="text-sm font-medium">Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Knowledge</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span class="text-sm font-medium">Documentation</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">L3 Support Lead</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[10px] text-text-muted uppercase font-bold tracking-wider mb-0.5">
+<span>Support</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Incidents</span>
+</div>
+<h2 class="text-white text-lg font-bold">Incident Management</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/60" placeholder="Search incidents (ID, Subject, Org)..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                    Create Incident
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">inbox</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Incidents</div>
+<div class="text-2xl font-bold text-white">342</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+                        +12 new today
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-danger">priority_high</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Critical Open</div>
+<div class="text-2xl font-bold text-danger">5</div>
+<div class="text-[10px] text-text-muted mt-1">Avg resolution: 2h</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-danger h-full" style="width: 25%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">warning</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">High Priority</div>
+<div class="text-2xl font-bold text-warning">18</div>
+<div class="text-[10px] text-text-muted mt-1">Needs attention</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-warning h-full" style="width: 45%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-primary">engineering</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">In Progress</div>
+<div class="text-2xl font-bold text-primary">42</div>
+<div class="text-[10px] text-text-muted mt-1">Active investigations</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full" style="width: 60%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Resolved (24h)</div>
+<div class="text-2xl font-bold text-success">28</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+                        94% SLA met
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-text-muted">schedule</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Avg MTTR</div>
+<div class="text-2xl font-bold text-white">4h 12m</div>
+<div class="text-[10px] text-success mt-1">-15m vs last week</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 h-80 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">show_chart</span>
+                                Incident Volume (Last 30 Days)
+                            </h3>
+<div class="flex gap-2">
+<button class="px-2 py-1 bg-surface-darker text-xs text-white border border-border-color rounded hover:bg-border-color">Daily</button>
+<button class="px-2 py-1 bg-transparent text-xs text-text-muted border border-transparent rounded hover:bg-border-color">Weekly</button>
+</div>
+</div>
+<div class="flex-1 relative w-full h-full">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 200">
+<defs>
+<linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#137fec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#137fec" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<line stroke="#233648" stroke-width="1" x1="0" x2="800" y1="199" y2="199"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="100" y2="100"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<path d="M0,140 C100,160 200,100 300,120 S500,60 600,40 S700,80 800,50 V200 H0 Z" fill="url(#chartGradient)"></path>
+<path d="M0,140 C100,160 200,100 300,120 S500,60 600,40 S700,80 800,50" fill="none" stroke="#137fec" stroke-width="2"></path>
+<circle cx="600" cy="40" fill="#fff" r="4" stroke="#137fec" stroke-width="2"></circle>
+</svg>
+<div class="absolute bottom-2 left-0 right-0 flex justify-between text-[10px] text-text-muted px-2">
+<span>Oct 1</span>
+<span>Oct 8</span>
+<span>Oct 15</span>
+<span>Oct 22</span>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-80">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold">Incident Feed</h3>
+<button class="text-primary text-xs hover:underline">View All</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+<div class="space-y-0 divide-y divide-border-color">
+<div class="flex items-start gap-3 p-3 hover:bg-surface-darker transition-colors cursor-pointer">
+<div class="mt-1 w-2 h-2 rounded-full bg-danger flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="text-xs font-bold text-white">INC-4921</span>
+<span class="text-[10px] text-text-muted">2m ago</span>
+</div>
+<p class="text-xs text-text-muted truncate">Database latency spike in US-East region</p>
+<div class="mt-1 flex items-center gap-2">
+<span class="text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">Critical</span>
+<span class="text-[10px] text-primary">System Alert</span>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 hover:bg-surface-darker transition-colors cursor-pointer">
+<div class="mt-1 w-2 h-2 rounded-full bg-warning flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="text-xs font-bold text-white">INC-4920</span>
+<span class="text-[10px] text-text-muted">15m ago</span>
+</div>
+<p class="text-xs text-text-muted truncate">User reported API 500 errors on login</p>
+<div class="mt-1 flex items-center gap-2">
+<div class="w-4 h-4 rounded-full bg-indigo-500 text-[8px] flex items-center justify-center text-white">JD</div>
+<span class="text-[10px] text-text-muted">Investigating</span>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 hover:bg-surface-darker transition-colors cursor-pointer">
+<div class="mt-1 w-2 h-2 rounded-full bg-success flex-shrink-0"></div>
+<div class="flex flex-col min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="text-xs font-bold text-white">INC-4918</span>
+<span class="text-[10px] text-text-muted">1h ago</span>
+</div>
+<p class="text-xs text-text-muted truncate">Resolved: Payment gateway timeout</p>
+<div class="mt-1 flex items-center gap-2">
+<span class="text-[10px] text-success">Closed</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                        Active Incidents
+                    </h3>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:border-text-muted transition-colors">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                            Filter
+                        </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:border-text-muted transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                            Export
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold w-28">Incident ID</th>
+<th class="px-4 py-3 font-semibold w-24">Priority</th>
+<th class="px-4 py-3 font-semibold w-28">Status</th>
+<th class="px-4 py-3 font-semibold">Subject</th>
+<th class="px-4 py-3 font-semibold">Assigned To</th>
+<th class="px-4 py-3 font-semibold">Organization</th>
+<th class="px-4 py-3 font-semibold text-right">Created</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4921</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                        CRITICAL
+                                    </span>
+</td>
+<td class="px-4 py-3">
+<span class="flex items-center gap-1.5 text-white text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-danger animate-pulse"></span>
+                                        Open
+                                    </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">Database latency spike US-East</td>
+<td class="px-4 py-3 text-text-muted text-xs">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-[9px] text-white">UN</div>
+<span>Unassigned</span>
+</div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Global Fleet Ops</td>
+<td class="px-4 py-3 text-right text-text-muted text-xs font-mono">Just now</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4920</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        HIGH
+                                    </span>
+</td>
+<td class="px-4 py-3">
+<span class="flex items-center gap-1.5 text-white text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        Investigating
+                                    </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">Authentication failures for API v2</td>
+<td class="px-4 py-3 text-text-muted text-xs">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-[9px] text-white">JS</div>
+<span>Sarah J.</span>
+</div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Acme Logistics</td>
+<td class="px-4 py-3 text-right text-text-muted text-xs font-mono">15m ago</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4919</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-text-muted/10 text-text-muted border border-border-color">
+                                        MEDIUM
+                                    </span>
+</td>
+<td class="px-4 py-3">
+<span class="flex items-center gap-1.5 text-white text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        Investigating
+                                    </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">Dashboard widget loading error</td>
+<td class="px-4 py-3 text-text-muted text-xs">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-purple-600 flex items-center justify-center text-[9px] text-white">MK</div>
+<span>Mike K.</span>
+</div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Red Arrow Transport</td>
+<td class="px-4 py-3 text-right text-text-muted text-xs font-mono">45m ago</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4915</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-text-muted/10 text-text-muted border border-border-color">
+                                        LOW
+                                    </span>
+</td>
+<td class="px-4 py-3">
+<span class="flex items-center gap-1.5 text-white text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        Resolved
+                                    </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">Typo in email notification template</td>
+<td class="px-4 py-3 text-text-muted text-xs">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-[9px] text-white">AL</div>
+<span>Alex L.</span>
+</div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Swift Delivery Co</td>
+<td class="px-4 py-3 text-right text-text-muted text-xs font-mono">2h ago</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4912</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        HIGH
+                                    </span>
+</td>
+<td class="px-4 py-3">
+<span class="flex items-center gap-1.5 text-white text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        Resolved
+                                    </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">GPS sync failure on Vehicle #240</td>
+<td class="px-4 py-3 text-text-muted text-xs">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center text-[9px] text-white">RT</div>
+<span>Robert T.</span>
+</div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Global Fleet Ops</td>
+<td class="px-4 py-3 text-right text-text-muted text-xs font-mono">3h ago</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Support Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>API Status: <span class="text-success">Connected</span></span>
+<span>Avg Response: <span class="text-success">42ms</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

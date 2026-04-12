@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html class="light dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Admin Authentication</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#137fec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101922",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: {
+                "DEFAULT": "0.25rem", 
+                "lg": "0.5rem", 
+                "xl": "0.75rem", 
+                "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for the right panel */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased overflow-hidden">
+<div class="flex h-screen w-full flex-row">
+<!-- Left Panel: Branding & Marketing -->
+<!-- Hidden on small screens, takes up 40% on large screens -->
+<div class="hidden lg:flex lg:w-5/12 xl:w-5/12 relative bg-slate-900 flex-col justify-between p-12 text-white h-full shrink-0">
+<!-- Background Image with Overlay -->
+<div class="absolute inset-0 z-0">
+<img class="h-full w-full object-cover opacity-50 mix-blend-overlay" data-alt="Abstract aerial view of a global logistics network with connected nodes and fleet routes at dusk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2aPcpw8W8c3s3eaQfCYN4U_of9XoWYKr2kXvn6NgF9RZUYg9fwpGGwEoV8EPQ5lKGgF3vbPT_HFbtf903pr6o2_ijTKJZnQnnX0X_yxDj8sPbR7kuBxZYJszUM3GO8IM7vF-snZZGdHXzf1IarUEDwBimwj_2wHIBIXfihQBimTBouR4BllIw7kxuxG27npeceWsLVNgCZS2Lkk2ABL9xWmSeJfKBBgd2C63wSngKX75WWNWP32ESoWwkjoOdSheugEfWYWQcV3k"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/60 to-slate-900/40"></div>
+<!-- Additional decorative gradient for brand color -->
+<div class="absolute inset-0 bg-primary/20 mix-blend-multiply"></div>
+</div>
+<!-- Top Content: Brand -->
+<div class="relative z-10">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20">
+<span class="material-symbols-outlined text-white">local_shipping</span>
+</div>
+<span class="text-2xl font-bold tracking-tight text-white">FleetCommand</span>
+</div>
+</div>
+<!-- Bottom Content: Value Prop & Social Proof -->
+<div class="relative z-10 max-w-md animate-in slide-in-from-bottom-8 duration-1000">
+<h2 class="text-3xl font-bold leading-tight mb-4 text-white">Orchestrate your entire logistics network.</h2>
+<p class="text-slate-300 text-lg mb-8 leading-relaxed">
+                     Gain real-time visibility, optimize delivery routes, and manage driver compliance from a single, secure admin portal.
+                 </p>
+<!-- Social Proof / Trusted By -->
+<div class="flex flex-col gap-4">
+<p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Trusted by operations teams at</p>
+<div class="flex items-center gap-6 opacity-70 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-300">
+<span class="font-bold text-xl">LogiTech</span>
+<span class="font-bold text-xl">CargoFlow</span>
+<span class="font-bold text-xl">SwiftHaul</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Panel: Authentication Flows -->
+<!-- Scrollable container holding the 3 distinct states requested -->
+<div class="flex-1 flex flex-col items-center justify-start overflow-y-auto custom-scroll bg-white dark:bg-background-dark h-full relative w-full">
+<!-- Top Navigation (Mobile Only) -->
+<div class="w-full lg:hidden p-6 flex justify-between items-center bg-white dark:bg-background-dark sticky top-0 z-20 border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">local_shipping</span>
+<span class="text-lg font-bold">FleetCommand</span>
+</div>
+</div>
+<div class="w-full max-w-[440px] px-6 py-12 flex flex-col gap-24">
+<!-- SECTION 1: LOGIN STATE -->
+<section class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+<!-- Header -->
+<div class="text-center space-y-2">
+<h1 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Admin Portal Login</h1>
+<p class="text-base text-slate-500 dark:text-slate-400">Secure access for fleet administrators.</p>
+</div>
+<!-- Form -->
+<form class="space-y-5" onsubmit="event.preventDefault()">
+<!-- Email Field -->
+<div class="space-y-1.5">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="email">Work Email</label>
+<div class="relative group">
+<span class="absolute left-3 top-3.5 text-slate-400 material-symbols-outlined text-[20px] transition-colors group-focus-within:text-primary">mail</span>
+<input class="flex h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 pl-10 text-base shadow-sm transition-all placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white" id="email" placeholder="admin@company.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="password">Password</label>
+<a class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative group">
+<span class="absolute left-3 top-3.5 text-slate-400 material-symbols-outlined text-[20px] transition-colors group-focus-within:text-primary">lock</span>
+<input class="flex h-12 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 pl-10 text-base shadow-sm transition-all placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white" id="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer" type="button">
+<span class="material-symbols-outlined text-[20px]">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-white hover:bg-blue-600 active:scale-[0.98] h-12 w-full shadow-lg shadow-blue-500/25">
+                            Sign In
+                        </button>
+</form>
+<div class="pt-2 text-center text-sm text-slate-500">
+                        Issues logging in? <a class="font-semibold text-slate-900 dark:text-white hover:underline" href="#">Contact IT Support</a>
+</div>
+</section>
+<!-- VISUAL DIVIDER INDICATING FLOW PROGRESSION -->
+<div class="relative flex items-center justify-center opacity-60">
+<div class="h-12 w-[1px] bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-700"></div>
+</div>
+<!-- SECTION 2: 2FA VERIFICATION STATE -->
+<section class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+<div class="text-center space-y-4">
+<div class="inline-flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20 shadow-inner">
+<span class="material-symbols-outlined text-primary text-3xl">verified_user</span>
+</div>
+<div>
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white">Two-Factor Authentication</h2>
+<p class="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-[80%] mx-auto">
+                                For security, please enter the code sent to <span class="font-medium text-slate-900 dark:text-white whitespace-nowrap">+1 (***) ***-5589</span>
+</p>
+</div>
+</div>
+<div class="space-y-6">
+<!-- 2FA Input Grid -->
+<div class="flex justify-between gap-2 sm:gap-3">
+<input class="h-14 w-full rounded-lg border-2 border-primary bg-blue-50/30 text-center text-2xl font-bold text-primary focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-primary/50 dark:bg-slate-800 dark:text-white caret-transparent cursor-default" maxlength="1" readonly="" type="text" value="4"/>
+<input class="h-14 w-full rounded-lg border-2 border-primary bg-blue-50/30 text-center text-2xl font-bold text-primary focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-primary/50 dark:bg-slate-800 dark:text-white caret-transparent cursor-default" maxlength="1" readonly="" type="text" value="9"/>
+<input autofocus="" class="h-14 w-full rounded-lg border border-slate-300 text-center text-2xl font-bold text-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-white animate-pulse" maxlength="1" placeholder="-" type="text"/>
+<input class="h-14 w-full rounded-lg border border-slate-300 text-center text-2xl font-bold text-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-900" disabled="" maxlength="1" type="text"/>
+<input class="h-14 w-full rounded-lg border border-slate-300 text-center text-2xl font-bold text-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-900" disabled="" maxlength="1" type="text"/>
+<input class="h-14 w-full rounded-lg border border-slate-300 text-center text-2xl font-bold text-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-white disabled:bg-slate-100 dark:disabled:bg-slate-900" disabled="" maxlength="1" type="text"/>
+</div>
+<div class="flex flex-col gap-4">
+<button class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-bold bg-primary text-white hover:bg-blue-600 active:scale-[0.98] transition-all h-12 w-full shadow-lg shadow-blue-500/25">
+                                Verify Code
+                            </button>
+<button class="text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors">
+                                Use backup email instead
+                            </button>
+</div>
+</div>
+<div class="text-center text-sm bg-slate-50 dark:bg-slate-900/50 py-3 rounded-lg border border-slate-100 dark:border-slate-800">
+<span class="text-slate-500">Didn't receive code?</span>
+<a class="ml-1 font-bold text-primary hover:underline" href="#">Resend in 24s</a>
+</div>
+</section>
+<!-- VISUAL DIVIDER INDICATING FLOW PROGRESSION -->
+<div class="relative flex items-center justify-center opacity-60">
+<div class="h-12 w-[1px] bg-gradient-to-b from-transparent via-slate-300 to-transparent dark:via-slate-700"></div>
+</div>
+<!-- SECTION 3: ORGANIZATION SWITCHER STATE -->
+<section class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 pb-12">
+<div class="text-center">
+<div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 mb-4 border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300 text-2xl">domain</span>
+</div>
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white">Select Organization</h2>
+<p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                            Your account is associated with multiple fleets.
+                        </p>
+</div>
+<!-- Search -->
+<div class="relative">
+<span class="absolute left-3 top-2.5 text-slate-400 material-symbols-outlined text-[20px]">search</span>
+<input class="flex h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 pl-10 text-sm transition-all placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary dark:border-slate-700 dark:bg-slate-900 dark:text-white" placeholder="Search organization..." type="text"/>
+</div>
+<!-- Org List -->
+<div class="space-y-3">
+<!-- Active Item -->
+<div class="group relative flex cursor-pointer items-center space-x-4 rounded-xl border-2 border-primary bg-primary/5 p-4 transition-all hover:bg-primary/10 dark:border-primary dark:bg-blue-900/10 dark:hover:bg-blue-900/20 shadow-sm">
+<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm dark:bg-slate-800 border border-primary/20">
+<span class="material-symbols-outlined text-[20px]">local_shipping</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-slate-900 dark:text-white">North America Logistics</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="inline-flex items-center rounded-sm bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary ring-1 ring-inset ring-primary/20">Admin</span>
+<span class="text-[11px] text-slate-500">ID: #8821</span>
+</div>
+</div>
+<div class="flex-shrink-0 self-center">
+<span class="material-symbols-outlined text-primary fill-current">check_circle</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="group relative flex cursor-pointer items-center space-x-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700">
+<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500 border border-slate-100 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">
+<span class="material-symbols-outlined text-[20px]">flight</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-slate-900 dark:text-white">Euro Transports Ltd.</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="inline-flex items-center rounded-sm bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10 dark:bg-slate-700 dark:text-slate-300">Viewer</span>
+</div>
+</div>
+<div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300">chevron_right</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="group relative flex cursor-pointer items-center space-x-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700">
+<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-500 border border-slate-100 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600">
+<span class="material-symbols-outlined text-[20px]">warehouse</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-bold text-slate-900 dark:text-white">Last Mile Delivery Co.</p>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="inline-flex items-center rounded-sm bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/10 dark:bg-slate-700 dark:text-slate-300">Ops Manager</span>
+</div>
+</div>
+<div class="flex-shrink-0 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-300">chevron_right</span>
+</div>
+</div>
+</div>
+<div class="pt-2">
+<button class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98] transition-all h-12 w-full dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 shadow-lg shadow-slate-900/10">
+                                Access Dashboard
+                                <span class="material-symbols-outlined text-[18px] ml-2">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Footer Security Badge -->
+<div class="pt-8 pb-4 text-center border-t border-slate-100 dark:border-slate-800 w-full">
+<p class="text-xs text-slate-400 flex items-center justify-center gap-1.5 font-medium">
+<span class="material-symbols-outlined text-[14px] text-green-600">lock</span>
+                        Secured by Enterprise Guard. SOC2 Compliant.
+                    </p>
+</div>
+</div>
+</div>
+</div>
+</body></html>

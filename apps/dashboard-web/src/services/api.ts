@@ -229,6 +229,10 @@ class ApiService {
     return this.client.get("/dispatch/trips", { params });
   }
 
+  async getTripCustomers(): Promise<any> {
+    return this.client.get("/dispatch/trips/customers");
+  }
+
   async getTrip(id: string): Promise<any> {
     return this.client.get(`/admin/trips/${id}`);
   }

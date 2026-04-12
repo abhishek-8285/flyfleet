@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Audit Module Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<h2 class="text-white text-lg font-bold">Audit Module Settings</h2>
+<div class="flex items-center gap-2 mt-0.5 text-[11px] text-text-muted">
+<span>Audit Logs</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Settings</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                    ReadOnly Mode
+                </span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Logging Active</span>
+<label class="relative inline-flex items-center cursor-not-allowed opacity-75">
+<input checked="" class="sr-only peer" disabled="" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 rounded-full peer peer-checked:bg-success relative after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-surface-dark hover:bg-surface-darker text-text-muted border border-border-color text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+                    Export Policy
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-primary">history_toggle_off</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Retention Period</div>
+<div class="text-2xl font-bold text-white">5 Years</div>
+<div class="text-[10px] text-primary flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">verified</span>
+                        Compliance Standard
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">visibility_off</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Masking Rules</div>
+<div class="text-2xl font-bold text-success">Active</div>
+<div class="text-[10px] text-text-muted mt-1">32 Rules Applied</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">lock</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Sensitive Fields</div>
+<div class="text-2xl font-bold text-warning">Masked</div>
+<div class="text-[10px] text-text-muted mt-1">PII &amp; Financial Data</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">storage</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Logs Stored</div>
+<div class="text-2xl font-bold text-white">45.2 TB</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                        Storage Healthy
+                    </div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                                Data Retention Policy
+                            </h3>
+<span class="text-[10px] text-text-muted bg-surface-dark px-2 py-0.5 rounded border border-border-color">Read Only</span>
+</div>
+<div class="p-6 grid grid-cols-2 gap-6">
+<div class="col-span-2 md:col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Online Retention Duration</label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:outline-none cursor-not-allowed opacity-75" disabled="" type="text" value="365 Days"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-text-muted text-[16px]">calendar_month</span>
+</div>
+<p class="mt-1 text-[10px] text-text-muted">Period logs are available for instant search.</p>
+</div>
+<div class="col-span-2 md:col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Archival Retention Duration</label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:outline-none cursor-not-allowed opacity-75" disabled="" type="text" value="5 Years"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-text-muted text-[16px]">inventory_2</span>
+</div>
+<p class="mt-1 text-[10px] text-text-muted">Cold storage for compliance purposes.</p>
+</div>
+<div class="col-span-2">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Purge Strategy</label>
+<div class="bg-surface-darker border border-border-color rounded p-3 opacity-75">
+<div class="flex items-center gap-3">
+<div class="w-4 h-4 rounded-full border border-primary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+</div>
+<div>
+<div class="text-sm text-white font-medium">Automatic Purge</div>
+<div class="text-xs text-text-muted">Data older than retention period is automatically deleted permanently.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">visibility_off</span>
+                                Data Masking Configuration
+                            </h3>
+<span class="text-[10px] text-text-muted bg-surface-dark px-2 py-0.5 rounded border border-border-color">Read Only</span>
+</div>
+<div class="p-6 space-y-4">
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">PII Masking Pattern</label>
+<input class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:outline-none cursor-not-allowed opacity-75" disabled="" type="text" value="Partial Masking (Last 4 visible)"/>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Masked Fields</label>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-darker border border-border-color text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">credit_card</span>
+                                        credit_card_number
+                                    </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-darker border border-border-color text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">badge</span>
+                                        social_security_number
+                                    </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-darker border border-border-color text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">mail</span>
+                                        email_address
+                                    </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-darker border border-border-color text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">call</span>
+                                        phone_number
+                                    </span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-surface-darker border border-border-color text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">home</span>
+                                        home_address
+                                    </span>
+</div>
+</div>
+<div class="pt-2 border-t border-border-color/50">
+<label class="block text-xs font-medium text-text-muted mb-2">Role-Based Unmasking Access</label>
+<div class="bg-surface-darker border border-border-color rounded overflow-hidden">
+<div class="px-3 py-2 border-b border-border-color flex items-center justify-between text-xs">
+<span class="text-white">Super Admin</span>
+<span class="text-success font-medium">Full Access</span>
+</div>
+<div class="px-3 py-2 border-b border-border-color flex items-center justify-between text-xs">
+<span class="text-white">Compliance Officer</span>
+<span class="text-warning font-medium">Audit Only</span>
+</div>
+<div class="px-3 py-2 flex items-center justify-between text-xs">
+<span class="text-white">Support Staff</span>
+<span class="text-danger font-medium">No Access</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold">Tracked Audit Events</h3>
+<button class="text-primary text-xs hover:underline">View All</button>
+</div>
+<div class="p-2 border-b border-border-color bg-surface-darker">
+<input class="w-full bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search event types..." type="text"/>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+<div class="space-y-1">
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-[16px]">login</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">User Login</span>
+<span class="text-[10px] text-text-muted">Category: Auth</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-[16px]">logout</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">User Logout</span>
+<span class="text-[10px] text-text-muted">Category: Auth</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-warning/10 text-warning flex items-center justify-center border border-warning/20">
+<span class="material-symbols-outlined text-[16px]">settings_alert</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Policy Change</span>
+<span class="text-[10px] text-text-muted">Category: Admin</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-danger/10 text-danger flex items-center justify-center border border-danger/20">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Data Deletion</span>
+<span class="text-[10px] text-text-muted">Category: Data</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-darker text-text-muted flex items-center justify-center border border-border-color">
+<span class="material-symbols-outlined text-[16px]">download</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Export Report</span>
+<span class="text-[10px] text-text-muted">Category: Report</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-surface-darker text-text-muted text-[10px] border border-border-color font-bold">DISABLED</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-[16px]">key</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">API Key Created</span>
+<span class="text-[10px] text-text-muted">Category: Security</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+<span class="material-symbols-outlined text-[16px]">group_add</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">User Created</span>
+<span class="text-[10px] text-text-muted">Category: IAM</span>
+</div>
+</div>
+<div class="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] border border-success/20 font-bold">ACTIVE</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-color bg-surface-darker/50">
+<div class="flex justify-between text-xs text-text-muted mb-2">
+<span>Total Event Types</span>
+<span class="text-white font-medium">142</span>
+</div>
+<div class="w-full bg-border-color h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 85%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-text-muted mt-1">
+<span>120 Active</span>
+<span>22 Disabled</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">notifications</span>
+                            Audit Alert Destinations
+                        </h3>
+</div>
+<div class="p-0">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Destination Name</th>
+<th class="px-4 py-3 font-semibold">Type</th>
+<th class="px-4 py-3 font-semibold">Target</th>
+<th class="px-4 py-3 font-semibold">Trigger Events</th>
+<th class="px-4 py-3 font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">Security Ops Channel</td>
+<td class="px-4 py-3 text-text-muted">Slack Webhook</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">#sec-ops-alerts</td>
+<td class="px-4 py-3 text-text-muted">Critical Only</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                            CONNECTED
+                                        </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">Compliance Archive S3</td>
+<td class="px-4 py-3 text-text-muted">AWS S3 Bucket</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">s3://fleet-audit-logs</td>
+<td class="px-4 py-3 text-text-muted">All Events</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                            CONNECTED
+                                        </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">SIEM Splunk Forwarder</td>
+<td class="px-4 py-3 text-text-muted">Splunk HEC</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">https://inputs.splunk...</td>
+<td class="px-4 py-3 text-text-muted">All Events</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                            DEGRADED
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Audit Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Encryption: <span class="text-success">AES-256</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OTA Firmware Control Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetCommand</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Diagnostics</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">monitor_heart</span>
+<span class="text-sm font-medium">Health Status</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">system_update</span>
+<span class="text-sm font-medium">Firmware</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">bug_report</span>
+<span class="text-sm font-medium">Error Logs</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Fleet Control</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-sm font-medium">Live Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings_remote</span>
+<span class="text-sm font-medium">Remote Config</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Inventory</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">router</span>
+<span class="text-sm font-medium">Devices</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Sarah Jenkins</span>
+<span class="text-xs text-text-muted truncate">Technical Lead</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[10px] font-mono text-primary uppercase tracking-wider mb-0.5">
+<span class="text-text-muted">Diagnostics</span>
+<span class="text-text-muted">/</span>
+<span>Firmware</span>
+</div>
+<h2 class="text-white text-lg font-bold">Firmware Management</h2>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                    Live Connection
+                </span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Auto-Rollback</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+                    Schedule Upgrade
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 h-64 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">broadcast_on_home</span>
+                                Active Rollouts Progress
+                            </h3>
+<div class="flex items-center gap-3">
+<span class="text-[10px] text-text-muted">Refresh rate: 5s</span>
+<div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+</div>
+</div>
+<div class="flex-1 flex flex-col justify-center gap-6">
+<div class="space-y-2">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-white font-medium">v2.4.1-stable <span class="text-text-muted font-normal ml-2">Region: NA-East • Truck Fleet A</span></span>
+<span class="text-success font-bold">84%</span>
+</div>
+<div class="w-full bg-surface-darker h-2 rounded-full overflow-hidden border border-border-color">
+<div class="bg-gradient-to-r from-primary to-success h-full relative" style="width: 84%">
+<div class="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+</div>
+</div>
+<div class="flex justify-between text-[10px] text-text-muted">
+<span>Target: 1,250 Devices</span>
+<span class="flex gap-3">
+<span class="text-success">1,050 Updated</span>
+<span class="text-warning">150 Pending</span>
+<span class="text-danger">50 Failed</span>
+</span>
+</div>
+</div>
+<div class="space-y-2 opacity-80">
+<div class="flex justify-between text-xs mb-1">
+<span class="text-white font-medium">v2.4.1-beta <span class="text-text-muted font-normal ml-2">Region: EU-West • Van Fleet B</span></span>
+<span class="text-primary font-bold">45%</span>
+</div>
+<div class="w-full bg-surface-darker h-2 rounded-full overflow-hidden border border-border-color">
+<div class="bg-primary h-full" style="width: 45%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-text-muted">
+<span>Target: 800 Devices</span>
+<span class="flex gap-3">
+<span class="text-success">360 Updated</span>
+<span class="text-warning">430 Pending</span>
+<span class="text-danger">10 Failed</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 h-64 flex flex-col">
+<h3 class="text-white text-sm font-semibold mb-4">Rollout Success Rate</h3>
+<div class="flex items-center gap-6 h-full">
+<div class="relative w-32 h-32 flex-shrink-0">
+<svg class="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
+<path class="text-surface-darker" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3.8"></path>
+<path class="text-success" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="92, 100" stroke-width="3.8"></path>
+<path class="text-danger" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="5, 100" stroke-dashoffset="-92" stroke-width="3.8"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col text-white">
+<span class="text-2xl font-bold">92%</span>
+<span class="text-[9px] uppercase text-text-muted">Success</span>
+</div>
+</div>
+<div class="flex-1 space-y-3">
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+                                        Successful
+                                    </div>
+<span class="text-white font-medium">92%</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="w-2 h-2 rounded-full bg-danger"></span>
+                                        Failed
+                                    </div>
+<span class="text-white font-medium">5%</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="w-2 h-2 rounded-full bg-warning"></span>
+                                        Timeout
+                                    </div>
+<span class="text-white font-medium">3%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden mb-6">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">inventory_2</span>
+                        Firmware Repository
+                    </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-8 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50" placeholder="Search version or hardware..." type="text"/>
+</div>
+<button class="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded text-xs font-medium transition-colors">
+                            Upload New
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Version</th>
+<th class="px-4 py-3 font-semibold">Release Date</th>
+<th class="px-4 py-3 font-semibold">Target Hardware</th>
+<th class="px-4 py-3 font-semibold">File Size</th>
+<th class="px-4 py-3 font-semibold">Status</th>
+<th class="px-4 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+<span class="font-bold text-white">v2.4.1-stable</span>
+</div>
+<span class="text-[10px] text-text-muted ml-6">hash: 8f4a...2c1</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 24, 2023</td>
+<td class="px-4 py-3 text-white">
+<span class="bg-surface-darker px-2 py-1 rounded border border-border-color text-xs font-mono">HW-REV-04</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">14.2 MB</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                        ACTIVE
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-xs text-text-muted hover:text-white hover:underline">Notes</button>
+<button class="px-2 py-1 text-xs bg-surface-darker border border-border-color rounded text-white hover:bg-border-color transition-colors">Rollback</button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">science</span>
+<span class="font-medium text-white">v2.4.2-beta</span>
+</div>
+<span class="text-[10px] text-text-muted ml-6">hash: 3b1x...9a2</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 26, 2023</td>
+<td class="px-4 py-3 text-white">
+<span class="bg-surface-darker px-2 py-1 rounded border border-border-color text-xs font-mono">HW-REV-05</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">14.4 MB</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        TESTING
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-xs text-text-muted hover:text-white hover:underline">Notes</button>
+<button class="px-2 py-1 text-xs bg-surface-darker border border-border-color rounded text-white hover:bg-border-color transition-colors">Promote</button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">history</span>
+<span class="font-medium text-text-muted">v2.3.9-stable</span>
+</div>
+<span class="text-[10px] text-text-muted ml-6">hash: 1a9d...4f5</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 12, 2023</td>
+<td class="px-4 py-3 text-white">
+<span class="bg-surface-darker px-2 py-1 rounded border border-border-color text-xs font-mono">HW-REV-04</span>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs font-mono">13.8 MB</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-surface-light/5 text-text-muted border border-surface-light/10">
+                                        DEPRECATED
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-xs text-text-muted hover:text-white hover:underline">Notes</button>
+<button class="px-2 py-1 text-xs bg-surface-darker border border-border-color rounded text-white hover:bg-border-color transition-colors">Archive</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-[280px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold">Critical Firmware Alerts</h3>
+<button class="text-primary text-xs hover:underline">View All</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+<div class="space-y-1">
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-danger text-[20px]">error</span>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Update Failed: Device ID #921</span>
+<span class="text-[10px] text-text-muted">Checksum mismatch during OTA</span>
+</div>
+</div>
+<span class="text-xs text-text-muted">2m ago</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-warning text-[20px]">warning</span>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Low Battery Warning</span>
+<span class="text-[10px] text-text-muted">Skipped update for 12 devices</span>
+</div>
+</div>
+<span class="text-xs text-text-muted">15m ago</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group cursor-pointer">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-danger text-[20px]">wifi_off</span>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Connection Lost</span>
+<span class="text-[10px] text-text-muted">Batch #402 timeout during handshake</span>
+</div>
+</div>
+<span class="text-xs text-text-muted">1h ago</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-[280px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold">Deployment Regions</h3>
+<button class="text-primary text-xs hover:underline">Global View</button>
+</div>
+<div class="flex-1 p-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+<div class="space-y-2">
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">North America (NA-East)</span>
+<span class="text-white">Updated: 98%</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-success h-full" style="width: 98%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Europe (EU-West)</span>
+<span class="text-white">Updated: 45%</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 45%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Asia Pacific (APAC-SG)</span>
+<span class="text-white">Updated: 12%</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-warning h-full" style="width: 12%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">South America (SA-BR)</span>
+<span class="text-white">Scheduled</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-text-muted h-full opacity-20" style="width: 100%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Device Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Protocol: <span class="text-success">MQTT/TLS</span></span>
+<span>Gateway Status: <span class="text-success">Connected</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

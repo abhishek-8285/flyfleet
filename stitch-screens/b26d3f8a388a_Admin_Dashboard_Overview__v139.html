@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Backup Detail View - FleetSecurity DR</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Disaster Recovery</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined text-[20px]">backup</span>
+<span class="text-sm font-medium">Backups</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+<span class="text-sm font-medium">Restore Jobs</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDZh6uatk0yGcNiIzaRvGoBWNz295fP1msDiu0yzl_bIFCECtIA7l86McNC8hJOf4_vg1uJJIyRuLLvr7JQOjNS6R36RqnvapXr7Ltjx0yg3fUFuH6ixkRnAn8QALqtf6GUPOzpU6gOQ4nOY_jurNyhvwgJoZrN-WZnO3u3HwxVTvNVOhkId09cV6BIsXfgJ05-By6XUTveqYhwEPa-dnHsziH6PKNvDxM0ZZg5yLOxCaiK-Od3cDIU7K7jXwluA18h_P_Z_uupGAc");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<div class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest font-semibold">
+<a class="hover:text-primary transition-colors" href="#">Backups</a>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">BKUP-2023-1024-001</span>
+</div>
+<h2 class="text-white text-lg font-bold">Backup Detail View</h2>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 bg-surface-dark hover:bg-border-color border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+                    Verify Integrity
+                </button>
+<button class="px-4 py-2 bg-danger/10 hover:bg-danger/20 border border-danger/30 text-danger text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+                    Delete Backup
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Backup Type</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">database</span>
+<div class="text-xl font-bold text-white">Full Snapshot</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Size</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-indigo-400">hard_drive</span>
+<div class="text-xl font-bold text-white">2.4 TB</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Status</div>
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-success"></span>
+<div class="text-xl font-bold text-success uppercase">Available</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Retention Policy</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning">history</span>
+<div class="text-xl font-bold text-white">90 Days GFS</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-7">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker flex items-center justify-between">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">info</span>
+                                Job Metadata
+                            </h3>
+<span class="text-[10px] text-text-muted font-mono bg-border-color/30 px-2 py-0.5 rounded">ID: BKUP-2023-1024-001</span>
+</div>
+<div class="p-5">
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="p-3 bg-surface-darker/50 rounded border border-border-color/50">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Start Time</div>
+<div class="text-sm text-white font-medium">Oct 24, 2023 • 02:00:05 AM</div>
+</div>
+<div class="p-3 bg-surface-darker/50 rounded border border-border-color/50">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">End Time</div>
+<div class="text-sm text-white font-medium">Oct 24, 2023 • 03:42:12 AM</div>
+</div>
+</div>
+<div class="p-3 bg-surface-darker/50 rounded border border-border-color/50">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Initiated By</div>
+<div class="flex items-center gap-2 mt-1">
+<div class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+</div>
+<span class="text-sm text-white">System Scheduler (Cron: 00 02 * * *)</span>
+</div>
+</div>
+<div class="p-3 bg-surface-darker/50 rounded border border-border-color/50">
+<div class="flex justify-between items-center mb-1">
+<div class="text-[10px] text-text-muted uppercase font-bold">Checksum (SHA-256)</div>
+<button class="text-primary text-[10px] hover:underline">Copy Hash</button>
+</div>
+<div class="text-xs text-white font-mono break-all bg-background-dark p-2 rounded">
+                                        f8e3c1d2a4b567890e123456789abcdef0123456789abcdef0123456789abcde
+                                    </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-5">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">storage</span>
+                                Storage Details
+                            </h3>
+</div>
+<div class="p-5 space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-indigo-500/10 rounded flex items-center justify-center border border-indigo-500/20">
+<span class="material-symbols-outlined text-indigo-500">cloud</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">Amazon S3</div>
+<div class="text-[10px] text-text-muted uppercase">Primary Target</div>
+</div>
+</div>
+<span class="text-xs text-text-muted">Bucket: fleet-security-dr-prod</span>
+</div>
+<div class="pt-4 border-t border-border-color">
+<div class="flex justify-between text-xs mb-2">
+<span class="text-text-muted">Storage Tier</span>
+<span class="text-white font-medium">Standard-IA</span>
+</div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-text-muted">Encryption Status</span>
+<span class="text-success font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">lock</span>
+                                        AES-256 Enabled
+                                    </span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Availability Zone</span>
+<span class="text-white font-medium">us-east-1a</span>
+</div>
+</div>
+<div class="p-4 bg-primary/5 border border-primary/20 rounded-lg mt-4">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+<div>
+<div class="text-xs font-bold text-white mb-1">Immutability Lock</div>
+<p class="text-[10px] text-text-muted leading-relaxed">
+                                            This backup is protected by an object lock. It cannot be deleted or modified until Nov 24, 2023.
+                                        </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                            Recent Verification Logs
+                        </h3>
+<button class="text-xs text-primary hover:underline font-medium">View Detailed Logs</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-[10px] text-text-muted uppercase tracking-wider bg-surface-darker/30">
+<th class="px-4 py-2.5 font-semibold">Log Timestamp</th>
+<th class="px-4 py-2.5 font-semibold">Action</th>
+<th class="px-4 py-2.5 font-semibold">Initiated By</th>
+<th class="px-4 py-2.5 font-semibold">Result</th>
+<th class="px-4 py-2.5 font-semibold text-right">Details</th>
+</tr>
+</thead>
+<tbody class="text-xs">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted font-mono whitespace-nowrap">2023-10-24 14:30:15</td>
+<td class="px-4 py-3 font-medium text-white">Manual Integrity Check</td>
+<td class="px-4 py-3 text-text-muted">amorgan@fleet.com</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">PASSED</span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted font-mono whitespace-nowrap">2023-10-24 03:42:15</td>
+<td class="px-4 py-3 font-medium text-white">Post-Backup Validation</td>
+<td class="px-4 py-3 text-text-muted">System BFF</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">PASSED</span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white"><span class="material-symbols-outlined text-[18px]">open_in_new</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. DR Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>API Protocol: <span class="text-primary">REST/BFF</span></span>
+<span>Security: <span class="text-success">SSL/TLS 1.3</span></span>
+<span>Server Time: <span class="font-mono text-white">15:10 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

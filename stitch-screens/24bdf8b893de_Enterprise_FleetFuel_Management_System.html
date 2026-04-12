@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Enterprise FleetFuel Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,100..700,0..1&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111a22; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #233648; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334d66; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .map-grid {
+            background-image: 
+                linear-gradient(#233648 1px, transparent 1px),
+                linear-gradient(90deg, #233648 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            const NavItem = ({ to, icon, label }) => (
+                <Link to={to} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive(to) ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                    <span class="material-symbols-outlined text-[20px]">{icon}</span>
+                    <span class="text-sm font-medium">{label}</span>
+                </Link>
+            );
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">local_gas_station</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetFuel</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+                        <NavItem to="/" icon="dashboard" label="Dashboard" />
+                        <NavItem to="/trips" icon="route" label="Trips" />
+                        <NavItem to="/vehicles" icon="directions_car" label="Vehicles" />
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Finance</div>
+                        <NavItem to="/fuel-logs" icon="local_gas_station" label="Fuel Logs" />
+                        <NavItem to="/invoices" icon="receipt_long" label="Invoices" />
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+                        <NavItem to="/work-orders" icon="build" label="Work Orders" />
+                        <NavItem to="/inventory" icon="inventory_2" label="Inventory" />
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security & Admin</div>
+                        <NavItem to="/mfa" icon="shield_lock" label="MFA Center" />
+                        <NavItem to="/audit-logs" icon="troubleshoot" label="Audit Logs" />
+                        <NavItem to="/dr" icon="settings_backup_restore" label="Disaster Recovery" />
+                        <NavItem to="/settings" icon="settings" label="Settings" />
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Fleet Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Layout = ({ children, headerTitle, headerSubtitle, actions }) => (
+            <div className="flex h-screen w-full">
+                <Sidebar />
+                <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div>
+                            <h2 className="text-white text-lg font-bold">{headerTitle}</h2>
+                            {headerSubtitle && <p className="text-[11px] text-text-muted mt-0.5">{headerSubtitle}</p>}
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {actions}
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        {children}
+                    </div>
+                    <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                        <span>© 2023 Enterprise Fleet Manager. System V2.4.1</span>
+                        <div className="flex items-center gap-4">
+                            <span>API Status: <span className="text-success">Connected</span></span>
+                            <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                        </div>
+                    </footer>
+                </main>
+            </div>
+        );
+
+        // --- Screen Components ---
+
+        const DashboardView = () => (
+            <Layout headerTitle="Fleet Dashboard" headerSubtitle="Operations • System Health Overview">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Vehicles</div>
+                        <div className="text-2xl font-bold text-white">1,204</div>
+                        <div className="text-[10px] text-success mt-1">98.2% Availability</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Weekly Fuel Cost</div>
+                        <div className="text-2xl font-bold text-white">$45,890</div>
+                        <div className="text-[10px] text-warning mt-1">+12.5% vs avg</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Open Work Orders</div>
+                        <div className="text-2xl font-bold text-danger">46</div>
+                        <div className="text-[10px] text-text-muted mt-1">8 Critical priority</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Compliance Rate</div>
+                        <div className="text-2xl font-bold text-success">94.2%</div>
+                        <div className="text-[10px] text-text-muted mt-1">Audit score: Grade A</div>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                        <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                            <h3 className="text-white font-semibold text-sm">Recent Alerts</h3>
+                            <button className="text-primary text-xs hover:underline">View All</button>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <div className="flex gap-3 p-3 bg-danger/10 border border-danger/20 rounded-lg">
+                                <span className="material-symbols-outlined text-danger text-[20px]">warning</span>
+                                <div className="text-xs">
+                                    <p className="text-white font-medium">Critical Brake Failure</p>
+                                    <p className="text-text-muted">Vehicle #VH-4022 reported major deceleration issue.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+                                <span className="material-symbols-outlined text-warning text-[20px]">speed</span>
+                                <div className="text-xs">
+                                    <p className="text-white font-medium">Fuel Efficiency Drop</p>
+                                    <p className="text-text-muted">Route 42A showing 15% lower MPG than expected.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                        <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                            <h3 className="text-white font-semibold text-sm">Live Fleet Map</h3>
+                            <button className="text-primary text-xs hover:underline">Full Map</button>
+                        </div>
+                        <div className="h-64 bg-[#1b2631] relative map-grid">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="relative">
+                                    <div className="w-4 h-4 bg-primary rounded-full border-2 border-white animate-pulse"></div>
+                                    <div className="absolute -inset-4 bg-primary/20 rounded-full animate-ping"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Layout>
+        );
+
+        const TripListView = () => (
+            <Layout 
+                headerTitle="Trip Management" 
+                headerSubtitle="Fleet Management • Active Operations"
+                actions={<button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 shadow-lg"><span className="material-symbols-outlined text-[16px]">add</span>Add Trip</button>}
+            >
+                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                    <th className="px-6 py-4 font-semibold">Trip ID</th>
+                                    <th className="px-6 py-4 font-semibold">Vehicle</th>
+                                    <th className="px-6 py-4 font-semibold">Driver</th>
+                                    <th className="px-6 py-4 font-semibold">Route</th>
+                                    <th className="px-6 py-4 font-semibold text-right">Status</th>
+                                    <th className="px-6 py-4 font-semibold text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm divide-y divide-border-color/30">
+                                <tr className="hover:bg-surface-darker/50 transition-colors">
+                                    <td className="px-6 py-4 font-mono text-xs text-primary">#TR-8821</td>
+                                    <td className="px-6 py-4 text-white">VH-402 (Ford Transit)</td>
+                                    <td className="px-6 py-4 text-white">John Doe</td>
+                                    <td className="px-6 py-4 text-text-muted text-xs">New York → Boston</td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">IN PROGRESS</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <Link to="/trip/8821" className="text-primary hover:underline">View Detail</Link>
+                                    </td>
+                                </tr>
+                                <tr className="hover:bg-surface-darker/50 transition-colors">
+                                    <td className="px-6 py-4 font-mono text-xs text-primary">#TR-8822</td>
+                                    <td className="px-6 py-4 text-white">VH-109 (Chevy Silverado)</td>
+                                    <td className="px-6 py-4 text-white">Alice Smith</td>
+                                    <td className="px-6 py-4 text-text-muted text-xs">Chicago → Detroit</td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">Scheduled</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className="text-text-muted cursor-not-allowed">View Detail</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </Layout>
+        );
+
+        const VehicleListView = () => (
+            <Layout 
+                headerTitle="Vehicle Registry" 
+                headerSubtitle="Fleet Asset Management"
+                actions={<button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 shadow-lg"><span className="material-symbols-outlined text-[16px]">add</span>Add Vehicle</button>}
+            >
+                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                <th className="px-6 py-4 font-semibold">Vehicle ID</th>
+                                <th className="px-6 py-4 font-semibold">Make/Model</th>
+                                <th className="px-6 py-4 font-semibold">License Plate</th>
+                                <th className="px-6 py-4 font-semibold">Odometer</th>
+                                <th className="px-6 py-4 font-semibold text-right">Status</th>
+                                <th className="px-6 py-4"></th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                <td className="px-6 py-4 font-mono text-xs text-primary">#V-2023-001</td>
+                                <td className="px-6 py-4 text-white">Toyota Camry (2023)</td>
+                                <td className="px-6 py-4 text-text-muted">XYZ-8821</td>
+                                <td className="px-6 py-4 text-text-muted">12,405 mi</td>
+                                <td className="px-6 py-4 text-right">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/20">ACTIVE</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button className="text-text-muted hover:text-white"><span className="material-symbols-outlined">edit</span></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </Layout>
+        );
+
+        const FuelLogListView = () => (
+            <Layout headerTitle="Fuel Transaction Logs" headerSubtitle="Fuel Usage • Cost Tracking">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                        <div className="text-[10px] text-text-muted font-bold uppercase mb-1">Total Cost (MTD)</div>
+                        <div className="text-xl font-bold text-white">$4,850.12</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                        <div className="text-[10px] text-text-muted font-bold uppercase mb-1">Avg Price / Gal</div>
+                        <div className="text-xl font-bold text-white">$3.89</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                        <div className="text-[10px] text-text-muted font-bold uppercase mb-1">Total Volume</div>
+                        <div className="text-xl font-bold text-white">1,248 Gal</div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-4">
+                        <div className="text-[10px] text-text-muted font-bold uppercase mb-1">Active Cards</div>
+                        <div className="text-xl font-bold text-white">24</div>
+                    </div>
+                </div>
+                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-surface-darker/50 text-xs text-text-muted uppercase tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4">Log ID</th>
+                                <th className="px-6 py-4">Vehicle</th>
+                                <th className="px-6 py-4">Station</th>
+                                <th className="px-6 py-4 text-right">Qty</th>
+                                <th className="px-6 py-4 text-right">Cost</th>
+                                <th className="px-6 py-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                <td className="px-6 py-4 text-primary font-mono text-xs">FL-2023-8901</td>
+                                <td className="px-6 py-4 text-white">VH-8821</td>
+                                <td className="px-6 py-4 text-text-muted">Shell Station #42, NY</td>
+                                <td className="px-6 py-4 text-right text-text-muted">45.5 L</td>
+                                <td className="px-6 py-4 text-right text-white font-semibold">$142.50</td>
+                                <td className="px-6 py-4 text-right">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">VERIFIED</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </Layout>
+        );
+
+        const WorkOrderListView = () => (
+            <Layout headerTitle="Maintenance Work Orders" headerSubtitle="Service Schedule • Repair Registry">
+                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-surface-darker/50 text-xs text-text-muted uppercase tracking-wider">
+                            <tr>
+                                <th className="px-6 py-4">WO ID</th>
+                                <th className="px-6 py-4">Vehicle</th>
+                                <th className="px-6 py-4">Type</th>
+                                <th className="px-6 py-4">Priority</th>
+                                <th className="px-6 py-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                <td className="px-6 py-4 font-mono text-xs text-primary">#WO-2938</td>
+                                <td className="px-6 py-4 text-white">Ford Transit (#V-492)</td>
+                                <td className="px-6 py-4 text-white">Brake System Overhaul</td>
+                                <td className="px-6 py-4">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">CRITICAL</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">In Progress</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </Layout>
+        );
+
+        const MFACenterView = () => (
+            <Layout headerTitle="MFA Security Center" headerSubtitle="Authentication Policies • Access Control">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-6">
+                        <h3 className="text-white text-sm font-semibold mb-4">Authentication Methods</h3>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-primary">smartphone</span>
+                                    <span className="text-sm font-medium">Authenticator App</span>
+                                </div>
+                                <span className="px-2 py-0.5 bg-success/10 text-success text-[10px] font-bold rounded">ENABLED</span>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
+                                <div className="flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-indigo-400">sms</span>
+                                    <span className="text-sm font-medium">SMS Delivery</span>
+                                </div>
+                                <span className="px-2 py-0.5 bg-warning/10 text-warning text-[10px] font-bold rounded">FALLBACK</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-surface-dark rounded-xl border border-border-color p-6">
+                        <h3 className="text-white text-sm font-semibold mb-4">Lockout Policy</h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between text-xs py-2 border-b border-border-color">
+                                <span className="text-text-muted">Max Failed Attempts</span>
+                                <span className="text-white">5 Attempts</span>
+                            </div>
+                            <div className="flex justify-between text-xs py-2">
+                                <span className="text-text-muted">Lockout Duration</span>
+                                <span className="text-white">30 Minutes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Layout>
+        );
+
+        const DisasterRecoveryView = () => (
+            <Layout headerTitle="Disaster Recovery" headerSubtitle="Infrastructure • Backup & Restore Control">
+                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden mb-6">
+                    <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                        <h3 className="text-white font-semibold text-sm">Backup Inventory</h3>
+                        <button className="px-3 py-1 bg-primary text-white text-xs rounded shadow-lg">+ Create Backup</button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="text-[11px] text-text-muted uppercase bg-surface-darker/30">
+                                <tr>
+                                    <th className="px-6 py-4">Job ID</th>
+                                    <th className="px-6 py-4">Date</th>
+                                    <th className="px-6 py-4">Size</th>
+                                    <th className="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-sm">
+                                <tr className="border-t border-border-color">
+                                    <td className="px-6 py-4 font-mono text-primary">BK-72183-US</td>
+                                    <td className="px-6 py-4 text-text-muted">Oct 25, 04:00 AM</td>
+                                    <td className="px-6 py-4 text-white">412.5 GB</td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">VERIFIED</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div className="bg-danger/5 border border-danger/20 p-4 rounded-lg flex gap-4">
+                    <span className="material-symbols-outlined text-danger">warning</span>
+                    <div>
+                        <h4 className="text-danger font-semibold text-sm">Emergency System Restore</h4>
+                        <p className="text-xs text-text-muted mt-1">Full system restore will overwrite production data. This action is immutable.</p>
+                        <button className="mt-4 px-4 py-2 bg-danger hover:bg-red-600 text-white text-xs font-bold rounded">Initiate Restore Operations</button>
+                    </div>
+                </div>
+            </Layout>
+        );
+
+        // --- Main App ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<DashboardView />} />
+                        <Route path="/trips" element={<TripListView />} />
+                        <Route path="/vehicles" element={<VehicleListView />} />
+                        <Route path="/fuel-logs" element={<FuelLogListView />} />
+                        <Route path="/work-orders" element={<WorkOrderListView />} />
+                        <Route path="/mfa" element={<MFACenterView />} />
+                        <Route path="/dr" element={<DisasterRecoveryView />} />
+                        <Route path="/audit-logs" element={<Layout headerTitle="Audit Logs"><div className="text-text-muted italic">Historical system audit data stream...</div></Layout>} />
+                        <Route path="/inventory" element={<Layout headerTitle="Parts Inventory"><div className="text-text-muted italic">Asset inventory and stock tracking...</div></Layout>} />
+                        <Route path="/invoices" element={<Layout headerTitle="Billing & Invoices"><div className="text-text-muted italic">Account statements and payment history...</div></Layout>} />
+                        <Route path="/settings" element={<Layout headerTitle="System Settings"><div className="text-text-muted italic">Global platform configuration...</div></Layout>} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

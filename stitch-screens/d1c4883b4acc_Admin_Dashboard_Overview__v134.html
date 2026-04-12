@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>System Health Dashboard Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">monitoring</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetMonitor</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">System Health</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dns</span>
+<span class="text-sm font-medium">Infrastructure</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="text-sm font-medium">Network</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Applications</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">api</span>
+<span class="text-sm font-medium">API Gateway</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-sm font-medium">Databases</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Alerts</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="text-sm font-medium">Incidents</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">DevOps Lead</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<h2 class="text-white text-lg font-bold">System Health Dashboard</h2>
+<p class="text-[11px] text-text-muted mt-0.5">Enterprise Fleet Platform • Monitoring Module</p>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30">
+                    All Systems Operational
+                </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+                    Refresh Data
+                </button>
+<button class="px-4 py-2 bg-danger hover:bg-red-600 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-danger/20">
+<span class="material-symbols-outlined text-[16px]">report_problem</span>
+                    Incident Report
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Global Uptime %</div>
+<div class="text-2xl font-bold text-white">99.99%</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">arrow_upward</span>
+                        Target Met
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-primary">speed</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Avg API Latency</div>
+<div class="text-2xl font-bold text-primary">42ms</div>
+<div class="text-[10px] text-text-muted mt-1">Last 5 min avg</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full" style="width: 35%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">bug_report</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Active Error Rate</div>
+<div class="text-2xl font-bold text-warning">0.02%</div>
+<div class="text-[10px] text-text-muted mt-1">Within tolerance</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-warning h-full" style="width: 2%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">database</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Database Health</div>
+<div class="text-2xl font-bold text-success">Healthy</div>
+<div class="text-[10px] text-text-muted mt-1">Replica Lag: 0ms</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-success h-full" style="width: 100%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-text-muted">layers</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Queue Backlog</div>
+<div class="text-2xl font-bold text-white">142</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_down</span>
+                        -12% vs last hour
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-orange-500">integration_instructions</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Active Integrations</div>
+<div class="text-2xl font-bold text-orange-500">28/30</div>
+<div class="text-[10px] text-text-muted mt-1">2 degraded</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 h-80 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">show_chart</span>
+                                API Latency Trend (Last 24h)
+                            </h3>
+<div class="flex items-center gap-2">
+<span class="flex items-center gap-1 text-[10px] text-text-muted"><div class="w-2 h-2 bg-primary rounded-full"></div> P95</span>
+<span class="flex items-center gap-1 text-[10px] text-text-muted"><div class="w-2 h-2 bg-gray-600 rounded-full"></div> P50</span>
+</div>
+</div>
+<div class="flex-1 relative w-full h-full">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 200">
+<defs>
+<linearGradient id="latencyGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#137fec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#137fec" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<line stroke="#233648" stroke-width="1" x1="0" x2="800" y1="199" y2="199"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="150" y2="150"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="100" y2="100"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="50" y2="50"></line>
+<path d="M0,120 C100,130 200,90 300,100 S500,40 600,60 S700,80 800,50 V200 H0 Z" fill="url(#latencyGradient)"></path>
+<path d="M0,120 C100,130 200,90 300,100 S500,40 600,60 S700,80 800,50" fill="none" stroke="#137fec" stroke-width="2"></path>
+<path d="M0,160 C100,165 200,150 300,155 S500,130 600,140 S700,145 800,130" fill="none" stroke="#4b5563" stroke-dasharray="4,2" stroke-width="1.5"></path>
+<circle cx="600" cy="60" fill="#fff" r="4" stroke="#137fec" stroke-width="2"></circle>
+</svg>
+<div class="absolute bottom-2 left-0 right-0 flex justify-between text-[10px] text-text-muted px-2">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col items-center justify-center gap-2 group hover:border-success/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+<span class="material-symbols-outlined">cloud_queue</span>
+</div>
+<div class="text-center">
+<div class="text-white text-sm font-semibold">Web BFF</div>
+<div class="text-[10px] text-success font-medium">100% Uptime</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col items-center justify-center gap-2 group hover:border-success/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+<span class="material-symbols-outlined">lock</span>
+</div>
+<div class="text-center">
+<div class="text-white text-sm font-semibold">Auth Service</div>
+<div class="text-[10px] text-success font-medium">100% Uptime</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col items-center justify-center gap-2 group hover:border-warning/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div class="text-center">
+<div class="text-white text-sm font-semibold">Billing API</div>
+<div class="text-[10px] text-warning font-medium">98.5% Uptime</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col items-center justify-center gap-2 group hover:border-success/50 transition-colors">
+<div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<div class="text-center">
+<div class="text-white text-sm font-semibold">Fleet Engine</div>
+<div class="text-[10px] text-success font-medium">99.9% Uptime</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-[280px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold">Top Error Sources</h3>
+<button class="text-primary text-xs hover:underline">View Logs</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-2">
+<div class="space-y-1">
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-darker flex items-center justify-center text-xs font-mono text-text-muted border border-border-color">500</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Payment Gateway</span>
+<span class="text-[10px] text-text-muted">TimeoutException</span>
+</div>
+</div>
+<span class="text-xs font-bold text-danger bg-danger/10 px-2 py-0.5 rounded">124 err</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-darker flex items-center justify-center text-xs font-mono text-text-muted border border-border-color">429</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Public API V1</span>
+<span class="text-[10px] text-text-muted">RateLimitExceeded</span>
+</div>
+</div>
+<span class="text-xs font-bold text-warning bg-warning/10 px-2 py-0.5 rounded">89 err</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-darker flex items-center justify-center text-xs font-mono text-text-muted border border-border-color">502</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Reporting Service</span>
+<span class="text-[10px] text-text-muted">BadGateway</span>
+</div>
+</div>
+<span class="text-xs font-bold text-danger bg-danger/10 px-2 py-0.5 rounded">45 err</span>
+</div>
+<div class="flex items-center justify-between p-2 hover:bg-surface-darker rounded transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-darker flex items-center justify-center text-xs font-mono text-text-muted border border-border-color">404</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Asset Service</span>
+<span class="text-[10px] text-text-muted">ResourceNotFound</span>
+</div>
+</div>
+<span class="text-xs font-bold text-text-muted bg-surface-darker px-2 py-0.5 rounded">31 err</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 min-h-[220px]">
+<div class="p-4 border-b border-border-color">
+<h3 class="text-white text-sm font-semibold">Queue Performance</h3>
+</div>
+<div class="p-4 flex flex-col justify-center h-full gap-4">
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-white">Email Notifications</span>
+<span class="text-text-muted">850/1000</span>
+</div>
+<div class="w-full bg-border-color h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 85%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-white">Data Ingestion</span>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px] text-warning">warning</span>
+<span class="text-warning">920/1000</span>
+</div>
+</div>
+<div class="w-full bg-border-color h-2 rounded-full overflow-hidden">
+<div class="bg-warning h-full" style="width: 92%"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs">
+<span class="text-white">Audit Logs</span>
+<span class="text-text-muted">240/5000</span>
+</div>
+<div class="w-full bg-border-color h-2 rounded-full overflow-hidden">
+<div class="bg-success h-full" style="width: 5%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-danger text-[18px]">notifications_active</span>
+                        System Alerts (Real-time)
+                    </h3>
+<div class="flex items-center gap-2">
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter alerts..." type="text"/>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Timestamp</th>
+<th class="px-4 py-3 font-semibold">Service</th>
+<th class="px-4 py-3 font-semibold">Alert Message</th>
+<th class="px-4 py-3 font-semibold">Type</th>
+<th class="px-4 py-3 font-semibold">Instance ID</th>
+<th class="px-4 py-3 font-semibold text-right">Severity</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:35:12</td>
+<td class="px-4 py-3 font-medium text-white">db-primary-01</td>
+<td class="px-4 py-3 text-white">High CPU Utilization (&gt;85%)</td>
+<td class="px-4 py-3 text-text-muted">Infrastructure</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">i-0a2b3c4d</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                        CRITICAL
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:34:05</td>
+<td class="px-4 py-3 font-medium text-white">payment-gw</td>
+<td class="px-4 py-3 text-white">External API Timeout</td>
+<td class="px-4 py-3 text-text-muted">Connectivity</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">svc-pay-04</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        WARNING
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:30:22</td>
+<td class="px-4 py-3 font-medium text-white">redis-cache</td>
+<td class="px-4 py-3 text-white">Memory Usage High</td>
+<td class="px-4 py-3 text-text-muted">Resource</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">cache-02</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        WARNING
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:15:00</td>
+<td class="px-4 py-3 font-medium text-white">auth-service</td>
+<td class="px-4 py-3 text-white">Certificate Expiry Warning</td>
+<td class="px-4 py-3 text-text-muted">Security</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">global</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                        INFO
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Monitoring Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Region: <span class="text-white">us-east-1</span></span>
+<span>Environment: <span class="text-warning">Production</span></span>
+<span>Last Sync: <span class="font-mono text-white">14:36:12 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

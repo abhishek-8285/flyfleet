@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FleetMaster - Enterprise Fleet Management Platform</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#192633",
+                        "border-dark": "#233648",
+                        "text-secondary": "#92adc9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem", 
+                        "lg": "0.75rem", 
+                        "xl": "1rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(19, 127, 236, 0.15) 0%, rgba(19, 127, 236, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden">
+<!-- Top Navigation -->
+<header class="fixed top-0 z-50 w-full border-b border-solid border-slate-200 dark:border-border-dark bg-white/80 dark:bg-[#111a22]/80 backdrop-blur-md">
+<div class="px-4 md:px-10 flex h-16 items-center justify-between max-w-[1440px] mx-auto">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined !text-3xl">local_shipping</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">FleetMaster</h2>
+</div>
+<nav class="hidden md:flex flex-1 justify-center gap-8">
+<a class="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#features">Features</a>
+<a class="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#pricing">Pricing</a>
+<a class="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#contact">Resources</a>
+</nav>
+<div class="flex gap-2">
+<button class="hidden sm:flex h-9 items-center justify-center rounded-lg px-4 bg-transparent border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white text-sm font-bold hover:bg-slate-100 dark:hover:bg-surface-dark transition-colors">
+<span class="truncate">Login</span>
+</button>
+<button class="flex h-9 items-center justify-center rounded-lg px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold transition-colors shadow-lg shadow-primary/25">
+<span class="truncate">Request Demo</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex min-h-screen w-full flex-col pt-16">
+<!-- Hero Section -->
+<section class="relative w-full py-16 md:py-24 overflow-hidden">
+<div class="glow-effect"></div>
+<div class="px-4 md:px-10 max-w-[1280px] mx-auto flex flex-col items-center text-center relative z-10">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wide mb-6">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+                    New V2.0 Dashboard Live
+                </div>
+<h1 class="text-4xl md:text-6xl lg:text-7xl font-black leading-tight tracking-tight mb-6 max-w-4xl text-slate-900 dark:text-white">
+                    Fleet Management,<br/>
+<span class="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">Future-Proofed.</span>
+</h1>
+<p class="text-slate-600 dark:text-text-secondary text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
+                    Optimize routes, reduce costs, and ensure driver safety with the world's most advanced AI-driven fleet platform.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 mb-16">
+<button class="h-12 px-8 rounded-lg bg-primary hover:bg-primary/90 text-white text-base font-bold transition-all shadow-lg shadow-primary/30 flex items-center justify-center gap-2">
+                        Request Demo
+                        <span class="material-symbols-outlined !text-lg">arrow_forward</span>
+</button>
+<button class="h-12 px-8 rounded-lg bg-slate-200 dark:bg-surface-dark hover:bg-slate-300 dark:hover:bg-border-dark text-slate-900 dark:text-white text-base font-bold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined !text-lg">play_circle</span>
+                        Watch Video
+                    </button>
+</div>
+<!-- Dashboard Mockup -->
+<div class="relative w-full max-w-5xl rounded-xl border border-slate-200 dark:border-border-dark bg-slate-900 shadow-2xl overflow-hidden aspect-video group">
+<div class="absolute top-0 w-full h-full bg-gradient-to-t from-background-dark/80 to-transparent z-10 pointer-events-none"></div>
+<div class="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="High detailed dark mode dashboard analytics interface with graphs and map" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBM1Md37WqnFJMzFOVSziDk3PuxHAf_F757b1IBfS8OFARtO3-VE8gdJnV96G74Px1_7Uyt56s8YPMObSOIoI9e7p6DR1YR9CRSCzQpHfiW4VuENOe1mtWY-iOi34aHx2h5_MV4brys3JZ2iMcNt7ntBX6BCSxAlxkTHQPTxcs7jtCorwo_Pm6dkyJWtM0NRDijuGHMoI8HvHhUZ8M8psCHNAXAifKuxK7fWcpv1jkzCEueDFFhIxKYUX5bkoGZcf_91plEpd_yAHU");'>
+</div>
+<!-- Floating UI Elements for depth -->
+<div class="absolute bottom-6 left-6 right-6 z-20 flex justify-between items-end hidden md:flex">
+<div class="bg-surface-dark/90 backdrop-blur border border-border-dark p-4 rounded-lg shadow-lg flex gap-4 items-center">
+<div class="p-2 bg-green-500/20 rounded-md text-green-500">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<div>
+<p class="text-xs text-text-secondary">Efficiency</p>
+<p class="text-lg font-bold text-white">+24.5%</p>
+</div>
+</div>
+<div class="bg-surface-dark/90 backdrop-blur border border-border-dark p-4 rounded-lg shadow-lg flex gap-4 items-center">
+<div class="p-2 bg-primary/20 rounded-md text-primary">
+<span class="material-symbols-outlined">local_gas_station</span>
+</div>
+<div>
+<p class="text-xs text-text-secondary">Fuel Saved</p>
+<p class="text-lg font-bold text-white">12,405 L</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Social Proof -->
+<section class="border-y border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-[#0d141c]">
+<div class="px-4 md:px-10 py-8 max-w-[1280px] mx-auto text-center">
+<p class="text-slate-500 dark:text-text-secondary text-sm font-semibold tracking-widest uppercase mb-6">Trusted by Industry Leaders</p>
+<div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<!-- Logos using text for simplicity in this exercise, normally SVGs -->
+<div class="text-xl font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2"><span class="material-symbols-outlined">public</span> GLOBEX</div>
+<div class="text-xl font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2"><span class="material-symbols-outlined">inventory_2</span> PACKLY</div>
+<div class="text-xl font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2"><span class="material-symbols-outlined">local_shipping</span> HAULR</div>
+<div class="text-xl font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2"><span class="material-symbols-outlined">factory</span> INDUS</div>
+<div class="text-xl font-bold text-slate-400 dark:text-slate-500 flex items-center gap-2"><span class="material-symbols-outlined">bolt</span> VELOCITY</div>
+</div>
+</div>
+</section>
+<!-- Features Section -->
+<section class="py-20 px-4 md:px-10" id="features">
+<div class="max-w-[1280px] mx-auto">
+<div class="mb-16 md:text-center max-w-3xl mx-auto">
+<h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">Everything you need to run your fleet</h2>
+<p class="text-slate-600 dark:text-text-secondary text-lg">Our platform provides comprehensive tools to manage every aspect of your operations, from the driver's seat to the back office.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Feature 1 -->
+<div class="group p-6 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
+<div class="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 mb-6 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined !text-3xl">location_on</span>
+</div>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Real-time Tracking</h3>
+<p class="text-slate-600 dark:text-text-secondary mb-4">See every vehicle, every second with live GPS updates and seamless map integration for total visibility.</p>
+<div class="h-40 w-full rounded-lg bg-slate-100 dark:bg-background-dark overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center opacity-80" data-location="New York City map view" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDyr80O2z5H0WHSQtqBRvw4yaK5xu-ugXEOF_rJY2tHyZGnt6p0Wnr7-s2g7C7USyeJ-Qe9EaB5KZwqZ5zsOIc_dXWfDIWV9Xy4EKcK-GL3oOKhisrqIUt7RJF_ntar6wXShCtVbt5fAEPyyatkSxw4X6_jZcAGhwq9alkJx9GyMae2wn2bT_j2rWmV9uwDAe5ZHkrih882euEvkwSXw5KsCZpFeNAd1NSVOKiKb4HAWO_nE1DkeNmWhXfjpOJ1e_bbVKrelX92lkA");'></div>
+</div>
+</div>
+<!-- Feature 2 -->
+<div class="group p-6 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
+<div class="w-12 h-12 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 mb-6 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined !text-3xl">analytics</span>
+</div>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Advanced Analytics</h3>
+<p class="text-slate-600 dark:text-text-secondary mb-4">Turn mileage into actionable insights with predictive maintenance schedules and detailed fuel reports.</p>
+<div class="h-40 w-full rounded-lg bg-slate-100 dark:bg-background-dark overflow-hidden relative flex items-center justify-center p-4">
+<div class="w-full h-full bg-cover bg-center rounded" data-alt="Data charts and graphs dashboard" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDshwxFU9gU5P2i82yjskk4M5orwGATUInNR5jPR1Acmiid-nt-NAqKqb9oKURS05BjRsLaNPD1xxbLPIuSXR0EWpJ8ExEAU9QlEFidMRfFaGvkpRHmEcYh0BTfcGujjci27HUdx4l2R2S8SxCGn9CdHRkQN4-6JjIvi3440op07ZqITMmTzGjxKUpml_Ed9IcwixIapHsL4oIwmAfsGRhVixBulKgnjpi3jvAN00zXxWW-uG1wwGs4xLQ3LPhdyVCl-ZaBX38R_y4");'></div>
+</div>
+</div>
+<!-- Feature 3 -->
+<div class="group p-6 rounded-xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5">
+<div class="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500 mb-6 group-hover:bg-green-500 group-hover:text-white transition-colors">
+<span class="material-symbols-outlined !text-3xl">security</span>
+</div>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Driver Safety</h3>
+<p class="text-slate-600 dark:text-text-secondary mb-4">AI-powered alerts to prevent accidents before they happen and coach drivers on safer habits.</p>
+<div class="h-40 w-full rounded-lg bg-slate-100 dark:bg-background-dark overflow-hidden relative">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Driver inside truck cabin" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCHfR_7JOZjw0jEfvlLEx2R7IPCfwma2IuiY7ODf-aD30-LFbEk3ZxXErUaYFAtm5FnHBpvEnueUT1stwrrZV6VnywVMTc3rf5f2Ef5BXR4xTdJEnBXQDunG7QwntWRfdoWiE99yCsJ4R-WYEG1BycR36uh9FywCTQKj6Tcvd9B9hNHI04__cPLRKRvf3YZ3vudYQBnwUypwtVQhA9fIaW41R3at0KXgKJRU2YXkShXPjKIFNFIjRG2hDuS0e_xk66OPwBSanbIvJs");'></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Pricing Section -->
+<section class="py-20 px-4 md:px-10 bg-slate-50 dark:bg-[#0d141c]" id="pricing">
+<div class="max-w-[1280px] mx-auto">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">Transparent Pricing</h2>
+<p class="text-slate-600 dark:text-text-secondary text-lg">Choose the plan that fits your fleet size and needs.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+<!-- Starter Plan -->
+<div class="flex flex-col p-8 rounded-2xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark">
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Starter</h3>
+<p class="text-slate-500 dark:text-text-secondary text-sm mt-2">For small fleets (1-10 vehicles)</p>
+<div class="my-6">
+<span class="text-4xl font-bold text-slate-900 dark:text-white">$29</span>
+<span class="text-slate-500 dark:text-text-secondary">/vehicle/mo</span>
+</div>
+<button class="w-full py-3 rounded-lg border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white font-bold hover:bg-slate-50 dark:hover:bg-border-dark transition-colors mb-8">
+                            Get Started
+                        </button>
+<ul class="flex flex-col gap-4 text-sm text-slate-600 dark:text-text-secondary flex-1">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-green-500 text-lg">check_circle</span> Real-time GPS Tracking</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-green-500 text-lg">check_circle</span> 30-day History</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-green-500 text-lg">check_circle</span> Basic Reporting</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-green-500 text-lg">check_circle</span> Mobile App Access</li>
+</ul>
+</div>
+<!-- Pro Plan (Highlighted) -->
+<div class="relative flex flex-col p-8 rounded-2xl border-2 border-primary bg-white dark:bg-surface-dark shadow-2xl shadow-primary/10 transform md:-translate-y-4">
+<div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                            Most Popular
+                        </div>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Pro</h3>
+<p class="text-slate-500 dark:text-text-secondary text-sm mt-2">For growing businesses</p>
+<div class="my-6">
+<span class="text-4xl font-bold text-slate-900 dark:text-white">$49</span>
+<span class="text-slate-500 dark:text-text-secondary">/vehicle/mo</span>
+</div>
+<button class="w-full py-3 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors mb-8 shadow-lg shadow-primary/25">
+                            Start Free Trial
+                        </button>
+<ul class="flex flex-col gap-4 text-sm text-slate-600 dark:text-text-secondary flex-1">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Everything in Starter</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Unlimited History</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Fuel Management</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> Driver Safety Scorecard</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-lg">check_circle</span> API Access</li>
+</ul>
+</div>
+<!-- Enterprise Plan -->
+<div class="flex flex-col p-8 rounded-2xl border border-slate-200 dark:border-border-dark bg-white dark:bg-surface-dark">
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Enterprise</h3>
+<p class="text-slate-500 dark:text-text-secondary text-sm mt-2">Custom solutions for logistics</p>
+<div class="my-6">
+<span class="text-4xl font-bold text-slate-900 dark:text-white">Custom</span>
+</div>
+<button class="w-full py-3 rounded-lg border border-slate-200 dark:border-border-dark text-slate-900 dark:text-white font-bold hover:bg-slate-50 dark:hover:bg-border-dark transition-colors mb-8">
+                            Contact Sales
+                        </button>
+<ul class="flex flex-col gap-4 text-sm text-slate-600 dark:text-text-secondary flex-1">
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-400 text-lg">check_circle</span> Everything in Pro</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-400 text-lg">check_circle</span> Dedicated Account Manager</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-400 text-lg">check_circle</span> Custom Integrations</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-400 text-lg">check_circle</span> On-premise Deployment</li>
+<li class="flex items-center gap-3"><span class="material-symbols-outlined text-slate-400 text-lg">check_circle</span> 24/7 Priority Support</li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Section -->
+<section class="py-20 px-4 md:px-10">
+<div class="max-w-5xl mx-auto rounded-2xl bg-gradient-to-br from-surface-dark to-background-dark border border-border-dark p-10 md:p-16 text-center relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+<div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+<h2 class="relative z-10 text-3xl md:text-5xl font-bold text-white mb-6">Ready to modernize your fleet?</h2>
+<p class="relative z-10 text-text-secondary text-lg mb-10 max-w-2xl mx-auto">Join over 2,000 companies optimizing their operations with FleetMaster today.</p>
+<div class="relative z-10 flex flex-col sm:flex-row gap-4 justify-center">
+<button class="h-12 px-8 rounded-lg bg-primary hover:bg-primary/90 text-white text-base font-bold transition-all shadow-lg shadow-primary/25">
+                        Get Started Now
+                    </button>
+<button class="h-12 px-8 rounded-lg border border-border-dark bg-transparent hover:bg-border-dark text-white text-base font-bold transition-all">
+                        Talk to Sales
+                    </button>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="border-t border-slate-200 dark:border-border-dark bg-white dark:bg-background-dark pt-16 pb-8">
+<div class="px-4 md:px-10 max-w-[1280px] mx-auto">
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
+<div class="col-span-2 lg:col-span-2">
+<div class="flex items-center gap-3 text-slate-900 dark:text-white mb-4">
+<div class="size-6 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h2 class="text-lg font-bold">FleetMaster</h2>
+</div>
+<p class="text-slate-500 dark:text-text-secondary text-sm max-w-xs mb-6">
+                            The world's most advanced AI-driven fleet management platform. Optimization made simple.
+                        </p>
+<div class="flex gap-4">
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">public</span></a>
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">alternate_email</span></a>
+<a class="text-slate-400 hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">rss_feed</span></a>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="text-slate-900 dark:text-white font-bold">Product</h4>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Features</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Pricing</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Integrations</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Changelog</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="text-slate-900 dark:text-white font-bold">Resources</h4>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Documentation</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">API Reference</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Community</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Help Center</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="text-slate-900 dark:text-white font-bold">Company</h4>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">About</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Blog</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Careers</a>
+<a class="text-slate-500 dark:text-text-secondary hover:text-primary transition-colors text-sm" href="#">Contact</a>
+</div>
+</div>
+<div class="border-t border-slate-200 dark:border-border-dark pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-slate-400 text-sm">© 2024 FleetMaster Inc. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="text-slate-400 hover:text-primary text-sm" href="#">Privacy Policy</a>
+<a class="text-slate-400 hover:text-primary text-sm" href="#">Terms of Service</a>
+</div>
+</div>
+</div>
+</footer>
+</main>
+</body></html>

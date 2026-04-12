@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Backup Jobs List View - FleetSecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Infrastructure Control</div>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-border-color hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">dns</span>
+<span class="text-sm font-medium">Servers</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 border-l-4 border-primary rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+<span class="text-sm font-medium">Disaster Recovery</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-muted hover:bg-border-color hover:text-white rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">database</span>
+<span class="text-sm font-medium">Storage Pools</span>
+</a>
+<div class="mt-6 px-3 mb-4 text-xs font-semibold uppercase tracking-wider text-text-muted">Filters</div>
+<div class="space-y-4 px-3">
+<div>
+<label class="block text-[10px] text-text-muted uppercase font-bold mb-2">Backup Type</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted group-hover:text-white">Full Backups</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted group-hover:text-white">Incremental</span>
+</label>
+</div>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted uppercase font-bold mb-2">Status</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted group-hover:text-white">Completed</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted group-hover:text-white">Running</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted group-hover:text-white">Failed</span>
+</label>
+</div>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted uppercase font-bold mb-2">Date Range</label>
+<select class="w-full bg-surface-dark border-border-color text-xs text-white rounded px-2 py-1.5 focus:ring-primary focus:border-primary">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range</option>
+</select>
+</div>
+</div>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] text-text-muted font-medium mb-1">
+<span>Infrastructure</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span>Disaster Recovery</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Backups</span>
+</nav>
+<div class="flex items-center gap-3">
+<h2 class="text-white text-lg font-bold">Backup Jobs List View</h2>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                        DR Module
+                    </span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded-lg pl-10 pr-4 py-2 w-72 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search Global Backups..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">add_box</span>
+                    Create Backup
+                </button>
+</div>
+</header>
+<div class="px-6 pt-6 pb-2">
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-[10px] text-text-muted font-bold uppercase mb-1">Success Rate (24h)</div>
+<div class="text-xl font-bold text-success">99.8%</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-[10px] text-text-muted font-bold uppercase mb-1">Active Transfers</div>
+<div class="text-xl font-bold text-primary">12</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-[10px] text-text-muted font-bold uppercase mb-1">Total Storage used</div>
+<div class="text-xl font-bold text-white">2.4 TB</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-[10px] text-text-muted font-bold uppercase mb-1">Pending Verification</div>
+<div class="text-xl font-bold text-warning">4</div>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-hidden p-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                        Backup Operations Log
+                    </h3>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-border-color rounded text-xs text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+                            Sync BFF
+                        </button>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="sticky top-0 z-10 border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker shadow-sm">
+<th class="px-6 py-4 font-semibold">Backup ID</th>
+<th class="px-6 py-4 font-semibold">Type</th>
+<th class="px-6 py-4 font-semibold">Start Time</th>
+<th class="px-6 py-4 font-semibold">Duration</th>
+<th class="px-6 py-4 font-semibold">Size</th>
+<th class="px-6 py-4 font-semibold">Storage Location</th>
+<th class="px-6 py-4 font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-color/30">
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72183-US</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FULL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-25 04:00:12</td>
+<td class="px-6 py-4 text-text-muted">1h 12m</td>
+<td class="px-6 py-4 text-white font-medium">412.5 GB</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">cloud</span>
+                                    AWS-US-EAST-1
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+<span class="w-1 h-1 rounded-full bg-success"></span>
+                                        VERIFIED
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72184-DE</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-darker text-text-muted border border-border-color">INCREMENTAL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-25 08:30:00</td>
+<td class="px-6 py-4 text-text-muted">14m 22s</td>
+<td class="px-6 py-4 text-white font-medium">2.1 GB</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">dns</span>
+                                    On-Prem: LUN-04
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                        COMPLETED
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group bg-primary/5">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72185-IE</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-darker text-text-muted border border-border-color">INCREMENTAL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-25 10:15:44</td>
+<td class="px-6 py-4 text-primary animate-pulse">In Progress...</td>
+<td class="px-6 py-4 text-text-muted font-medium">---</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">cloud</span>
+                                    Azure-West-Europe
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                        RUNNING
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72186-US</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FULL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-25 12:00:00</td>
+<td class="px-6 py-4 text-text-muted">---</td>
+<td class="px-6 py-4 text-text-muted font-medium">---</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">cloud</span>
+                                    GCP-US-CENTRAL
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-gray-500/10 text-text-muted border border-border-color">
+                                        SCHEDULED
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72180-CA</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-darker text-text-muted border border-border-color">INCREMENTAL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-24 22:10:05</td>
+<td class="px-6 py-4 text-text-muted">42m 10s</td>
+<td class="px-6 py-4 text-white font-medium">18.4 GB</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">dns</span>
+                                    Local-San-02
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                        FAILED
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-primary font-medium">BK-72179-UK</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FULL</span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">2023-10-24 18:00:00</td>
+<td class="px-6 py-4 text-text-muted">2h 45m</td>
+<td class="px-6 py-4 text-white font-medium">890.2 GB</td>
+<td class="px-6 py-4 flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[16px]">cloud</span>
+                                    AWS-EU-WEST-2
+                                </td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+<span class="w-1 h-1 rounded-full bg-success"></span>
+                                        VERIFIED
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-3 border-t border-border-color bg-surface-darker/50 flex items-center justify-between text-[11px] text-text-muted uppercase font-semibold">
+<div>Showing 1 - 25 of 1,248 Jobs</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1 hover:text-white transition-colors cursor-not-allowed opacity-50">
+<span class="material-symbols-outlined text-[14px]">chevron_left</span> Previous
+                        </button>
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 flex items-center justify-center bg-primary text-white rounded">1</span>
+<span class="w-6 h-6 flex items-center justify-center hover:bg-border-color rounded cursor-pointer transition-colors">2</span>
+<span class="w-6 h-6 flex items-center justify-center hover:bg-border-color rounded cursor-pointer transition-colors">3</span>
+<span>...</span>
+<span class="w-6 h-6 flex items-center justify-center hover:bg-border-color rounded cursor-pointer transition-colors">50</span>
+</div>
+<button class="flex items-center gap-1 hover:text-white transition-colors">
+                            Next <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. DR Module V2.4.1</span>
+<div class="flex items-center gap-4">
+<span>Data Source: <span class="text-primary">BFF /dr/backups</span></span>
+<span>System Status: <span class="text-success font-bold">STABLE</span></span>
+<span>Server Time: <span class="font-mono text-white">10:42 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

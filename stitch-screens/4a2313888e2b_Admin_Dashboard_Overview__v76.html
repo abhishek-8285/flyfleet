@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Data Export Request Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="radio"]:checked {
+            background-color: #137fec;
+            border-color: #137fec;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 0 1px #137fec;
+            border-color: #137fec;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">dataset</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetData</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Data Governance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">cloud_download</span>
+<span class="text-sm font-medium">Data Requests</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">policy</span>
+<span class="text-sm font-medium">Compliance Policies</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Catalog</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-sm font-medium">Data Assets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">schema</span>
+<span class="text-sm font-medium">Schema Registry</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Settings</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configuration</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Data Steward</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-xs text-text-muted mb-1">
+<span>Data Requests</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">New Request</span>
+</div>
+<h2 class="text-white text-lg font-bold">New Data Export Request</h2>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted text-xs font-semibold rounded transition-colors">
+                        Cancel
+                    </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">send</span>
+                        Submit Request
+                    </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="max-w-4xl mx-auto space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">badge</span>
+                                Request Basics
+                            </h3>
+<span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 1 of 3</span>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">User ID</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">person</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-sm text-white rounded w-full pl-10 pr-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary opacity-60 cursor-not-allowed" disabled="" type="text" value="alex.morgan"/>
+</div>
+<p class="text-[10px] text-text-muted">Automatically populated from session</p>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Organization ID <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">domain</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-sm text-white rounded w-full pl-10 pr-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600" placeholder="e.g. ORG-8821-X" type="text"/>
+</div>
+</div>
+<div class="space-y-1.5 md:col-span-2">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Request Type <span class="text-danger">*</span></label>
+<select class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary appearance-none">
+<option disabled="" selected="" value="">Select request purpose...</option>
+<option value="audit">Compliance Audit</option>
+<option value="analytics">Fleet Performance Analytics</option>
+<option value="migration">System Migration</option>
+<option value="legal">Legal Hold / Discovery</option>
+</select>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                                Export Configuration
+                            </h3>
+<span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 2 of 3</span>
+</div>
+<div class="p-6 space-y-6">
+<div class="space-y-3">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Data Scope <span class="text-danger">*</span></label>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+<div class="flex items-center justify-between mb-2">
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">directions_car</span>
+<input checked="" class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio"/>
+</div>
+<span class="text-sm font-medium text-white">Vehicle Telemetry</span>
+<span class="text-xs text-text-muted mt-1">GPS, speed, and sensor data</span>
+</label>
+<label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+<div class="flex items-center justify-between mb-2">
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">person_pin</span>
+<input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio"/>
+</div>
+<span class="text-sm font-medium text-white">Driver Profiles</span>
+<span class="text-xs text-text-muted mt-1">PII, licenses, and history</span>
+</label>
+<label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+<div class="flex items-center justify-between mb-2">
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">cleaning</span>
+<input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio"/>
+</div>
+<span class="text-sm font-medium text-white">Maintenance Logs</span>
+<span class="text-xs text-text-muted mt-1">Repairs, costs, and service</span>
+</label>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+<div class="space-y-1.5">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Export Format</label>
+<div class="flex items-center gap-4 bg-surface-darker border border-border-color rounded p-2">
+<label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+<input checked="" class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio"/>
+<span class="text-sm text-white">CSV</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+<input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio"/>
+<span class="text-sm text-white">JSON</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+<input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio"/>
+<span class="text-sm text-white">PDF Report</span>
+</label>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Delivery Method</label>
+<select class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary">
+<option value="direct">Direct Download</option>
+<option value="s3">Secure S3 Bucket</option>
+<option value="email">Email Link (Expires 24h)</option>
+<option value="sftp">Corporate SFTP</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">description</span>
+                                Additional Details
+                            </h3>
+<span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 3 of 3</span>
+</div>
+<div class="p-6">
+<div class="space-y-1.5">
+<label class="text-xs font-medium text-text-muted uppercase tracking-wider">Comments / Justification</label>
+<textarea class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 resize-none" placeholder="Please provide specific details about the required data subset or time range needed..." rows="4"></textarea>
+<div class="flex justify-between items-center mt-2">
+<p class="text-[10px] text-text-muted">Maximum 500 characters. Sensitive data will be masked automatically.</p>
+<span class="text-[10px] text-text-muted">0 / 500</span>
+</div>
+</div>
+<div class="mt-6 flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded">
+<span class="material-symbols-outlined text-primary mt-0.5">info</span>
+<div>
+<h4 class="text-sm font-semibold text-white">Data Privacy Notice</h4>
+<p class="text-xs text-text-muted mt-1">By submitting this request, you acknowledge that the exported data may contain confidential information. You agree to handle this data in accordance with the Enterprise Data Governance Policy v4.2.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Governance Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Connection: <span class="text-success">Secure TLS 1.3</span></span>
+<span>API Status: <span class="text-success">Online</span></span>
+<span>Server Time: <span class="font-mono text-white">15:42 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

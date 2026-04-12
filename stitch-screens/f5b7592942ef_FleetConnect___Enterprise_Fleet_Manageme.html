@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetConnect - Enterprise Fleet Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                        "terminal-bg": "#0a0e14",
+                        "terminal-text": "#33ff00",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["Consolas", "Monaco", "Courier New", "monospace"],
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #111a22; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #233648; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334d66; }
+        .chart-grid line { stroke: #233648; stroke-dasharray: 4; }
+        .terminal-scroll::-webkit-scrollbar { width: 8px; }
+        .terminal-scroll::-webkit-scrollbar-track { background: #0a0e14; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #233648; border-radius: 0; }
+        @keyframes shimmer { 
+            0% { transform: translateX(-100%); } 
+            100% { transform: translateX(100%); } 
+        }
+    </style>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // Shared Components
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path ? "bg-primary/10 text-primary border-l-4 border-primary" : "text-text-muted hover:bg-border-color hover:text-white";
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">router</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetConnect</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Device Management</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive("/")}`}>
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Overview</span>
+                        </Link>
+                        <Link to="/diagnostics" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive("/diagnostics")}`}>
+                            <span className="material-symbols-outlined">monitor_heart</span>
+                            <span className="text-sm font-medium">Device Health</span>
+                        </Link>
+                        <Link to="/telemetry" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive("/telemetry")}`}>
+                            <span className="material-symbols-outlined">settings_input_antenna</span>
+                            <span className="text-sm font-medium">Live Telemetry</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+                        <Link to="/commands" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive("/commands")}`}>
+                            <span className="material-symbols-outlined">settings_remote</span>
+                            <span className="text-sm font-medium">Remote Commands</span>
+                        </Link>
+                        <Link to="/firmware" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive("/firmware")}`}>
+                            <span className="material-symbols-outlined">system_update</span>
+                            <span className="text-sm font-medium">Firmware Updates</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Fleet Technician</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- Screen 1: Dashboard ---
+        const DashboardScreen = () => {
+            return (
+                <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold">Device Health Dashboard</h2>
+                                <p className="text-[11px] text-text-muted mt-0.5">Device Diagnostics Module • Enterprise View</p>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30">
+                                System Healthy
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                <span className="text-xs text-text-muted font-medium">Auto-Refresh</span>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input defaultChecked className="sr-only peer" type="checkbox" />
+                                    <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                                Run Diagnostics
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                            {/* Stats Cards */}
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-white">developer_board</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Devices</div>
+                                <div className="text-2xl font-bold text-white">4,285</div>
+                                <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">add_circle</span>
+                                    +15 new
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-success">wifi</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Online</div>
+                                <div className="text-2xl font-bold text-success">4,102</div>
+                                <div className="text-[10px] text-text-muted mt-1">95.7% uptime</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-success h-full" style={{width: '95.7%'}}></div>
+                                </div>
+                            </div>
+                             <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-text-muted">wifi_off</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Offline</div>
+                                <div className="text-2xl font-bold text-text-muted">183</div>
+                                <div className="text-[10px] text-warning mt-1">Check connectivity</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-text-muted h-full" style={{width: '4.3%'}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-warning">battery_alert</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Low Battery</div>
+                                <div className="text-2xl font-bold text-warning">42</div>
+                                <div className="text-[10px] text-warning flex items-center gap-1 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">warning</span>
+                                    Below 20%
+                                </div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-warning h-full" style={{width: '15%'}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-orange-500">signal_cellular_alt_2_bar</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Signal Warnings</div>
+                                <div className="text-2xl font-bold text-orange-500">89</div>
+                                <div className="text-[10px] text-text-muted mt-1">Weak reception area</div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-danger">error</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">System Errors</div>
+                                <div className="text-2xl font-bold text-danger">12</div>
+                                <div className="text-[10px] text-danger mt-1">Critical faults</div>
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full min-h-[500px]">
+                            <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                                    Device Status & Health
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search Device ID or Vehicle..." type="text"/>
+                                    <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                        <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                                    </button>
+                                    <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                        <span className="material-symbols-outlined text-[18px]">download</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                            <th className="px-4 py-3 font-semibold">Device ID</th>
+                                            <th className="px-4 py-3 font-semibold">Assigned Vehicle</th>
+                                            <th className="px-4 py-3 font-semibold">Status</th>
+                                            <th className="px-4 py-3 font-semibold">Last Heartbeat</th>
+                                            <th className="px-4 py-3 font-semibold">Firmware Version</th>
+                                            <th className="px-4 py-3 font-semibold">Signal (dBm)</th>
+                                            <th className="px-4 py-3 font-semibold">Battery %</th>
+                                            <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                            <td className="px-4 py-3 text-white font-mono text-xs"><Link to="/diagnostics" className="hover:text-primary hover:underline">DV-8821-XJ</Link></td>
+                                            <td className="px-4 py-3 font-medium text-white">Ford Transit #402</td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-success"></span> ONLINE
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">2 mins ago</td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">v4.2.1</td>
+                                            <td className="px-4 py-3 text-text-muted font-mono text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-success">signal_cellular_alt</span>
+                                                    -65 dBm
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 bg-surface-darker rounded-full h-1.5 border border-border-color">
+                                                        <div className="bg-success h-full rounded-full" style={{width: '98%'}}></div>
+                                                    </div>
+                                                    <span className="text-xs text-white">98%</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <button className="text-text-muted hover:text-primary transition-colors p-1">
+                                                    <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        {/* More rows would go here */}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Diagnostics ---
+        const DiagnosticsScreen = () => {
+            return (
+                <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <nav className="flex items-center text-[11px] text-text-muted mb-0.5 space-x-1">
+                                    <Link to="/" className="hover:text-white cursor-pointer transition-colors">DIAGNOSTICS</Link>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="hover:text-white cursor-pointer transition-colors">DEVICES</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary font-mono font-medium">TCU-982-X1</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                                    Telematics Control Unit #982
+                                    <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                </h2>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                <span className="w-2 h-2 rounded-full bg-success"></span>
+                                <span className="text-xs text-white font-medium">Online</span>
+                                <span className="text-[10px] text-text-muted ml-1 border-l border-border-color pl-2">Last ping: 2s ago</span>
+                            </div>
+                            <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-border-color text-text-muted transition-colors">
+                                <span className="material-symbols-outlined text-[20px]">refresh</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-hidden p-6 custom-scrollbar">
+                        <div className="grid grid-cols-12 gap-6 h-full">
+                            <div className="col-span-3 flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar pr-2">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">memory</span>
+                                            Hardware Information
+                                        </h3>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="text-[10px] text-text-muted uppercase">Model</div>
+                                                <div className="text-sm text-white font-medium">Connect X4</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[10px] text-text-muted uppercase">Firmware</div>
+                                                <div className="text-sm text-white font-medium">v4.2.1-stable</div>
+                                            </div>
+                                        </div>
+                                         <div className="pt-4 border-t border-border-color">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-xs text-text-muted">Internal Battery</span>
+                                                <span className="text-xs text-success font-bold">94%</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+                                                <div className="bg-success h-full" style={{width: '94%'}}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex-1">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-warning text-[18px]">sensors</span>
+                                            Sensor Telemetry
+                                        </h3>
+                                    </div>
+                                    <div className="p-4 space-y-4">
+                                        <div className="flex items-center justify-between p-3 bg-surface-darker rounded border border-border-color">
+                                            <div className="flex items-center gap-3">
+                                                <span className="material-symbols-outlined text-text-muted">key</span>
+                                                <div>
+                                                    <div className="text-xs text-text-muted">Ignition</div>
+                                                    <div className="text-sm font-bold text-white">ON</div>
+                                                </div>
+                                            </div>
+                                            <div className="text-[10px] text-success bg-success/10 px-2 py-0.5 rounded border border-success/20">Active</div>
+                                        </div>
+                                        {/* More telemetry items */}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-6 flex flex-col gap-6 h-full">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div>
+                                            <h3 className="text-white text-sm font-semibold">System Diagnostics</h3>
+                                            <p className="text-[11px] text-text-muted">Running full system check sequence...</p>
+                                        </div>
+                                        <span className="text-xs font-mono text-primary animate-pulse">Running...</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between text-xs mb-1">
+                                            <span className="text-white">Progress</span>
+                                            <span className="text-text-muted">72%</span>
+                                        </div>
+                                        <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                            <div className="bg-primary h-full relative" style={{width: '72%'}}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 overflow-hidden">
+                                    <div className="p-3 px-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-text-muted text-[16px]">terminal</span>
+                                            Live Connection Logs
+                                        </h3>
+                                    </div>
+                                    <div className="flex-1 bg-[#0b1219] p-4 overflow-y-auto custom-scrollbar font-mono text-xs leading-relaxed">
+                                        <div className="text-text-muted"><span className="text-[#569cd6]">14:35:01.241</span> <span className="text-[#c586c0]">[INFO]</span> Connection established to ws://relay-04.fleet.net</div>
+                                        <div className="text-text-muted"><span className="text-[#569cd6]">14:35:01.450</span> <span className="text-[#c586c0]">[INFO]</span> Auth handshake successful (Token ID: 99a8...)</div>
+                                        <div className="text-text-muted"><span className="text-[#569cd6]">14:35:02.112</span> <span className="text-[#4ec9b0]">[DEBUG]</span> Sensor polling interval: 1000ms</div>
+                                        <div className="text-text-muted"><span className="text-[#569cd6]">14:35:03.001</span> <span className="text-[#ce9178]">[DATA]</span> Payload: &#123; "ign": 1, "spd": 0, "lat": 40.7128, "lon": -74.0060 &#125;</div>
+                                        <div className="text-white animate-pulse">_</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-3 flex flex-col gap-6 h-full">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-text-muted text-[18px]">build</span>
+                                            Remote Actions
+                                        </h3>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        <button className="w-full py-2 px-3 bg-surface-darker border border-border-color hover:border-primary/50 hover:bg-surface-dark text-white rounded flex items-center justify-between group transition-all">
+                                            <span className="flex items-center gap-2 text-sm"><span className="material-symbols-outlined text-text-muted group-hover:text-primary text-[18px]">restart_alt</span> Restart Device</span>
+                                            <span className="material-symbols-outlined text-text-muted text-[14px]">chevron_right</span>
+                                        </button>
+                                        <button className="w-full py-2 px-3 bg-surface-darker border border-border-color hover:border-warning/50 hover:bg-surface-dark text-white rounded flex items-center justify-between group transition-all">
+                                            <span className="flex items-center gap-2 text-sm"><span className="material-symbols-outlined text-text-muted group-hover:text-warning text-[18px]">delete_sweep</span> Clear Cache</span>
+                                            <span className="material-symbols-outlined text-text-muted text-[14px]">chevron_right</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 3: Firmware ---
+        const FirmwareScreen = () => {
+            return (
+                <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <div className="flex items-center gap-2 text-[10px] font-mono text-primary uppercase tracking-wider mb-0.5">
+                                    <span className="text-text-muted">Diagnostics</span>
+                                    <span className="text-text-muted">/</span>
+                                    <span>Firmware</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">Firmware Management</h2>
+                            </div>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-12 gap-6 mb-6">
+                            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 h-64 flex flex-col">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">broadcast_on_home</span>
+                                            Active Rollouts Progress
+                                        </h3>
+                                    </div>
+                                    <div className="flex-1 flex flex-col justify-center gap-6">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white font-medium">v2.4.1-stable <span className="text-text-muted font-normal ml-2">Region: NA-East • Truck Fleet A</span></span>
+                                                <span className="text-success font-bold">84%</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden border border-border-color">
+                                                <div className="bg-gradient-to-r from-primary to-success h-full relative" style={{width: '84%'}}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 h-64 flex flex-col">
+                                    <h3 className="text-white text-sm font-semibold mb-4">Rollout Success Rate</h3>
+                                    <div className="flex items-center gap-6 h-full">
+                                        <div className="relative w-32 h-32 flex-shrink-0">
+                                            <div className="absolute inset-0 flex items-center justify-center flex-col text-white">
+                                                <span className="text-2xl font-bold">92%</span>
+                                                <span className="text-[9px] uppercase text-text-muted">Success</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden mb-6">
+                            <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-text-muted text-[18px]">inventory_2</span>
+                                    Firmware Repository
+                                </h3>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                            <th className="px-4 py-3 font-semibold">Version</th>
+                                            <th className="px-4 py-3 font-semibold">Release Date</th>
+                                            <th className="px-4 py-3 font-semibold">Target Hardware</th>
+                                            <th className="px-4 py-3 font-semibold">File Size</th>
+                                            <th className="px-4 py-3 font-semibold">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                            <td className="px-4 py-3"><span className="font-bold text-white">v2.4.1-stable</span></td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">Oct 24, 2023</td>
+                                            <td className="px-4 py-3 text-white"><span className="bg-surface-darker px-2 py-1 rounded border border-border-color text-xs font-mono">HW-REV-04</span></td>
+                                            <td className="px-4 py-3 text-text-muted text-xs font-mono">14.2 MB</td>
+                                            <td className="px-4 py-3"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">ACTIVE</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 4: Remote Commands ---
+        const CommandsScreen = () => {
+            return (
+                <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                         <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                                    Remote Device Command Center
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-success/20 text-success border border-success/30">Target: Vehicle-8821</span>
+                                </h2>
+                            </div>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                         <div className="grid grid-cols-4 gap-4 mb-6">
+                            <div className="bg-surface-dark rounded-lg border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] text-text-muted uppercase font-bold">Signal Strength</div>
+                                    <div className="text-lg font-mono text-white">-68 dBm</div>
+                                </div>
+                                <span className="material-symbols-outlined text-success">signal_cellular_alt</span>
+                            </div>
+                            <div className="bg-surface-dark rounded-lg border border-border-color p-3 flex items-center justify-between">
+                                <div>
+                                    <div className="text-[10px] text-text-muted uppercase font-bold">Battery Voltage</div>
+                                    <div className="text-lg font-mono text-white">12.4 V</div>
+                                </div>
+                                <span className="material-symbols-outlined text-warning">battery_charging_full</span>
+                            </div>
+                        </div>
+                        
+                        <h3 className="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">terminal</span>
+                            Command Console
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                             <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden group hover:border-primary/50 transition-colors">
+                                <div className="p-4 bg-surface-darker border-b border-border-color flex justify-between items-center">
+                                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-warning text-sm">power_settings_new</span>
+                                        Power Control
+                                    </span>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <button className="w-full flex items-center justify-between px-3 py-2 bg-background-dark hover:bg-surface-darker border border-border-color rounded text-xs text-text-muted hover:text-white transition-colors group/btn">
+                                        <span>Reboot Device</span>
+                                        <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden group hover:border-primary/50 transition-colors">
+                                <div className="p-4 bg-surface-darker border-b border-border-color flex justify-between items-center">
+                                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-sm">wifi</span>
+                                        Network
+                                    </span>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <button className="w-full flex items-center justify-between px-3 py-2 bg-background-dark hover:bg-surface-darker border border-border-color rounded text-xs text-text-muted hover:text-white transition-colors group/btn">
+                                        <span>Reset Modem</span>
+                                        <span className="material-symbols-outlined text-[16px]">cell_tower</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 5: Telemetry ---
+        const TelemetryScreen = () => {
+            return (
+                <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                         <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                                    Device: TEL-9021-X
+                                    <span className="text-xs font-normal text-text-muted bg-surface-dark border border-border-color px-2 py-0.5 rounded">FW: v2.4.1</span>
+                                </h2>
+                            </div>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-hidden p-6">
+                        <div className="grid grid-cols-12 gap-6 h-full">
+                             <div className="col-span-12 lg:col-span-7 flex flex-col gap-6 h-full overflow-hidden">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex-1 relative overflow-hidden flex flex-col min-h-[400px]">
+                                     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                                        <div className="bg-surface-darker/90 backdrop-blur border border-border-color p-2 rounded shadow-lg text-xs text-white">
+                                            <div className="font-bold mb-1 text-text-muted">Current Location</div>
+                                            <div className="font-mono">Lat: 34.0522 N</div>
+                                            <div className="font-mono">Lon: 118.2437 W</div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full h-full bg-[#1b2631] relative">
+                                        <div className="absolute inset-0" style={{backgroundImage: 'linear-gradient(#233648 1px, transparent 1px), linear-gradient(90deg, #233648 1px, transparent 1px)', backgroundSize: '40px 40px', opacity: '0.3'}}></div>
+                                        <div className="absolute left-[600px] top-[220px] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                                            <div className="w-16 h-16 bg-primary/20 rounded-full animate-ping absolute"></div>
+                                            <div className="w-4 h-4 bg-primary border-2 border-white rounded-full relative z-10 shadow-[0_0_10px_rgba(19,127,236,0.8)]"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                             <div className="col-span-12 lg:col-span-5 h-full overflow-hidden flex flex-col">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full overflow-hidden">
+                                    <div className="p-3 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">terminal</span>
+                                            Raw Packet Stream
+                                        </h3>
+                                    </div>
+                                    <div className="flex-1 bg-terminal-bg p-4 overflow-y-auto terminal-scroll font-mono text-xs">
+                                        <div className="mb-3 group">
+                                            <div className="flex gap-2 text-[10px] text-text-muted mb-1 opacity-60">
+                                                <span>[14:35:02.142]</span>
+                                                <span>RX</span>
+                                                <span>LEN: 42</span>
+                                            </div>
+                                            <div className="text-terminal-text break-all leading-tight">
+                                                7E 00 10 17 01 00 13 A2 00 40 8B 1C 44 FF FE 02 44 42 04 7E ...
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 flex items-center gap-2 text-primary text-[10px] animate-pulse">
+                                            <span className="w-2 h-4 bg-primary"></span>
+                                            Awaiting data...
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App ---
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <div className="flex h-screen w-full">
+                        <Sidebar />
+                        <Routes>
+                            <Route path="/" element={<DashboardScreen />} />
+                            <Route path="/diagnostics" element={<DiagnosticsScreen />} />
+                            <Route path="/firmware" element={<FirmwareScreen />} />
+                            <Route path="/commands" element={<CommandsScreen />} />
+                            <Route path="/telemetry" element={<TelemetryScreen />} />
+                        </Routes>
+                    </div>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

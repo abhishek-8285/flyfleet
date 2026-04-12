@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vehicle Settings View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetCommand</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-sm font-medium">Live Map</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-medium">Service Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Administration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Platform Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-2 text-[11px] text-text-muted">
+<span class="hover:text-white cursor-pointer transition-colors">Vehicles</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="hover:text-white cursor-pointer transition-colors font-medium text-white">V-2048</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span>Settings</span>
+</div>
+<h2 class="text-white text-lg font-bold mt-0.5">Vehicle Configuration</h2>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                    Active
+                </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-1.5 bg-surface-dark hover:bg-surface-darker border border-border-color text-text-muted hover:text-white text-xs font-medium rounded transition-colors">
+                    Discard Changes
+                </button>
+<button class="px-4 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Configuration
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 max-w-7xl mx-auto">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                                Operational Status
+                            </h3>
+</div>
+<div class="p-5">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-4">
+<label class="block text-xs font-medium text-text-muted uppercase tracking-wider">Current State</label>
+<div class="flex flex-col gap-3">
+<label class="flex items-center p-3 border border-primary/50 bg-primary/5 rounded-lg cursor-pointer transition-all hover:bg-primary/10">
+<input checked="" class="form-radio text-primary focus:ring-primary bg-background-dark border-border-color" name="status" type="radio"/>
+<div class="ml-3">
+<span class="block text-sm font-medium text-white">Active Service</span>
+<span class="block text-xs text-text-muted">Vehicle is available for dispatch</span>
+</div>
+</label>
+<label class="flex items-center p-3 border border-border-color bg-surface-darker/30 rounded-lg cursor-pointer transition-all hover:border-border-color/80 hover:bg-surface-darker/50">
+<input class="form-radio text-warning focus:ring-warning bg-background-dark border-border-color" name="status" type="radio"/>
+<div class="ml-3">
+<span class="block text-sm font-medium text-white">Maintenance</span>
+<span class="block text-xs text-text-muted">Scheduled for repair or service</span>
+</div>
+</label>
+<label class="flex items-center p-3 border border-border-color bg-surface-darker/30 rounded-lg cursor-pointer transition-all hover:border-border-color/80 hover:bg-surface-darker/50">
+<input class="form-radio text-text-muted focus:ring-text-muted bg-background-dark border-border-color" name="status" type="radio"/>
+<div class="ml-3">
+<span class="block text-sm font-medium text-white">Inactive</span>
+<span class="block text-xs text-text-muted">Temporarily out of fleet rotation</span>
+</div>
+</label>
+<label class="flex items-center p-3 border border-border-color bg-surface-darker/30 rounded-lg cursor-pointer transition-all hover:border-danger/50 hover:bg-danger/5 group">
+<input class="form-radio text-danger focus:ring-danger bg-background-dark border-border-color" name="status" type="radio"/>
+<div class="ml-3">
+<span class="block text-sm font-medium text-white group-hover:text-danger transition-colors">Retired / Sold</span>
+<span class="block text-xs text-text-muted">Permanently removed from fleet</span>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-4">
+<div class="p-4 bg-surface-darker rounded border border-border-color">
+<h4 class="text-xs font-medium text-white mb-2">Vehicle Identity</h4>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Make / Model</label>
+<div class="text-sm text-white font-medium">Ford Transit 350</div>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Year</label>
+<div class="text-sm text-white font-medium">2022</div>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] text-text-muted uppercase mb-1">VIN</label>
+<div class="flex items-center gap-2">
+<span class="text-sm text-white font-mono bg-background-dark px-2 py-1 rounded border border-border-color w-full">1FT7W2BT4MED12948</span>
+<button class="text-primary hover:text-white"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+</div>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] text-text-muted uppercase mb-1">License Plate</label>
+<input class="w-full bg-background-dark border border-border-color rounded text-sm text-white px-2 py-1 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="text" value="CA 8492 L1"/>
+</div>
+</div>
+</div>
+<div class="p-4 bg-surface-darker rounded border border-border-color">
+<h4 class="text-xs font-medium text-white mb-2">Assignment</h4>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs text-text-muted">Current Driver</span>
+<button class="text-xs text-primary hover:underline">Change</button>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary border border-primary/30">JD</div>
+<div>
+<div class="text-sm font-medium text-white">John Doe</div>
+<div class="text-[10px] text-text-muted">ID: DRV-0042</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">satellite_alt</span>
+                                GPS Device Mapping
+                            </h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                                Connected
+                            </span>
+</div>
+<div class="p-5">
+<div class="flex flex-col md:flex-row gap-6 items-start">
+<div class="flex-1 w-full">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Device Serial (IMEI)</label>
+<input class="w-full bg-background-dark border border-border-color rounded text-sm text-white px-3 py-2 font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="text" value="864920481920482"/>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Data Plan</label>
+<select class="w-full bg-background-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Enterprise 5G (Unlimited)</option>
+<option>Standard LTE (10GB)</option>
+<option>Basic IoT (500MB)</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Sampling Rate (Engine On)</label>
+<select class="w-full bg-background-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Every 10 seconds</option>
+<option selected="">Every 30 seconds</option>
+<option>Every 1 minute</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted uppercase mb-1">Sampling Rate (Engine Off)</label>
+<select class="w-full bg-background-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Every 15 minutes</option>
+<option selected="">Every 1 hour</option>
+<option>Every 6 hours</option>
+</select>
+</div>
+</div>
+</div>
+<div class="w-full md:w-64 flex-shrink-0">
+<div class="bg-surface-darker rounded border border-border-color p-3">
+<div class="flex justify-between items-center mb-3">
+<span class="text-xs font-semibold text-white">Signal Strength</span>
+<span class="text-[10px] text-success font-mono">-64 dBm</span>
+</div>
+<div class="flex gap-1 h-8 items-end mb-4">
+<div class="w-1/5 bg-success h-[40%] rounded-sm"></div>
+<div class="w-1/5 bg-success h-[60%] rounded-sm"></div>
+<div class="w-1/5 bg-success h-[80%] rounded-sm"></div>
+<div class="w-1/5 bg-success h-full rounded-sm"></div>
+<div class="w-1/5 bg-surface-light/10 h-full rounded-sm"></div>
+</div>
+<div class="flex justify-between items-center text-xs text-text-muted border-t border-border-color pt-2 mt-2">
+<span>Firmware</span>
+<span class="text-white">v4.2.1-stable</span>
+</div>
+<div class="flex justify-between items-center text-xs text-text-muted mt-1">
+<span>Last Ping</span>
+<span class="text-white">2 min ago</span>
+</div>
+<button class="w-full mt-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium rounded border border-primary/20 transition-colors">
+                                    Reboot Device
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker/50">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">speed</span>
+                            Service Thresholds
+                        </h3>
+</div>
+<div class="p-5 flex-1 space-y-6">
+<div>
+<div class="flex justify-between items-end mb-2">
+<label class="text-xs font-medium text-text-muted">Oil Change Interval</label>
+<span class="text-xs font-bold text-white">5,000 miles</span>
+</div>
+<input class="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="10000" min="3000" step="500" type="range" value="5000"/>
+<div class="flex justify-between mt-1 text-[10px] text-text-muted">
+<span>3k</span>
+<span>10k</span>
+</div>
+<div class="mt-2 text-xs text-text-muted bg-surface-darker p-2 rounded border border-border-color">
+                            Current: <span class="text-white">2,410 miles</span> since last service.
+                            <div class="w-full bg-border-color h-1 rounded-full mt-1.5 overflow-hidden">
+<div class="bg-success h-full" style="width: 48%"></div>
+</div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-end mb-2">
+<label class="text-xs font-medium text-text-muted">Tire Rotation</label>
+<span class="text-xs font-bold text-white">7,500 miles</span>
+</div>
+<input class="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="15000" min="5000" step="500" type="range" value="7500"/>
+<div class="flex justify-between mt-1 text-[10px] text-text-muted">
+<span>5k</span>
+<span>15k</span>
+</div>
+<div class="mt-2 text-xs text-text-muted bg-surface-darker p-2 rounded border border-border-color">
+                            Current: <span class="text-white">4,120 miles</span> since last rotation.
+                            <div class="w-full bg-border-color h-1 rounded-full mt-1.5 overflow-hidden">
+<div class="bg-warning h-full" style="width: 55%"></div>
+</div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-end mb-2">
+<label class="text-xs font-medium text-text-muted">Brake Inspection</label>
+<span class="text-xs font-bold text-white">12 months</span>
+</div>
+<select class="w-full bg-background-dark border border-border-color rounded text-xs text-white px-2 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Every 6 months</option>
+<option selected="">Every 12 months</option>
+<option>Every 24 months</option>
+</select>
+<div class="mt-2 text-xs text-text-muted bg-surface-darker p-2 rounded border border-border-color">
+                            Next due: <span class="text-danger">Oct 15, 2023</span> (Overdue)
+                        </div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker/50">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                            Recent Activity
+                        </h3>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+<div class="divide-y divide-border-color">
+<div class="p-3 hover:bg-surface-darker transition-colors">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-medium text-white">Configuration Update</span>
+<span class="text-[10px] text-text-muted">Today, 09:42 AM</span>
+</div>
+<p class="text-[11px] text-text-muted">GPS sampling rate changed from 60s to 30s by <span class="text-primary">Alex Morgan</span>.</p>
+</div>
+<div class="p-3 hover:bg-surface-darker transition-colors">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-medium text-white">Maintenance Logged</span>
+<span class="text-[10px] text-text-muted">Oct 21, 14:10</span>
+</div>
+<p class="text-[11px] text-text-muted">Oil change completed at Fleet Service Center A.</p>
+<div class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-success/10 text-success border border-success/20">
+                                Service Record #4921
+                            </div>
+</div>
+<div class="p-3 hover:bg-surface-darker transition-colors">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-medium text-white">Status Change</span>
+<span class="text-[10px] text-text-muted">Oct 15, 08:00</span>
+</div>
+<p class="text-[11px] text-text-muted">Vehicle marked as <span class="text-white">Active</span> from Maintenance.</p>
+</div>
+<div class="p-3 hover:bg-surface-darker transition-colors">
+<div class="flex items-center justify-between mb-1">
+<span class="text-xs font-medium text-white">Alert Triggered</span>
+<span class="text-[10px] text-text-muted">Oct 10, 18:45</span>
+</div>
+<p class="text-[11px] text-text-muted">Harsh braking event detected. Driver notified.</p>
+<div class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-danger/10 text-danger border border-danger/20">
+                                High Severity
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Vehicle Module V2.0</span>
+<div class="flex items-center gap-4">
+<span>Last Sync: <span class="text-success">Just now</span></span>
+<span>API Status: <span class="text-success">Connected</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

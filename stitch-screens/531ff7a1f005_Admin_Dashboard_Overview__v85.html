@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Work Order Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">commute</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">home_repair_service</span>
+<span class="text-sm font-medium">Work Orders</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-sm font-medium">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-sm font-medium">Inventory</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">People</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">engineering</span>
+<span class="text-sm font-medium">Technicians</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center text-xs text-text-muted mb-0.5">
+<a class="hover:text-white transition-colors" href="#">Work Orders</a>
+<span class="mx-2">/</span>
+<span class="text-white font-medium">WO-2023-8492</span>
+</nav>
+<div class="flex items-center gap-3">
+<h2 class="text-white text-lg font-bold">Brake System Overhaul</h2>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/30">
+                        Maintenance
+                    </span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">inventory</span>
+                    Assign Inventory
+                </button>
+<button class="px-3 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+                    Edit Work Order
+                </button>
+<button class="px-4 py-2 bg-success hover:bg-emerald-600 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-success/20">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    Close Work Order
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Current Status</div>
+<div class="text-xl font-bold text-primary flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+                            In Progress
+                        </div>
+</div>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined text-2xl">pending_actions</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Priority</div>
+<div class="text-xl font-bold text-danger">High</div>
+</div>
+<div class="p-2 bg-danger/10 rounded-lg text-danger">
+<span class="material-symbols-outlined text-2xl">priority_high</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Est. Cost</div>
+<div class="text-xl font-bold text-white">$1,245.00</div>
+</div>
+<div class="p-2 bg-surface-darker border border-border-color rounded-lg text-text-muted">
+<span class="material-symbols-outlined text-2xl">attach_money</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group flex items-center justify-between">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Scheduled Date</div>
+<div class="text-xl font-bold text-white">Oct 26, 2023</div>
+</div>
+<div class="p-2 bg-surface-darker border border-border-color rounded-lg text-text-muted">
+<span class="material-symbols-outlined text-2xl">event</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="border-b border-border-color">
+<nav aria-label="Tabs" class="-mb-px flex space-x-6">
+<a class="border-primary text-primary whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">article</span>
+                                Overview
+                            </a>
+<a class="border-transparent text-text-muted hover:text-white hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                                Inventory Logs
+                            </a>
+<a class="border-transparent text-text-muted hover:text-white hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">history</span>
+                                Service History
+                            </a>
+</nav>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-6">
+<div class="flex justify-between items-start mb-6">
+<h3 class="text-white text-base font-semibold">Description of Work</h3>
+<span class="text-xs text-text-muted">Created: Oct 24, 2023 by System</span>
+</div>
+<p class="text-sm text-gray-300 mb-6 leading-relaxed">
+                            Vehicle reported soft brake pedal feel and grinding noise coming from the rear axle during braking. Initial inspection suggests worn brake pads and potential rotor damage. Technician to inspect hydraulic lines for leaks, replace rear brake pads, resurface or replace rotors as necessary, and perform a full brake fluid flush.
+                        </p>
+<div class="grid grid-cols-2 gap-6 pt-6 border-t border-border-color">
+<div>
+<h4 class="text-xs font-semibold text-text-muted uppercase mb-3">Diagnostic Codes</h4>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-surface-darker border border-border-color text-white">
+                                        P0500
+                                    </span>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-surface-darker border border-border-color text-white">
+                                        C0035
+                                    </span>
+</div>
+</div>
+<div>
+<h4 class="text-xs font-semibold text-text-muted uppercase mb-3">Service Category</h4>
+<div class="flex items-center gap-2 text-sm text-white">
+<span class="material-symbols-outlined text-text-muted text-[18px]">build</span>
+                                    Preventative Maintenance
+                                </div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">handyman</span>
+                                Parts Consumed
+                            </h3>
+<span class="text-xs text-text-muted">3 items logged</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Part Number</th>
+<th class="px-4 py-3 font-semibold">Description</th>
+<th class="px-4 py-3 font-semibold text-right">Qty</th>
+<th class="px-4 py-3 font-semibold text-right">Unit Cost</th>
+<th class="px-4 py-3 font-semibold text-right">Total</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-mono text-xs text-primary">BP-R-2023</td>
+<td class="px-4 py-3 text-white">Rear Brake Pad Set (Ceramic)</td>
+<td class="px-4 py-3 text-white text-right">1</td>
+<td class="px-4 py-3 text-text-muted text-right">$85.00</td>
+<td class="px-4 py-3 text-white text-right">$85.00</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-mono text-xs text-primary">BR-R-Vent</td>
+<td class="px-4 py-3 text-white">Vented Brake Rotor</td>
+<td class="px-4 py-3 text-white text-right">2</td>
+<td class="px-4 py-3 text-text-muted text-right">$120.00</td>
+<td class="px-4 py-3 text-white text-right">$240.00</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-mono text-xs text-primary">BF-DOT4-1L</td>
+<td class="px-4 py-3 text-white">Brake Fluid DOT4 1L</td>
+<td class="px-4 py-3 text-white text-right">2</td>
+<td class="px-4 py-3 text-text-muted text-right">$15.00</td>
+<td class="px-4 py-3 text-white text-right">$30.00</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-surface-darker/30">
+<td class="px-4 py-3 text-right text-xs text-text-muted font-bold uppercase" colspan="4">Total Parts Cost</td>
+<td class="px-4 py-3 text-right text-white font-bold">$355.00</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">local_shipping</span>
+                                Vehicle Information
+                            </h3>
+<a class="text-primary text-xs hover:underline" href="#">View Asset</a>
+</div>
+<div class="p-5 flex flex-col gap-4">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 bg-surface-darker rounded-lg border border-border-color flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl text-text-muted">airport_shuttle</span>
+</div>
+<div>
+<div class="text-white font-bold text-lg">Ford Transit 350</div>
+<div class="text-text-muted text-sm">2021 Cargo Van</div>
+</div>
+</div>
+<div class="space-y-3 pt-2">
+<div class="flex justify-between items-center text-sm">
+<span class="text-text-muted">License Plate</span>
+<span class="text-white font-mono bg-surface-darker px-2 py-0.5 rounded border border-border-color">ABC-1234</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-text-muted">VIN</span>
+<span class="text-white font-mono text-xs">1FTNE2...4928</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-text-muted">Odometer</span>
+<span class="text-white font-medium">45,201 mi</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-text-muted">Location</span>
+<span class="text-white">Depot A - Seattle</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">person</span>
+                                Technician Details
+                            </h3>
+<button class="text-primary text-xs hover:underline">Reassign</button>
+</div>
+<div class="p-5">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-sm font-bold text-white">MR</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Mike Ross</span>
+<span class="text-xs text-text-muted">Senior Mechanic</span>
+</div>
+<span class="ml-auto inline-block w-2.5 h-2.5 bg-success rounded-full border-2 border-surface-dark" title="Available"></span>
+</div>
+<div class="space-y-3 text-sm">
+<div class="flex justify-between">
+<span class="text-text-muted">Assigned Date</span>
+<span class="text-white">Oct 25, 08:00 AM</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">Time Logged</span>
+<span class="text-white">4h 30m</span>
+</div>
+<div class="pt-3 mt-3 border-t border-border-color">
+<button class="w-full py-2 text-xs font-medium text-text-muted hover:text-white bg-surface-darker hover:bg-border-color rounded border border-border-color transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+                                        Message Technician
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex-1">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">attachment</span>
+                                Attachments
+                            </h3>
+<button class="p-1 text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<div class="p-2 space-y-1">
+<a class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker group transition-colors" href="#">
+<div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">image</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-xs text-white font-medium truncate">brake_rotor_damage.jpg</span>
+<span class="text-[10px] text-text-muted">2.4 MB • Uploaded Oct 24</span>
+</div>
+</a>
+<a class="flex items-center gap-3 p-2 rounded hover:bg-surface-darker group transition-colors" href="#">
+<div class="w-8 h-8 rounded bg-danger/10 flex items-center justify-center text-danger group-hover:bg-danger group-hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-xs text-white font-medium truncate">inspection_report_v2.pdf</span>
+<span class="text-[10px] text-text-muted">840 KB • Uploaded Oct 25</span>
+</div>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Maintenance Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Last Updated: <span class="text-white">Oct 26, 14:35</span></span>
+<span>Server Status: <span class="text-success">Connected</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

@@ -1,0 +1,2022 @@
+2026-04-12 10:39:48.033 IST [9205] LOG:  starting PostgreSQL 18.2 on aarch64-unknown-linux-android, compiled by Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349), 64-bit
+2026-04-12 10:39:48.034 IST [9205] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2026-04-12 10:39:48.036 IST [9205] LOG:  listening on Unix socket "/data/data/com.termux/files/usr/tmp/.s.PGSQL.5433"
+2026-04-12 10:39:48.044 IST [9213] LOG:  database system was shut down at 2026-04-12 10:39:43 IST
+2026-04-12 10:39:48.057 IST [9205] LOG:  database system is ready to accept connections
+2026-04-12 10:39:56.383 IST [9231] FATAL:  role "postgres" does not exist
+2026-04-12 10:40:00.344 IST [9247] FATAL:  database "u0_a412" does not exist
+2026-04-12 10:41:21.588 IST [9516] ERROR:  relation "drivers" does not exist
+2026-04-12 10:41:21.588 IST [9516] STATEMENT:  CREATE TABLE IF NOT EXISTS vehicles (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+	    name VARCHAR(100) NOT NULL,
+	    license_plate VARCHAR(20) NOT NULL,
+	    vin VARCHAR(50),
+	    make VARCHAR(50),
+	    model VARCHAR(50),
+	    year INTEGER,
+	    status VARCHAR(20) DEFAULT 'active', -- active, maintenance, inactive
+	    current_driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
+	    is_deleted BOOLEAN DEFAULT FALSE,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:21.599 IST [9516] ERROR:  relation "vehicles" does not exist
+2026-04-12 10:41:21.599 IST [9516] STATEMENT:  CREATE TABLE IF NOT EXISTS devices (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+	    vehicle_id UUID REFERENCES vehicles(id) ON DELETE SET NULL,
+	    serial_number VARCHAR(100) UNIQUE NOT NULL,
+	    type VARCHAR(50) DEFAULT 'gps', -- gps, obd, dashcam
+	    status VARCHAR(20) DEFAULT 'active',
+	    last_ping_at TIMESTAMP WITH TIME ZONE,
+	    is_deleted BOOLEAN DEFAULT FALSE,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:21.602 IST [9516] ERROR:  relation "vehicles" does not exist
+2026-04-12 10:41:21.602 IST [9516] STATEMENT:  CREATE TABLE IF NOT EXISTS vehicle_assignments (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    vehicle_id UUID REFERENCES vehicles(id) ON DELETE CASCADE,
+	    driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
+	    device_id UUID REFERENCES devices(id) ON DELETE SET NULL,
+	    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	    ended_at TIMESTAMP WITH TIME ZONE,
+	    is_active BOOLEAN DEFAULT TRUE
+	);
+2026-04-12 10:41:21.603 IST [9516] ERROR:  relation "vehicles" does not exist
+2026-04-12 10:41:21.603 IST [9516] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicles_org ON vehicles(org_id);
+2026-04-12 10:41:21.606 IST [9516] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:21.606 IST [9516] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_devices_org ON devices(org_id);
+2026-04-12 10:41:21.606 IST [9516] ERROR:  relation "vehicle_assignments" does not exist
+2026-04-12 10:41:21.606 IST [9516] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_assignments_vehicle ON vehicle_assignments(vehicle_id);
+2026-04-12 10:41:22.395 IST [9580] ERROR:  column "organization_id" does not exist
+2026-04-12 10:41:22.395 IST [9580] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_org_id ON trips(organization_id);
+2026-04-12 10:41:22.398 IST [9580] ERROR:  column "start_time" does not exist
+2026-04-12 10:41:22.398 IST [9580] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_start_time ON trips(start_time);
+2026-04-12 10:41:22.541 IST [9593] ERROR:  relation "geofence_events" does not exist
+2026-04-12 10:41:22.541 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_geofence_events_vehicle_id 
+	ON geofence_events(vehicle_id) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.542 IST [9593] ERROR:  relation "geofence_events" does not exist
+2026-04-12 10:41:22.542 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_geofence_events_time 
+	ON geofence_events(time DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.542 IST [9593] ERROR:  relation "geofence_assignments" does not exist
+2026-04-12 10:41:22.542 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_geofence_assignments_vehicle 
+	ON geofence_assignments(vehicle_id, is_active) 
+	WHERE is_active = true;
+2026-04-12 10:41:22.544 IST [9593] ERROR:  column "deleted_at" does not exist at character 76
+2026-04-12 10:41:22.544 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_driver_id 
+	ON trips(driver_id) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.544 IST [9593] ERROR:  column "deleted_at" does not exist at character 78
+2026-04-12 10:41:22.544 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_vehicle_id 
+	ON trips(vehicle_id) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.544 IST [9593] ERROR:  column "deleted_at" does not exist at character 109
+2026-04-12 10:41:22.544 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_time_range 
+	ON trips(tenant_id, start_time DESC, end_time DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.545 IST [9593] ERROR:  relation "telemetry_points" does not exist
+2026-04-12 10:41:22.545 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_telemetry_points_device_batch 
+	ON telemetry_points(device_id, batch_id, recorded_at DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.545 IST [9593] ERROR:  relation "telemetry_points" does not exist
+2026-04-12 10:41:22.545 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_telemetry_points_time 
+	ON telemetry_points(recorded_at DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.545 IST [9593] ERROR:  relation "invoices" does not exist
+2026-04-12 10:41:22.545 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_invoices_org_status 
+	ON invoices(org_id, status, due_date) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.545 IST [9593] ERROR:  relation "invoice_items" does not exist
+2026-04-12 10:41:22.545 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice_id 
+	ON invoice_items(invoice_id) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.546 IST [9593] ERROR:  relation "payment_records" does not exist
+2026-04-12 10:41:22.546 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_payment_records_invoice 
+	ON payment_records(invoice_id, payment_date DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.546 IST [9593] ERROR:  syntax error at or near "TIME" at character 104
+2026-04-12 10:41:22.546 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_scheduled_reports_org 
+	ON scheduled_reports(org_id, status, next_run AT TIME ZONE 'UTC') 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.546 IST [9593] ERROR:  relation "report_executions" does not exist
+2026-04-12 10:41:22.546 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_report_executions_report 
+	ON report_executions(report_id, started_at DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.546 IST [9593] ERROR:  relation "mfa_recovery_codes" does not exist
+2026-04-12 10:41:22.546 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user 
+	ON mfa_recovery_codes(user_id, used) 
+	WHERE used = false;
+2026-04-12 10:41:22.547 IST [9593] ERROR:  relation "login_history" does not exist
+2026-04-12 10:41:22.547 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_login_history_user_time 
+	ON login_history(user_id, login_time DESC) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.551 IST [9593] ERROR:  column "deleted_at" does not exist at character 80
+2026-04-12 10:41:22.551 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_users_org_email 
+	ON users(org_id, email) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.551 IST [9593] ERROR:  column "driver_id" does not exist at character 76
+2026-04-12 10:41:22.551 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_users_driver_id 
+	ON users(driver_id) 
+	WHERE driver_id IS NOT NULL AND deleted_at IS NULL;
+2026-04-12 10:41:22.552 IST [9593] ERROR:  column "is_active" does not exist
+2026-04-12 10:41:22.552 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicles_org_status 
+	ON vehicles(org_id, status, is_active) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.552 IST [9593] ERROR:  column "device_id" does not exist at character 82
+2026-04-12 10:41:22.552 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicles_device_id 
+	ON vehicles(device_id) 
+	WHERE device_id IS NOT NULL AND deleted_at IS NULL;
+2026-04-12 10:41:22.553 IST [9593] ERROR:  column "is_active" does not exist
+2026-04-12 10:41:22.553 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_drivers_org_status 
+	ON drivers(org_id, status, is_active) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.553 IST [9593] ERROR:  relation "vehicle_verifications" does not exist
+2026-04-12 10:41:22.553 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicle_verifications_org_pending 
+	ON vehicle_verifications(org_id, verification_date DESC) 
+	WHERE status = 'pending' AND deleted_at IS NULL;
+2026-04-12 10:41:22.554 IST [9593] ERROR:  relation "driver_verifications" does not exist
+2026-04-12 10:41:22.554 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_driver_verifications_org_pending 
+	ON driver_verifications(org_id, verification_date DESC) 
+	WHERE status = 'pending' AND deleted_at IS NULL;
+2026-04-12 10:41:22.554 IST [9593] ERROR:  relation "geofence_events" does not exist
+2026-04-12 10:41:22.554 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_geofence_events_recent 
+	ON geofence_events(vehicle_id, time DESC) 
+	WHERE time >= NOW() - INTERVAL '7 days' AND deleted_at IS NULL;
+2026-04-12 10:41:22.554 IST [9593] ERROR:  relation "telemetry_points" does not exist
+2026-04-12 10:41:22.554 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_telemetry_points_recent 
+	ON telemetry_points(device_id, recorded_at DESC) 
+	WHERE recorded_at >= NOW() - INTERVAL '24 hours' AND deleted_at IS NULL;
+2026-04-12 10:41:22.557 IST [9593] ERROR:  relation "invoices" does not exist
+2026-04-12 10:41:22.557 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_invoices_org_date 
+	ON invoices(org_id, invoice_date DESC, status) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:22.557 IST [9593] ERROR:  column "deleted_at" does not exist at character 105
+2026-04-12 10:41:22.557 IST [9593] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_trips_driver_daterange 
+	ON trips(driver_id, start_time, end_time) 
+	WHERE deleted_at IS NULL;
+2026-04-12 10:41:23.035 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.035 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS firmware_version VARCHAR(50);
+2026-04-12 10:41:23.036 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.036 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS battery_level INTEGER;
+2026-04-12 10:41:23.036 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.036 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS signal_strength INTEGER;
+2026-04-12 10:41:23.036 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.036 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS hardware_revision VARCHAR(20);
+2026-04-12 10:41:23.037 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.037 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP WITH TIME ZONE;
+2026-04-12 10:41:23.037 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.037 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS model VARCHAR(50);
+2026-04-12 10:41:23.037 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.037 IST [9619] STATEMENT:  ALTER TABLE devices ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(50);
+2026-04-12 10:41:23.043 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.043 IST [9619] STATEMENT:  CREATE TABLE IF NOT EXISTS device_telemetry (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+	    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+	    payload JSONB NOT NULL,
+	    packet_type VARCHAR(50), -- gps, obd, heartbeat, sensor
+	    raw_hex TEXT,
+	    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:23.047 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.047 IST [9619] STATEMENT:  CREATE TABLE IF NOT EXISTS device_commands (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+	    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+	    command VARCHAR(100) NOT NULL, -- reboot, reset_modem, clear_cache, update_config
+	    category VARCHAR(50), -- power, network, config, diagnostic
+	    params JSONB,
+	    status VARCHAR(20) DEFAULT 'pending', -- pending, sent, executing, completed, failed, cancelled
+	    result JSONB,
+	    error_message TEXT,
+	    created_by UUID REFERENCES users(id),
+	    sent_at TIMESTAMP WITH TIME ZONE,
+	    executed_at TIMESTAMP WITH TIME ZONE,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:23.062 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.062 IST [9619] STATEMENT:  CREATE TABLE IF NOT EXISTS device_firmware_status (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+	    rollout_id UUID REFERENCES firmware_rollouts(id) ON DELETE CASCADE,
+	    status VARCHAR(20) DEFAULT 'pending', -- pending, downloading, installing, completed, failed
+	    progress INTEGER DEFAULT 0,
+	    error_message TEXT,
+	    started_at TIMESTAMP WITH TIME ZONE,
+	    completed_at TIMESTAMP WITH TIME ZONE,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+	    UNIQUE(device_id, rollout_id)
+	);
+2026-04-12 10:41:23.065 IST [9619] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:23.065 IST [9619] STATEMENT:  CREATE TABLE IF NOT EXISTS device_diagnostics_logs (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
+	    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+	    log_type VARCHAR(50), -- connection, error, warning, info, debug
+	    source VARCHAR(50), -- modem, gps, sensor, system
+	    message TEXT,
+	    metadata JSONB,
+	    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:23.066 IST [9619] ERROR:  relation "device_telemetry" does not exist
+2026-04-12 10:41:23.066 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_telemetry_device ON device_telemetry(device_id);
+2026-04-12 10:41:23.067 IST [9619] ERROR:  relation "device_telemetry" does not exist
+2026-04-12 10:41:23.067 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_telemetry_timestamp ON device_telemetry(timestamp DESC);
+2026-04-12 10:41:23.067 IST [9619] ERROR:  relation "device_commands" does not exist
+2026-04-12 10:41:23.067 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_commands_device ON device_commands(device_id);
+2026-04-12 10:41:23.067 IST [9619] ERROR:  relation "device_commands" does not exist
+2026-04-12 10:41:23.067 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_commands_status ON device_commands(status);
+2026-04-12 10:41:23.071 IST [9619] ERROR:  relation "device_firmware_status" does not exist
+2026-04-12 10:41:23.071 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_firmware_status_rollout ON device_firmware_status(rollout_id);
+2026-04-12 10:41:23.071 IST [9619] ERROR:  relation "device_diagnostics_logs" does not exist
+2026-04-12 10:41:23.071 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_diagnostics_logs_device ON device_diagnostics_logs(device_id);
+2026-04-12 10:41:23.071 IST [9619] ERROR:  relation "device_diagnostics_logs" does not exist
+2026-04-12 10:41:23.071 IST [9619] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_diagnostics_logs_timestamp ON device_diagnostics_logs(timestamp DESC);
+2026-04-12 10:41:23.161 IST [9623] ERROR:  insert or update on table "support_tickets" violates foreign key constraint "support_tickets_org_id_fkey"
+2026-04-12 10:41:23.161 IST [9623] DETAIL:  Key (org_id)=(00000000-0000-0000-0000-000000000001) is not present in table "organizations".
+2026-04-12 10:41:23.161 IST [9623] STATEMENT:  INSERT INTO support_tickets (ticket_id, org_id, title, description, status, priority, category, reporter_id) VALUES
+	('INC-1001', '00000000-0000-0000-0000-000000000001', 'Vehicle telemetry sync failure', 'Missing heartbeats from units in the southern corridor.', 'IN_PROGRESS', 'HIGH', 'Technical', '00000000-0000-0000-0000-000000000002'),
+	('INC-1002', '00000000-0000-0000-0000-000000000001', 'Driver app login issue', 'New drivers unable to complete initial registration flow.', 'PENDING', 'MEDIUM', 'Account', '00000000-0000-0000-0000-000000000003');
+2026-04-12 10:41:23.163 IST [9623] ERROR:  null value in column "ticket_id" of relation "incident_comments" violates not-null constraint
+2026-04-12 10:41:23.163 IST [9623] DETAIL:  Failing row contains (04e95f1f-7e81-4085-8aaf-ff4c834f5377, null, null, John D., INTERNAL, Initial investigation started. Checking network connectivity to ..., f, 2026-04-12 10:41:23.162698+05:30, 2026-04-12 10:41:23.162698+05:30).
+2026-04-12 10:41:23.163 IST [9623] STATEMENT:  INSERT INTO incident_comments (ticket_id, author_name, content, comment_type) VALUES
+	((SELECT id FROM support_tickets WHERE ticket_id = 'INC-1001'), 'John D.', 'Initial investigation started. Checking network connectivity to southern region devices.', 'INTERNAL'),
+	((SELECT id FROM support_tickets WHERE ticket_id = 'INC-1001'), 'System Monitor', 'Automated alert triggered at 13:30 UTC', 'SYSTEM');
+2026-04-12 10:41:23.333 IST [9631] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:23.333 IST [9631] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:23.333 IST [9631] STATEMENT:  SELECT create_hypertable('telemetry_analytics', 'timestamp', if_not_exists => TRUE);
+2026-04-12 10:41:23.333 IST [9631] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:23.333 IST [9631] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:23.333 IST [9631] STATEMENT:  SELECT create_hypertable('telemetry_anomalies', 'timestamp', if_not_exists => TRUE);
+2026-04-12 10:41:23.549 IST [9640] ERROR:  column "organization_id" does not exist
+2026-04-12 10:41:23.549 IST [9640] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_predictive_models_org_type_status ON predictive_models(organization_id, model_type, status);
+2026-04-12 10:41:24.081 IST [9673] ERROR:  type "geometry" does not exist at character 274
+2026-04-12 10:41:24.081 IST [9673] STATEMENT:  CREATE TABLE IF NOT EXISTS fuel_readings (
+	    time TIMESTAMP WITH TIME ZONE NOT NULL,
+	    vehicle_id UUID NOT NULL,
+	    level_percent DECIMAL(5,2),
+	    level_liters DECIMAL(10,2),
+	    refuel_event BOOLEAN DEFAULT FALSE,
+	    theft_event BOOLEAN DEFAULT FALSE,
+	    location GEOMETRY(Point, 4326),
+	    raw_data JSONB,
+	    PRIMARY KEY (time, vehicle_id)
+	);
+2026-04-12 10:41:24.091 IST [9673] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.091 IST [9673] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_fuel_raw_data_gin ON fuel_readings USING GIN (raw_data);
+2026-04-12 10:41:24.094 IST [9673] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.094 IST [9673] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_fuel_vehicle_time ON fuel_readings (vehicle_id, time DESC);
+2026-04-12 10:41:24.097 IST [9673] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.097 IST [9673] STATEMENT:  COMMENT ON TABLE fuel_readings IS 'Stores dedicated fuel sensor data';
+2026-04-12 10:41:24.156 IST [9677] ERROR:  column v.registration_number does not exist at character 421
+2026-04-12 10:41:24.156 IST [9677] STATEMENT:  CREATE MATERIALIZED VIEW IF NOT EXISTS vehicle_status AS
+	WITH latest_telemetry AS (
+	    SELECT DISTINCT ON (vehicle_id)
+	        vehicle_id,
+	        time,
+	        latitude,
+	        longitude,
+	        speed_kph,
+	        heading,
+	        odometer_km,
+	        fuel_level_percent,
+	        engine_temp_celsius,
+	        alerts
+	    FROM vehicle_telemetry
+	    ORDER BY vehicle_id, time DESC
+	)
+	SELECT 
+	    v.id AS vehicle_id,
+	    v.registration_number,
+	    v.status AS vehicle_registry_status,
+	    lt.time AS last_update,
+	    lt.latitude,
+	    lt.longitude,
+	    lt.speed_kph,
+	    lt.heading,
+	    lt.odometer_km,
+	    lt.fuel_level_percent,
+	    lt.engine_temp_celsius,
+	    lt.alerts,
+	    CASE 
+	        WHEN lt.time < NOW() - INTERVAL '5 minutes' THEN 'offline'
+	        WHEN lt.speed_kph > 5 THEN 'moving'
+	        ELSE 'idle'
+	    END AS operational_status,
+	    d.name AS driver_name,
+	    d.id AS driver_id
+	FROM vehicles v
+	LEFT JOIN latest_telemetry lt ON v.id = lt.vehicle_id
+	LEFT JOIN drivers d ON v.current_driver_id = d.id
+	WHERE v.is_deleted = FALSE;
+2026-04-12 10:41:24.157 IST [9677] ERROR:  relation "vehicle_status" does not exist
+2026-04-12 10:41:24.157 IST [9677] STATEMENT:  CREATE UNIQUE INDEX IF NOT EXISTS idx_vehicle_status_vehicle_id ON vehicle_status (vehicle_id);
+2026-04-12 10:41:24.163 IST [9677] ERROR:  relation "vehicle_status" does not exist
+2026-04-12 10:41:24.163 IST [9677] STATEMENT:  COMMENT ON MATERIALIZED VIEW vehicle_status IS 'Aggregated real-time status of all active vehicles for the Command Center';
+2026-04-12 10:41:24.260 IST [9681] ERROR:  relation "work_orders" does not exist
+2026-04-12 10:41:24.260 IST [9681] CONTEXT:  SQL statement "ALTER TABLE work_orders ADD COLUMN vendor_id UUID REFERENCES maintenance_vendors(id)"
+	PL/pgSQL function inline_code_block line 5 at SQL statement
+2026-04-12 10:41:24.260 IST [9681] STATEMENT:  DO $$ 
+	BEGIN 
+	    -- Add vendor_id
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='work_orders' AND column_name='vendor_id') THEN
+	        ALTER TABLE work_orders ADD COLUMN vendor_id UUID REFERENCES maintenance_vendors(id);
+	    END IF;
+	
+	    -- Add approval_status
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='work_orders' AND column_name='approval_status') THEN
+	        ALTER TABLE work_orders ADD COLUMN approval_status VARCHAR(50) DEFAULT 'NOT_REQUIRED';
+	        -- Possible values: NOT_REQUIRED, PENDING_MANAGER, PENDING_FLEET_HEAD, PENDING_FINANCE, APPROVED, REJECTED
+	    END IF;
+	
+	    -- Add cost_breakdown
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='work_orders' AND column_name='cost_breakdown') THEN
+	        ALTER TABLE work_orders ADD COLUMN cost_breakdown JSONB DEFAULT '{"labor_cost": 0, "parts_cost": 0, "external_service_cost": 0}'::jsonb;
+	    END IF;
+	
+	    -- Add inspection_id (link to inspection that triggered this WO if any)
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='work_orders' AND column_name='inspection_id') THEN
+	        ALTER TABLE work_orders ADD COLUMN inspection_id UUID REFERENCES vehicle_inspections(id);
+	    END IF;
+	END $$;
+2026-04-12 10:41:24.264 IST [9681] ERROR:  relation "inventory_parts" does not exist
+2026-04-12 10:41:24.264 IST [9681] CONTEXT:  SQL statement "ALTER TABLE inventory_parts ADD COLUMN category VARCHAR(100)"
+	PL/pgSQL function inline_code_block line 5 at SQL statement
+2026-04-12 10:41:24.264 IST [9681] STATEMENT:  DO $$ 
+	BEGIN 
+	    -- Add category
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='inventory_parts' AND column_name='category') THEN
+	        ALTER TABLE inventory_parts ADD COLUMN category VARCHAR(100);
+	    END IF;
+	
+	    -- Add compatible_vehicles array
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='inventory_parts' AND column_name='compatible_vehicles') THEN
+	        ALTER TABLE inventory_parts ADD COLUMN compatible_vehicles VARCHAR(100)[];
+	    END IF;
+	END $$;
+2026-04-12 10:41:24.272 IST [9681] ERROR:  relation "work_orders" does not exist
+2026-04-12 10:41:24.272 IST [9681] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_work_orders_vendor ON work_orders(vendor_id);
+2026-04-12 10:41:24.272 IST [9681] ERROR:  relation "work_orders" does not exist
+2026-04-12 10:41:24.272 IST [9681] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_work_orders_approval ON work_orders(approval_status);
+2026-04-12 10:41:24.273 IST [9681] ERROR:  function update_work_orders_updated_at() does not exist
+2026-04-12 10:41:24.273 IST [9681] STATEMENT:  CREATE TRIGGER trigger_maintenance_vendors_updated_at
+	    BEFORE UPDATE ON maintenance_vendors
+	    FOR EACH ROW
+	    EXECUTE FUNCTION update_work_orders_updated_at();
+2026-04-12 10:41:24.273 IST [9681] ERROR:  function update_work_orders_updated_at() does not exist
+2026-04-12 10:41:24.273 IST [9681] STATEMENT:  CREATE TRIGGER trigger_inspection_templates_updated_at
+	    BEFORE UPDATE ON inspection_templates
+	    FOR EACH ROW
+	    EXECUTE FUNCTION update_work_orders_updated_at();
+2026-04-12 10:41:24.274 IST [9681] ERROR:  function update_work_orders_updated_at() does not exist
+2026-04-12 10:41:24.274 IST [9681] STATEMENT:  CREATE TRIGGER trigger_vehicle_inspections_updated_at
+	    BEFORE UPDATE ON vehicle_inspections
+	    FOR EACH ROW
+	    EXECUTE FUNCTION update_work_orders_updated_at();
+2026-04-12 10:41:24.672 IST [9693] ERROR:  permission denied to create role
+2026-04-12 10:41:24.672 IST [9693] DETAIL:  Only roles with the CREATEROLE attribute may create roles.
+2026-04-12 10:41:24.672 IST [9693] CONTEXT:  SQL statement "CREATE ROLE flyfleet_app"
+	PL/pgSQL function inline_code_block line 4 at SQL statement
+2026-04-12 10:41:24.672 IST [9693] STATEMENT:  DO $$ 
+	BEGIN
+	    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'flyfleet_app') THEN
+	        CREATE ROLE flyfleet_app;
+	    END IF;
+	END $$;
+2026-04-12 10:41:24.675 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.675 IST [9693] STATEMENT:  CREATE POLICY org_tenant_policy ON organizations
+	    FOR ALL
+	    TO flyfleet_app
+	    USING (id = get_current_org_id())
+	    WITH CHECK (id = get_current_org_id());
+2026-04-12 10:41:24.676 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.676 IST [9693] STATEMENT:  CREATE POLICY user_tenant_policy ON users
+	    FOR ALL
+	    TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.677 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.677 IST [9693] STATEMENT:  CREATE POLICY vehicle_tenant_policy ON vehicles
+	    FOR ALL
+	    TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.679 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.679 IST [9693] STATEMENT:  CREATE POLICY telemetry_tenant_policy ON telemetry
+	    FOR ALL
+	    TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.680 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.680 IST [9693] STATEMENT:  CREATE POLICY trip_tenant_policy ON trips
+	    FOR ALL
+	    TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.680 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.680 IST [9693] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON organizations TO flyfleet_app;
+2026-04-12 10:41:24.680 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.680 IST [9693] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON users TO flyfleet_app;
+2026-04-12 10:41:24.681 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.681 IST [9693] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON vehicles TO flyfleet_app;
+2026-04-12 10:41:24.681 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.681 IST [9693] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON telemetry TO flyfleet_app;
+2026-04-12 10:41:24.681 IST [9693] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.681 IST [9693] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON trips TO flyfleet_app;
+2026-04-12 10:41:24.681 IST [9693] ERROR:  syntax error at or near "soul" at character 1
+2026-04-12 10:41:24.681 IST [9693] STATEMENT:  soul
+2026-04-12 10:41:24.767 IST [9697] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.767 IST [9697] CONTEXT:  SQL statement "ALTER TABLE fuel_readings ADD COLUMN org_id UUID REFERENCES organizations(id)"
+	PL/pgSQL function inline_code_block line 12 at SQL statement
+2026-04-12 10:41:24.767 IST [9697] STATEMENT:  DO $$ 
+	BEGIN
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'gps_locations' AND column_name = 'org_id') THEN
+	        ALTER TABLE gps_locations ADD COLUMN org_id UUID REFERENCES organizations(id);
+	    END IF;
+	    
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'obd_readings' AND column_name = 'org_id') THEN
+	        ALTER TABLE obd_readings ADD COLUMN org_id UUID REFERENCES organizations(id);
+	    END IF;
+	
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_readings' AND column_name = 'org_id') THEN
+	        ALTER TABLE fuel_readings ADD COLUMN org_id UUID REFERENCES organizations(id);
+	    END IF;
+	
+	    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_telemetry' AND column_name = 'org_id') THEN
+	        ALTER TABLE vehicle_telemetry ADD COLUMN org_id UUID REFERENCES organizations(id);
+	    END IF;
+	END $$;
+2026-04-12 10:41:24.772 IST [9697] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.772 IST [9697] STATEMENT:  CREATE POLICY gps_tenant_policy ON gps_locations
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.774 IST [9697] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.774 IST [9697] STATEMENT:  CREATE POLICY obd_tenant_policy ON obd_readings
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.774 IST [9697] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.774 IST [9697] STATEMENT:  ALTER TABLE fuel_readings ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:24.775 IST [9697] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.775 IST [9697] STATEMENT:  CREATE POLICY fuel_tenant_policy ON fuel_readings
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.775 IST [9697] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.775 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.775 IST [9697] STATEMENT:  SELECT create_hypertable('gps_locations', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.775 IST [9697] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.775 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.775 IST [9697] STATEMENT:  SELECT create_hypertable('obd_readings', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.776 IST [9697] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.776 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.776 IST [9697] STATEMENT:  SELECT create_hypertable('fuel_readings', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.776 IST [9697] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.776 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.776 IST [9697] STATEMENT:  SELECT create_hypertable('vehicle_telemetry', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.776 IST [9697] ERROR:  unrecognized parameter namespace "timescaledb"
+2026-04-12 10:41:24.776 IST [9697] STATEMENT:  ALTER TABLE gps_locations SET (timescaledb.compress, timescaledb.compress_segmentby = 'vehicle_id, org_id');
+2026-04-12 10:41:24.776 IST [9697] ERROR:  function add_compression_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.776 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.776 IST [9697] STATEMENT:  SELECT add_compression_policy('gps_locations', INTERVAL '7 days');
+2026-04-12 10:41:24.777 IST [9697] ERROR:  unrecognized parameter namespace "timescaledb"
+2026-04-12 10:41:24.777 IST [9697] STATEMENT:  ALTER TABLE obd_readings SET (timescaledb.compress, timescaledb.compress_segmentby = 'vehicle_id, org_id');
+2026-04-12 10:41:24.777 IST [9697] ERROR:  function add_compression_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.777 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.777 IST [9697] STATEMENT:  SELECT add_compression_policy('obd_readings', INTERVAL '7 days');
+2026-04-12 10:41:24.777 IST [9697] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:24.777 IST [9697] STATEMENT:  ALTER TABLE fuel_readings SET (timescaledb.compress, timescaledb.compress_segmentby = 'vehicle_id, org_id');
+2026-04-12 10:41:24.777 IST [9697] ERROR:  function add_compression_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.777 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.777 IST [9697] STATEMENT:  SELECT add_compression_policy('fuel_readings', INTERVAL '7 days');
+2026-04-12 10:41:24.777 IST [9697] ERROR:  function add_retention_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.777 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.777 IST [9697] STATEMENT:  SELECT add_retention_policy('gps_locations', INTERVAL '90 days');
+2026-04-12 10:41:24.778 IST [9697] ERROR:  function add_retention_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.778 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.778 IST [9697] STATEMENT:  SELECT add_retention_policy('obd_readings', INTERVAL '90 days');
+2026-04-12 10:41:24.778 IST [9697] ERROR:  function add_retention_policy(unknown, interval) does not exist at character 8
+2026-04-12 10:41:24.778 IST [9697] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.778 IST [9697] STATEMENT:  SELECT add_retention_policy('fuel_readings', INTERVAL '90 days');
+2026-04-12 10:41:24.855 IST [9701] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.855 IST [9701] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.855 IST [9701] STATEMENT:  SELECT create_hypertable('consumption_events', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.857 IST [9701] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.857 IST [9701] STATEMENT:  CREATE POLICY consumption_tenant_policy ON consumption_events
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.859 IST [9701] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.859 IST [9701] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON usage_meters TO flyfleet_app;
+2026-04-12 10:41:24.860 IST [9701] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.860 IST [9701] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON consumption_events TO flyfleet_app;
+2026-04-12 10:41:24.909 IST [9705] ERROR:  function create_hypertable(unknown, unknown, if_not_exists => boolean) does not exist at character 8
+2026-04-12 10:41:24.909 IST [9705] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+2026-04-12 10:41:24.909 IST [9705] STATEMENT:  SELECT create_hypertable('sla_metrics', 'time', if_not_exists => TRUE);
+2026-04-12 10:41:24.911 IST [9705] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.911 IST [9705] STATEMENT:  CREATE POLICY sla_tenant_policy ON sla_metrics
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:24.911 IST [9705] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:24.911 IST [9705] STATEMENT:  GRANT SELECT, INSERT ON sla_metrics TO flyfleet_app;
+2026-04-12 10:41:24.964 IST [9709] ERROR:  relation "devices" does not exist
+2026-04-12 10:41:24.964 IST [9709] STATEMENT:  CREATE TABLE IF NOT EXISTS device_twins (
+	    device_id UUID PRIMARY KEY REFERENCES devices(id) ON DELETE CASCADE,
+	    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+	    desired_state JSONB NOT NULL DEFAULT '{}'::jsonb,
+	    reported_state JSONB NOT NULL DEFAULT '{}'::jsonb,
+	    last_seen TIMESTAMPTZ,
+	    drift_status VARCHAR(20) NOT NULL DEFAULT 'unknown',
+	    drift_reason TEXT,
+	    last_command_id UUID REFERENCES device_commands(id) ON DELETE SET NULL,
+	    last_command_status VARCHAR(32),
+	    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    CONSTRAINT chk_device_twins_drift_status CHECK (drift_status IN ('in_sync', 'drifted', 'unknown'))
+	);
+2026-04-12 10:41:24.965 IST [9709] ERROR:  relation "device_twins" does not exist
+2026-04-12 10:41:24.965 IST [9709] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_twins_org ON device_twins(org_id);
+2026-04-12 10:41:24.965 IST [9709] ERROR:  relation "device_twins" does not exist
+2026-04-12 10:41:24.965 IST [9709] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_twins_drift_status ON device_twins(drift_status);
+2026-04-12 10:41:24.966 IST [9709] ERROR:  relation "device_twins" does not exist
+2026-04-12 10:41:24.966 IST [9709] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_device_twins_last_seen ON device_twins(last_seen DESC);
+2026-04-12 10:41:25.168 IST [9721] ERROR:  relation "fuel_logs" does not exist
+2026-04-12 10:41:25.168 IST [9721] STATEMENT:  ALTER TABLE fuel_logs
+	ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+	ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id) ON DELETE SET NULL;
+2026-04-12 10:41:25.180 IST [9721] ERROR:  relation "fuel_logs" does not exist
+2026-04-12 10:41:25.180 IST [9721] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_fuel_logs_created_by ON fuel_logs(created_by);
+2026-04-12 10:41:25.250 IST [9725] ERROR:  relation "billing_invoices" does not exist
+2026-04-12 10:41:25.250 IST [9725] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_credit_notes (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID NOT NULL,
+	    original_invoice_id UUID REFERENCES billing_invoices(id),
+	    credit_note_no VARCHAR(50) UNIQUE NOT NULL,
+	    status VARCHAR(20) NOT NULL DEFAULT 'issued', -- issued, void, applied
+	    total_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,
+	    currency VARCHAR(3) NOT NULL,
+	    reason TEXT,
+	    issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    metadata JSONB DEFAULT '{}',
+	    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    created_by UUID,
+	    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);
+2026-04-12 10:41:25.256 IST [9725] ERROR:  relation "billing_credit_notes" does not exist
+2026-04-12 10:41:25.256 IST [9725] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_credit_note_items (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    credit_note_id UUID NOT NULL REFERENCES billing_credit_notes(id) ON DELETE CASCADE,
+	    description TEXT NOT NULL,
+	    amount NUMERIC(15, 2) NOT NULL,
+	    tax_percent NUMERIC(5, 2) DEFAULT 0,
+	    metadata JSONB DEFAULT '{}',
+	    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+	);
+2026-04-12 10:41:25.257 IST [9725] ERROR:  relation "billing_credit_notes" does not exist
+2026-04-12 10:41:25.257 IST [9725] STATEMENT:  CREATE INDEX idx_credit_notes_org_id ON billing_credit_notes(org_id);
+2026-04-12 10:41:25.257 IST [9725] ERROR:  relation "billing_credit_notes" does not exist
+2026-04-12 10:41:25.257 IST [9725] STATEMENT:  CREATE INDEX idx_credit_notes_invoice_id ON billing_credit_notes(invoice_id);
+2026-04-12 10:41:25.258 IST [9725] ERROR:  relation "billing_credit_notes" does not exist
+2026-04-12 10:41:25.258 IST [9725] STATEMENT:  ALTER TABLE billing_credit_notes ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.258 IST [9725] ERROR:  relation "billing_credit_note_items" does not exist
+2026-04-12 10:41:25.258 IST [9725] STATEMENT:  ALTER TABLE billing_credit_note_items ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.259 IST [9725] ERROR:  relation "billing_credit_notes" does not exist
+2026-04-12 10:41:25.259 IST [9725] STATEMENT:  CREATE POLICY org_isolation_credit_notes ON billing_credit_notes 
+	    USING (org_id = CURRENT_SETTING('app.current_org_id')::UUID);
+2026-04-12 10:41:25.259 IST [9725] ERROR:  relation "billing_credit_note_items" does not exist
+2026-04-12 10:41:25.259 IST [9725] STATEMENT:  CREATE POLICY org_isolation_credit_note_items ON billing_credit_note_items 
+	    USING (credit_note_id IN (SELECT id FROM billing_credit_notes WHERE org_id = CURRENT_SETTING('app.current_org_id')::UUID));
+2026-04-12 10:41:25.332 IST [9729] ERROR:  relation "billing_invoices" does not exist
+2026-04-12 10:41:25.332 IST [9729] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_device_assignments (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID NOT NULL,
+	    device_id VARCHAR(100) NOT NULL, -- Links to devices.device_id
+	    product_id UUID NOT NULL REFERENCES billing_hardware_products(id),
+	    billing_type VARCHAR(20) NOT NULL, -- ONE_TIME, LEASE
+	    status VARCHAR(20) NOT NULL DEFAULT 'PENDING_ACTIVATION', -- PENDING, ACTIVE, TERMINATED
+	    activated_at TIMESTAMPTZ,
+	    invoice_id UUID REFERENCES billing_invoices(id), -- Null if leased and billed in monthly runs
+	    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	    UNIQUE(device_id)
+	);
+2026-04-12 10:41:25.336 IST [9729] ERROR:  relation "billing_device_assignments" does not exist
+2026-04-12 10:41:25.336 IST [9729] STATEMENT:  CREATE INDEX idx_device_assignments_org_id ON billing_device_assignments(org_id);
+2026-04-12 10:41:25.336 IST [9729] ERROR:  relation "billing_device_assignments" does not exist
+2026-04-12 10:41:25.336 IST [9729] STATEMENT:  CREATE INDEX idx_device_assignments_device_id ON billing_device_assignments(device_id);
+2026-04-12 10:41:25.337 IST [9729] ERROR:  relation "billing_device_assignments" does not exist
+2026-04-12 10:41:25.337 IST [9729] STATEMENT:  ALTER TABLE billing_device_assignments ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.339 IST [9729] ERROR:  relation "billing_device_assignments" does not exist
+2026-04-12 10:41:25.339 IST [9729] STATEMENT:  CREATE POLICY org_isolation_device_assignments ON billing_device_assignments 
+	    USING (org_id = CURRENT_SETTING('app.current_org_id')::UUID);
+2026-04-12 10:41:25.412 IST [9733] ERROR:  relation "billing_invoices" does not exist
+2026-04-12 10:41:25.412 IST [9733] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_ledger_entries (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID NOT NULL REFERENCES organizations(id),
+	    entry_type VARCHAR(50) NOT NULL, -- INVOICE_ISSUED, PAYMENT_RECEIVED, CREDIT_APPLIED, REFUND_PROCESSED, REVENUE_RECOGNIZED
+	    amount DECIMAL(15, 4) NOT NULL, -- Positive for money in, Negative for money out / obligations
+	    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+	    invoice_id UUID REFERENCES billing_invoices(id),
+	    payment_id UUID, -- References payment gateway / external tx
+	    credit_note_id UUID REFERENCES billing_credit_notes(id),
+	    ledger_account VARCHAR(50) NOT NULL, -- e.g., 'ACCOUNTS_RECEIVABLE', 'DEFERRED_REVENUE', 'CASH', 'REVENUE'
+	    description TEXT,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:25.421 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.421 IST [9733] STATEMENT:  CREATE POLICY balances_tenant_policy ON billing_customer_balances
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.421 IST [9733] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:25.421 IST [9733] STATEMENT:  ALTER TABLE billing_ledger_entries ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.422 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.422 IST [9733] STATEMENT:  CREATE POLICY ledger_tenant_policy ON billing_ledger_entries
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.423 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.423 IST [9733] STATEMENT:  CREATE POLICY revenue_schedule_tenant_policy ON billing_revenue_schedules
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.424 IST [9733] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:25.424 IST [9733] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_ledger_org_id ON billing_ledger_entries(org_id);
+2026-04-12 10:41:25.424 IST [9733] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:25.424 IST [9733] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_ledger_invoice_id ON billing_ledger_entries(invoice_id);
+2026-04-12 10:41:25.427 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.427 IST [9733] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_customer_balances TO flyfleet_app;
+2026-04-12 10:41:25.427 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.427 IST [9733] STATEMENT:  GRANT SELECT, INSERT ON billing_credit_transactions TO flyfleet_app;
+2026-04-12 10:41:25.428 IST [9733] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:25.428 IST [9733] STATEMENT:  GRANT SELECT, INSERT ON billing_ledger_entries TO flyfleet_app;
+2026-04-12 10:41:25.428 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.428 IST [9733] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_revenue_schedules TO flyfleet_app;
+2026-04-12 10:41:25.428 IST [9733] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.428 IST [9733] STATEMENT:  GRANT SELECT, INSERT ON billing_recognized_revenue TO flyfleet_app;
+2026-04-12 10:41:25.511 IST [9737] ERROR:  relation "billing_subscriptions" does not exist
+2026-04-12 10:41:25.511 IST [9737] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_cycles (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID NOT NULL REFERENCES organizations(id),
+	    subscription_id UUID NOT NULL REFERENCES billing_subscriptions(id),
+	    cycle_start TIMESTAMP WITH TIME ZONE NOT NULL,
+	    cycle_end TIMESTAMP WITH TIME ZONE NOT NULL,
+	    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, CLOSED, CANCELLED
+	    closed_at TIMESTAMP WITH TIME ZONE,
+	    invoice_id UUID REFERENCES billing_invoices(id),
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:25.520 IST [9737] ERROR:  relation "billing_subscriptions" does not exist
+2026-04-12 10:41:25.520 IST [9737] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_coupon_redemptions (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    coupon_id UUID NOT NULL REFERENCES billing_coupons(id),
+	    org_id UUID NOT NULL REFERENCES organizations(id),
+	    subscription_id UUID REFERENCES billing_subscriptions(id),
+	    invoice_id UUID REFERENCES billing_invoices(id),
+	    redeemed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:25.521 IST [9737] ERROR:  relation "billing_cycles" does not exist
+2026-04-12 10:41:25.521 IST [9737] STATEMENT:  ALTER TABLE billing_cycles ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.522 IST [9737] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.522 IST [9737] STATEMENT:  CREATE POLICY cycles_tenant_policy ON billing_cycles
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.522 IST [9737] ERROR:  relation "billing_coupon_redemptions" does not exist
+2026-04-12 10:41:25.522 IST [9737] STATEMENT:  ALTER TABLE billing_coupon_redemptions ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.522 IST [9737] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.522 IST [9737] STATEMENT:  CREATE POLICY redemption_tenant_policy ON billing_coupon_redemptions
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.523 IST [9737] ERROR:  relation "billing_cycles" does not exist
+2026-04-12 10:41:25.523 IST [9737] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_cycles_sub_id ON billing_cycles(subscription_id);
+2026-04-12 10:41:25.523 IST [9737] ERROR:  relation "billing_cycles" does not exist
+2026-04-12 10:41:25.523 IST [9737] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_cycles_org_id ON billing_cycles(org_id);
+2026-04-12 10:41:25.523 IST [9737] ERROR:  relation "billing_cycles" does not exist
+2026-04-12 10:41:25.523 IST [9737] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_cycles_active ON billing_cycles(subscription_id, status);
+2026-04-12 10:41:25.525 IST [9737] ERROR:  relation "billing_cycles" does not exist
+2026-04-12 10:41:25.525 IST [9737] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_cycles TO flyfleet_app;
+2026-04-12 10:41:25.525 IST [9737] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.525 IST [9737] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_coupons TO flyfleet_app;
+2026-04-12 10:41:25.526 IST [9737] ERROR:  relation "billing_coupon_redemptions" does not exist
+2026-04-12 10:41:25.526 IST [9737] STATEMENT:  GRANT SELECT, INSERT ON billing_coupon_redemptions TO flyfleet_app;
+2026-04-12 10:41:25.595 IST [9741] ERROR:  relation "billing_invoices" does not exist
+2026-04-12 10:41:25.595 IST [9741] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_invoice_tax_lines (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    invoice_id UUID NOT NULL REFERENCES billing_invoices(id) ON DELETE CASCADE,
+	    tax_rate_id UUID NOT NULL REFERENCES billing_tax_rates(id),
+	    name VARCHAR(100) NOT NULL,
+	    amount DECIMAL(15, 4) NOT NULL,
+	    percentage DECIMAL(5, 2) NOT NULL,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:25.601 IST [9741] ERROR:  relation "billing_invoice_tax_lines" does not exist
+2026-04-12 10:41:25.601 IST [9741] STATEMENT:  ALTER TABLE billing_invoice_tax_lines ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.603 IST [9741] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.603 IST [9741] STATEMENT:  CREATE POLICY tax_lines_tenant_policy ON billing_invoice_tax_lines
+	    FOR ALL TO flyfleet_app
+	    USING (EXISTS (SELECT 1 FROM billing_invoices WHERE id = invoice_id AND org_id = get_current_org_id()));
+2026-04-12 10:41:25.605 IST [9741] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.605 IST [9741] STATEMENT:  CREATE POLICY sequences_tenant_policy ON billing_invoice_sequences
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.605 IST [9741] ERROR:  relation "billing_invoice_tax_lines" does not exist
+2026-04-12 10:41:25.605 IST [9741] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_tax_lines_invoice ON billing_invoice_tax_lines(invoice_id);
+2026-04-12 10:41:25.608 IST [9741] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.608 IST [9741] STATEMENT:  GRANT SELECT ON billing_tax_regions TO flyfleet_app;
+2026-04-12 10:41:25.608 IST [9741] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.608 IST [9741] STATEMENT:  GRANT SELECT ON billing_tax_rates TO flyfleet_app;
+2026-04-12 10:41:25.608 IST [9741] ERROR:  relation "billing_invoice_tax_lines" does not exist
+2026-04-12 10:41:25.608 IST [9741] STATEMENT:  GRANT SELECT, INSERT ON billing_invoice_tax_lines TO flyfleet_app;
+2026-04-12 10:41:25.609 IST [9741] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.609 IST [9741] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_invoice_sequences TO flyfleet_app;
+2026-04-12 10:41:25.679 IST [9745] ERROR:  relation "billing_invoices" does not exist
+2026-04-12 10:41:25.679 IST [9745] STATEMENT:  CREATE TABLE IF NOT EXISTS billing_payment_attempts (
+	    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	    org_id UUID NOT NULL REFERENCES organizations(id),
+	    invoice_id UUID NOT NULL REFERENCES billing_invoices(id) ON DELETE CASCADE,
+	    attempt_number INT NOT NULL DEFAULT 1,
+	    status VARCHAR(50) NOT NULL, -- e.g., SUCCESS, FAILED, PROCESSING
+	    failure_reason TEXT,
+	    processor_response JSONB,
+	    amount DECIMAL(15, 4) NOT NULL,
+	    currency VARCHAR(3) NOT NULL,
+	    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+2026-04-12 10:41:25.680 IST [9745] ERROR:  relation "billing_payment_attempts" does not exist
+2026-04-12 10:41:25.680 IST [9745] STATEMENT:  ALTER TABLE billing_payment_attempts ENABLE ROW LEVEL SECURITY;
+2026-04-12 10:41:25.681 IST [9745] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.681 IST [9745] STATEMENT:  CREATE POLICY payment_attempts_tenant_policy ON billing_payment_attempts
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.682 IST [9745] ERROR:  relation "billing_payment_attempts" does not exist
+2026-04-12 10:41:25.682 IST [9745] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_payment_attempts_invoice ON billing_payment_attempts(invoice_id);
+2026-04-12 10:41:25.682 IST [9745] ERROR:  relation "billing_payment_attempts" does not exist
+2026-04-12 10:41:25.682 IST [9745] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_payment_attempts_status ON billing_payment_attempts(status);
+2026-04-12 10:41:25.682 IST [9745] ERROR:  relation "billing_payment_attempts" does not exist
+2026-04-12 10:41:25.682 IST [9745] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_payment_attempts TO flyfleet_app;
+2026-04-12 10:41:25.745 IST [9749] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.745 IST [9749] STATEMENT:  CREATE POLICY subs_tenant_policy ON billing_subscriptions
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.749 IST [9749] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.749 IST [9749] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_plans TO flyfleet_app;
+2026-04-12 10:41:25.749 IST [9749] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.749 IST [9749] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_pricing_components TO flyfleet_app;
+2026-04-12 10:41:25.750 IST [9749] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.750 IST [9749] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_subscriptions TO flyfleet_app;
+2026-04-12 10:41:25.795 IST [9753] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.795 IST [9753] STATEMENT:  CREATE POLICY accounting_tenant_policy ON billing_accounting_exports
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:25.798 IST [9753] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.798 IST [9753] STATEMENT:  GRANT SELECT, INSERT, UPDATE ON billing_accounting_exports TO flyfleet_app;
+2026-04-12 10:41:25.923 IST [9758] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.923 IST [9758] STATEMENT:  CREATE POLICY template_read_policy ON billing_invoice_templates
+	    FOR SELECT TO flyfleet_app
+	    USING (true);
+2026-04-12 10:41:25.923 IST [9758] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.923 IST [9758] STATEMENT:  CREATE POLICY document_tenant_policy ON billing_invoice_documents
+	    FOR ALL TO flyfleet_app
+	    USING (EXISTS (SELECT 1 FROM invoices i WHERE i.id = invoice_id AND i.org_id = get_current_org_id()));
+2026-04-12 10:41:25.927 IST [9758] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.927 IST [9758] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON billing_invoice_templates TO flyfleet_app;
+2026-04-12 10:41:25.928 IST [9758] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:25.928 IST [9758] STATEMENT:  GRANT SELECT, INSERT, UPDATE, DELETE ON billing_invoice_documents TO flyfleet_app;
+2026-04-12 10:41:26.021 IST [9782] ERROR:  column "role" of relation "users" does not exist
+2026-04-12 10:41:26.021 IST [9782] STATEMENT:  ALTER TABLE users ALTER COLUMN role DROP DEFAULT;
+2026-04-12 10:41:26.029 IST [9782] ERROR:  column "org_id" does not exist at character 45
+2026-04-12 10:41:26.029 IST [9782] HINT:  Perhaps you meant to reference the column "users.role_id".
+2026-04-12 10:41:26.029 IST [9782] QUERY:  UPDATE users SET org_id = default_org WHERE org_id IS NULL
+2026-04-12 10:41:26.029 IST [9782] CONTEXT:  PL/pgSQL function inline_code_block line 14 at SQL statement
+2026-04-12 10:41:26.029 IST [9782] STATEMENT:  DO $$
+	DECLARE
+	    default_org uuid;
+	BEGIN
+	    SELECT id INTO default_org FROM organizations WHERE name = 'Default Organization' LIMIT 1;
+	    IF default_org IS NULL THEN
+	        -- If missing, we create a placeholder org to satisfy the NOT NULL constraint for legacy superadmins
+	        INSERT INTO organizations (name)
+	        VALUES ('Default Organization')
+	        RETURNING id INTO default_org;
+	    END IF;
+	
+	    -- Update legacy rows with the default org
+	    UPDATE users SET org_id = default_org WHERE org_id IS NULL;
+	END
+	$$;
+2026-04-12 10:41:26.030 IST [9782] ERROR:  column "org_id" of relation "users" does not exist
+2026-04-12 10:41:26.030 IST [9782] STATEMENT:  ALTER TABLE users ALTER COLUMN org_id SET NOT NULL;
+2026-04-12 10:41:26.133 IST [9791] ERROR:  column "role" does not exist at character 62
+2026-04-12 10:41:26.133 IST [9791] STATEMENT:  UPDATE users SET permission_mask = 9223372036854775807 WHERE role = 'super_admin';
+2026-04-12 10:41:26.463 IST [9813] ERROR:  column "organization_id" does not exist
+2026-04-12 10:41:26.463 IST [9813] STATEMENT:  ALTER TABLE trips RENAME COLUMN organization_id TO org_id;
+2026-04-12 10:41:26.486 IST [9813] WARNING:  Found 15 tables still using organization_id column name. Consider manual review.
+2026-04-12 10:41:26.486 IST [9813] CONTEXT:  PL/pgSQL function inline_code_block line 12 at RAISE
+2026-04-12 10:41:26.571 IST [9817] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:26.571 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_ledger_org_created
+	ON billing_ledger_entries(org_id, created_at DESC);
+2026-04-12 10:41:26.572 IST [9817] ERROR:  relation "billing_ledger_entries" does not exist
+2026-04-12 10:41:26.572 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_ledger_invoice_org
+	ON billing_ledger_entries(invoice_id, org_id)
+	WHERE invoice_id IS NOT NULL;
+2026-04-12 10:41:26.576 IST [9817] ERROR:  column "org_id" does not exist
+2026-04-12 10:41:26.576 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_gps_vehicle_org_time
+	ON gps_locations(vehicle_id, org_id, time DESC);
+2026-04-12 10:41:26.577 IST [9817] ERROR:  column "org_id" does not exist
+2026-04-12 10:41:26.577 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_obd_vehicle_org_time
+	ON obd_readings(vehicle_id, org_id, time DESC);
+2026-04-12 10:41:26.577 IST [9817] ERROR:  relation "fuel_readings" does not exist
+2026-04-12 10:41:26.577 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_fuel_vehicle_org_time
+	ON fuel_readings(vehicle_id, org_id, time DESC);
+2026-04-12 10:41:26.578 IST [9817] ERROR:  column "org_id" does not exist
+2026-04-12 10:41:26.578 IST [9817] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicle_telemetry_vehicle_org_time
+	ON vehicle_telemetry(vehicle_id, org_id, time DESC);
+2026-04-12 10:41:26.588 IST [9817] WARNING:  Some indexes may not have been created. Count: 4
+2026-04-12 10:41:26.588 IST [9817] CONTEXT:  PL/pgSQL function inline_code_block line 19 at RAISE
+2026-04-12 10:41:26.593 IST [9817] ERROR:  relation "idx_ledger_org_created" does not exist
+2026-04-12 10:41:26.593 IST [9817] STATEMENT:  COMMENT ON INDEX idx_ledger_org_created IS 'Enables fast time-based billing reports per org';
+2026-04-12 10:41:26.594 IST [9817] ERROR:  relation "idx_gps_vehicle_org_time" does not exist
+2026-04-12 10:41:26.594 IST [9817] STATEMENT:  COMMENT ON INDEX idx_gps_vehicle_org_time IS 'Optimizes telemetry queries filtered by vehicle and org';
+2026-04-12 10:41:26.681 IST [9821] WARNING:  Critical tables missing updated_at triggers: 4
+2026-04-12 10:41:26.681 IST [9821] CONTEXT:  PL/pgSQL function inline_code_block line 16 at RAISE
+2026-04-12 10:41:26.743 IST [9825] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:26.743 IST [9825] STATEMENT:  CREATE POLICY driver_attendance_tenant_policy ON driver_attendance
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:26.756 IST [9825] ERROR:  role "flyfleet_app" does not exist
+2026-04-12 10:41:26.756 IST [9825] STATEMENT:  CREATE POLICY driver_schedules_tenant_policy ON driver_schedules
+	    FOR ALL TO flyfleet_app
+	    USING (org_id = get_current_org_id())
+	    WITH CHECK (org_id = get_current_org_id());
+2026-04-12 10:41:26.883 IST [9833] ERROR:  relation "behavior_score_updates" does not exist
+2026-04-12 10:41:26.883 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_behavior_score_updates_driver_id ON behavior_score_updates(driver_id);
+2026-04-12 10:41:26.883 IST [9833] ERROR:  relation "driver_audit_logs" does not exist
+2026-04-12 10:41:26.883 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_driver_audit_logs_driver_id ON driver_audit_logs(driver_id);
+2026-04-12 10:41:26.884 IST [9833] ERROR:  relation "driver_expenses" does not exist
+2026-04-12 10:41:26.884 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_driver_expenses_driver_id ON driver_expenses(driver_id);
+2026-04-12 10:41:26.884 IST [9833] ERROR:  relation "driver_messages" does not exist
+2026-04-12 10:41:26.884 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_driver_messages_driver_id ON driver_messages(driver_id);
+2026-04-12 10:41:26.884 IST [9833] ERROR:  relation "duty_status_logs" does not exist
+2026-04-12 10:41:26.884 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_duty_status_logs_driver_id ON duty_status_logs(driver_id);
+2026-04-12 10:41:26.933 IST [9833] ERROR:  relation "governance_audit_logs" does not exist
+2026-04-12 10:41:26.933 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_governance_audit_logs_organization_id ON governance_audit_logs(organization_id) WHERE organization_id IS NOT NULL;
+2026-04-12 10:41:26.933 IST [9833] ERROR:  relation "governance_requests" does not exist
+2026-04-12 10:41:26.933 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_governance_requests_organization_id ON governance_requests(organization_id) WHERE organization_id IS NOT NULL;
+2026-04-12 10:41:26.933 IST [9833] ERROR:  relation "governance_settings" does not exist
+2026-04-12 10:41:26.933 IST [9833] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_governance_settings_organization_id ON governance_settings(organization_id) WHERE organization_id IS NOT NULL;
+2026-04-12 10:41:26.975 IST [9837] ERROR:  unterminated quoted string at or near "''',
+	                           table_record.table_name, new_column);
+	        EXCEPTION
+	            WHEN others THEN
+	                -- Comment failure is not critical
+	                NULL;
+	        END;
+	    END LOOP;
+	END " at character 4190
+2026-04-12 10:41:26.975 IST [9837] STATEMENT:  DO $$
+	DECLARE
+	    table_record RECORD;
+	    old_column TEXT := 'organization_id';
+	    new_column TEXT := 'org_id';
+	    index_record RECORD;
+	    idx_name_old TEXT;
+	    idx_name_new TEXT;
+	BEGIN
+	    -- Find all BASE TABLES (not views) with organization_id column
+	    FOR table_record IN
+	        SELECT c.table_name
+	        FROM information_schema.columns c
+	        JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema
+	        WHERE c.table_schema = 'public'
+	          AND c.column_name = old_column
+	          AND t.table_type = 'BASE TABLE'  -- Skip views and materialized views
+	          AND c.table_name NOT IN ('pg_statistic', 'pg_class')
+	    LOOP
+	        RAISE NOTICE 'Processing table: %', table_record.table_name;
+	
+	        -- 1. Drop indexes that reference the old column (will recreate after rename)
+	        FOR index_record IN
+	            SELECT indexname
+	            FROM pg_indexes
+	            WHERE schemaname = 'public'
+	              AND tablename = table_record.table_name
+	              AND indexdef LIKE '%' || old_column || '%'
+	        LOOP
+	            idx_name_old := index_record.indexname;
+	            -- Build new index name by replacing organization_id with org_id
+	            idx_name_new := REPLACE(idx_name_old, old_column, new_column);
+	            -- Also fix any double underscores from the replacement
+	            idx_name_new := REGEXP_REPLACE(idx_name_new, '_+', '_', 'g);
+	
+	            EXECUTE format('DROP INDEX IF EXISTS %I', idx_name_old);
+	            RAISE NOTICE '  Dropped index: %', idx_name_old;
+	        END LOOP;
+	
+	        -- 2. Rename the column
+	        BEGIN
+	            EXECUTE format('ALTER TABLE %I RENAME COLUMN %I TO %I',
+	                           table_record.table_name, old_column, new_column);
+	            RAISE NOTICE '  Renamed column: % -> %', old_column, new_column;
+	        EXCEPTION
+	            WHEN others THEN
+	                RAISE WARNING '  Failed to rename column on %: %', table_record.table_name, SQLERRM;
+	        END;
+	
+	        -- 3. Recreate indexes that were on the new column (based on pattern)
+	        -- Basic org index
+	        BEGIN
+	            EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%s_%s ON %I(%I)',
+	                           table_record.table_name, new_column, table_record.table_name, new_column);
+	        EXCEPTION
+	            WHEN others THEN
+	                RAISE WARNING '  Failed to create basic index on %.%: %', table_record.table_name, new_column, SQLERRM;
+	        END;
+	
+	        -- Composite with status (if status column exists)
+	        IF EXISTS (
+	            SELECT 1 FROM information_schema.columns
+	            WHERE table_schema = 'public'
+	              AND table_name = table_record.table_name
+	              AND column_name = 'status'
+	        ) THEN
+	            BEGIN
+	                EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%s_%s_status ON %I(%I, status)',
+	                               table_record.table_name, new_column, table_record.table_name, new_column);
+	            EXCEPTION
+	                WHEN others THEN
+	                    RAISE WARNING '  Failed to create status composite index on %: %', table_record.table_name, SQLERRM;
+	            END;
+	        END IF;
+	
+	        -- Composite with created_at (for time-based queries)
+	        IF EXISTS (
+	            SELECT 1 FROM information_schema.columns
+	            WHERE table_schema = 'public'
+	              AND table_name = table_record.table_name
+	              AND column_name = 'created_at'
+	        ) THEN
+	            BEGIN
+	                EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%s_%s_created ON %I(%I, created_at DESC)',
+	                               table_record.table_name, new_column, table_record.table_name, new_column);
+	            EXCEPTION
+	                WHEN others THEN
+	                    RAISE WARNING '  Failed to create created_at composite index on %: %', table_record.table_name, SQLERRM;
+	            END;
+	        END IF;
+	
+	        RAISE NOTICE '  Recreated indexes for %', table_record.table_name;
+	
+	        -- 4. Update column comment
+	        BEGIN
+	            EXECUTE format('COMMENT ON COLUMN %I.%I IS ''Organization UUID - foreign key to organizations(id)''',
+	                           table_record.table_name, new_column);
+	        EXCEPTION
+	            WHEN others THEN
+	                -- Comment failure is not critical
+	                NULL;
+	        END;
+	    END LOOP;
+	END $$;
+2026-04-12 10:41:27.071 IST [9837] WARNING:  Could not add FK to inspection_templates: insert or update on table "inspection_templates" violates foreign key constraint "fk_inspection_templates_organization"
+2026-04-12 10:41:27.071 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 35 at RAISE
+2026-04-12 10:41:27.116 IST [9837] WARNING:  Found 12 BASE TABLES still using organization_id column name. Manual review needed:
+2026-04-12 10:41:27.116 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 15 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - analytics_jobs
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - bulk_config
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - bulk_jobs
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - driver_behavior_analytics
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - fleet_analytics
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - prediction_results
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - predictive_maintenance_analytics
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - route_optimization_requests
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - trip_settings
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - video_recordings
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - video_retention_policies
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.122 IST [9837] WARNING:    - video_streams
+2026-04-12 10:41:27.122 IST [9837] CONTEXT:  PL/pgSQL function inline_code_block line 27 at RAISE
+2026-04-12 10:41:27.171 IST [9841] ERROR:  column "org_id" does not exist at character 35
+2026-04-12 10:41:27.171 IST [9841] HINT:  Perhaps you meant to reference the column "users.role_id".
+2026-04-12 10:41:27.171 IST [9841] QUERY:  EXISTS (SELECT 1 FROM users WHERE org_id IS NULL LIMIT 1)
+2026-04-12 10:41:27.171 IST [9841] CONTEXT:  PL/pgSQL function inline_code_block line 4 at IF
+2026-04-12 10:41:27.171 IST [9841] STATEMENT:  DO $$
+	BEGIN
+	    -- Check if any rows have NULL org_id
+	    IF EXISTS (SELECT 1 FROM users WHERE org_id IS NULL LIMIT 1) THEN
+	        RAISE WARNING 'Found users with NULL org_id. These must be fixed before setting NOT NULL constraint:';
+	        RAISE WARNING '  Count: %', (SELECT COUNT(*) FROM users WHERE org_id IS NULL);
+	        RAISE WARNING '  Example IDs: (select id, email from users where org_id is null limit 5)';
+	        RAISE WARNING '  Please assign org_id values before re-running this migration.';
+	    ELSE
+	        ALTER TABLE users ALTER COLUMN org_id SET NOT NULL;
+	        RAISE NOTICE 'Set users.org_id to NOT NULL';
+	    END IF;
+	END $$;
+2026-04-12 10:41:27.179 IST [9841] ERROR:  column "org_id" referenced in foreign key constraint does not exist
+2026-04-12 10:41:27.179 IST [9841] CONTEXT:  SQL statement "ALTER TABLE users
+	        ADD CONSTRAINT fk_users_organization
+	        FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE"
+	PL/pgSQL function inline_code_block line 7 at SQL statement
+2026-04-12 10:41:27.179 IST [9841] STATEMENT:  DO $$
+	BEGIN
+	    IF NOT EXISTS (
+	        SELECT 1 FROM information_schema.table_constraints
+	        WHERE table_name = 'users' AND constraint_name = 'fk_users_organization'
+	    ) THEN
+	        ALTER TABLE users
+	        ADD CONSTRAINT fk_users_organization
+	        FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE;
+	
+	        COMMENT ON CONSTRAINT fk_users_organization ON users IS
+	            'Ensures user belongs to valid organization (multi-tenancy enforcement)';
+	        RAISE NOTICE 'Added FK: users.org_id → organizations(id)';
+	    ELSE
+	        RAISE NOTICE 'FK fk_users_organization already exists';
+	    END IF;
+	END $$;
+2026-04-12 10:41:27.187 IST [9841] ERROR:  column "org_id" does not exist
+2026-04-12 10:41:27.187 IST [9841] CONTEXT:  SQL statement "CREATE INDEX idx_users_org_id ON users(org_id)"
+	PL/pgSQL function inline_code_block line 9 at SQL statement
+2026-04-12 10:41:27.187 IST [9841] STATEMENT:  DO $$
+	BEGIN
+	    IF NOT EXISTS (
+	        SELECT 1 FROM pg_indexes
+	        WHERE schemaname = 'public'
+	          AND tablename = 'users'
+	          AND indexname = 'idx_users_org_id'
+	    ) THEN
+	        CREATE INDEX idx_users_org_id ON users(org_id);
+	        RAISE NOTICE 'Created index: idx_users_org_id';
+	    ELSE
+	        RAISE NOTICE 'Index idx_users_org_id already exists';
+	    END IF;
+	END $$;
+2026-04-12 10:41:27.187 IST [9841] ERROR:  column "org_id" does not exist
+2026-04-12 10:41:27.187 IST [9841] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_users_org_email ON users(org_id, email);
+2026-04-12 10:41:27.188 IST [9841] ERROR:  column "org_id" does not exist at character 54
+2026-04-12 10:41:27.188 IST [9841] HINT:  Perhaps you meant to reference the column "users.role_id".
+2026-04-12 10:41:27.188 IST [9841] QUERY:  SELECT COUNT(*)                     FROM users WHERE org_id IS NULL
+2026-04-12 10:41:27.188 IST [9841] CONTEXT:  PL/pgSQL function inline_code_block line 9 at SQL statement
+2026-04-12 10:41:27.188 IST [9841] STATEMENT:  DO $$
+	DECLARE
+	    null_org_count INT;
+	    null_role_count INT;
+	    fk_org_exists BOOLEAN;
+	    fk_role_exists BOOLEAN;
+	    idx_org_exists BOOLEAN;
+	BEGIN
+	    SELECT COUNT(*) INTO null_org_count FROM users WHERE org_id IS NULL;
+	    SELECT COUNT(*) INTO null_role_count FROM users WHERE role_id IS NULL;
+	
+	    SELECT EXISTS (
+	        SELECT 1 FROM information_schema.table_constraints
+	        WHERE table_name = 'users' AND constraint_name = 'fk_users_organization'
+	    ) INTO fk_org_exists;
+	
+	    SELECT EXISTS (
+	        SELECT 1 FROM information_schema.table_constraints
+	        WHERE table_name = 'users' AND constraint_name = 'fk_users_role'
+	    ) INTO fk_role_exists;
+	
+	    SELECT EXISTS (
+	        SELECT 1 FROM pg_indexes
+	        WHERE schemaname = 'public' AND tablename = 'users' AND indexname = 'idx_users_org_id'
+	    ) INTO idx_org_exists;
+	
+	    RAISE NOTICE 'Verification:';
+	    RAISE NOTICE '  Users with NULL org_id: %', null_org_count;
+	    RAISE NOTICE '  Users with NULL role_id: %', null_role_count;
+	    RAISE NOTICE '  FK users.org_id → organizations exists: %', fk_org_exists;
+	    RAISE NOTICE '  FK users.role_id → roles exists: %', fk_role_exists;
+	    RAISE NOTICE '  Index idx_users_org_id exists: %', idx_org_exists;
+	
+	    IF null_org_count = 0 AND null_role_count = 0 AND fk_org_exists AND fk_role_exists AND idx_org_exists THEN
+	        RAISE NOTICE 'SUCCESS: users table constraints are properly configured';
+	    END IF;
+	END $$;
+2026-04-12 10:41:27.188 IST [9841] ERROR:  syntax error at or near "EXISTS" at character 45
+2026-04-12 10:41:27.188 IST [9841] STATEMENT:  ALTER TABLE users
+	    ADD CONSTRAINT IF NOT EXISTS chk_users_status
+	    CHECK (status IN ('active', 'inactive', 'suspended', 'pending'));
+2026-04-12 10:41:27.188 IST [9841] ERROR:  constraint "chk_users_status" for table "users" does not exist
+2026-04-12 10:41:27.188 IST [9841] STATEMENT:  COMMENT ON CONSTRAINT chk_users_status ON users IS 'Allowed values for user account status';
+2026-04-12 10:41:27.189 IST [9841] ERROR:  column "org_id" of relation "users" does not exist
+2026-04-12 10:41:27.189 IST [9841] STATEMENT:  COMMENT ON COLUMN users.org_id IS 'Organization UUID - NOT NULL, foreign key to organizations(id) - required for multi-tenancy';
+2026-04-12 10:41:27.265 IST [9845] ERROR:  column i.indkey does not exist at character 138
+2026-04-12 10:41:27.265 IST [9845] HINT:  Perhaps you meant to reference the column "idx.indkey".
+2026-04-12 10:41:27.265 IST [9845] QUERY:  SELECT
+	            t.relname AS table_name,
+	            i.relname AS index_name,
+	            array_agg(a.attname ORDER BY array_position(i.indkey, a.attnum)) AS indexed_columns
+	        FROM pg_index idx
+	        JOIN pg_class i ON i.oid = idx.indexrelid
+	        JOIN pg_class t ON t.oid = idx.indrelid
+	        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
+	        WHERE t.relkind = 'r' -- ordinary tables only
+	          AND t.relnamespace = 'public'::regnamespace
+	          AND array_length(idx.indkey, 1) = 1 -- single-column indexes only
+	        GROUP BY t.relname, i.relname
+	        HAVING COUNT(*) > 1
+2026-04-12 10:41:27.265 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 5 at FOR over SELECT rows
+2026-04-12 10:41:27.265 IST [9845] STATEMENT:  DO $$
+	DECLARE
+	    dup_record RECORD;
+	BEGIN
+	    FOR dup_record IN
+	        SELECT
+	            t.relname AS table_name,
+	            i.relname AS index_name,
+	            array_agg(a.attname ORDER BY array_position(i.indkey, a.attnum)) AS indexed_columns
+	        FROM pg_index idx
+	        JOIN pg_class i ON i.oid = idx.indexrelid
+	        JOIN pg_class t ON t.oid = idx.indrelid
+	        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(idx.indkey)
+	        WHERE t.relkind = 'r' -- ordinary tables only
+	          AND t.relnamespace = 'public'::regnamespace
+	          AND array_length(idx.indkey, 1) = 1 -- single-column indexes only
+	        GROUP BY t.relname, i.relname
+	        HAVING COUNT(*) > 1
+	    LOOP
+	        -- This query finds tables with multiple single-column indexes on different columns
+	        -- But we want to find duplicates on the SAME column
+	        -- Let's do a different approach
+	    END LOOP;
+	END $$;
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on api_clients.client_id: 2 indexes - api_clients_client_id_key, idx_api_clients_client_id
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on backup_verifications.backup_id: 2 indexes - backup_verifications_backup_id_key, idx_backup_verifications_backup_id
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on billing_coupons.code: 2 indexes - billing_coupons_code_key, idx_coupons_code
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on billing_subscriptions.org_id: 2 indexes - billing_subscriptions_org_id_key, idx_subs_org_id
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on invites.code: 2 indexes - idx_invites_code, invites_code_key
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.281 IST [9845] WARNING:  Duplicate index on mfa_org_overrides.org_id: 2 indexes - idx_mfa_org_overrides_org_id, mfa_org_overrides_org_id_key
+2026-04-12 10:41:27.281 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.282 IST [9845] WARNING:  Duplicate index on vehicles.license_plate: 2 indexes - idx_vehicles_license, vehicles_license_plate_key
+2026-04-12 10:41:27.282 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.282 IST [9845] WARNING:  Duplicate index on vehicles.vehicle_no: 2 indexes - idx_vehicles_vehicle_no, vehicles_vehicle_no_key
+2026-04-12 10:41:27.282 IST [9845] CONTEXT:  PL/pgSQL function inline_code_block line 23 at RAISE
+2026-04-12 10:41:27.712 IST [9861] ERROR:  syntax error at or near "EXECUTE" at character 988
+2026-04-12 10:41:27.712 IST [9861] STATEMENT:  DO $$
+	DECLARE
+	    tbl RECORD;
+	    rows_updated INT;
+	BEGIN
+	    FOR tbl IN
+	        SELECT table_name
+	        FROM information_schema.columns c
+	        WHERE c.table_schema = 'public'
+	          AND c.column_name = 'organization_id'
+	          AND EXISTS (
+	              SELECT 1 FROM information_schema.columns c2
+	              WHERE c2.table_schema = 'public'
+	                AND c2.table_name = c.table_name
+	                AND c2.column_name = 'org_id'
+	          )
+	    LOOP
+	        RAISE NOTICE 'Migrating data in %: organization_id → org_id', tbl.table_name;
+	
+	        -- Update rows where org_id is NULL but organization_id has value
+	        EXECUTE format(
+	            'UPDATE %I SET org_id = organization_id WHERE org_id IS NULL AND organization_id IS NOT NULL',
+	            tbl.table_name
+	        );
+	        GET DIAGNOSTICS rows_updated = ROW_COUNT;
+	        RAISE NOTICE '  Updated % rows', rows_updated;
+	
+	        -- Verification: check for mismatches
+	        IF EXISTS (
+	            EXECUTE format(
+	                'SELECT 1 FROM %I WHERE org_id != organization_id AND organization_id IS NOT NULL LIMIT 1',
+	                tbl.table_name
+	            )
+	        ) THEN
+	            RAISE WARNING '  Table % still has mismatched values!', tbl.table_name;
+	        ELSE
+	            RAISE NOTICE '  Data migration successful for %', tbl.table_name;
+	        END IF;
+	    END LOOP;
+	END $$;
+2026-04-12 10:41:27.774 IST [9861] WARNING:  Could not add FK fk_inspection_templates_organization to inspection_templates: insert or update on table "inspection_templates" violates foreign key constraint "fk_inspection_templates_organization"
+2026-04-12 10:41:27.774 IST [9861] CONTEXT:  PL/pgSQL function inline_code_block line 31 at RAISE
+2026-04-12 10:41:27.990 IST [9873] ERROR:  relation "fuel_logs" does not exist
+2026-04-12 10:41:27.990 IST [9873] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_fuel_logs_updated_by ON fuel_logs(updated_by) WHERE updated_by IS NOT NULL;
+2026-04-12 10:41:28.051 IST [9877] ERROR:  relation "driver_audit_logs" does not exist
+2026-04-12 10:41:28.051 IST [9877] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_driver_audit_logs_org_id ON driver_audit_logs(org_id);
+2026-04-12 10:41:28.054 IST [9877] ERROR:  relation "vehicle_assignments" does not exist
+2026-04-12 10:41:28.054 IST [9877] STATEMENT:  CREATE INDEX IF NOT EXISTS idx_vehicle_assignments_device_id ON vehicle_assignments(device_id) WHERE device_id IS NOT NULL;
+2026-04-12 10:41:28.107 IST [9881] ERROR:  column v.tenant_id does not exist at character 88
+2026-04-12 10:41:28.107 IST [9881] QUERY:  SELECT COUNT(*)                       FROM vehicles v
+	    LEFT JOIN organizations o ON v.tenant_id = o.id
+	    WHERE v.tenant_id IS NOT NULL AND o.id IS NULL
+2026-04-12 10:41:28.107 IST [9881] CONTEXT:  PL/pgSQL function inline_code_block line 5 at SQL statement
+2026-04-12 10:41:28.107 IST [9881] STATEMENT:  DO $$
+	DECLARE
+	    orphan_count INTEGER;
+	BEGIN
+	    SELECT COUNT(*) INTO orphan_count
+	    FROM vehicles v
+	    LEFT JOIN organizations o ON v.tenant_id = o.id
+	    WHERE v.tenant_id IS NOT NULL AND o.id IS NULL;
+	
+	    IF orphan_count > 0 THEN
+	        RAISE EXCEPTION 'Found % vehicles with invalid tenant_id (no matching organization). Fix data first.', orphan_count;
+	    END IF;
+	END $$;
+2026-04-12 10:41:28.108 IST [9881] ERROR:  column "tenant_id" does not exist
+2026-04-12 10:41:28.108 IST [9881] STATEMENT:  ALTER TABLE vehicles RENAME COLUMN tenant_id TO org_id;
+2026-04-12 10:41:28.110 IST [9881] ERROR:  syntax error at or near "\" at character 496
+2026-04-12 10:41:28.110 IST [9881] STATEMENT:  DO $$
+	BEGIN
+	    IF NOT EXISTS (
+	        SELECT 1 FROM information_schema.table_constraints tc
+	        JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+	        WHERE tc.constraint_type = 'FOREIGN KEY'
+	          AND tc.table_name = 'vehicles'
+	          AND kcu.column_name = 'org_id'
+	    ) THEN
+	        ALTER TABLE vehicles
+	        ADD CONSTRAINT fk_vehicles_organization
+	        FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE;
+	        \echo '✅ Added FK: vehicles.org_id → organizations.id';
+	    ELSE
+	        \echo '✅ FK already exists, skipping';
+	    END IF;
+	END $$;
+2026-04-12 10:41:28.117 IST [9881] ERROR:  syntax error at or near "\" at character 265
+2026-04-12 10:41:28.117 IST [9881] STATEMENT:  DO $$
+	BEGIN
+	    -- Check if RLS is already enabled
+	    IF NOT EXISTS (
+	        SELECT 1 FROM pg_tables
+	        WHERE schemaname = 'public' AND tablename = 'vehicles' AND rowsecurity = true
+	    ) THEN
+	        ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
+	        \echo '✅ Enabled RLS on vehicles';
+	
+	        -- Create tenant isolation policy
+	        CREATE POLICY vehicles_tenant_policy ON vehicles
+	            FOR ALL
+	            USING (org_id = get_current_org_id())
+	            WITH CHECK (org_id = get_current_org_id());
+	        \echo '✅ Created RLS policy: vehicles_tenant_policy';
+	    ELSE
+	        \echo '✅ RLS already enabled on vehicles';
+	
+	        -- Check if policy exists, if not create it
+	        IF NOT EXISTS (
+	            SELECT 1 FROM pg_policies WHERE tablename = 'vehicles' AND policyname = 'vehicles_tenant_policy'
+	        ) THEN
+	            CREATE POLICY vehicles_tenant_policy ON vehicles
+	                FOR ALL
+	                USING (org_id = get_current_org_id())
+	                WITH CHECK (org_id = get_current_org_id());
+	            \echo '✅ Created missing RLS policy: vehicles_tenant_policy';
+	        END IF;
+	    END IF;
+	END $$;
+2026-04-12 10:41:28.409 IST [9893] WARNING:  Could not add FK fk_inspection_templates_organization to inspection_templates: insert or update on table "inspection_templates" violates foreign key constraint "fk_inspection_templates_organization"
+2026-04-12 10:41:28.409 IST [9893] CONTEXT:  PL/pgSQL function inline_code_block line 30 at RAISE
+2026-04-12 10:41:28.499 IST [9893] ERROR:  syntax error at or near "as" at character 216
+2026-04-12 10:41:28.499 IST [9893] STATEMENT:  SELECT COUNT(*) FROM information_schema.columns WHERE column_name = 'organization_id' AND table_schema = 'public' AND table_name IN (SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE') as remaining_org_id_columns;
+2026-04-12 10:41:28.505 IST [9893] ERROR:  syntax error at or near "as" at character 204
+2026-04-12 10:41:28.505 IST [9893] STATEMENT:  SELECT COUNT(*) FROM pg_policies WHERE policyname NOT LIKE '%_tenant_policy' AND tablename IN (SELECT table_name FROM information_schema.columns WHERE column_name = 'org_id' AND table_schema = 'public') as non_standard_policies;
+2026-04-12 10:41:28.623 IST [9897] WARNING:  Could not add FK fk_inspection_templates_organization to inspection_templates: insert or update on table "inspection_templates" violates foreign key constraint "fk_inspection_templates_organization"
+2026-04-12 10:41:28.623 IST [9897] CONTEXT:  PL/pgSQL function inline_code_block line 31 at RAISE
+2026-04-12 10:41:28.682 IST [9901] ERROR:  relation "fuel_logs" does not exist
+2026-04-12 10:41:28.682 IST [9901] STATEMENT:  ALTER TABLE fuel_logs DROP COLUMN IF EXISTS organization_id;
+2026-04-12 10:41:28.682 IST [9901] ERROR:  relation "fuel_transactions" does not exist
+2026-04-12 10:41:28.682 IST [9901] STATEMENT:  ALTER TABLE fuel_transactions DROP COLUMN IF EXISTS organization_id;
+2026-04-12 10:41:28.683 IST [9901] ERROR:  relation "fuel_logs" does not exist at character 286
+2026-04-12 10:41:28.683 IST [9901] STATEMENT:  CREATE MATERIALIZED VIEW finance_dashboard_summary AS
+	WITH monthly_fuel AS (
+	    SELECT fuel_logs.org_id AS org_id,
+	           date_trunc('month', fuel_logs.transaction_date)::date AS month,
+	           sum(fuel_logs.total_cost) AS fuel_cost,
+	           count(*) AS fuel_count
+	    FROM fuel_logs
+	    GROUP BY fuel_logs.org_id, date_trunc('month', fuel_logs.transaction_date)::date
+	),
+	monthly_expenses AS (
+	    SELECT expense_items.org_id,
+	           date_trunc('month', expense_items.transaction_date::timestamp with time zone)::date AS month,
+	           sum(expense_items.amount) AS expense_cost,
+	           count(*) AS expense_count
+	    FROM expense_items
+	    GROUP BY expense_items.org_id, date_trunc('month', expense_items.transaction_date::timestamp with time zone)::date
+	),
+	monthly_tds AS (
+	    SELECT tds_records.org_id,
+	           date_trunc('month', tds_records.deducted_at)::date AS month,
+	           sum(tds_records.tds_amount) AS tds_cost
+	    FROM tds_records
+	    GROUP BY tds_records.org_id, date_trunc('month', tds_records.deducted_at)::date
+	)
+	SELECT COALESCE(f.org_id, e.org_id, t.org_id) AS org_id,
+	       COALESCE(f.month, e.month, t.month) AS month,
+	       COALESCE(f.fuel_cost, 0) AS total_fuel_cost,
+	       COALESCE(e.expense_cost, 0) AS total_expense_cost,
+	       COALESCE(t.tds_cost, 0) AS total_tds_deducted,
+	       COALESCE(f.fuel_cost, 0) + COALESCE(e.expense_cost, 0) AS total_cost,
+	       COALESCE(f.fuel_count, 0) AS fuel_transaction_count,
+	       COALESCE(e.expense_count, 0) AS expense_count,
+	       now() AS last_updated
+	FROM monthly_fuel f
+	FULL JOIN monthly_expenses e ON f.org_id = e.org_id AND f.month = e.month
+	FULL JOIN monthly_tds t ON COALESCE(f.org_id, e.org_id) = t.org_id AND COALESCE(f.month, e.month) = t.month;
+2026-04-12 10:41:28.683 IST [9901] ERROR:  relation "finance_dashboard_summary" does not exist
+2026-04-12 10:41:28.683 IST [9901] STATEMENT:  CREATE UNIQUE INDEX idx_finance_summary_org_month ON finance_dashboard_summary (org_id, month);
+2026-04-12 10:41:28.683 IST [9901] ERROR:  relation "finance_dashboard_summary" does not exist
+2026-04-12 10:41:28.683 IST [9901] STATEMENT:  REFRESH MATERIALIZED VIEW finance_dashboard_summary;
+2026-04-12 10:41:28.886 IST [9905] ERROR:  relation "final_unindexed" does not exist at character 22
+2026-04-12 10:41:28.886 IST [9905] STATEMENT:  SELECT COUNT(*) FROM final_unindexed;
+2026-04-12 10:41:28.941 IST [9909] ERROR:  relation "invoice_permissions" does not exist at character 8
+2026-04-12 10:41:28.941 IST [9909] STATEMENT:  UPDATE invoice_permissions
+	SET org_id = 'ce95cfe5-42a2-48b2-99d5-3f817c2f0247'
+	WHERE org_id = '00000000-0000-0000-0000-000000000000';
+2026-04-12 10:41:28.946 IST [9909] ERROR:  relation "invoice_permissions" does not exist
+2026-04-12 10:41:28.946 IST [9909] CONTEXT:  SQL statement "ALTER TABLE invoice_permissions
+	        ADD CONSTRAINT fk_invoice_permissions_organization
+	        FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE"
+	PL/pgSQL function inline_code_block line 9 at SQL statement
+2026-04-12 10:41:28.946 IST [9909] STATEMENT:  DO $$
+	BEGIN
+	    IF NOT EXISTS (
+	        SELECT 1 FROM information_schema.table_constraints
+	        WHERE table_name = 'invoice_permissions'
+	          AND constraint_type = 'FOREIGN KEY'
+	          AND constraint_name = 'fk_invoice_permissions_organization'
+	    ) THEN
+	        ALTER TABLE invoice_permissions
+	        ADD CONSTRAINT fk_invoice_permissions_organization
+	        FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE;
+	        RAISE NOTICE 'Added FK: fk_invoice_permissions_organization';
+	    ELSE
+	        RAISE NOTICE 'FK already exists, skipping';
+	    END IF;
+	END $$;
+2026-04-12 10:41:29.191 IST [9921] ERROR:  role "flyfleet_app_user" does not exist
+2026-04-12 10:41:29.191 IST [9921] STATEMENT:  CREATE POLICY vehicle_tenant_isolation ON vehicles
+	    FOR ALL
+	    TO flyfleet_app_user
+	    USING (org_id = get_current_org_id());
+2026-04-12 10:41:29.192 IST [9921] ERROR:  role "flyfleet_app_user" does not exist
+2026-04-12 10:41:29.192 IST [9921] STATEMENT:  CREATE POLICY trip_tenant_isolation ON trips
+	    FOR ALL
+	    TO flyfleet_app_user
+	    USING (org_id = get_current_org_id());
+2026-04-12 10:41:29.194 IST [9921] ERROR:  role "flyfleet_app_user" does not exist
+2026-04-12 10:41:29.194 IST [9921] STATEMENT:  CREATE POLICY telemetry_tenant_isolation ON telemetry_events
+	    FOR ALL
+	    TO flyfleet_app_user
+	    USING (org_id = get_current_org_id());
+2026-04-12 10:41:29.308 IST [9929] ERROR:  column "email_verified" of relation "users" does not exist at character 60
+2026-04-12 10:41:29.308 IST [9929] STATEMENT:  INSERT INTO users (id, email, password_hash, name, status, email_verified, permission_mask)
+	VALUES (
+	    '00000000-0000-0000-0000-000000000001',
+	    'admin@flyfleet.local',
+	    '$2a$10$X7yMjZkzPzGqKX4fGqKX4eYjHZqKX4fGqKX4eYjHZqKX4eYjHZqKX',
+	    'System Administrator',
+	    'active',
+	    true,
+	    9223372036854775807  -- All permissions (bitmask all 1s)
+	)
+	ON CONFLICT (id) DO NOTHING;
+2026-04-12 10:41:29.309 IST [9929] ERROR:  column "slug" of relation "organizations" does not exist at character 38
+2026-04-12 10:41:29.309 IST [9929] STATEMENT:  INSERT INTO organizations (id, name, slug, status, plan_type)
+	VALUES (
+	    '00000000-0000-0000-0000-000000000001',
+	    'Default Fleet',
+	    'default-fleet',
+	    'active',
+	    'enterprise'
+	)
+	ON CONFLICT (id) DO NOTHING;
+2026-04-12 10:41:29.309 IST [9929] ERROR:  column "organization_id" of relation "user_organizations" does not exist at character 42
+2026-04-12 10:41:29.309 IST [9929] STATEMENT:  INSERT INTO user_organizations (user_id, organization_id, role)
+	VALUES (
+	    '00000000-0000-0000-0000-000000000001',
+	    '00000000-0000-0000-0000-000000000001',
+	    'admin'
+	)
+	ON CONFLICT (user_id, organization_id) DO NOTHING;
+2026-04-12 10:41:29.310 IST [9929] ERROR:  column "permissions" of relation "roles" does not exist at character 43
+2026-04-12 10:41:29.310 IST [9929] STATEMENT:  INSERT INTO roles (id, name, description, permissions, is_system)
+	VALUES
+	    ('00000000-0000-0000-0000-000000000001', 'Super Admin', 'Full system access', 9223372036854775807, true),
+	    ('00000000-0000-0000-0000-000000000002', 'Fleet Manager', 'Manage vehicles, drivers, trips', 281474976710655, true),
+	    ('00000000-0000-0000-0000-000000000003', 'Driver', 'View assigned trips and vehicles', 1023, true),
+	    ('00000000-0000-0000-0000-000000000004', 'Viewer', 'Read-only access', 1, true),
+	    ('00000000-0000-0000-0000-000000000005', 'Dispatcher', 'Manage trips and routing', 65535, true)
+	ON CONFLICT (id) DO NOTHING;
+2026-04-12 10:41:29.310 IST [9929] ERROR:  relation "system_config" does not exist at character 13
+2026-04-12 10:41:29.310 IST [9929] STATEMENT:  INSERT INTO system_config (key, value, description)
+	VALUES
+	    ('auth.mfa_required', 'false', 'Require MFA for all users'),
+	    ('auth.session_timeout', '3600', 'Session timeout in seconds'),
+	    ('auth.max_concurrent_sessions', '3', 'Max concurrent sessions per user'),
+	    ('tracking.gps_interval', '30', 'GPS telemetry interval in seconds'),
+	    ('tracking.websocket_port', '8084', 'WebSocket server port'),
+	    ('features.geofencing', 'true', 'Enable geofencing module'),
+	    ('features.maintenance', 'true', 'Enable maintenance module'),
+	    ('features.billing', 'true', 'Enable billing module'),
+	    ('features.india_integration', 'true', 'Enable India-specific integrations'),
+	    ('ui.default_language', 'en', 'Default UI language'),
+	    ('ui.default_map_center', '{"lat":28.6139,"lng":77.2090}', 'Default map center (New Delhi)')
+	ON CONFLICT (key) DO NOTHING;
+2026-04-12 10:41:29.312 IST [9929] ERROR:  column "event_pattern" of relation "audit_policies" does not exist at character 29
+2026-04-12 10:41:29.312 IST [9929] QUERY:  INSERT INTO audit_policies (event_pattern, retention_days, created_at)
+	    VALUES
+	        ('%', 90, NOW()),
+	        ('auth.%', 365, NOW()),
+	        ('user.%', 365, NOW())
+	    ON CONFLICT DO NOTHING
+2026-04-12 10:41:29.312 IST [9929] CONTEXT:  PL/pgSQL function inline_code_block line 4 at SQL statement
+2026-04-12 10:41:29.312 IST [9929] STATEMENT:  DO $$
+	BEGIN
+	    -- Ensure audit log retention policy is set
+	    INSERT INTO audit_policies (event_pattern, retention_days, created_at)
+	    VALUES
+	        ('%', 90, NOW()),
+	        ('auth.%', 365, NOW()),
+	        ('user.%', 365, NOW())
+	    ON CONFLICT DO NOTHING;
+	END $$;
+2026-04-12 10:41:29.313 IST [9929] ERROR:  relation "vehicle_types" does not exist at character 13
+2026-04-12 10:41:29.313 IST [9929] STATEMENT:  INSERT INTO vehicle_types (name, description, capacity_unit)
+	VALUES
+	    ('truck_heavy', 'Heavy duty truck', 'tons'),
+	    ('truck_medium', 'Medium duty truck', 'tons'),
+	    ('truck_light', 'Light commercial vehicle', 'kg'),
+	    ('van', 'Delivery van', 'cubic_meters'),
+	    ('car', 'Passenger car', 'passengers'),
+	    ('bike', 'Motorcycle/scooter', 'passengers'),
+	    ('bus', 'Passenger bus', 'passengers'),
+	    ('trailer', 'Semi-trailer', 'tons')
+	ON CONFLICT (name) DO NOTHING;
+2026-04-12 10:41:29.313 IST [9929] ERROR:  relation "fuel_types" does not exist at character 13
+2026-04-12 10:41:29.313 IST [9929] STATEMENT:  INSERT INTO fuel_types (name, unit)
+	VALUES
+	    ('diesel', 'liters'),
+	    ('petrol', 'liters'),
+	    ('cng', 'kg'),
+	    ('electric', 'kWh'),
+	    ('lpg', 'liters')
+	ON CONFLICT (name) DO NOTHING;
+2026-04-12 10:41:29.314 IST [9929] ERROR:  relation "notification_templates" does not exist at character 13
+2026-04-12 10:41:29.314 IST [9929] STATEMENT:  INSERT INTO notification_templates (name, channel, subject, body, is_system)
+	VALUES
+	    ('geofence_entry', 'push', 'Vehicle entered geofence', 'Vehicle {{vehicle_name}} entered zone {{zone_name}}', true),
+	    ('geofence_exit', 'push', 'Vehicle exited geofence', 'Vehicle {{vehicle_name}} exited zone {{zone_name}}', true),
+	    ('maintenance_due', 'email', 'Maintenance Due', 'Vehicle {{vehicle_name}} is due for {{maintenance_type}}', true),
+	    ('sos_alert', 'push', 'SOS ALERT', 'Emergency SOS from vehicle {{vehicle_name}} at {{location}}', true),
+	    ('trip_completed', 'email', 'Trip Completed', 'Trip {{trip_id}} has been completed successfully', true),
+	    ('mfa_code', 'email', 'Your MFA Code', 'Your verification code is: {{code}}', true)
+	ON CONFLICT (name) DO NOTHING;
+2026-04-12 10:44:48.145 IST [9211] LOG:  checkpoint starting: time
+2026-04-12 10:47:21.015 IST [9211] LOG:  checkpoint complete: wrote 1510 buffers (9.2%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=152.617 s, sync=0.195 s, total=152.871 s; sync files=1184, longest=0.041 s, average=0.001 s; distance=11061 kB, estimate=11061 kB; lsn=0/2231130, redo lsn=0/22310A0
+2026-04-12 10:54:11.272 IST [11976] ERROR:  column "avatar_url" does not exist at character 50
+2026-04-12 10:54:11.272 IST [11976] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE id = $1
+2026-04-12 10:54:11.313 IST [11976] ERROR:  column "revoked_at" of relation "auth_tokens" does not exist at character 24
+2026-04-12 10:54:11.313 IST [11976] STATEMENT:  UPDATE auth_tokens SET revoked_at = $1 WHERE user_id = $2
+2026-04-12 10:54:11.326 IST [11976] ERROR:  column "revoked_at" of relation "auth_tokens" does not exist at character 24
+2026-04-12 10:54:11.326 IST [11976] STATEMENT:  UPDATE auth_tokens SET revoked_at = $1 WHERE user_id = $2
+2026-04-12 10:54:11.338 IST [11976] ERROR:  column "avatar_url" does not exist at character 50
+2026-04-12 10:54:11.338 IST [11976] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE email = $1
+2026-04-12 10:54:36.613 IST [11976] ERROR:  column "avatar_url" does not exist at character 50
+2026-04-12 10:54:36.613 IST [11976] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE email = $1
+2026-04-12 10:54:59.327 IST [11976] ERROR:  column "avatar_url" does not exist at character 50
+2026-04-12 10:54:59.327 IST [11976] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE email = $1
+2026-04-12 10:59:48.309 IST [9211] LOG:  checkpoint starting: time
+2026-04-12 10:59:49.154 IST [9211] LOG:  checkpoint complete: wrote 8 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.812 s, sync=0.009 s, total=0.845 s; sync files=9, longest=0.003 s, average=0.001 s; distance=43 kB, estimate=9959 kB; lsn=0/223BE70, redo lsn=0/223BE18
+2026-04-12 11:01:05.728 IST [15698] ERROR:  column "mfa_backup_codes" does not exist at character 105
+2026-04-12 11:01:05.728 IST [15698] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE email = $1
+2026-04-12 11:01:50.042 IST [15694] ERROR:  column "email_verified" does not exist at character 138
+2026-04-12 11:01:50.042 IST [15694] STATEMENT:  
+			SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
+			       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+			       COALESCE(failed_logins, 0), locked_until, last_login_at,
+			       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
+			       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+			       created_at, updated_at
+			FROM users WHERE email = $1
+2026-04-12 11:04:48.214 IST [9211] LOG:  checkpoint starting: time
+2026-04-12 11:04:51.318 IST [9211] LOG:  checkpoint complete: wrote 30 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.055 s, sync=0.027 s, total=3.104 s; sync files=25, longest=0.003 s, average=0.002 s; distance=169 kB, estimate=8980 kB; lsn=0/22663E0, redo lsn=0/2266388
+2026-04-12 11:13:32.798 IST [17774] ERROR:  null value in column "role_id" of relation "users" violates not-null constraint
+2026-04-12 11:13:32.798 IST [17774] DETAIL:  Failing row contains (550e8400-e29b-41d4-a716-446655440001, admin@flyfleet.io, $2a$12$LJ3m4ys3Lk2TzKq3qJzZFOa9Vqz2K4qG2qG2qG2qG2qG2qG2qG2qG, Admin User, null, f, null, active, 2026-04-12 11:13:32.783924+05:30, 2026-04-12 11:13:32.783924+05:30, null, f, null, 0, f, en, null, [], t, 0, null, null, null).
+2026-04-12 11:13:32.798 IST [17774] STATEMENT:  INSERT INTO users (id, email, password_hash, name, status, email_verified, mfa_enabled, failed_logins, sidebar_collapsed, language, created_at, updated_at) VALUES ('550e8400-e29b-41d4-a716-446655440001'::uuid, 'admin@flyfleet.io', '$2a$12$LJ3m4ys3Lk2TzKq3qJzZFOa9Vqz2K4qG2qG2qG2qG2qG2qG2qG2qG', 'Admin User', 'active', true, false, 0, false, 'en', NOW(), NOW()) ON CONFLICT (id) DO NOTHING;
+2026-04-12 11:14:16.790 IST [17894] ERROR:  column "plan_type" of relation "organizations" does not exist at character 70
+2026-04-12 11:14:16.790 IST [17894] STATEMENT:  
+	-- Create organization
+	INSERT INTO organizations (id, name, status, plan_type, created_at, updated_at)
+	VALUES ('org-00000000-0000-0000-0000-000000000001'::uuid, 'Delta Fleet', 'active', 'enterprise', NOW(), NOW())
+	ON CONFLICT (id) DO NOTHING;
+	
+	-- Create user with role_id
+	INSERT INTO users (
+	    id, email, password_hash, name, role_id, status,
+	    email_verified, mfa_enabled, failed_logins, 
+	    sidebar_collapsed, language, created_at, updated_at
+	) VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    'admin@flyfleet.io',
+	    '$2a$12$LJ3m4ys3Lk2TzKq3qJzZFOa9Vqz2K4qG2qG2qG2qG2qG2qG2qG2qG',
+	    'Admin User',
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    'active',
+	    true, false, 0,
+	    false, 'en',
+	    NOW(), NOW()
+	) ON CONFLICT (id) DO NOTHING;
+	
+	-- Link user to organization
+	INSERT INTO user_organizations (user_id, organization_id, role_id, is_default, created_at)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    'org-00000000-0000-0000-0000-000000000001'::uuid,
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    true,
+	    NOW()
+	) ON CONFLICT DO NOTHING;
+	
+2026-04-12 11:14:38.632 IST [17924] ERROR:  invalid input syntax for type uuid: "org-00000000-0000-0000-0000-000000000001" at character 108
+2026-04-12 11:14:38.632 IST [17924] STATEMENT:  
+	-- Create organization
+	INSERT INTO organizations (id, name, status, plan, created_at, updated_at)
+	VALUES ('org-00000000-0000-0000-0000-000000000001'::uuid, 'Delta Fleet', 'active', 'enterprise', NOW(), NOW())
+	ON CONFLICT (id) DO NOTHING;
+	
+	-- Create user with role_id
+	INSERT INTO users (
+	    id, email, password_hash, name, role_id, status,
+	    email_verified, mfa_enabled, failed_logins, 
+	    sidebar_collapsed, language, created_at, updated_at
+	) VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    'admin@flyfleet.io',
+	    '$2a$12$LJ3m4ys3Lk2TzKq3qJzZFOa9Vqz2K4qG2qG2qG2qG2qG2qG2qG2qG',
+	    'Admin User',
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    'active',
+	    true, false, 0,
+	    false, 'en',
+	    NOW(), NOW()
+	) ON CONFLICT (id) DO NOTHING;
+	
+	-- Link user to organization
+	INSERT INTO user_organizations (user_id, organization_id, role_id, is_default, created_at)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    'org-00000000-0000-0000-0000-000000000001'::uuid,
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    true,
+	    NOW()
+	) ON CONFLICT DO NOTHING;
+	
+2026-04-12 11:14:48.399 IST [9211] LOG:  checkpoint starting: time
+2026-04-12 11:14:48.654 IST [9211] LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.205 s, sync=0.004 s, total=0.256 s; sync files=2, longest=0.004 s, average=0.002 s; distance=1 kB, estimate=8082 kB; lsn=0/2266A50, redo lsn=0/22669F8
+2026-04-12 11:14:57.151 IST [18123] ERROR:  column "organization_id" of relation "user_organizations" does not exist at character 835
+2026-04-12 11:14:57.151 IST [18123] STATEMENT:  
+	-- Create organization
+	INSERT INTO organizations (id, name, status, plan, created_at, updated_at)
+	VALUES ('00000000-0000-0000-0000-000000000001'::uuid, 'Delta Fleet', 'active', 'enterprise', NOW(), NOW())
+	ON CONFLICT (id) DO NOTHING;
+	
+	-- Create user with role_id
+	INSERT INTO users (
+	    id, email, password_hash, name, role_id, status,
+	    email_verified, mfa_enabled, failed_logins, 
+	    sidebar_collapsed, language, created_at, updated_at
+	) VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    'admin@flyfleet.io',
+	    '$2a$12$LJ3m4ys3Lk2TzKq3qJzZFOa9Vqz2K4qG2qG2qG2qG2qG2qG2qG2qG',
+	    'Admin User',
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    'active',
+	    true, false, 0,
+	    false, 'en',
+	    NOW(), NOW()
+	) ON CONFLICT (id) DO NOTHING;
+	
+	-- Link user to organization
+	INSERT INTO user_organizations (user_id, organization_id, role_id, is_default, created_at)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    '00000000-0000-0000-0000-000000000001'::uuid,
+	    'e349ce46-2c59-4c43-8338-afc37d01b88e'::uuid,
+	    true,
+	    NOW()
+	) ON CONFLICT DO NOTHING;
+	
+2026-04-12 11:15:18.793 IST [18175] ERROR:  insert or update on table "user_organizations" violates foreign key constraint "user_organizations_user_id_fkey"
+2026-04-12 11:15:18.793 IST [18175] DETAIL:  Key (user_id)=(550e8400-e29b-41d4-a716-446655440001) is not present in table "users".
+2026-04-12 11:15:18.793 IST [18175] STATEMENT:  
+	INSERT INTO user_organizations (user_id, org_id, role, status, created_at)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    '00000000-0000-0000-0000-000000000001'::uuid,
+	    'super_admin',
+	    'active',
+	    NOW()
+	) ON CONFLICT DO NOTHING;
+	
+2026-04-12 11:16:07.853 IST [18378] ERROR:  insert or update on table "user_organizations" violates foreign key constraint "user_organizations_org_id_fkey"
+2026-04-12 11:16:07.853 IST [18378] DETAIL:  Key (org_id)=(00000000-0000-0000-0000-000000000001) is not present in table "organizations".
+2026-04-12 11:16:07.853 IST [18378] STATEMENT:  
+	INSERT INTO user_organizations (user_id, org_id, role, status, created_at)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001'::uuid,
+	    '00000000-0000-0000-0000-000000000001'::uuid,
+	    'super_admin',
+	    'active',
+	    NOW()
+	) ON CONFLICT DO NOTHING;
+	
+2026-04-12 11:17:27.570 IST [15698] ERROR:  column o.theme_color does not exist at character 43
+2026-04-12 11:17:27.570 IST [15698] STATEMENT:  
+			SELECT o.id, o.name, uo.role, COALESCE(o.theme_color, ''),
+				   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.org_id = o.id), 0)
+			FROM user_organizations uo
+			JOIN organizations o ON o.id = uo.org_id
+			WHERE uo.user_id = $1
+2026-04-12 11:18:04.305 IST [15694] ERROR:  relation "user_roles" does not exist at character 54
+2026-04-12 11:18:04.305 IST [15694] STATEMENT:  
+			SELECT COALESCE(MAX(r.permission_mask), 0)
+			FROM user_roles ur
+			JOIN roles r ON r.id = ur.role_id
+			WHERE ur.user_id = $1 AND ur.org_id = $2
+2026-04-12 11:18:04.314 IST [15694] ERROR:  relation "user_roles" does not exist at character 54
+2026-04-12 11:18:04.314 IST [15694] STATEMENT:  
+			SELECT COALESCE(MAX(r.permission_mask), 0)
+			FROM user_roles ur
+			JOIN roles r ON r.id = ur.role_id
+			WHERE ur.user_id = $1 AND ur.org_id = $2
+2026-04-12 11:18:04.315 IST [15694] ERROR:  relation "user_roles" does not exist at character 136
+2026-04-12 11:18:04.315 IST [15694] STATEMENT:  
+			SELECT r.id, r.org_id, r.name, r.description, r.is_system, r.permission_mask,
+				   r.created_by, r.created_at, r.updated_at
+			FROM user_roles ur
+			JOIN roles r ON r.id = ur.role_id
+			WHERE ur.user_id = $1 AND ur.org_id = $2
+2026-04-12 11:18:04.318 IST [15694] ERROR:  column "org_id" of relation "auth_tokens" does not exist at character 38
+2026-04-12 11:18:04.318 IST [15694] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 11:18:04.319 IST [15694] ERROR:  column "description" does not exist at character 33
+2026-04-12 11:18:04.319 IST [15694] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 11:19:48.753 IST [9211] LOG:  checkpoint starting: time
+2026-04-12 11:19:55.739 IST [9211] LOG:  checkpoint complete: wrote 67 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.832 s, sync=0.092 s, total=6.986 s; sync files=50, longest=0.032 s, average=0.002 s; distance=210 kB, estimate=7295 kB; lsn=0/229B608, redo lsn=0/229B5B0
+2026-04-12 11:23:17.390 IST [9205] LOG:  received fast shutdown request
+2026-04-12 11:23:17.400 IST [9205] LOG:  aborting any active transactions
+2026-04-12 11:23:17.402 IST [15693] FATAL:  terminating connection due to administrator command
+2026-04-12 11:23:17.402 IST [15694] FATAL:  terminating connection due to administrator command
+2026-04-12 11:23:17.402 IST [15699] FATAL:  terminating connection due to administrator command
+2026-04-12 11:23:17.402 IST [15695] FATAL:  terminating connection due to administrator command
+2026-04-12 11:23:17.402 IST [15698] FATAL:  terminating connection due to administrator command
+2026-04-12 11:23:17.419 IST [9205] LOG:  background worker "logical replication launcher" (PID 9216) exited with exit code 1
+2026-04-12 11:23:17.426 IST [9211] LOG:  shutting down
+2026-04-12 11:23:17.429 IST [9211] LOG:  checkpoint starting: shutdown immediate
+2026-04-12 11:23:17.454 IST [9211] LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.001 s, total=0.027 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=6565 kB; lsn=0/229B6B8, redo lsn=0/229B6B8
+2026-04-12 11:23:17.515 IST [9205] LOG:  database system is shut down
+2026-04-12 11:23:25.680 IST [20374] LOG:  starting PostgreSQL 18.2 on aarch64-unknown-linux-android, compiled by Android (13989888, +pgo, +bolt, +lto, +mlgo, based on r563880c) clang version 21.0.0 (https://android.googlesource.com/toolchain/llvm-project 5e96669f06077099aa41290cdb4c5e6fa0f59349), 64-bit
+2026-04-12 11:23:25.682 IST [20374] LOG:  listening on IPv4 address "127.0.0.1", port 5433
+2026-04-12 11:23:25.683 IST [20374] LOG:  listening on Unix socket "/data/data/com.termux/files/usr/tmp/.s.PGSQL.5433"
+2026-04-12 11:23:25.750 IST [20382] LOG:  database system was shut down at 2026-04-12 11:23:17 IST
+2026-04-12 11:23:25.766 IST [20374] LOG:  database system is ready to accept connections
+2026-04-12 11:24:22.846 IST [20688] ERROR:  column "status" does not exist at character 18
+2026-04-12 11:24:22.846 IST [20688] STATEMENT:  SELECT id, name, status FROM organizations LIMIT 5;
+2026-04-12 11:24:50.299 IST [20766] LOG:  PID 15693 in cancel request did not match any process
+2026-04-12 11:24:50.301 IST [20767] LOG:  PID 15699 in cancel request did not match any process
+2026-04-12 11:24:50.304 IST [20768] LOG:  PID 15695 in cancel request did not match any process
+2026-04-12 11:24:50.306 IST [20769] LOG:  PID 15698 in cancel request did not match any process
+2026-04-12 11:24:50.309 IST [20770] LOG:  PID 15694 in cancel request did not match any process
+2026-04-12 11:26:55.359 IST [20791] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 11:26:55.359 IST [20791] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 11:26:55.360 IST [20791] ERROR:  column "resource" does not exist at character 15
+2026-04-12 11:26:55.360 IST [20791] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 11:48:03.186 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 11:51:16.773 IST [20380] LOG:  checkpoint complete: wrote 660 buffers (4.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=193.279 s, sync=0.058 s, total=193.587 s; sync files=187, longest=0.003 s, average=0.001 s; distance=6258 kB, estimate=6258 kB; lsn=0/28B7FA0, redo lsn=0/28B7F10
+2026-04-12 11:55:44.517 IST [24267] ERROR:  update or delete on table "organizations" violates foreign key constraint "geofences_org_id_fkey" on table "geofences"
+2026-04-12 11:55:44.517 IST [24267] DETAIL:  Key (id)=(550e8400-e29b-41d4-a716-446655440000) is still referenced from table "geofences".
+2026-04-12 11:55:44.517 IST [24267] STATEMENT:  
+	DELETE FROM users WHERE email = 'admin@flyfleet.io';
+	DELETE FROM user_organizations WHERE user_id = '550e8400-e29b-41d4-a716-446655440001';
+	DELETE FROM organizations WHERE id = '550e8400-e29b-41d4-a716-446655440000';
+	DELETE FROM roles WHERE org_id = '550e8400-e29b-41d4-a716-446655440000';
+	
+2026-04-12 11:56:19.877 IST [24315] ERROR:  column "is_deleted" of relation "users" does not exist at character 301
+2026-04-12 11:56:19.877 IST [24315] STATEMENT:  
+	-- Just test the user insert (the critical one)
+	INSERT INTO users (id, email, password_hash, name, status, email_verified, permission_mask,
+	                   sidebar_collapsed, language, mfa_enabled, mfa_secret, mfa_backup_codes,
+	                   failed_logins, phone, avatar_url, last_login_ip, is_deleted)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001',
+	    'admin@flyfleet.io',
+	    '$2a$10$B2/XZniBnqEmecEhQGzUn.9ZU5sNpthotIAmxEJcWqGEkodD7Jp9i',
+	    'Admin User',
+	    'active',
+	    true,
+	    9223372036854775807,
+	    false, 'en',
+	    false, '', '[]'::jsonb,
+	    0, '', '', '',
+	    false
+	) ON CONFLICT (id) DO NOTHING;
+	
+	-- Link user to org
+	INSERT INTO user_organizations (user_id, org_id, role, is_active)
+	VALUES (
+	    '550e8400-e29b-41d4-a716-446655440001',
+	    '550e8400-e29b-41d4-a716-446655440000',
+	    'admin',
+	    true
+	) ON CONFLICT DO NOTHING;
+	
+	-- Test roles insert
+	INSERT INTO roles (id, org_id, name, description, is_system, permission_mask)
+	VALUES
+	    ('e349ce46-2c59-4c43-8338-afc37d01b88e', '550e8400-e29b-41d4-a716-446655440000', 'Super Admin', 'Full system access', true, 9223372036854775807)
+	ON CONFLICT (id) DO NOTHING;
+	
+2026-04-12 11:58:03.958 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 11:58:04.662 IST [20380] LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.626 s, sync=0.011 s, total=0.705 s; sync files=7, longest=0.004 s, average=0.002 s; distance=20 kB, estimate=5634 kB; lsn=0/28BD190, redo lsn=0/28BD138
+2026-04-12 11:59:37.832 IST [20771] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 11:59:37.832 IST [20771] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 11:59:37.833 IST [20771] ERROR:  column "resource" does not exist at character 15
+2026-04-12 11:59:37.833 IST [20771] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 12:03:03.719 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 12:03:04.319 IST [20380] LOG:  checkpoint complete: wrote 5 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.525 s, sync=0.010 s, total=0.601 s; sync files=6, longest=0.004 s, average=0.002 s; distance=5 kB, estimate=5071 kB; lsn=0/28BE7A8, redo lsn=0/28BE750
+2026-04-12 12:33:48.535 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 12:33:48.734 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.123 s, sync=0.003 s, total=0.201 s; sync files=1, longest=0.003 s, average=0.003 s; distance=2 kB, estimate=4564 kB; lsn=0/28BF390, redo lsn=0/28BF338
+2026-04-12 12:38:47.365 IST [26350] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 12:38:47.365 IST [26350] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 12:38:47.367 IST [26350] ERROR:  column "resource" does not exist at character 15
+2026-04-12 12:38:47.367 IST [26350] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 12:38:48.813 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 12:38:49.000 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.107 s, sync=0.002 s, total=0.187 s; sync files=2, longest=0.002 s, average=0.001 s; distance=3 kB, estimate=4108 kB; lsn=0/28C01E8, redo lsn=0/28C0190
+2026-04-12 13:59:46.555 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 13:59:46.714 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.119 s, sync=0.003 s, total=0.161 s; sync files=1, longest=0.003 s, average=0.003 s; distance=3 kB, estimate=3698 kB; lsn=0/28C10B0, redo lsn=0/28C1058
+2026-04-12 14:12:58.557 IST [16761] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 14:12:58.557 IST [16761] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 14:13:55.531 IST [16761] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 14:13:55.531 IST [16761] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 14:13:55.533 IST [16761] ERROR:  column "resource" does not exist at character 15
+2026-04-12 14:13:55.533 IST [16761] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 14:14:47.037 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 14:14:47.233 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.134 s, sync=0.005 s, total=0.198 s; sync files=2, longest=0.004 s, average=0.003 s; distance=4 kB, estimate=3328 kB; lsn=0/28C2210, redo lsn=0/28C21B8
+2026-04-12 14:20:05.924 IST [16759] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 14:20:05.924 IST [16759] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 14:20:05.931 IST [16759] ERROR:  column "resource" does not exist at character 15
+2026-04-12 14:20:05.931 IST [16759] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-12 14:24:47.415 IST [20380] LOG:  checkpoint starting: time
+2026-04-12 14:24:47.642 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.119 s, sync=0.005 s, total=0.229 s; sync files=2, longest=0.003 s, average=0.003 s; distance=4 kB, estimate=2996 kB; lsn=0/28C34D8, redo lsn=0/28C3480
+2026-04-12 14:53:33.479 IST [26176] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 14:53:33.479 IST [26176] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 16:07:28.516 IST [26329] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 16:07:28.516 IST [26329] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 16:24:48.532 IST [802] LOG:  invalid length of startup packet
+2026-04-12 16:25:44.821 IST [6770] LOG:  invalid length of startup packet
+2026-04-12 16:26:41.800 IST [10525] LOG:  invalid length of startup packet
+2026-04-12 16:28:48.430 IST [16771] LOG:  invalid length of startup packet
+2026-04-12 16:35:00.586 IST [8312] LOG:  invalid length of startup packet
+2026-04-12 16:36:25.107 IST [14621] LOG:  invalid length of startup packet
+2026-04-12 16:37:16.317 IST [18185] LOG:  invalid length of startup packet
+2026-04-12 16:38:53.898 IST [23747] LOG:  invalid length of startup packet
+2026-04-12 16:43:32.934 IST [9752] LOG:  invalid length of startup packet
+2026-04-12 16:45:40.243 IST [16475] LOG:  invalid length of startup packet
+2026-04-12 16:47:37.645 IST [22047] LOG:  invalid length of startup packet
+2026-04-12 16:49:33.321 IST [27828] LOG:  invalid length of startup packet
+2026-04-12 16:51:25.741 IST [1318] LOG:  invalid length of startup packet
+2026-04-12 16:53:26.354 IST [9670] LOG:  invalid length of startup packet
+2026-04-12 16:55:32.900 IST [16268] LOG:  invalid length of startup packet
+2026-04-12 16:57:24.304 IST [21799] LOG:  invalid length of startup packet
+2026-04-12 16:59:15.322 IST [27061] LOG:  invalid length of startup packet
+2026-04-12 17:01:15.098 IST [886] LOG:  invalid length of startup packet
+2026-04-12 17:03:06.358 IST [7828] LOG:  invalid length of startup packet
+2026-04-12 17:04:58.734 IST [13814] LOG:  invalid length of startup packet
+2026-04-12 17:06:51.056 IST [20119] LOG:  invalid length of startup packet
+2026-04-12 17:08:46.096 IST [25624] LOG:  invalid length of startup packet
+2026-04-12 17:10:46.904 IST [31576] LOG:  invalid length of startup packet
+2026-04-12 17:12:54.329 IST [7284] LOG:  invalid length of startup packet
+2026-04-12 17:14:52.260 IST [13453] LOG:  invalid length of startup packet
+2026-04-12 17:16:42.128 IST [19675] LOG:  invalid length of startup packet
+2026-04-12 17:18:26.270 IST [24611] LOG:  invalid length of startup packet
+2026-04-12 17:20:11.074 IST [29914] LOG:  invalid length of startup packet
+2026-04-12 17:21:53.900 IST [4725] LOG:  invalid length of startup packet
+2026-04-12 17:23:38.151 IST [10010] LOG:  invalid length of startup packet
+2026-04-12 17:25:20.576 IST [15401] LOG:  invalid length of startup packet
+2026-04-12 17:27:08.216 IST [21505] LOG:  invalid length of startup packet
+2026-04-12 17:28:50.408 IST [26225] LOG:  invalid length of startup packet
+2026-04-12 17:30:34.242 IST [31493] LOG:  invalid length of startup packet
+2026-04-12 17:32:36.824 IST [8415] LOG:  invalid length of startup packet
+2026-04-12 17:34:21.106 IST [13657] LOG:  invalid length of startup packet
+2026-04-12 17:36:07.186 IST [19336] LOG:  invalid length of startup packet
+2026-04-12 17:37:53.541 IST [24669] LOG:  invalid length of startup packet
+2026-04-12 17:39:37.834 IST [29877] LOG:  invalid length of startup packet
+2026-04-12 17:41:24.190 IST [4978] LOG:  invalid length of startup packet
+2026-04-12 17:43:11.291 IST [11045] LOG:  invalid length of startup packet
+2026-04-12 17:44:54.405 IST [16494] LOG:  invalid length of startup packet
+2026-04-12 17:46:41.132 IST [23931] LOG:  invalid length of startup packet
+2026-04-12 17:48:05.555 IST [28468] LOG:  invalid length of startup packet
+2026-04-12 17:49:35.483 IST [1378] LOG:  invalid length of startup packet
+2026-04-12 17:51:06.918 IST [8159] LOG:  invalid length of startup packet
+2026-04-12 17:52:40.899 IST [13685] LOG:  invalid length of startup packet
+2026-04-12 17:54:09.428 IST [18670] LOG:  invalid length of startup packet
+2026-04-12 17:55:37.382 IST [23651] LOG:  invalid length of startup packet
+2026-04-12 17:57:08.803 IST [28597] LOG:  invalid length of startup packet
+2026-04-12 17:58:36.626 IST [1469] LOG:  invalid length of startup packet
+2026-04-12 18:00:11.305 IST [8689] LOG:  invalid length of startup packet
+2026-04-12 18:01:42.514 IST [13821] LOG:  invalid length of startup packet
+2026-04-12 18:03:09.259 IST [18771] LOG:  invalid length of startup packet
+2026-04-12 18:04:39.591 IST [23726] LOG:  invalid length of startup packet
+2026-04-12 18:06:11.941 IST [28725] LOG:  invalid length of startup packet
+2026-04-12 18:07:42.830 IST [1433] LOG:  invalid length of startup packet
+2026-04-12 18:09:13.929 IST [8022] LOG:  invalid length of startup packet
+2026-04-12 18:10:41.433 IST [13184] LOG:  invalid length of startup packet
+2026-04-12 18:12:13.054 IST [18093] LOG:  invalid length of startup packet
+2026-04-12 18:13:45.506 IST [23134] LOG:  invalid length of startup packet
+2026-04-12 18:15:14.681 IST [27775] LOG:  invalid length of startup packet
+2026-04-12 18:16:44.649 IST [32511] LOG:  invalid length of startup packet
+2026-04-12 18:18:16.415 IST [7165] LOG:  invalid length of startup packet
+2026-04-12 18:19:48.649 IST [12447] LOG:  invalid length of startup packet
+2026-04-12 18:21:17.257 IST [17007] LOG:  invalid length of startup packet
+2026-04-12 18:22:48.672 IST [22029] LOG:  invalid length of startup packet
+2026-04-12 18:24:20.715 IST [26553] LOG:  invalid length of startup packet
+2026-04-12 18:25:51.666 IST [31518] LOG:  invalid length of startup packet
+2026-04-12 18:27:21.939 IST [6083] LOG:  invalid length of startup packet
+2026-04-12 18:28:54.734 IST [11250] LOG:  invalid length of startup packet
+2026-04-12 18:30:26.350 IST [16204] LOG:  invalid length of startup packet
+2026-04-12 18:31:56.071 IST [21195] LOG:  invalid length of startup packet
+2026-04-12 18:33:26.315 IST [25580] LOG:  invalid length of startup packet
+2026-04-12 18:35:03.368 IST [30935] LOG:  invalid length of startup packet
+2026-04-12 18:36:48.875 IST [7478] LOG:  invalid length of startup packet
+2026-04-12 18:38:16.409 IST [12069] LOG:  invalid length of startup packet
+2026-04-12 18:39:42.510 IST [16812] LOG:  invalid length of startup packet
+2026-04-12 18:41:14.523 IST [21612] LOG:  invalid length of startup packet
+2026-04-12 18:42:41.571 IST [27099] LOG:  invalid length of startup packet
+2026-04-12 18:44:44.528 IST [3703] LOG:  invalid length of startup packet
+2026-04-12 18:45:59.778 IST [7959] LOG:  invalid length of startup packet
+2026-04-12 18:47:29.490 IST [12395] LOG:  invalid length of startup packet
+2026-04-12 18:49:03.681 IST [17067] LOG:  invalid length of startup packet
+2026-04-12 18:50:35.813 IST [21452] LOG:  invalid length of startup packet
+2026-04-12 18:52:19.001 IST [26573] LOG:  invalid length of startup packet
+2026-04-12 18:53:51.469 IST [31732] LOG:  invalid length of startup packet
+2026-04-12 18:55:24.598 IST [6303] LOG:  invalid length of startup packet
+2026-04-12 18:57:02.147 IST [11354] LOG:  invalid length of startup packet
+2026-04-12 18:58:39.714 IST [16473] LOG:  invalid length of startup packet
+2026-04-12 19:00:15.302 IST [20881] LOG:  invalid length of startup packet
+2026-04-12 19:01:53.380 IST [25788] LOG:  invalid length of startup packet
+2026-04-12 19:03:30.147 IST [30869] LOG:  invalid length of startup packet
+2026-04-12 19:05:05.747 IST [5502] LOG:  invalid length of startup packet
+2026-04-12 19:06:38.888 IST [10262] LOG:  invalid length of startup packet
+2026-04-12 19:08:17.877 IST [14940] LOG:  invalid length of startup packet
+2026-04-12 19:09:53.732 IST [19415] LOG:  invalid length of startup packet
+2026-04-12 19:11:26.882 IST [23858] LOG:  invalid length of startup packet
+2026-04-12 19:12:58.374 IST [28322] LOG:  invalid length of startup packet
+2026-04-12 19:14:31.845 IST [2193] LOG:  invalid length of startup packet
+2026-04-12 19:16:08.280 IST [8600] LOG:  invalid length of startup packet
+2026-04-12 19:17:42.964 IST [13382] LOG:  invalid length of startup packet
+2026-04-12 19:19:19.509 IST [18114] LOG:  invalid length of startup packet
+2026-04-12 19:20:56.304 IST [22707] LOG:  invalid length of startup packet
+2026-04-12 19:22:36.882 IST [27986] LOG:  invalid length of startup packet
+2026-04-12 19:24:15.709 IST [1358] LOG:  invalid length of startup packet
+2026-04-12 19:25:52.564 IST [7859] LOG:  invalid length of startup packet
+2026-04-12 19:27:31.361 IST [12853] LOG:  invalid length of startup packet
+2026-04-12 19:29:04.079 IST [17320] LOG:  invalid length of startup packet
+2026-04-12 19:30:45.039 IST [22516] LOG:  invalid length of startup packet
+2026-04-12 19:32:43.574 IST [28565] LOG:  invalid length of startup packet
+2026-04-12 19:34:21.703 IST [932] LOG:  invalid length of startup packet
+2026-04-12 20:28:06.117 IST [12716] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 20:28:06.117 IST [12716] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 21:06:00.943 IST [1311] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 21:06:00.943 IST [1311] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 22:19:54.098 IST [17493] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 22:19:54.098 IST [17493] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-12 23:17:04.079 IST [29188] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-12 23:17:04.079 IST [29188] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 01:00:45.852 IST [18666] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 01:00:45.852 IST [18666] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 01:22:37.015 IST [23028] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 01:22:37.015 IST [23028] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 01:59:40.602 IST [27272] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 01:59:40.602 IST [27272] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)

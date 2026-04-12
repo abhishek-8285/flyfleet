@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User MFA Status &amp; Reset Controls</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Enforcement</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<h2 class="text-white text-lg font-bold">User MFA Enforcement Management</h2>
+<p class="text-[11px] text-text-muted mt-0.5 uppercase tracking-wide">Security Suite / MFA Enforcement</p>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                    High Security Mode
+                </span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Enforce Global Policy</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-danger hover:bg-red-600 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-danger/20 ring-1 ring-white/10">
+<span class="material-symbols-outlined text-[16px]">phonelink_erase</span>
+                    Force Global MFA Reset
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Active Users</div>
+<div class="text-2xl font-bold text-white">12,458</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                        All accounts compliant
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">MFA Configured</div>
+<div class="text-2xl font-bold text-success">98.2%</div>
+<div class="text-[10px] text-text-muted mt-1">206 Pending Setup</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Hardware Keys</div>
+<div class="text-2xl font-bold text-primary">1,204</div>
+<div class="text-[10px] text-text-muted mt-1">FIDO2 Devices Active</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Reset Requests (24h)</div>
+<div class="text-2xl font-bold text-warning">14</div>
+<div class="text-[10px] text-text-muted mt-1">Requires Admin Action</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full min-h-[500px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">manage_accounts</span>
+                        User MFA Status
+                    </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1.5 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search by user or email..." type="text"/>
+</div>
+<button class="p-1.5 bg-surface-dark border border-border-color rounded text-text-muted hover:text-white hover:bg-border-color transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+<button class="p-1.5 bg-primary text-white rounded hover:bg-primary-dark shadow-lg shadow-primary/20 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add_moderator</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-6 py-3 font-semibold">User Identity</th>
+<th class="px-6 py-3 font-semibold">MFA Status</th>
+<th class="px-6 py-3 font-semibold">Primary Method</th>
+<th class="px-6 py-3 font-semibold text-center">Trusted Devices</th>
+<th class="px-6 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                                            JD
+                                        </div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">John Doe</span>
+<span class="text-[11px] text-text-muted">john.doe@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        ACTIVE
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">smartphone</span>
+<span class="text-white">TOTP App</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5">Google Authenticator</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="text-white font-mono font-medium bg-surface-darker px-2 py-1 rounded border border-border-color">3</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-text-muted text-xs text-text-muted hover:text-white rounded transition-colors">
+                                            View Devices
+                                        </button>
+<button class="px-3 py-1.5 bg-danger/10 border border-danger/20 hover:bg-danger/20 text-xs text-danger font-medium rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restart_alt</span>
+                                            Reset MFA
+                                        </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                                            SC
+                                        </div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Sarah Connor</span>
+<span class="text-[11px] text-text-muted">sarah.c@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        ACTIVE
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">usb</span>
+<span class="text-white">FIDO2 Key</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5">YubiKey 5 NFC</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="text-white font-mono font-medium bg-surface-darker px-2 py-1 rounded border border-border-color">1</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-text-muted text-xs text-text-muted hover:text-white rounded transition-colors">
+                                            View Devices
+                                        </button>
+<button class="px-3 py-1.5 bg-danger/10 border border-danger/20 hover:bg-danger/20 text-xs text-danger font-medium rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restart_alt</span>
+                                            Reset MFA
+                                        </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                                            MR
+                                        </div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Mike Ross</span>
+<span class="text-[11px] text-text-muted">mike.ross@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-warning/10 text-warning border border-warning/20">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                        INACTIVE
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">sms</span>
+<span class="text-white">SMS OTP</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5">Pending verification</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="text-white font-mono font-medium bg-surface-darker px-2 py-1 rounded border border-border-color">0</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-text-muted text-xs text-text-muted hover:text-white rounded transition-colors">
+                                            View Devices
+                                        </button>
+<button class="px-3 py-1.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-xs text-primary font-medium rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">send</span>
+                                            Send Invite
+                                        </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                                            GU
+                                        </div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Guest User</span>
+<span class="text-[11px] text-text-muted">guest.user@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-danger/10 text-danger border border-danger/20">
+<span class="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                        LOCKED
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">smartphone</span>
+<span class="text-white">TOTP App</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5">Failed attempts limit</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="text-white font-mono font-medium bg-surface-darker px-2 py-1 rounded border border-border-color">1</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-text-muted text-xs text-text-muted hover:text-white rounded transition-colors">
+                                            View Devices
+                                        </button>
+<button class="px-3 py-1.5 bg-warning/10 border border-warning/20 hover:bg-warning/20 text-xs text-warning font-medium rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock_open</span>
+                                            Unlock &amp; Reset
+                                        </button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                                            AB
+                                        </div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Alice Baker</span>
+<span class="text-[11px] text-text-muted">alice.b@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        ACTIVE
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">smartphone</span>
+<span class="text-white">TOTP App</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5">Authy</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="text-white font-mono font-medium bg-surface-darker px-2 py-1 rounded border border-border-color">2</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-text-muted text-xs text-text-muted hover:text-white rounded transition-colors">
+                                            View Devices
+                                        </button>
+<button class="px-3 py-1.5 bg-danger/10 border border-danger/20 hover:bg-danger/20 text-xs text-danger font-medium rounded transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restart_alt</span>
+                                            Reset MFA
+                                        </button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-darker border-t border-border-color flex justify-between items-center text-xs">
+<span class="text-text-muted">Showing 1-5 of 12,458 users</span>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded border border-border-color text-text-muted hover:text-white hover:bg-border-color disabled:opacity-50" disabled="">Previous</button>
+<button class="px-3 py-1.5 rounded border border-border-color text-text-muted hover:text-white hover:bg-border-color">Next</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+<div class="flex items-center gap-4">
+<span>Encryption: <span class="text-success">AES-256</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

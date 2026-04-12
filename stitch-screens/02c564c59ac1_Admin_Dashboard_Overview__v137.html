@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Backup Job - Disaster Recovery</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">database_upload</span>
+<span class="text-sm font-medium">Disaster Recovery</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+<a class="hover:text-primary transition-colors" href="#">Disaster Recovery</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Backups</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-white">Create Job</span>
+</nav>
+<h2 class="text-white text-lg font-bold leading-tight">Create Backup Job</h2>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-border-color text-text-muted hover:text-white hover:bg-surface-dark text-xs font-semibold rounded transition-colors">
+                    Cancel
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">play_circle</span>
+                    Start Backup Job
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="max-w-4xl mx-auto space-y-8">
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">settings_backup_restore</span>
+<h3 class="text-white font-semibold text-base">Backup Configuration</h3>
+</div>
+<div class="bg-surface-dark border border-border-color rounded-xl p-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Backup Type</label>
+<div class="grid grid-cols-2 gap-2 p-1 bg-surface-darker border border-border-color rounded-lg">
+<label class="cursor-pointer">
+<input checked="" class="sr-only peer" name="backup_type" type="radio"/>
+<div class="flex items-center justify-center py-2 px-3 rounded-md text-xs font-medium text-text-muted peer-checked:bg-primary peer-checked:text-white transition-all">
+                                            FULL
+                                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="sr-only peer" name="backup_type" type="radio"/>
+<div class="flex items-center justify-center py-2 px-3 rounded-md text-xs font-medium text-text-muted peer-checked:bg-primary peer-checked:text-white transition-all">
+                                            INCREMENTAL
+                                        </div>
+</label>
+</div>
+<p class="text-[10px] text-text-muted">Full: complete snapshot of all data. Incremental: only changes since last job.</p>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Storage Location</label>
+<div class="relative">
+<select class="w-full bg-surface-darker border border-danger text-sm text-white rounded-lg px-4 py-2.5 outline-none focus:ring-1 focus:ring-danger appearance-none">
+<option disabled="" selected="" value="">Select location...</option>
+<option value="hot">HOT (Amazon S3 - Standard)</option>
+<option value="cold">COLD (Amazon S3 Glacier)</option>
+</select>
+<div class="absolute right-3 top-2.5 pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+<p class="text-[10px] text-danger flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">error</span>
+                                    Validation Error: Please select a storage location
+                                </p>
+</div>
+<div class="col-span-2 space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Retention Policy (Days)</label>
+<div class="flex items-center gap-4">
+<div class="flex-1">
+<input class="w-full bg-surface-darker border border-border-color focus:border-primary focus:ring-primary text-sm text-white rounded-lg px-4 py-2.5 outline-none" placeholder="e.g. 30" type="number" value="30"/>
+</div>
+<div class="flex-1 flex items-center gap-4 px-4 py-2 bg-warning/10 border border-warning/30 rounded-lg">
+<span class="material-symbols-outlined text-warning text-[20px]">warning</span>
+<p class="text-[11px] text-warning font-medium leading-tight">Retention periods over 90 days may incur additional cold storage costs.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">info</span>
+<h3 class="text-white font-semibold text-base">Metadata</h3>
+</div>
+<div class="bg-surface-dark border border-border-color rounded-xl p-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="col-span-2 space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Remarks / Description</label>
+<textarea class="w-full bg-surface-darker border border-border-color focus:border-primary focus:ring-primary text-sm text-white rounded-lg px-4 py-2.5 outline-none resize-none" placeholder="Describe the purpose of this backup job..." rows="3"></textarea>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Initiated By</label>
+<div class="flex items-center gap-3 px-4 py-2.5 bg-surface-darker border border-border-color rounded-lg text-sm text-text-muted">
+<span class="material-symbols-outlined text-[18px]">person</span>
+<span>Alex Morgan (alex.m@fleet.com)</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-semibold text-text-muted uppercase tracking-wider">Job Identifier</label>
+<div class="px-4 py-2.5 bg-surface-darker border border-border-color rounded-lg text-sm font-mono text-text-muted">
+                                    DR-BACKUP-20231024-X9
+                                </div>
+</div>
+</div>
+</div>
+</section>
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<h3 class="text-white font-semibold text-base">Schedule</h3>
+</div>
+<div class="bg-surface-dark border border-border-color rounded-xl p-6">
+<div class="space-y-6">
+<div class="flex items-center gap-8">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-primary bg-surface-darker border-border-color focus:ring-primary focus:ring-offset-surface-dark" name="schedule_type" type="radio"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white group-hover:text-primary transition-colors">Immediate</span>
+<span class="text-[10px] text-text-muted">Job will start immediately after creation</span>
+</div>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="w-4 h-4 text-primary bg-surface-darker border-border-color focus:ring-primary focus:ring-offset-surface-dark" name="schedule_type" type="radio"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white group-hover:text-primary transition-colors">Scheduled</span>
+<span class="text-[10px] text-text-muted">Configure a specific time or recurring window</span>
+</div>
+</label>
+</div>
+<div class="p-4 bg-surface-darker border border-border-color rounded-lg opacity-40 cursor-not-allowed">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Execution Time</label>
+<input class="w-full bg-surface-dark border border-border-color text-xs text-text-muted rounded px-3 py-2 pointer-events-none" disabled="" type="datetime-local"/>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Recurrence</label>
+<select class="w-full bg-surface-dark border border-border-color text-xs text-text-muted rounded px-3 py-2 pointer-events-none" disabled="">
+<option>Once</option>
+<option>Daily</option>
+<option>Weekly</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<div class="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+<span class="material-symbols-outlined text-primary text-[20px]">info</span>
+<div>
+<p class="text-xs text-white font-medium">API Endpoint: <code class="bg-surface-darker px-1 rounded text-primary">POST /dr/backups</code></p>
+<p class="text-[11px] text-text-muted mt-1">Submit this form to trigger a Disaster Recovery backup via the Web BFF. All operations are logged for compliance audits.</p>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Disaster Recovery Module V1.2</span>
+<div class="flex items-center gap-4">
+<span>Encryption: <span class="text-success">AES-256</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

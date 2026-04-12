@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetManager - Trip Management Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="checkbox"]:checked {
+            background-color: #137fec;
+            border-color: #137fec;
+        }
+        input[type="checkbox"] {
+            background-color: #16202a;
+            border-color: #233648;
+            color: #137fec;
+        }
+        input[type="checkbox"]:focus {
+            ring-color: #137fec;
+        }
+        .map-grid {
+            background-image: 
+                linear-gradient(#233648 1px, transparent 1px),
+                linear-gradient(90deg, #233648 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        .map-grid line {
+            stroke: #233648;
+            stroke-width: 0.5;
+        }
+    </style>
+    <!-- React Scripts -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Sidebar = () => {
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">local_shipping</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+                        <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Dashboard</span>
+                        </Link>
+                        <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary">
+                            <span className="material-symbols-outlined">route</span>
+                            <span className="text-sm font-medium">Trips</span>
+                        </Link>
+                         <Link to="/telemetry" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">map</span>
+                            <span className="text-sm font-medium">Live Map (Telemetry)</span>
+                        </Link>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">directions_car</span>
+                            <span className="text-sm font-medium">Vehicles</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">badge</span>
+                            <span className="text-sm font-medium">Drivers</span>
+                        </a>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">build</span>
+                            <span className="text-sm font-medium">Service Logs</span>
+                        </a>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Admin</div>
+                        <Link to="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">settings</span>
+                            <span className="text-sm font-medium">Settings</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Trip Coordinator</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- Screens ---
+
+        const TripListView = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <span>Fleet Management</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white">Trips</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Trip List View</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-gray-600 transition-all" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button className="p-2 bg-surface-dark hover:bg-border-color border border-border-color text-text-muted hover:text-white rounded transition-colors" title="Filters">
+                                    <span className="material-symbols-outlined text-[20px]">filter_list</span>
+                                </button>
+                                <Link to="/add" className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    Add Trip
+                                </Link>
+                            </div>
+                        </header>
+                        <div className="flex flex-1 overflow-hidden">
+                            <aside className="w-64 bg-surface-dark border-r border-border-color overflow-y-auto custom-scrollbar p-4 flex-shrink-0 hidden lg:block">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-white">Filters</h3>
+                                    <button className="text-[10px] text-primary hover:text-primary-dark font-medium">Reset All</button>
+                                </div>
+                                <div className="mb-6">
+                                    <h4 className="text-xs font-semibold text-text-muted uppercase mb-3">Trip Status</h4>
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                            <span className="text-xs text-gray-300 group-hover:text-white">Scheduled</span>
+                                            <span className="ml-auto text-[10px] text-gray-600">24</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input defaultChecked className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                            <span className="text-xs text-gray-300 group-hover:text-white">In Progress</span>
+                                            <span className="ml-auto text-[10px] text-gray-600">12</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                            <span className="text-xs text-gray-300 group-hover:text-white">Completed</span>
+                                            <span className="ml-auto text-[10px] text-gray-600">856</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer group">
+                                            <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                            <span className="text-xs text-gray-300 group-hover:text-white">Cancelled</span>
+                                            <span className="ml-auto text-[10px] text-gray-600">5</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {/* ... other filters ... */}
+                            </aside>
+                            <div className="flex-1 overflow-hidden flex flex-col p-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 overflow-hidden shadow-lg">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-white font-semibold text-sm">Active Trips</h3>
+                                            <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">12 Live</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Refresh">
+                                                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                            </button>
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Export">
+                                                <span className="material-symbols-outlined text-[18px]">download</span>
+                                            </button>
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Columns">
+                                                <span className="material-symbols-outlined text-[18px]">view_column</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto custom-scrollbar">
+                                        <table className="w-full text-left border-collapse min-w-[1000px]">
+                                            <thead className="sticky top-0 z-10">
+                                                <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker shadow-sm">
+                                                    <th className="px-4 py-3 font-semibold w-10">
+                                                        <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+                                                    </th>
+                                                    <th className="px-4 py-3 font-semibold">Trip ID</th>
+                                                    <th className="px-4 py-3 font-semibold">Vehicle ID</th>
+                                                    <th className="px-4 py-3 font-semibold">Driver ID</th>
+                                                    <th className="px-4 py-3 font-semibold">Start Location</th>
+                                                    <th className="px-4 py-3 font-semibold">End Location</th>
+                                                    <th className="px-4 py-3 font-semibold">Start Time</th>
+                                                    <th className="px-4 py-3 font-semibold">Distance</th>
+                                                    <th className="px-4 py-3 font-semibold text-right">Status</th>
+                                                    <th className="px-4 py-3 font-semibold w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                    <td className="px-4 py-3"><input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/></td>
+                                                    <td className="px-4 py-3 font-mono text-xs text-primary font-medium hover:underline cursor-pointer"><Link to="/detail">#TR-8821</Link></td>
+                                                    <td className="px-4 py-3 text-white flex items-center gap-2"><span className="material-symbols-outlined text-text-muted text-[16px]">local_shipping</span>VH-402</td>
+                                                    <td className="px-4 py-3 text-white"><div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-[9px] font-bold">JD</div><span className="text-xs">J. Doe</span></div></td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs">New York, NY</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs">Boston, MA</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 25, 08:30</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs font-mono">215 mi</td>
+                                                    <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20"><span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse"></span>IN PROGRESS</span></td>
+                                                    <td className="px-4 py-3 text-right"><button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><span className="material-symbols-outlined text-[16px]">more_vert</span></button></td>
+                                                </tr>
+                                                <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                    <td className="px-4 py-3"><input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/></td>
+                                                    <td className="px-4 py-3 font-mono text-xs text-primary font-medium hover:underline cursor-pointer"><Link to="/detail">#TR-8822</Link></td>
+                                                    <td className="px-4 py-3 text-white flex items-center gap-2"><span className="material-symbols-outlined text-text-muted text-[16px]">local_shipping</span>VH-109</td>
+                                                    <td className="px-4 py-3 text-white"><div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-[9px] font-bold">AS</div><span className="text-xs">A. Smith</span></div></td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs">Chicago, IL</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs">Detroit, MI</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 26, 09:00</td>
+                                                    <td className="px-4 py-3 text-text-muted text-xs font-mono">280 mi</td>
+                                                    <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">SCHEDULED</span></td>
+                                                    <td className="px-4 py-3 text-right"><button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"><span className="material-symbols-outlined text-[16px]">more_vert</span></button></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="p-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
+                                        <span className="text-[11px] text-text-muted">Showing 1-7 of 1,245 trips</span>
+                                        <div className="flex items-center gap-1">
+                                            <button className="px-2 py-1 rounded text-text-muted hover:text-white hover:bg-border-color disabled:opacity-50"><span className="material-symbols-outlined text-[16px]">chevron_left</span></button>
+                                            <button className="px-2 py-1 rounded bg-primary text-white text-[11px] font-bold">1</button>
+                                            <button className="px-2 py-1 rounded text-text-muted hover:text-white hover:bg-border-color text-[11px]">2</button>
+                                            <button className="px-2 py-1 rounded text-text-muted hover:text-white hover:bg-border-color text-[11px]">3</button>
+                                            <span className="text-text-muted text-[11px]">...</span>
+                                            <button className="px-2 py-1 rounded text-text-muted hover:text-white hover:bg-border-color text-[11px]">42</button>
+                                            <button className="px-2 py-1 rounded text-text-muted hover:text-white hover:bg-border-color"><span className="material-symbols-outlined text-[16px]">chevron_right</span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const AddTripForm = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col justify-center">
+                                <nav className="flex items-center text-xs text-text-muted mb-1">
+                                    <Link className="hover:text-white transition-colors" to="/">Trips</Link>
+                                    <span className="mx-2 text-border-color">/</span>
+                                    <span className="text-primary font-medium">Add</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">Add New Trip</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Link to="/" className="px-4 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </Link>
+                                <Link to="/" className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add</span>
+                                    Create Trip
+                                </Link>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto space-y-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                                            <span className="material-symbols-outlined text-sm">local_shipping</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white text-sm font-semibold">Trip Essentials</h3>
+                                            <p className="text-xs text-text-muted mt-0.5">Basic identification details for the assignment</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Vehicle ID <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><span className="material-symbols-outlined text-[18px]">directions_car</span></span>
+                                                <input className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="Select or enter vehicle ID" type="text"/>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Driver ID <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted"><span className="material-symbols-outlined text-[18px]">badge</span></span>
+                                                <input className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="Select assigned driver" type="text"/>
+                                            </div>
+                                        </div>
+                                        {/* More form fields... */}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const TripDetailView = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <Link className="hover:text-white cursor-pointer transition-colors" to="/">Trips</Link>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white font-medium">TRIP-2023-8492</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Trip Detail View</h2>
+                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-dark border border-border-color text-text-muted">
+                                    Freight Logistics
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Link to="/edit" className="px-4 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Trip
+                                </Link>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                {/* Stats Cards */}
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><span className="material-symbols-outlined text-4xl text-primary">distance</span></div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Distance</div>
+                                    <div className="text-2xl font-bold text-white">842.5 <span className="text-sm font-normal text-text-muted">km</span></div>
+                                </div>
+                                {/* ... more stats ... */}
+                            </div>
+
+                            <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-280px)] min-h-[600px]">
+                                <div className="lg:w-7/12 flex flex-col bg-surface-dark rounded-xl border border-border-color overflow-hidden relative">
+                                    <div className="absolute top-4 left-4 z-10 bg-surface-darker/90 backdrop-blur border border-border-color rounded p-2 shadow-lg">
+                                        <div className="text-xs font-bold text-white mb-1">Route #8492</div>
+                                        <div className="text-[10px] text-text-muted">Seattle, WA -&gt; Portland, OR</div>
+                                    </div>
+                                    <div className="w-full h-full bg-[#1b2631] map-grid relative flex items-center justify-center overflow-hidden">
+                                        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                                            <path className="opacity-40" d="M 200 150 Q 350 200 500 400" fill="none" stroke="#137fec" strokeDasharray="8 4" strokeLinecap="round" strokeWidth="4"></path>
+                                            <path d="M 200 150 Q 350 200 420 300" fill="none" stroke="#137fec" strokeLinecap="round" strokeWidth="4"></path>
+                                            <circle cx="200" cy="150" fill="#10b981" r="6" stroke="#ffffff" strokeWidth="2"></circle>
+                                            <circle cx="420" cy="300" fill="#137fec" r="8" stroke="#ffffff" strokeWidth="2">
+                                                <animate attributeName="r" dur="2s" repeatCount="indefinite" values="8;12;8"></animate>
+                                                <animate attributeName="opacity" dur="2s" repeatCount="indefinite" values="1;0.5;1"></animate>
+                                            </circle>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="lg:w-5/12 flex flex-col bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="flex border-b border-border-color bg-surface-darker">
+                                        <button className="px-6 py-3 text-sm font-medium text-white border-b-2 border-primary bg-surface-dark transition-colors">General Info</button>
+                                        <button className="px-6 py-3 text-sm font-medium text-text-muted hover:text-white border-b-2 border-transparent hover:border-border-color transition-colors">Vehicle Specs</button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">Shipment Details</h3>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="p-3 bg-surface-darker rounded border border-border-color">
+                                                        <div className="text-[10px] text-text-muted mb-1">Origin</div>
+                                                        <div className="text-sm font-medium text-white">Seattle Logistics Center</div>
+                                                    </div>
+                                                    <div className="p-3 bg-surface-darker rounded border border-border-color">
+                                                        <div className="text-[10px] text-text-muted mb-1">Destination</div>
+                                                        <div className="text-sm font-medium text-white">Portland Distribution Hub</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const TripTelemetryView = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <Link className="hover:text-white cursor-pointer transition-colors" to="/">Trips</Link>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white font-mono">TRIP-2023-8942</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-primary font-medium">Telemetry</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                                        Trip Telemetry View
+                                        <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                    </h2>
+                                </div>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+                            <div className="flex-1 flex flex-col h-full min-w-0 border-r border-border-color bg-background-dark overflow-y-auto custom-scrollbar">
+                                <div className="flex-1 min-h-[400px] relative bg-[#0b1219] group">
+                                     <div className="absolute inset-0 opacity-40 map-grid">
+                                        <svg className="w-full h-full" height="100%" width="100%">
+                                            <pattern height="40" id="grid" patternUnits="userSpaceOnUse" width="40">
+                                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#233648" strokeWidth="1"></path>
+                                            </pattern>
+                                            <rect fill="url(#grid)" height="100%" width="100%"></rect>
+                                            <path d="M-10,300 Q150,280 300,400 T600,350 T900,500" fill="none" stroke="#16202a" strokeWidth="12"></path>
+                                            <path d="M-10,300 Q150,280 300,400 T600,350 T900,500" fill="none" stroke="#233648" strokeWidth="2"></path>
+                                            <path d="M100,290 Q250,270 350,380 L380,370" fill="none" stroke="#137fec" strokeDasharray="8,4" strokeWidth="3"></path>
+                                        </svg>
+                                    </div>
+                                    <div className="absolute top-[370px] left-[380px] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+                                        <div className="bg-surface-darker/80 text-white text-[10px] px-2 py-1 rounded mb-1 border border-border-color backdrop-blur whitespace-nowrap">
+                                            Vehicle #8942 • 65 km/h
+                                        </div>
+                                        <div className="relative">
+                                            <div className="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(19,127,236,0.3)] animate-pulse"></div>
+                                            <div className="absolute -inset-4 bg-primary/20 rounded-full animate-ping"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="w-full lg:w-96 flex flex-col bg-surface-dark border-l border-border-color h-full z-10 shrink-0">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">sensors</span>
+                                        Live Telemetry Feed
+                                    </h3>
+                                    <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
+                                    <div className="divide-y divide-border-color">
+                                        <div className="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-primary bg-surface-darker/30">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-xs font-mono text-primary font-bold">14:35:42</span>
+                                                <span className="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">IGNITION ON</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+                                                <div className="flex justify-between">
+                                                    <span className="text-text-muted">Speed:</span>
+                                                    <span className="text-white font-medium">65 km/h</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* More telemetry items */}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const EditTripForm = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <nav aria-label="Breadcrumb" className="flex text-xs text-text-muted mb-1">
+                                        <ol className="flex items-center space-x-2">
+                                            <li><Link className="hover:text-white transition-colors" to="/">Trips</Link></li>
+                                            <li><span className="text-border-color">/</span></li>
+                                            <li><Link className="hover:text-white transition-colors" to="/detail">TR-2023-8492</Link></li>
+                                            <li><span className="text-border-color">/</span></li>
+                                            <li className="text-white font-medium">Edit</li>
+                                        </ol>
+                                    </nav>
+                                    <h2 className="text-white text-lg font-bold">Edit Trip Details</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Link to="/detail" className="px-4 py-2 border border-border-color bg-surface-dark hover:bg-surface-darker text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </Link>
+                                <Link to="/detail" className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </Link>
+                            </div>
+                        </header>
+                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto">
+                                <div className="grid grid-cols-12 gap-6">
+                                    <div className="col-span-12 lg:col-span-8 space-y-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="p-4 border-b border-border-color bg-surface-darker/50">
+                                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-primary text-[18px]">info</span>
+                                                    Trip Information
+                                                </h3>
+                                            </div>
+                                            <div className="p-6 space-y-6">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="space-y-1.5">
+                                                        <label className="block text-xs font-medium text-text-muted">Trip ID</label>
+                                                        <input className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-text-muted focus:outline-none cursor-not-allowed opacity-70" disabled type="text" defaultValue="TR-2023-8492"/>
+                                                    </div>
+                                                    <div className="space-y-1.5">
+                                                        <label className="block text-xs font-medium text-text-muted">Status</label>
+                                                        <select className="w-full bg-background-dark border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                            <option value="scheduled">Scheduled</option>
+                                                            <option defaultValue="in-progress">In Progress</option>
+                                                            <option value="completed">Completed</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const SettingsView = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                         <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-text-muted text-xs mb-1">
+                                        <span>Trips</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white">Settings</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Trip Configuration</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Link to="/" className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </Link>
+                            </div>
+                        </header>
+                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Active Policies</div>
+                                    <div className="text-2xl font-bold text-white">14</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Data Retention Compliance</div>
+                                    <div className="text-2xl font-bold text-success">Compliant</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 space-y-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div className="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">folder_delete</span>
+                                                Default Data Retention
+                                            </h3>
+                                        </div>
+                                        <div className="p-5">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label className="block text-xs font-medium text-white mb-2">Retention Period</label>
+                                                    <select className="w-full bg-surface-darker text-sm text-white border border-border-color rounded-lg px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                        <option value="1">1 Year</option>
+                                                        <option value="2">2 Years</option>
+                                                        <option defaultValue="3">3 Years (Recommended)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<TripListView />} />
+                        <Route path="/add" element={<AddTripForm />} />
+                        <Route path="/detail" element={<TripDetailView />} />
+                        <Route path="/telemetry" element={<TripTelemetryView />} />
+                        <Route path="/edit" element={<EditTripForm />} />
+                        <Route path="/settings" element={<SettingsView />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

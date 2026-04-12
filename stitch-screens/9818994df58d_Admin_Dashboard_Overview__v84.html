@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Billing Module Settings View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetBilling</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Finance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Invoices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Compliance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">policy</span>
+<span class="text-sm font-medium">Tax Rules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="text-sm font-medium">Audit Trail</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Configuration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">currency_exchange</span>
+<span class="text-sm font-medium">Currencies</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Finance Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+<span>Billing</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Settings</span>
+</div>
+<h2 class="text-white text-lg font-bold">Billing Configuration</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Auto-Invoicing</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">account_balance</span>
+                                Tax Configuration
+                            </h3>
+<span class="text-[10px] bg-surface-darker text-text-muted px-2 py-1 rounded border border-border-color">Global Policy ID: #TAX-2023-Q4</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 bg-surface-darker rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Default Tax Rate (%)</label>
+<div class="relative">
+<input class="w-full bg-surface-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="20.00"/>
+<span class="absolute right-3 top-2 text-text-muted text-xs">%</span>
+</div>
+<p class="text-[10px] text-text-muted mt-2">Applied to all standard service items unless overridden.</p>
+</div>
+<div class="p-4 bg-surface-darker rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Tax Region</label>
+<select class="w-full bg-surface-dark border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option selected="">European Union (VAT)</option>
+<option>North America (Sales Tax)</option>
+<option>United Kingdom (VAT)</option>
+<option>APAC (GST)</option>
+</select>
+<p class="text-[10px] text-text-muted mt-2">Determines the calculation logic for tax line items.</p>
+</div>
+</div>
+<div class="mt-4">
+<div class="flex items-center justify-between mb-2">
+<label class="text-xs font-medium text-text-muted">Tax Exempt Categories</label>
+<button class="text-primary text-xs hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">add</span> Add Category
+                                </button>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between p-2 bg-surface-darker border border-border-color rounded">
+<span class="text-sm text-white">Government Fleet Vehicles</span>
+<span class="text-xs text-success bg-success/10 px-2 py-0.5 rounded border border-success/20">Active</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-surface-darker border border-border-color rounded">
+<span class="text-sm text-white">Non-Profit Partners</span>
+<span class="text-xs text-text-muted bg-surface-dark px-2 py-0.5 rounded border border-border-color">Pending Approval</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">currency_exchange</span>
+                                Default Currency
+                            </h3>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Base Currency</label>
+<select class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option selected="">USD - US Dollar</option>
+<option>EUR - Euro</option>
+<option>GBP - British Pound</option>
+<option>JPY - Japanese Yen</option>
+</select>
+</div>
+<div class="p-3 bg-primary/5 border border-primary/10 rounded">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-[16px] mt-0.5">info</span>
+<p class="text-[11px] text-text-muted">Changing the base currency will trigger a recalculation of historical reports during the next nightly batch job.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[18px]">schedule</span>
+                                Late Payment Rules
+                            </h3>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Grace Period (Days)</label>
+<input class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="14"/>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Late Fee Percentage</label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color rounded text-sm text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="1.5"/>
+<span class="absolute right-3 top-2 text-text-muted text-xs">%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">insights</span>
+                            Current Billing Cycle Summary
+                        </h3>
+<div class="grid grid-cols-4 gap-4">
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] uppercase text-text-muted font-bold">Generated</div>
+<div class="text-lg font-bold text-white mt-1">1,204</div>
+<div class="text-[10px] text-success mt-1">Invoices</div>
+</div>
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] uppercase text-text-muted font-bold">Pending</div>
+<div class="text-lg font-bold text-warning mt-1">$45.2k</div>
+<div class="text-[10px] text-text-muted mt-1">Receivables</div>
+</div>
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] uppercase text-text-muted font-bold">Overdue</div>
+<div class="text-lg font-bold text-danger mt-1">28</div>
+<div class="text-[10px] text-text-muted mt-1">Accounts</div>
+</div>
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] uppercase text-text-muted font-bold">Avg. Cycle</div>
+<div class="text-lg font-bold text-primary mt-1">12 Days</div>
+<div class="text-[10px] text-text-muted mt-1">Payment Time</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                Invoice Template Settings
+                            </h3>
+<button class="text-primary text-xs hover:underline">Preview</button>
+</div>
+<div class="p-4 space-y-4">
+<div class="aspect-[210/297] bg-white rounded border border-border-color p-4 relative overflow-hidden group cursor-pointer hover:border-primary transition-colors">
+<div class="absolute inset-0 bg-surface-darker/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="bg-surface-dark text-white text-xs px-3 py-1.5 rounded-full border border-border-color shadow-lg">Edit Layout</span>
+</div>
+<div class="flex justify-between mb-4">
+<div class="w-16 h-8 bg-gray-200 rounded"></div>
+<div class="text-right">
+<div class="w-24 h-3 bg-gray-200 rounded mb-1 ml-auto"></div>
+<div class="w-16 h-2 bg-gray-100 rounded ml-auto"></div>
+</div>
+</div>
+<div class="space-y-2 mb-4">
+<div class="w-32 h-2 bg-gray-100 rounded"></div>
+<div class="w-48 h-2 bg-gray-100 rounded"></div>
+</div>
+<div class="w-full h-24 bg-gray-50 rounded mb-2 border border-dashed border-gray-200"></div>
+<div class="flex justify-end mt-4">
+<div class="w-20 h-4 bg-gray-200 rounded"></div>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Template Theme</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="h-8 rounded bg-primary border-2 border-white ring-1 ring-primary"></button>
+<button class="h-8 rounded bg-[#16202a] border border-border-color hover:border-text-muted"></button>
+<button class="h-8 rounded bg-white border border-border-color hover:border-text-muted"></button>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Header Info</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
+<input checked="" class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-0" type="checkbox"/>
+<span class="text-xs">Company Logo</span>
+</label>
+<label class="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
+<input checked="" class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-0" type="checkbox"/>
+<span class="text-xs">Tax Registration Number</span>
+</label>
+<label class="flex items-center gap-2 text-sm text-text-muted cursor-pointer">
+<input class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-0" type="checkbox"/>
+<span class="text-xs">Payment QR Code</span>
+</label>
+</div>
+</div>
+<div class="pt-2 border-t border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Footer Notes</label>
+<textarea class="w-full bg-surface-darker border border-border-color rounded text-xs text-white px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none h-16 resize-none">Thank you for your business. Payment is due within 14 days.</textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden mb-6">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">rule</span>
+                        Active Billing Policies (Read Only)
+                    </h3>
+<div class="flex items-center gap-2">
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Policy Name</th>
+<th class="px-4 py-3 font-semibold">Type</th>
+<th class="px-4 py-3 font-semibold">Last Updated</th>
+<th class="px-4 py-3 font-semibold">Effective Date</th>
+<th class="px-4 py-3 font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">Global VAT Compliance 2023</td>
+<td class="px-4 py-3 text-text-muted">Taxation</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 24, 2023</td>
+<td class="px-4 py-3 text-text-muted text-xs">Jan 01, 2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                        ACTIVE
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">Late Fee Standard Model</td>
+<td class="px-4 py-3 text-text-muted">Penalty</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 15, 2023</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 15, 2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                        ACTIVE
+                                    </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 font-medium text-white">Legacy Currency Support</td>
+<td class="px-4 py-3 text-text-muted">Currency</td>
+<td class="px-4 py-3 text-text-muted text-xs">Jun 01, 2023</td>
+<td class="px-4 py-3 text-text-muted text-xs">Dec 31, 2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                        EXPIRING
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Billing Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Last Sync: <span class="font-mono text-white">14:35 UTC</span></span>
+<span>Ledger Status: <span class="text-success">Balanced</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

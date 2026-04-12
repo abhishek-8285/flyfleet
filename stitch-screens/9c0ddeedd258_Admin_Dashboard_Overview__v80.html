@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Report Execution History | Enterprise Fleet Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetAnalytics</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Reports Module</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Insights</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-sm font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Templates</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configurations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-sm font-medium">System Health</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBcQWvaIMEo7bhEJkaOFsOnKTdsJ1rYyawz2WVqkUn-A7C3vAugRnJO3oNu7ma4WPcBdjdoUbAo0zB_hAsVZ50EuGmtYCzjRXWbfGyjGWzM5Vwajmx5fdHBBDaToctUOlcA8ytQ1eJlpafw9A4X-Z17lL3W29NGOw_rUTYbbUsBrYUrn4ex-FCHkzgpdyXQ2O_1MvkCoDUnPSWc9s10vkEZEf6RJpui950SoANuFuIgrwZkYFaQq7MURb6pwAsodryQxNPXJCd8MtM");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Operations Lead</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-widest mb-1">
+<a class="hover:text-primary transition-colors" href="#">Schedules</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Weekly Maintenance Log</a>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-white">History</span>
+</nav>
+<h2 class="text-white text-lg font-bold leading-tight">Report Execution History</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Auto-Refresh</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+                    Refresh Data
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Job ID</div>
+<div class="text-lg font-mono font-bold text-white">SCH-WM-0492</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Frequency</div>
+<div class="text-lg font-bold text-white">Weekly <span class="text-xs font-normal text-text-muted">(Sun 02:00 UTC)</span></div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Last Run</div>
+<div class="text-lg font-bold text-success flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Successful
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Success Rate</div>
+<div class="text-lg font-bold text-white">98.4%</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<div class="flex items-center gap-4">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">format_list_bulleted</span>
+                            Execution Logs
+                        </h3>
+<div class="h-4 w-[1px] bg-border-color"></div>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-darker text-text-muted border border-border-color">Total: 128</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-sm">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-8 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter by Run ID or Date..." type="text"/>
+</div>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Run ID</th>
+<th class="px-4 py-3 font-semibold">Start Time</th>
+<th class="px-4 py-3 font-semibold">Completion Time</th>
+<th class="px-4 py-3 font-semibold">Duration</th>
+<th class="px-4 py-3 font-semibold">Status</th>
+<th class="px-4 py-3 font-semibold">Download</th>
+<th class="px-4 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-4 text-white font-mono text-xs">RID-90234-A</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-11-05 02:00:01</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-11-05 02:00:14</td>
+<td class="px-4 py-4 text-text-muted text-xs">13s</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        COMPLETED
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<a class="text-primary hover:text-primary-dark flex items-center gap-1 text-xs" href="#">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                                        PDF (1.2MB)
+                                    </a>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors bg-danger/5">
+<td class="px-4 py-4 text-white font-mono text-xs">RID-90234-B</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-29 02:00:00</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-29 02:01:45</td>
+<td class="px-4 py-4 text-text-muted text-xs">1m 45s</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+<span class="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                        FAILED
+                                    </span>
+</td>
+<td class="px-4 py-4 text-text-muted italic text-xs">Unavailable</td>
+<td class="px-4 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="text-[10px] font-bold text-primary hover:bg-primary/10 px-2 py-1 rounded border border-primary/20 flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[14px]">replay</span>
+                                            RETRY
+                                        </button>
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">info</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-4 text-white font-mono text-xs">RID-90234-C</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-11-06 14:15:00</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">—</td>
+<td class="px-4 py-4 text-text-muted text-xs">3m 12s...</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                        RUNNING
+                                    </span>
+</td>
+<td class="px-4 py-4 text-text-muted text-xs italic">Processing...</td>
+<td class="px-4 py-4 text-right">
+<button class="text-[10px] font-bold text-danger hover:bg-danger/10 px-2 py-1 rounded border border-danger/20 transition-colors">
+                                        CANCEL
+                                    </button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-4 text-white font-mono text-xs">RID-90233-X</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-22 02:00:00</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-22 02:00:08</td>
+<td class="px-4 py-4 text-text-muted text-xs">8s</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        COMPLETED
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<a class="text-primary hover:text-primary-dark flex items-center gap-1 text-xs" href="#">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                                        CSV (840KB)
+                                    </a>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-4 text-white font-mono text-xs">RID-90232-Y</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-15 02:00:01</td>
+<td class="px-4 py-4 text-text-muted text-xs whitespace-nowrap">2023-10-15 02:00:11</td>
+<td class="px-4 py-4 text-text-muted text-xs">10s</td>
+<td class="px-4 py-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        COMPLETED
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<a class="text-primary hover:text-primary-dark flex items-center gap-1 text-xs" href="#">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                                        PDF (1.1MB)
+                                    </a>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-4 py-3 bg-surface-darker/50 border-t border-border-color flex items-center justify-between text-xs text-text-muted">
+<div>Showing 1 to 5 of 128 executions</div>
+<div class="flex gap-1">
+<button class="px-2 py-1 rounded bg-surface-dark border border-border-color hover:bg-border-color disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="px-2.5 py-1 rounded bg-primary text-white border border-primary">1</button>
+<button class="px-2.5 py-1 rounded bg-surface-dark border border-border-color hover:bg-border-color">2</button>
+<button class="px-2.5 py-1 rounded bg-surface-dark border border-border-color hover:bg-border-color">3</button>
+<span class="px-1">...</span>
+<button class="px-2.5 py-1 rounded bg-surface-dark border border-border-color hover:bg-border-color">26</button>
+<button class="px-2 py-1 rounded bg-surface-dark border border-border-color hover:bg-border-color">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Reports Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Data Source: <span class="text-primary font-mono">GET /reports/schedules/{jobId}/history</span></span>
+<span>BFF Status: <span class="text-success">Connected</span></span>
+<span>Server Time: <span class="font-mono text-white">14:42 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

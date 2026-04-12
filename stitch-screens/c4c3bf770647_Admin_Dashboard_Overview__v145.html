@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Invoice List View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Main Module</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Finance &amp; Billing</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Invoices</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">credit_card</span>
+<span class="text-sm font-medium">Transactions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-sm font-medium">Wallets</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Reporting</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-sm font-medium">Revenue Reports</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Configuration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Billing Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Billing Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+<span class="hover:text-white cursor-pointer transition-colors">Billing</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Invoices</span>
+</div>
+<h2 class="text-white text-lg font-bold">Invoice List</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-sm text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" placeholder="Global Search..." type="text"/>
+</div>
+<button class="p-2 bg-surface-dark border border-border-color hover:bg-border-color text-text-muted hover:text-white rounded transition-colors" title="Filter">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<div class="h-8 w-[1px] bg-border-color"></div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                    Add Invoice
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">receipt</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Invoiced (MTD)</div>
+<div class="text-2xl font-bold text-white">$1,245,890</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+                        +12.5% vs last month
+                    </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">pending_actions</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Pending Payment</div>
+<div class="text-2xl font-bold text-warning">$182,400</div>
+<div class="text-[10px] text-text-muted mt-1">45 invoices open</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-warning h-full" style="width: 35%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-danger">event_busy</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Overdue Amount</div>
+<div class="text-2xl font-bold text-danger">$42,150</div>
+<div class="text-[10px] text-danger mt-1">Requires immediate action</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-danger h-full" style="width: 12%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Paid Invoices</div>
+<div class="text-2xl font-bold text-success">1,840</div>
+<div class="text-[10px] text-text-muted mt-1">Last 30 days</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-16rem)]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<div class="flex items-center gap-3">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                            All Invoices
+                        </h3>
+<span class="px-2 py-0.5 rounded text-[10px] bg-border-color text-text-muted font-mono">Total: 2,453</span>
+</div>
+<div class="flex items-center gap-2">
+<select class="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
+<option>All Statuses</option>
+<option>Paid</option>
+<option>Pending</option>
+<option>Overdue</option>
+</select>
+<select class="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary">
+<option>This Month</option>
+<option>Last Month</option>
+<option>Last Quarter</option>
+</select>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Export CSV">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Refresh">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-surface-darker">
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+<th class="px-4 py-3 font-semibold w-10">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</th>
+<th class="px-4 py-3 font-semibold">Invoice ID</th>
+<th class="px-4 py-3 font-semibold">Customer Name</th>
+<th class="px-4 py-3 font-semibold">Billing Period</th>
+<th class="px-4 py-3 font-semibold text-right">Total Amount</th>
+<th class="px-4 py-3 font-semibold text-center">Currency</th>
+<th class="px-4 py-3 font-semibold">Due Date</th>
+<th class="px-4 py-3 font-semibold text-center">Status</th>
+<th class="px-4 py-3 font-semibold w-10"></th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-color">
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-001</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-[10px] font-bold">AL</div>
+                                        Acme Logistics
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">$4,250.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase tracking-wide">
+                                        PAID
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-002</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-[10px] font-bold">GT</div>
+                                        Global Transport Inc.
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">$12,890.50</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wide">
+                                        PENDING
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-003</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center text-[10px] font-bold">SS</div>
+                                        Speedy Shipping
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 01 - Sep 30, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">€3,100.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">EUR</td>
+<td class="px-4 py-3 text-text-muted text-xs text-danger font-semibold">Oct 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase tracking-wide">
+                                        OVERDUE
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-004</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-bold">FF</div>
+                                        FastFreight Co.
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">$8,500.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">
+                                        PARTIALLY_PAID
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-005</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold">NO</div>
+                                        Nordic Ocean
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">£2,200.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">GBP</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 20, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wide">
+                                        PENDING
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-006</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-pink-500/20 text-pink-400 flex items-center justify-center text-[10px] font-bold">AM</div>
+                                        AmeriCar Fleet
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 01 - Sep 30, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">$15,600.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase tracking-wide">
+                                        PAID
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-007</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-teal-500/20 text-teal-400 flex items-center justify-center text-[10px] font-bold">PC</div>
+                                        Pacific Cargo
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Aug 01 - Aug 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">$5,400.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">USD</td>
+<td class="px-4 py-3 text-text-muted text-xs text-danger font-semibold">Sep 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase tracking-wide">
+                                        OVERDUE
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-008</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-bold">EL</div>
+                                        Euro Logistics
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Oct 01 - Oct 31, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">€1,850.00</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">EUR</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 15, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wide">
+                                        PENDING
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-primary font-medium cursor-pointer hover:underline">INV-2023-009</td>
+<td class="px-4 py-3 font-medium text-white">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-red-500/20 text-red-400 flex items-center justify-center text-[10px] font-bold">AC</div>
+                                        Asian Connections
+                                    </div>
+</td>
+<td class="px-4 py-3 text-text-muted text-xs">Sep 15 - Oct 15, 2023</td>
+<td class="px-4 py-3 text-white font-medium text-right">¥450,000</td>
+<td class="px-4 py-3 text-text-muted text-xs text-center">JPY</td>
+<td class="px-4 py-3 text-text-muted text-xs">Nov 01, 2023</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase tracking-wide">
+                                        PAID
+                                    </span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-color flex items-center justify-between bg-surface-darker">
+<span class="text-xs text-text-muted">Showing 1 to 9 of 2,453 entries</span>
+<div class="flex items-center gap-1">
+<button class="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white disabled:opacity-50">Previous</button>
+<button class="px-2 py-1 text-xs rounded bg-primary text-white font-medium">1</button>
+<button class="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white">2</button>
+<button class="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white">3</button>
+<span class="text-text-muted text-xs px-1">...</span>
+<button class="px-2 py-1 text-xs rounded hover:bg-border-color text-text-muted hover:text-white">Next</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Billing Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Data Source: <span class="text-white">Web BFF</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

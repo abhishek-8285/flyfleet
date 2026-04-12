@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Channel Preferences List View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="text-sm font-medium">Notification Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">
+<span>Monitoring</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span>Notification Settings</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary">Channel Preferences</span>
+</nav>
+<h2 class="text-white text-lg font-bold leading-tight">Channel Preferences</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-white text-xs rounded-lg pl-9 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50" placeholder="Global Search Users..." type="text"/>
+</div>
+<button class="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                    Reset to Defaults
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker/30 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="text-xs font-semibold text-white px-2 py-1 rounded bg-surface-darker border border-border-color">GET /notifications/preferences</span>
+<span class="text-[10px] text-text-muted font-mono uppercase tracking-widest">Web BFF Interface</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-4 font-semibold w-24">User ID</th>
+<th class="px-4 py-4 font-semibold">User Name</th>
+<th class="px-4 py-4 font-semibold text-center">Email</th>
+<th class="px-4 py-4 font-semibold text-center">SMS</th>
+<th class="px-4 py-4 font-semibold text-center">Push</th>
+<th class="px-4 py-4 font-semibold text-center">In-App</th>
+<th class="px-4 py-4 font-semibold">Last Updated</th>
+<th class="px-4 py-4 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3.5 text-text-muted font-mono text-xs">#USR-8492</td>
+<td class="px-4 py-3.5">
+<div class="flex flex-col">
+<span class="font-medium text-white">Johnathan Edwards</span>
+<span class="text-[10px] text-text-muted">j.edwards@fleet.com</span>
+</div>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-slate-600 cursor-pointer select-none">cancel</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">Oct 24, 2023 14:32</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3.5 text-text-muted font-mono text-xs">#USR-8493</td>
+<td class="px-4 py-3.5">
+<div class="flex flex-col">
+<span class="font-medium text-white">Sarah Chen</span>
+<span class="text-[10px] text-text-muted">s.chen@fleet.com</span>
+</div>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-slate-600 cursor-pointer select-none">cancel</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">Oct 24, 2023 11:15</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3.5 text-text-muted font-mono text-xs">#USR-8494</td>
+<td class="px-4 py-3.5">
+<div class="flex flex-col">
+<span class="font-medium text-white">Marcus Valerius</span>
+<span class="text-[10px] text-text-muted">m.valerius@fleet.com</span>
+</div>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">Oct 23, 2023 09:44</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3.5 text-text-muted font-mono text-xs">#USR-8495</td>
+<td class="px-4 py-3.5">
+<div class="flex flex-col">
+<span class="font-medium text-white">Eliza T. Thorne</span>
+<span class="text-[10px] text-text-muted">e.thorne@fleet.com</span>
+</div>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-slate-600 cursor-pointer select-none">cancel</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-slate-600 cursor-pointer select-none">cancel</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-slate-600 cursor-pointer select-none">cancel</span>
+</td>
+<td class="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">Oct 23, 2023 08:21</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3.5 text-text-muted font-mono text-xs">#USR-8496</td>
+<td class="px-4 py-3.5">
+<div class="flex flex-col">
+<span class="font-medium text-white">Samuel L. Jackson</span>
+<span class="text-[10px] text-text-muted">s.jackson@fleet.com</span>
+</div>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-center">
+<span class="material-symbols-outlined text-success cursor-pointer select-none">check_circle</span>
+</td>
+<td class="px-4 py-3.5 text-text-muted text-xs whitespace-nowrap">Oct 22, 2023 16:55</td>
+<td class="px-4 py-3.5 text-right">
+<button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-border-color bg-surface-darker/30 flex items-center justify-between text-xs text-text-muted">
+<div class="flex items-center gap-4">
+<span>Showing 1-10 of 1,248 Users</span>
+<div class="flex items-center gap-2">
+<span>Show:</span>
+<select class="bg-surface-dark border border-border-color rounded px-2 py-1 focus:ring-1 focus:ring-primary outline-none">
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 border border-border-color rounded hover:bg-surface-dark disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-white font-bold">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-dark">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-dark">3</button>
+<span class="px-1">...</span>
+<button class="w-8 h-8 rounded hover:bg-surface-dark">125</button>
+<button class="p-1.5 border border-border-color rounded hover:bg-surface-dark">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Notification Module V2.4.1</span>
+<div class="flex items-center gap-4">
+<span>API Status: <span class="text-success font-bold uppercase">Connected</span></span>
+<span>BFF Latency: <span class="text-success">24ms</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

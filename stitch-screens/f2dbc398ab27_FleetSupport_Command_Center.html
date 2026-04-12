@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSupport Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                        "info": "#0ea5e9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+        .tab-active {
+            border-bottom: 2px solid #137fec;
+            color: #ffffff;
+        }
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #92adc9;
+        }
+        .tab-inactive:hover {
+            color: #ffffff;
+            border-bottom: 2px solid #233648;
+        }
+        .code-block {
+            counter-reset: line;
+        }
+        .code-line::before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 1.5em;
+            margin-right: 1em;
+            color: #555;
+            text-align: right;
+            font-size: 0.8em;
+        }
+    </style>
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Layout Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            const NavItem = ({ to, icon, label, exact = false }) => {
+                const active = exact ? location.pathname === to : location.pathname.startsWith(to);
+                return (
+                    <Link 
+                        to={to} 
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                            active 
+                                ? "bg-primary/10 text-primary border-l-4 border-primary" 
+                                : "text-text-muted hover:bg-border-color hover:text-white"
+                        }`}
+                    >
+                        <span className="material-symbols-outlined">{icon}</span>
+                        <span className="text-sm font-medium">{label}</span>
+                    </Link>
+                );
+            };
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">support_agent</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSupport</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Support Module</div>
+                        <NavItem to="/" icon="dashboard" label="Dashboard" exact={true} />
+                        <NavItem to="/incidents" icon="bug_report" label="Incidents" />
+                        <NavItem to="/logs" icon="terminal" label="Troubleshooting Logs" />
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Consoles</div>
+                        <NavItem to="/user-console" icon="person_search" label="User Console" />
+                        <NavItem to="/org-console" icon="domain" label="Organization Hub" />
+
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Reports</div>
+                        <NavItem to="/reports" icon="bar_chart" label="SLA Reports" />
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Support Lead</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Layout = ({ children }) => {
+            return (
+                <div className="flex h-screen w-full bg-background-dark text-white">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Screen 1: Dashboard ---
+        const Dashboard = () => {
+            return (
+                <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold">Support Dashboard</h2>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">Support</span>
+                                    <span className="text-[11px] text-text-muted">/</span>
+                                    <span className="text-[11px] text-white uppercase tracking-wider font-semibold">Dashboard</span>
+                                </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/30">
+                                Live Data
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                <span className="text-xs text-text-muted font-medium">Auto-Refresh</span>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input defaultChecked className="sr-only peer" type="checkbox" />
+                                    <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">add</span>
+                                New Ticket
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-white">inbox</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Open Tickets</div>
+                                <div className="text-2xl font-bold text-white">42</div>
+                                <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">trending_down</span>
+                                    -12% vs yesterday
+                                </div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-white h-full" style={{width: '35%'}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-danger">timer_off</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">SLA Breaches (24h)</div>
+                                <div className="text-2xl font-bold text-danger">3</div>
+                                <div className="text-[10px] text-danger mt-1">Critical Priority</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-danger h-full" style={{width: '15%'}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-warning">error</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Device Errors</div>
+                                <div className="text-2xl font-bold text-warning">18</div>
+                                <div className="text-[10px] text-text-muted mt-1">Across fleet</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-warning h-full" style={{width: '65%'}}></div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-4xl text-success">av_timer</span>
+                                </div>
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Avg. Resolution Time</div>
+                                <div className="text-2xl font-bold text-success">2.4h</div>
+                                <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                    <span className="material-symbols-outlined text-[12px]">trending_down</span>
+                                    15% faster this week
+                                </div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-success h-full" style={{width: '85%'}}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-6 mb-6">
+                            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-5 h-80 flex flex-col">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">show_chart</span>
+                                            Incident Trends (Last 7 Days)
+                                        </h3>
+                                        <select className="bg-surface-darker text-xs text-text-muted border border-border-color rounded px-2 py-1">
+                                            <option>Last 7 Days</option>
+                                            <option>Last 30 Days</option>
+                                        </select>
+                                    </div>
+                                    <div className="flex-1 relative w-full h-full">
+                                        <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 200">
+                                            <defs>
+                                                <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+                                                    <stop offset="0%" stopColor="#137fec" stopOpacity="0.3"></stop>
+                                                    <stop offset="100%" stopColor="#137fec" stopOpacity="0"></stop>
+                                                </linearGradient>
+                                            </defs>
+                                            <line stroke="#233648" strokeWidth="1" x1="0" x2="800" y1="199" y2="199"></line>
+                                            <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="150" y2="150"></line>
+                                            <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="100" y2="100"></line>
+                                            <line stroke="#233648" strokeDasharray="4" strokeWidth="1" x1="0" x2="800" y1="50" y2="50"></line>
+                                            <path d="M0,140 C100,160 150,80 250,90 S350,120 450,70 S600,60 800,40 V200 H0 Z" fill="url(#chartGradient)"></path>
+                                            <path d="M0,140 C100,160 150,80 250,90 S350,120 450,70 S600,60 800,40" fill="none" stroke="#137fec" strokeWidth="2"></path>
+                                            <circle cx="800" cy="40" fill="#fff" r="4" stroke="#137fec" strokeWidth="2"></circle>
+                                        </svg>
+                                        <div className="absolute bottom-2 left-0 right-0 flex justify-between text-[10px] text-text-muted px-2">
+                                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-80">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center">
+                                        <h3 className="text-white text-sm font-semibold">Top System Errors</h3>
+                                        <button className="text-primary text-xs hover:underline">View All</button>
+                                    </div>
+                                    <div className="flex-1 p-4 flex flex-col justify-center gap-4">
+                                        <div className="w-full">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white">Connection Timeout (E-504)</span>
+                                                <span className="text-danger font-bold">45</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                                <div className="bg-danger h-full rounded-full" style={{width: '75%'}}></div>
+                                            </div>
+                                        </div>
+                                        <div className="w-full">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white">GPS Signal Lost (E-102)</span>
+                                                <span className="text-warning font-bold">28</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                                <div className="bg-warning h-full rounded-full" style={{width: '45%'}}></div>
+                                            </div>
+                                        </div>
+                                        <div className="w-full">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white">Auth Failure (E-401)</span>
+                                                <span className="text-text-muted font-bold">16</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                                <div className="bg-primary h-full rounded-full" style={{width: '25%'}}></div>
+                                            </div>
+                                        </div>
+                                        <div className="w-full">
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white">Sensor Malfunction (E-309)</span>
+                                                <span className="text-text-muted font-bold">9</span>
+                                            </div>
+                                            <div className="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                                <div className="bg-text-muted h-full rounded-full" style={{width: '15%'}}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Recent Activity Table */}
+                         <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                            <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                                    Recent Support Activity
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search tickets, IDs..." type="text"/>
+                                    <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                        <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                            <th className="px-4 py-3 font-semibold">Ticket ID</th>
+                                            <th className="px-4 py-3 font-semibold">Subject</th>
+                                            <th className="px-4 py-3 font-semibold">Reporter</th>
+                                            <th className="px-4 py-3 font-semibold">Priority</th>
+                                            <th className="px-4 py-3 font-semibold">Assigned To</th>
+                                            <th className="px-4 py-3 font-semibold">Last Updated</th>
+                                            <th className="px-4 py-3 font-semibold text-right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                            <td className="px-4 py-3 text-white font-mono text-xs">#T-9024</td>
+                                            <td className="px-4 py-3 text-white">Vehicle telemetry sync failure</td>
+                                            <td className="px-4 py-3 text-text-muted">Fleet Ops</td>
+                                            <td className="px-4 py-3"><span className="text-danger font-medium text-xs">High</span></td>
+                                            <td className="px-4 py-3 text-text-muted"><div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">JD</div><span>John D.</span></div></td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">10 mins ago</td>
+                                            <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">IN PROGRESS</span></td>
+                                        </tr>
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                            <td className="px-4 py-3 text-white font-mono text-xs">#T-9023</td>
+                                            <td className="px-4 py-3 text-white">Driver app login issue</td>
+                                            <td className="px-4 py-3 text-text-muted">Driver Support</td>
+                                            <td className="px-4 py-3"><span className="text-warning font-medium text-xs">Medium</span></td>
+                                            <td className="px-4 py-3 text-text-muted"><div className="flex items-center gap-2"><div className="w-5 h-5 rounded-full bg-warning/20 text-warning flex items-center justify-center text-[10px] font-bold">AS</div><span>Anna S.</span></div></td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">24 mins ago</td>
+                                            <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">PENDING</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            );
+        };
+
+        // --- Screen 2: User Console ---
+        const UserConsole = () => {
+            return (
+                <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+                                    <span className="hover:text-white cursor-pointer">Support</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-white">User Console</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">User Troubleshooting: Sarah Jenkins</h2>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                Online
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <span className="material-symbols-outlined text-text-muted text-[18px]">search</span>
+                                </span>
+                                <input className="bg-surface-dark border border-border-color text-sm text-white rounded-lg pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder:text-text-muted/50" placeholder="Search by User ID, Email..." type="text"/>
+                            </div>
+                            <button className="px-3 py-1.5 bg-surface-dark border border-border-color hover:bg-surface-darker text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                <span className="material-symbols-outlined text-[16px]">history</span>
+                                Audit Log
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grid grid-cols-12 gap-6 h-full">
+                            <div className="col-span-12 lg:col-span-3 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-0 overflow-hidden">
+                                    <div className="p-5 border-b border-border-color bg-surface-darker/50">
+                                        <div className="flex items-start justify-between">
+                                            <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary text-primary flex items-center justify-center text-2xl font-bold">SJ</div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-xs text-text-muted uppercase font-bold tracking-wider">User ID</span>
+                                                <span className="text-white font-mono text-xs mt-1">USR-882910</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4">
+                                            <h3 className="text-lg font-bold text-white">Sarah Jenkins</h3>
+                                            <p className="text-sm text-text-muted">sarah.j@fleetcorp.com</p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] font-medium uppercase">Regional Manager</span>
+                                                <span className="px-2 py-0.5 rounded bg-surface-darker text-text-muted border border-border-color text-[10px] font-medium uppercase">EMEA</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-5 space-y-4">
+                                        <div>
+                                            <div className="text-[10px] uppercase text-text-muted font-bold mb-2">Account Status</div>
+                                            <div className="flex items-center gap-2 text-sm text-white">
+                                                <span className="material-symbols-outlined text-success text-[18px]">check_circle</span>
+                                                Active (Verified)
+                                            </div>
+                                            <div className="text-xs text-text-muted mt-1">Member since Feb 12, 2021</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] uppercase text-text-muted font-bold mb-2">MFA Status</div>
+                                            <div className="flex items-center gap-2 text-sm text-white">
+                                                <span className="material-symbols-outlined text-success text-[18px]">lock</span>
+                                                Enforced
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-0 overflow-hidden flex-1">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                        <h3 className="text-sm font-semibold text-white">Active Sessions</h3>
+                                        <span className="text-[10px] bg-success/20 text-success px-1.5 py-0.5 rounded border border-success/20">2 Active</span>
+                                    </div>
+                                    <div className="divide-y divide-border-color">
+                                        <div className="p-4 hover:bg-surface-darker transition-colors cursor-pointer group relative">
+                                            <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="text-xs text-danger hover:underline">Revoke</button>
+                                            </div>
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <span className="material-symbols-outlined text-text-muted">laptop_mac</span>
+                                                <span className="text-sm text-white font-medium">MacBook Pro</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 pl-9">
+                                                <div className="flex items-center gap-2 text-xs text-text-muted">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                    <span>London, UK • 82.11.45.22</span>
+                                                </div>
+                                                <div className="text-[10px] text-text-muted/70">Chrome 118 • Current Session</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full overflow-hidden">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">manage_history</span>
+                                            Recent Login History
+                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            <select className="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1 outline-none">
+                                                <option>Last 30 Days</option>
+                                                <option>Last 7 Days</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto custom-scrollbar">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/30 sticky top-0 backdrop-blur-sm z-10">
+                                                    <th className="px-4 py-3 font-semibold">Time</th>
+                                                    <th className="px-4 py-3 font-semibold">Event Type</th>
+                                                    <th className="px-4 py-3 font-semibold">Source IP</th>
+                                                    <th className="px-4 py-3 font-semibold">Location</th>
+                                                    <th className="px-4 py-3 font-semibold text-right">Result</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                    <td className="px-4 py-3 text-white text-xs whitespace-nowrap">Today, 14:32</td>
+                                                    <td className="px-4 py-3 text-text-muted flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">login</span> Login</td>
+                                                    <td className="px-4 py-3 text-text-muted font-mono text-xs">82.11.45.22</td>
+                                                    <td className="px-4 py-3 text-text-muted">London, UK</td>
+                                                    <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">SUCCESS</span></td>
+                                                </tr>
+                                                <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors bg-danger/5">
+                                                    <td className="px-4 py-3 text-white text-xs whitespace-nowrap">Yesterday, 22:41</td>
+                                                    <td className="px-4 py-3 text-text-muted flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">password</span> Login</td>
+                                                    <td className="px-4 py-3 text-text-muted font-mono text-xs">192.158.1.1</td>
+                                                    <td className="px-4 py-3 text-text-muted">Moscow, RU</td>
+                                                    <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">FAILED</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-12 lg:col-span-2 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full">
+                                    <div className="p-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold">Quick Support Actions</h3>
+                                        <p className="text-[10px] text-text-muted mt-1">Execute administrative commands</p>
+                                    </div>
+                                    <div className="p-4 flex flex-col gap-3 overflow-y-auto">
+                                        <button className="w-full group p-3 rounded-lg border border-border-color hover:border-primary/50 hover:bg-surface-darker transition-all text-left">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <div className="p-2 rounded bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                                    <span className="material-symbols-outlined text-[20px]">lock_reset</span>
+                                                </div>
+                                                <span className="text-sm font-medium text-white">Reset Password</span>
+                                            </div>
+                                            <p className="text-[10px] text-text-muted pl-[44px]">Send email reset link</p>
+                                        </button>
+                                        <button className="w-full group p-3 rounded-lg border border-border-color hover:border-danger/50 hover:bg-surface-darker transition-all text-left">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <div className="p-2 rounded bg-danger/10 text-danger group-hover:bg-danger group-hover:text-white transition-colors">
+                                                    <span className="material-symbols-outlined text-[20px]">logout</span>
+                                                </div>
+                                                <span className="text-sm font-medium text-white">Force Logout</span>
+                                            </div>
+                                            <p className="text-[10px] text-text-muted pl-[44px]">Kill all active sessions</p>
+                                        </button>
+                                        <div className="h-px bg-border-color my-2"></div>
+                                        <div className="bg-surface-darker p-3 rounded border border-border-color">
+                                            <div className="text-[10px] uppercase text-text-muted font-bold mb-2">Support Notes</div>
+                                            <textarea className="w-full bg-surface-dark border border-border-color rounded p-2 text-xs text-white placeholder:text-text-muted/50 focus:ring-1 focus:ring-primary focus:border-primary outline-none resize-none h-24" placeholder="Add internal note..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            );
+        };
+
+        // --- Screen 3: Organization Support Console ---
+        const OrgConsole = () => {
+            return (
+                 <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <h2 className="text-white text-lg font-bold">Organization Support Console</h2>
+                                <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5">
+                                    <span>SUPPORT</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span>ORGANIZATION CONSOLE</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-white">Acme Logistics Inc.</span>
+                                </div>
+                            </div>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 ml-2">
+                                Active Account
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button className="px-4 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                <span className="material-symbols-outlined text-[16px]">build</span>
+                                Troubleshoot Configs
+                            </button>
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                                Impersonate
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-5xl text-primary">verified</span>
+                                </div>
+                                <div className="flex flex-col h-full justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1 tracking-wider">Subscription Plan</div>
+                                        <div className="text-2xl font-bold text-white mb-1">Enterprise Gold</div>
+                                        <div className="text-xs text-text-muted">Next renewal: <span className="text-white">Nov 15, 2024</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-5xl text-white">devices</span>
+                                </div>
+                                <div className="flex flex-col h-full justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1 tracking-wider">Total Devices</div>
+                                        <div className="text-2xl font-bold text-white mb-1">2,450</div>
+                                        <div className="flex items-center gap-3 mt-1">
+                                            <span className="text-xs text-success flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success"></span> 2,100 Online</span>
+                                            <span className="text-xs text-text-muted flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-text-muted"></span> 350 Offline</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group">
+                                <div className="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <span className="material-symbols-outlined text-5xl text-emerald-500">hub</span>
+                                </div>
+                                <div className="flex flex-col h-full justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1 tracking-wider">Integration Health</div>
+                                        <div className="text-2xl font-bold text-emerald-500 mb-1">98.5%</div>
+                                        <div className="text-xs text-text-muted">API Success Rate (24h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-6">
+                            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color h-[400px] flex flex-col overflow-hidden">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">map</span>
+                                            Real-time Fleet Distribution
+                                        </h3>
+                                    </div>
+                                    <div className="relative flex-1 bg-[#1a2632] w-full h-full group">
+                                        <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'radial-gradient(#233648 1px, transparent 1px)', backgroundSize: '20px 20px'}}></div>
+                                        <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-success rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse"></div>
+                                        <div className="absolute top-1/3 left-1/2 w-3 h-3 bg-success rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                                        <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-warning rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+                                        <div className="absolute bottom-4 left-4 bg-surface-darker/90 backdrop-blur border border-border-color p-3 rounded-lg">
+                                            <div className="text-xs font-semibold text-white mb-2">Region Status</div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2 text-[10px] text-text-muted"><span className="w-2 h-2 rounded-full bg-success"></span> North America (98% Active)</div>
+                                                <div className="flex items-center gap-2 text-[10px] text-text-muted"><span className="w-2 h-2 rounded-full bg-warning"></span> Europe (Load High)</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center">
+                                        <h3 className="text-white text-sm font-semibold">Active Alerts</h3>
+                                        <span className="bg-danger text-white text-[10px] px-2 py-0.5 rounded-full font-bold">3 New</span>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+                                        <div className="bg-surface-darker border border-border-color rounded p-3 flex gap-3 hover:border-danger/50 transition-colors cursor-pointer group">
+                                            <div className="mt-0.5 text-danger"><span className="material-symbols-outlined text-[20px]">error</span></div>
+                                            <div>
+                                                <div className="text-sm font-medium text-white group-hover:text-danger transition-colors">High Latency Detected</div>
+                                                <div className="text-xs text-text-muted mt-1">US-East Region experiencing 400ms+ latency.</div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-surface-darker border border-border-color rounded p-3 flex gap-3 hover:border-warning/50 transition-colors cursor-pointer group">
+                                            <div className="mt-0.5 text-warning"><span className="material-symbols-outlined text-[20px]">warning</span></div>
+                                            <div>
+                                                <div className="text-sm font-medium text-white group-hover:text-warning transition-colors">API Rate Limit Approaching</div>
+                                                <div className="text-xs text-text-muted mt-1">90% of hourly quota consumed.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </main>
+            );
+        };
+
+        // --- Screen 4: Incident Management ---
+        const Incidents = () => {
+             return (
+                 <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase font-bold tracking-wider mb-0.5">
+                                    <span>Support</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-white">Incidents</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">Incident Management</h2>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/60" placeholder="Search incidents (ID, Subject, Org)..." type="text"/>
+                            </div>
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">add</span>
+                                Create Incident
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Incidents</div>
+                                <div className="text-2xl font-bold text-white">342</div>
+                                <div className="text-[10px] text-success flex items-center gap-1 mt-1"><span className="material-symbols-outlined text-[12px]">trending_up</span> +12 new today</div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">Critical Open</div>
+                                <div className="text-2xl font-bold text-danger">5</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden"><div className="bg-danger h-full" style={{width: '25%'}}></div></div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                <div className="text-text-muted text-xs font-medium uppercase mb-1">High Priority</div>
+                                <div className="text-2xl font-bold text-warning">18</div>
+                                <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden"><div className="bg-warning h-full" style={{width: '45%'}}></div></div>
+                            </div>
+                         </div>
+                         <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                             <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                    Active Incidents
+                                </h3>
+                             </div>
+                             <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                            <th className="px-4 py-3 font-semibold w-28">Incident ID</th>
+                                            <th className="px-4 py-3 font-semibold w-24">Priority</th>
+                                            <th className="px-4 py-3 font-semibold w-28">Status</th>
+                                            <th className="px-4 py-3 font-semibold">Subject</th>
+                                            <th className="px-4 py-3 font-semibold">Assigned To</th>
+                                            <th className="px-4 py-3 font-semibold">Organization</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm">
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+                                            <td className="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4921</td>
+                                            <td className="px-4 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">CRITICAL</span></td>
+                                            <td className="px-4 py-3"><span className="flex items-center gap-1.5 text-white text-xs"><span className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse"></span> Open</span></td>
+                                            <td className="px-4 py-3 text-white font-medium">Database latency spike US-East</td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">Unassigned</td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">Global Fleet Ops</td>
+                                        </tr>
+                                        <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors cursor-pointer group">
+                                            <td className="px-4 py-3 font-mono text-xs text-primary font-medium group-hover:underline">INC-4920</td>
+                                            <td className="px-4 py-3"><span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">HIGH</span></td>
+                                            <td className="px-4 py-3"><span className="flex items-center gap-1.5 text-white text-xs"><span className="w-1.5 h-1.5 rounded-full bg-primary"></span> Investigating</span></td>
+                                            <td className="px-4 py-3 text-white font-medium">Authentication failures for API v2</td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">Sarah J.</td>
+                                            <td className="px-4 py-3 text-text-muted text-xs">Acme Logistics</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                             </div>
+                         </div>
+                    </div>
+                 </main>
+             );
+        };
+
+        // --- Screen 5: Troubleshooting Logs ---
+        const Logs = () => {
+             return (
+                <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                    <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <div className="flex items-center gap-2 text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+                                    <span>Support</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-primary">Troubleshooting Logs</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">Consolidated Debugging Logs</h2>
+                            </div>
+                            <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-dark text-text-muted border border-border-color">
+                                Live Stream
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-[16px]">file_download</span>
+                                Export Evidence
+                            </button>
+                        </div>
+                    </header>
+                    <div className="flex flex-1 overflow-hidden">
+                        <div className="flex-1 flex flex-col min-w-0 border-r border-border-color">
+                            <div className="p-4 border-b border-border-color bg-surface-dark flex gap-3 items-center">
+                                <div className="relative flex-1 max-w-md">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                                        <span className="material-symbols-outlined text-[18px]">search</span>
+                                    </span>
+                                    <input className="w-full bg-surface-darker border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search by message, trace ID, or user..." type="text"/>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar bg-surface-darker">
+                                <table className="w-full text-left border-collapse table-fixed">
+                                    <thead className="sticky top-0 z-10 bg-[#16202a] shadow-sm">
+                                        <tr className="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider font-semibold">
+                                            <th className="px-4 py-2 w-40">Timestamp</th>
+                                            <th className="px-4 py-2 w-24">Severity</th>
+                                            <th className="px-4 py-2 w-32">Module</th>
+                                            <th className="px-4 py-2 w-auto">Message</th>
+                                            <th className="px-4 py-2 w-32">Trace ID</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-[13px] font-mono divide-y divide-border-color/50">
+                                        <tr className="bg-danger/5 hover:bg-danger/10 cursor-pointer transition-colors border-l-2 border-l-danger">
+                                            <td className="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:32:01.452</td>
+                                            <td className="px-4 py-2"><span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30">ERROR</span></td>
+                                            <td className="px-4 py-2 text-white">AuthService</td>
+                                            <td className="px-4 py-2 text-white truncate">Failed to validate token signature: key expired</td>
+                                            <td className="px-4 py-2 text-primary hover:underline cursor-pointer">tid_8f92a1</td>
+                                        </tr>
+                                        <tr className="bg-warning/5 hover:bg-warning/10 cursor-pointer transition-colors border-l-2 border-l-warning">
+                                            <td className="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:58.102</td>
+                                            <td className="px-4 py-2"><span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning/20 text-warning border border-warning/30">WARN</span></td>
+                                            <td className="px-4 py-2 text-white">RateLimiter</td>
+                                            <td className="px-4 py-2 text-white truncate">User 4921 approaching API limit (95%)</td>
+                                            <td className="px-4 py-2 text-primary hover:underline cursor-pointer">tid_7b12c4</td>
+                                        </tr>
+                                        <tr className="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+                                            <td className="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:55.004</td>
+                                            <td className="px-4 py-2"><span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span></td>
+                                            <td className="px-4 py-2 text-white">FleetManager</td>
+                                            <td className="px-4 py-2 text-text-muted truncate">Vehicle status updated: V-8821 -&gt; Active</td>
+                                            <td className="px-4 py-2 text-primary hover:underline cursor-pointer">tid_6d88e2</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div className="w-96 bg-surface-dark border-l border-border-color flex flex-col flex-shrink-0 z-20 shadow-xl">
+                            <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                <h3 className="font-bold text-white flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-text-muted text-[18px]">find_in_page</span>
+                                    Log Detail
+                                </h3>
+                                <div className="flex gap-2">
+                                    <button className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[18px]">close</span></button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-mono text-text-muted">tid_8f92a1</span>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30 uppercase">Error</span>
+                                    </div>
+                                    <h4 className="text-white font-medium text-sm leading-snug">Failed to validate token signature: key expired</h4>
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-text-muted">
+                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                        2023-10-24 14:32:01.452 UTC
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5 class="text-xs font-bold uppercase tracking-wider text-text-muted mb-2">Stack Trace</h5>
+                                    <div class="bg-[#0d1117] rounded-md border border-border-color p-3 overflow-x-auto">
+<pre class="text-[11px] font-mono text-gray-300 leading-relaxed code-block"><code class="language-java">io.jsonwebtoken.ExpiredJwtException: JWT expired
+    at io.jsonwebtoken.impl.DefaultJwtParser.parse(DefaultJwtParser.java:401)
+    at com.fleet.auth.TokenValidator.validate(TokenValidator.java:45)
+    at com.fleet.auth.AuthFilter.doFilter(AuthFilter.java:28)</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+             );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Layout>
+                        <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/user-console" element={<UserConsole />} />
+                            <Route path="/org-console" element={<OrgConsole />} />
+                            <Route path="/incidents" element={<Incidents />} />
+                            <Route path="/logs" element={<Logs />} />
+                            <Route path="*" element={<Dashboard />} />
+                        </Routes>
+                    </Layout>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

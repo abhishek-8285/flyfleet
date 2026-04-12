@@ -40,6 +40,7 @@ type Trip struct {
 	VehicleID            string       `json:"vehicle_id" db:"vehicle_id"`
 	DriverID             *string      `json:"driver_id" db:"driver_id"`
 	Status               string       `json:"status" db:"status"` // planned, in_progress, paused, completed, cancelled
+	TripType             string       `json:"trip_type" db:"trip_type"` // delivery, service, long_haul, standard, local, return
 	Title                string       `json:"title" db:"title"`
 	Description          string       `json:"description" db:"description"`
 	PickupGeo            *Location    `json:"pickup_geo" db:"pickup_geo"`
@@ -258,16 +259,18 @@ type RouteOptimization struct {
 
 // TripListFilter represents filters for listing trips
 type TripListFilter struct {
-	OrgID     string `json:"org_id"`
-	VehicleID string `json:"vehicle_id"`
-	DriverID  string `json:"driver_id"`
-	Status    string `json:"status"`
-	From      string `json:"from"` // Date range start
-	To        string `json:"to"`   // Date range end
-	Page      int    `json:"page"`
-	PageSize  int    `json:"page_size"`
-	OrderBy   string `json:"order_by"`
-	OrderDir  string `json:"order_dir"`
+	OrgID        string `json:"org_id"`
+	VehicleID    string `json:"vehicle_id"`
+	DriverID     string `json:"driver_id"`
+	CustomerName string `json:"customer_name"` // Party/organization that gave the job
+	Status       string `json:"status"`
+	TripType     string `json:"trip_type"` // delivery, service, long_haul, standard, local, return
+	From         string `json:"from"`      // Date range start
+	To           string `json:"to"`        // Date range end
+	Page         int    `json:"page"`
+	PageSize     int    `json:"page_size"`
+	OrderBy      string `json:"order_by"`
+	OrderDir     string `json:"order_dir"`
 }
 
 // TripSummary represents trip analytics and summary information

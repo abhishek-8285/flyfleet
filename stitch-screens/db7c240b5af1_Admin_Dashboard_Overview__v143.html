@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Restore Points List - FleetSecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Data Recovery</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">settings_backup_restore</span>
+<span class="text-sm font-medium">Restore Points</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBP2EOPOtXHKiWRCfBgjuSkbKUVSEnsGVDobJhb5kPXqv5W3dpkfbg9expmJ38K89wnx2imXh6jiD63zNFsffR2OaYIIU2oqoLUpMziIz4M_2xGAvhKFPQkQsG92KnfDjS0t2xx3GZKVL13u1_LtabKEQgoIjl1MLDIxQAQxQFeBlOL_uViYWJpGhsu2QenIIZ8P6PyuyXRIHdGfMJpznlLSdwZ3g6Lfj6w8jOG9fqBo5hl9_Yj-ILbAt2wg9_gA3BTdV5_UFMf9qk");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">
+<span>Disaster Recovery</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary">Restore Points</span>
+</nav>
+<h2 class="text-white text-lg font-bold">Manage Restore Points</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded-lg pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Global search backups..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">backup</span>
+                    Initiate New Restore
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-hidden p-6 flex flex-col gap-6">
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface-dark border border-border-color p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined">storage</span>
+</div>
+<div>
+<div class="text-[10px] text-text-muted font-bold uppercase">Total Storage</div>
+<div class="text-lg font-bold text-white">12.4 TB</div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-success/10 text-success flex items-center justify-center">
+<span class="material-symbols-outlined">verified</span>
+</div>
+<div>
+<div class="text-[10px] text-text-muted font-bold uppercase">Verified Points</div>
+<div class="text-lg font-bold text-white">142</div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+<span class="material-symbols-outlined">history</span>
+</div>
+<div>
+<div class="text-[10px] text-text-muted font-bold uppercase">Retention Policy</div>
+<div class="text-lg font-bold text-white">90 Days</div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color p-4 rounded-xl flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center">
+<span class="material-symbols-outlined">report</span>
+</div>
+<div>
+<div class="text-[10px] text-text-muted font-bold uppercase">Failed Backups</div>
+<div class="text-lg font-bold text-white">2</div>
+</div>
+</div>
+</div>
+<div class="flex-1 bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<div class="flex items-center gap-4">
+<h3 class="text-white font-semibold text-sm">Restore Points Inventory</h3>
+<div class="h-4 w-[1px] bg-border-color"></div>
+<div class="flex items-center gap-1 text-[11px] text-text-muted">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+                            System Health: Optimal
+                        </div>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:border-text-muted transition-all">
+<span class="material-symbols-outlined text-[16px]">filter_alt</span>
+                            Filter
+                        </button>
+<button class="flex items-center gap-2 px-3 py-1.5 bg-surface-dark border border-border-color rounded text-xs text-text-muted hover:text-white hover:border-text-muted transition-all">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                            Export
+                        </button>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/30 sticky top-0 z-10 backdrop-blur-md">
+<th class="px-6 py-4 font-semibold">
+<div class="flex items-center gap-2">
+                                        Backup ID <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+</div>
+</th>
+<th class="px-6 py-4 font-semibold">Type</th>
+<th class="px-6 py-4 font-semibold">Created At</th>
+<th class="px-6 py-4 font-semibold text-right">Size</th>
+<th class="px-6 py-4 font-semibold text-center">Status</th>
+<th class="px-6 py-4 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-color">
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px]">cloud_done</span>
+<span class="font-mono text-xs text-white">BK-20231024-001</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase border border-indigo-500/20">Full</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-white">Oct 24, 2023 14:32</span>
+<span class="text-[10px] text-text-muted">Initiated by System</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono text-text-muted">1.28 TB</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        Verified
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-primary/20 text-text-muted hover:text-primary rounded transition-colors" title="Restore">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+</button>
+<button class="p-1.5 hover:bg-white/10 text-text-muted hover:text-white rounded transition-colors" title="Download">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 hover:bg-danger/20 text-text-muted hover:text-danger rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px]">cloud_sync</span>
+<span class="font-mono text-xs text-white">BK-20231024-002</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase border border-primary/20">Partial</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-white">Oct 24, 2023 12:00</span>
+<span class="text-[10px] text-text-muted">Incremental Update</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono text-text-muted">42.5 GB</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                        Available
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-primary/20 text-text-muted hover:text-primary rounded transition-colors" title="Restore">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+</button>
+<button class="p-1.5 hover:bg-white/10 text-text-muted hover:text-white rounded transition-colors" title="Download">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 hover:bg-danger/20 text-text-muted hover:text-danger rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px]">cloud_done</span>
+<span class="font-mono text-xs text-white">BK-20231023-084</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase border border-indigo-500/20">Full</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-white">Oct 23, 2023 23:59</span>
+<span class="text-[10px] text-text-muted">Daily Snapshot</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono text-text-muted">1.27 TB</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        Verified
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-primary/20 text-text-muted hover:text-primary rounded transition-colors" title="Restore">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+</button>
+<button class="p-1.5 hover:bg-white/10 text-text-muted hover:text-white rounded transition-colors" title="Download">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 hover:bg-danger/20 text-text-muted hover:text-danger rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-danger text-[18px]">cloud_off</span>
+<span class="font-mono text-xs text-white">BK-20231023-050</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase border border-indigo-500/20">Full</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-white">Oct 23, 2023 18:15</span>
+<span class="text-[10px] text-danger">Integrity Check Failed</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono text-text-muted">840 GB</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                        Corrupted
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-white/10 text-text-muted hover:text-white rounded transition-colors" title="Details">
+<span class="material-symbols-outlined text-[20px]">info</span>
+</button>
+<button class="p-1.5 hover:bg-danger/20 text-text-muted hover:text-danger rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted text-[18px]">cloud_done</span>
+<span class="font-mono text-xs text-white">BK-20231022-012</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase border border-indigo-500/20">Full</span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-white">Oct 22, 2023 04:00</span>
+<span class="text-[10px] text-text-muted">Weekly Master</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono text-text-muted">1.25 TB</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/20 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                        Verified
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-primary/20 text-text-muted hover:text-primary rounded transition-colors" title="Restore">
+<span class="material-symbols-outlined text-[20px]">settings_backup_restore</span>
+</button>
+<button class="p-1.5 hover:bg-white/10 text-text-muted hover:text-white rounded transition-colors" title="Download">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 hover:bg-danger/20 text-text-muted hover:text-danger rounded transition-colors" title="Delete">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-border-color bg-surface-darker flex items-center justify-between text-xs text-text-muted">
+<div class="flex items-center gap-4">
+<span>Showing <span class="text-white font-medium">1-10</span> of <span class="text-white font-medium">152</span> points</span>
+<div class="flex items-center gap-2">
+<span>Show:</span>
+<select class="bg-surface-dark border-border-color rounded text-[10px] px-2 py-0.5 outline-none focus:ring-1 focus:ring-primary">
+<option>10</option>
+<option>25</option>
+<option>50</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1 hover:bg-border-color rounded disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-primary text-white font-medium">1</button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-border-color text-text-muted">2</button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-border-color text-text-muted">3</button>
+<span class="px-1">...</span>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-border-color text-text-muted">16</button>
+<button class="p-1 hover:bg-border-color rounded">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 FleetSecurity Management Platform. DR Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>API Endpoint: <span class="font-mono">GET /dr/restores</span></span>
+<span>BFF Connectivity: <span class="text-success font-bold uppercase">Active</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

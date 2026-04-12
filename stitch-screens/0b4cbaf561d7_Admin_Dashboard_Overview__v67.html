@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DR Test Detail View - FleetSecurity</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .log-line:hover {
+            background-color: rgba(19, 127, 236, 0.05);
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted text-[10px]">Resilience Management</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">dynamic_form</span>
+<span class="text-sm font-medium">DR Testing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">cloud_sync</span>
+<span class="text-sm font-medium">Replication Status</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted text-[10px]">Infrastructure</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dns</span>
+<span class="text-sm font-medium">Site Clusters</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-sm font-medium">Storage Pools</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-8 border border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-xs font-medium text-white truncate">Alex Morgan</span>
+<span class="text-[10px] text-text-muted truncate">DR Coordinator</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">
+<span>DISASTER RECOVERY</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span>DR TESTING</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary">DETAIL</span>
+</nav>
+<div class="flex items-center gap-3">
+<h2 class="text-white text-lg font-bold">Q4 Infrastructure Failover Validation</h2>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">ID: DR-2023-094</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+                    Abort Test
+                </button>
+<button class="px-4 py-2 bg-primary/50 text-white/50 text-xs font-semibold rounded flex items-center gap-2 cursor-not-allowed border border-primary/20">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+                    Execute Test
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div class="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Test Type</div>
+<div class="flex items-end justify-between">
+<div class="text-lg font-bold text-white">Full Failover Simulation</div>
+<span class="material-symbols-outlined text-primary/40">settings_backup_restore</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div class="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Target Environment</div>
+<div class="flex items-end justify-between">
+<div class="text-lg font-bold text-white">US-EAST-2 (Recovery)</div>
+<span class="material-symbols-outlined text-primary/40">cloud_done</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div class="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Current Duration</div>
+<div class="flex items-end justify-between">
+<div class="text-lg font-bold text-white">01h 12m 44s</div>
+<span class="material-symbols-outlined text-primary/40">timer</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between ring-1 ring-primary/30 bg-primary/5">
+<div class="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Current Status</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse-soft"></span>
+<div class="text-lg font-bold text-primary">RUNNING</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">analytics</span>
+                                Execution Progress
+                            </h3>
+<span class="text-[11px] text-text-muted font-mono">STEP 3 OF 5 • 65% COMPLETE</span>
+</div>
+<div class="relative pt-1">
+<div class="flex items-center justify-between text-xs mb-3">
+<div class="flex flex-col items-center flex-1">
+<div class="w-6 h-6 rounded-full bg-success text-white flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<span class="text-white font-medium text-[10px]">Initialization</span>
+</div>
+<div class="h-0.5 bg-success flex-1 -mt-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-6 h-6 rounded-full bg-success text-white flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<span class="text-white font-medium text-[10px]">Storage Replication</span>
+</div>
+<div class="h-0.5 bg-primary flex-1 -mt-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-8 h-8 rounded-full border-2 border-primary bg-background-dark text-primary flex items-center justify-center mb-1 -mt-1 ring-4 ring-primary/10">
+<span class="material-symbols-outlined text-[18px] animate-spin">autorenew</span>
+</div>
+<span class="text-primary font-bold text-[10px]">Service Failover</span>
+</div>
+<div class="h-0.5 bg-border-color flex-1 -mt-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-6 h-6 rounded-full bg-border-color text-text-muted flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+</div>
+<span class="text-text-muted font-medium text-[10px]">Data Integrity</span>
+</div>
+<div class="h-0.5 bg-border-color flex-1 -mt-6"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-6 h-6 rounded-full bg-border-color text-text-muted flex items-center justify-center mb-2">
+<span class="material-symbols-outlined text-[14px]">flag</span>
+</div>
+<span class="text-text-muted font-medium text-[10px]">Final Report</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<h3 class="text-white text-sm font-semibold mb-4">Result Summary</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 rounded-lg bg-surface-darker border border-border-color">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-success">database</span>
+<span class="text-xs font-bold text-white">Database Consistency</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px]">
+<span class="text-text-muted">Checksum Validation</span>
+<span class="text-success font-medium">PASS</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-text-muted">Latency Offset</span>
+<span class="text-white font-medium">12ms</span>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-lg bg-surface-darker border border-border-color">
+<div class="flex items-center gap-3 mb-3">
+<span class="material-symbols-outlined text-warning">network_check</span>
+<span class="text-xs font-bold text-white">Network Connectivity</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px]">
+<span class="text-text-muted">Load Balancer Sync</span>
+<span class="text-warning font-medium">WARNING</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-text-muted">Public Endpoint</span>
+<span class="text-white font-medium">REACHABLE</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-[#05090e] rounded-xl border border-border-color flex flex-col h-[400px]">
+<div class="p-3 border-b border-border-color flex justify-between items-center bg-[#0b1219]">
+<h3 class="text-white text-xs font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[16px]">terminal</span>
+                                Live System Logs
+                            </h3>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1.5 text-[10px] text-success">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                    Streaming
+                                </span>
+<div class="h-4 w-px bg-border-color"></div>
+<button class="text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar">
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:30:15.12</span>
+<span class="text-blue-400 font-bold shrink-0">[INFO]</span>
+<span class="text-slate-300">Initiating failover sequence for US-EAST-1 cluster...</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:30:18.45</span>
+<span class="text-blue-400 font-bold shrink-0">[INFO]</span>
+<span class="text-slate-300">Quiescing source database nodes... Success.</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:31:02.09</span>
+<span class="text-blue-400 font-bold shrink-0">[INFO]</span>
+<span class="text-slate-300">Mounting replication volumes on target VPC...</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4 bg-primary/5 border-primary">
+<span class="text-text-muted/50 shrink-0">14:35:12.88</span>
+<span class="text-primary font-bold shrink-0">[RUN]</span>
+<span class="text-slate-300">Updating DNS records (TTL 60s) for public endpoints...</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:35:14.32</span>
+<span class="text-warning font-bold shrink-0">[WARN]</span>
+<span class="text-warning/80">Latency detected in API Gateway propagation (US-WEST-2).</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:36:00.01</span>
+<span class="text-blue-400 font-bold shrink-0">[INFO]</span>
+<span class="text-slate-300">Executing node integrity scripts on 'CLUSTER-A-01'...</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:36:05.15</span>
+<span class="text-blue-400 font-bold shrink-0">[INFO]</span>
+<span class="text-slate-300">Health checks passing for 12/12 web nodes.</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4">
+<span class="text-text-muted/50 shrink-0">14:36:12.44</span>
+<span class="text-primary font-bold shrink-0">[RUN]</span>
+<span class="text-slate-300">Routing traffic to DR Site... Waiting for heartbeat.</span>
+</div>
+<div class="log-line py-0.5 border-l-2 border-transparent pl-2 flex gap-4 opacity-50">
+<span class="text-text-muted/50 shrink-0">14:36:15.00</span>
+<span class="text-slate-500 font-bold shrink-0">[...]</span>
+<span class="text-slate-600 italic">Listening for system events...</span>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color">
+<h3 class="text-white text-sm font-semibold">Test Metadata</h3>
+</div>
+<div class="p-5 space-y-6">
+<div>
+<label class="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-2">Initiated By</label>
+<div class="flex items-center gap-3 bg-surface-darker p-3 rounded-lg border border-border-color">
+<div class="w-8 h-8 rounded bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">AM</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Alex Morgan</span>
+<span class="text-[10px] text-text-muted">alex.morgan@fleet.co</span>
+</div>
+</div>
+</div>
+<div>
+<label class="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-2">Success Criteria</label>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-xs text-slate-300">
+<span class="material-symbols-outlined text-success text-[14px] mt-0.5">verified</span>
+<span>RTO (Recovery Time Objective) &lt; 2 Hours</span>
+</li>
+<li class="flex items-start gap-2 text-xs text-slate-300">
+<span class="material-symbols-outlined text-success text-[14px] mt-0.5">verified</span>
+<span>RPO (Recovery Point Objective) &lt; 15 Mins</span>
+</li>
+<li class="flex items-start gap-2 text-xs text-slate-300">
+<span class="material-symbols-outlined text-text-muted text-[14px] mt-0.5">circle</span>
+<span>No data loss in primary S3 bucket</span>
+</li>
+<li class="flex items-start gap-2 text-xs text-slate-300">
+<span class="material-symbols-outlined text-text-muted text-[14px] mt-0.5">circle</span>
+<span>User authentication operational</span>
+</li>
+</ul>
+</div>
+<div>
+<label class="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-2">Logs Reference</label>
+<div class="bg-surface-darker rounded border border-border-color p-3 font-mono text-[11px] text-text-muted break-all">
+                                    arn:aws:logs:us-east-1:12345678:log-group/dr-tests/validation-2023-094
+                                </div>
+<button class="w-full mt-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 rounded border border-primary/20 transition-colors">
+                                    Open in CloudWatch
+                                </button>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1">
+<div class="p-4 border-b border-border-color">
+<h3 class="text-white text-sm font-semibold">Test Anomalies</h3>
+</div>
+<div class="p-2 space-y-1">
+<div class="p-3 bg-danger/5 border border-danger/20 rounded-lg">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-danger text-[18px]">error</span>
+<span class="text-xs font-bold text-danger">Resource Exhaustion</span>
+</div>
+<p class="text-[11px] text-text-muted">Node US-E-2-BAK-04 reached 95% CPU during disk mounting.</p>
+</div>
+<div class="p-3 bg-warning/5 border border-warning/20 rounded-lg">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-warning text-[18px]">warning</span>
+<span class="text-xs font-bold text-warning">Sync Lag</span>
+</div>
+<p class="text-[11px] text-text-muted">Replication lag increased to 180s momentarily.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. DR Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Last Snapshot: <span class="text-success">5m ago</span></span>
+<span>Environment: <span class="text-primary">Staging-DR</span></span>
+<span>Server Time: <span class="font-mono text-white">14:38 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

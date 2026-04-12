@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetManager - Vehicle Documents Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.5;
+        }
+    </style>
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">directions_car</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Fleet Management</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Overview</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">local_shipping</span>
+                            <span className="text-sm font-medium">Vehicles</span>
+                        </a>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') || isActive('/add') || isActive('/detail') || isActive('/edit') || isActive('/settings') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">folder_shared</span>
+                            <span className="text-sm font-medium">Documents</span>
+                        </Link>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">build</span>
+                            <span className="text-sm font-medium">Maintenance</span>
+                        </a>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">assignment</span>
+                            <span className="text-sm font-medium">Work Orders</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">person</span>
+                            <span className="text-sm font-medium">Drivers</span>
+                        </a>
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+                        <Link to="/settings" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/settings') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">settings</span>
+                            <span className="text-sm font-medium">Settings</span>
+                        </Link>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Fleet Manager</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const DocumentsList = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col justify-center">
+                                <div className="flex items-center gap-2 text-[11px] text-text-muted">
+                                    <span>Fleet Management</span>
+                                    <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span className="text-white">Documents</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">Vehicle Documents</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">search</span>
+                                    </span>
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Global Search (ID, Vehicle, Type)..." type="text"/>
+                                </div>
+                                <Link to="/add" className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                                    Add Document
+                                </Link>
+                            </div>
+                        </header>
+                        <div className="flex-1 flex overflow-hidden">
+                            <div className="w-64 bg-surface-dark border-r border-border-color p-4 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-shrink-0 z-10">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Filters</h3>
+                                    <button className="text-[10px] text-primary hover:text-primary-dark font-medium">Reset All</button>
+                                </div>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-2">Document Type</label>
+                                        <div className="space-y-2">
+                                            {['Registration', 'Insurance Policy', 'Fitness Cert.', 'Permit', 'Pollution (PUC)'].map(type => (
+                                                <label key={type} className="flex items-center gap-2 cursor-pointer group">
+                                                    <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+                                                    <span className="text-xs text-white group-hover:text-primary transition-colors">{type}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="w-full h-px bg-border-color"></div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-2">Status</label>
+                                        <div className="space-y-2">
+                                            {['Verified', 'Pending', 'Expired'].map(status => (
+                                                <label key={status} className="flex items-center gap-2 cursor-pointer group">
+                                                    <input defaultChecked={status === 'Verified'} className="rounded border-border-color bg-surface-darker text-primary focus:ring-0 w-4 h-4" type="checkbox"/>
+                                                    <span className="text-xs text-white group-hover:text-primary transition-colors">{status}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="w-full h-px bg-border-color"></div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-2">Expiry Period</label>
+                                        <select className="w-full bg-surface-darker border border-border-color text-xs text-white rounded px-3 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                            <option>All Time</option>
+                                            <option>Expiring in 7 Days</option>
+                                            <option>Expiring in 30 Days</option>
+                                            <option>Expired &gt; 30 Days</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="mt-auto p-4 bg-surface-darker rounded border border-border-color">
+                                    <div className="flex items-start gap-3">
+                                        <span className="material-symbols-outlined text-warning text-xl">warning</span>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-white">Compliance Alert</h4>
+                                            <p className="text-[10px] text-text-muted mt-1 leading-tight">3 vehicles have documents expiring within 48 hours.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full">
+                                    <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                                Document Registry
+                                            </h3>
+                                            <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold border border-primary/30">1,248 Total</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                            </button>
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-[18px]">download</span>
+                                            </button>
+                                            <div className="h-4 w-px bg-border-color mx-1"></div>
+                                            <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                                            </button>
+                                            <button className="bg-surface-dark border border-border-color p-1.5 rounded text-white shadow-sm">
+                                                <span className="material-symbols-outlined text-[18px]">view_list</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 overflow-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="sticky top-0 z-10 bg-surface-darker shadow-sm">
+                                                <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+                                                    <th className="px-4 py-3 font-semibold w-10">
+                                                        <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+                                                    </th>
+                                                    <th className="px-4 py-3 font-semibold">Document ID</th>
+                                                    <th className="px-4 py-3 font-semibold">Vehicle No</th>
+                                                    <th className="px-4 py-3 font-semibold">Type</th>
+                                                    <th className="px-4 py-3 font-semibold">Document Number</th>
+                                                    <th className="px-4 py-3 font-semibold">Expiry Date</th>
+                                                    <th className="px-4 py-3 font-semibold text-center">Status</th>
+                                                    <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-sm divide-y divide-border-color">
+                                                {[
+                                                    { id: 'DOC-8821', vh: 'VH-2023-001', type: 'Vehicle Registration', docNum: 'REG-9928-XA', exp: 'Dec 31, 2024', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20' },
+                                                    { id: 'DOC-8822', vh: 'VH-2023-001', type: 'Insurance Policy', docNum: 'INS-AXA-2291', exp: 'Oct 20, 2023', status: 'EXPIRED', statusClass: 'text-danger bg-danger/10 border-danger/20', expClass: 'text-danger font-medium' },
+                                                    { id: 'DOC-8835', vh: 'VH-2023-014', type: 'Pollution Cert (PUC)', docNum: 'PUC-DL-8821', exp: 'Nov 15, 2023', status: 'PENDING', statusClass: 'text-warning bg-warning/10 border-warning/20' },
+                                                    { id: 'DOC-8840', vh: 'VH-2023-042', type: 'National Permit', docNum: 'NP-29910-XX', exp: 'Jan 10, 2025', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20' },
+                                                    { id: 'DOC-8842', vh: 'VH-2023-055', type: 'Fitness Certificate', docNum: 'FC-221-990', exp: 'Oct 28, 2023', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20', expClass: 'text-warning font-medium' },
+                                                    { id: 'DOC-8891', vh: 'VH-2023-011', type: 'Insurance Policy', docNum: 'INS-LIC-0021', exp: 'Mar 15, 2024', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20' },
+                                                    { id: 'DOC-8902', vh: 'VH-2023-088', type: 'Road Tax Receipt', docNum: 'RT-2291-00', exp: 'Nov 01, 2023', status: 'PENDING', statusClass: 'text-warning bg-warning/10 border-warning/20' },
+                                                    { id: 'DOC-8915', vh: 'VH-2023-092', type: 'Registration', docNum: 'REG-NY-221', exp: 'Jun 20, 2026', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20' },
+                                                    { id: 'DOC-8920', vh: 'VH-2023-005', type: 'Hazmat Permit', docNum: 'HZ-991-002', exp: 'Oct 18, 2023', status: 'EXPIRED', statusClass: 'text-danger bg-danger/10 border-danger/20', expClass: 'text-danger font-medium' },
+                                                    { id: 'DOC-8933', vh: 'VH-2023-112', type: 'Insurance Policy', docNum: 'INS-GEI-992', exp: 'Feb 11, 2024', status: 'VERIFIED', statusClass: 'text-success bg-success/10 border-success/20' },
+                                                ].map((row, index) => (
+                                                    <tr key={index} className="hover:bg-surface-darker/50 transition-colors group cursor-pointer" onClick={() => navigate('/detail')}>
+                                                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                                                            <input className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+                                                        </td>
+                                                        <td className="px-4 py-3 font-mono text-xs text-text-muted">{row.id}</td>
+                                                        <td className="px-4 py-3 font-medium text-white">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-text-muted text-[16px]">local_shipping</span>
+                                                                {row.vh}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-white">{row.type}</td>
+                                                        <td className="px-4 py-3 text-text-muted font-mono text-xs">{row.docNum}</td>
+                                                        <td className={`px-4 py-3 ${row.expClass || 'text-text-muted'}`}>{row.exp}</td>
+                                                        <td className="px-4 py-3 text-center">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${row.statusClass}`}>
+                                                                {row.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button onClick={e => { e.stopPropagation(); navigate('/edit'); }} className="text-text-muted hover:text-white p-1">
+                                                                <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="p-4 border-t border-border-color bg-surface-darker flex justify-between items-center">
+                                        <div className="text-xs text-text-muted">
+                                            Showing <span className="text-white font-medium">1-10</span> of <span className="text-white font-medium">1,248</span> documents
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button className="px-3 py-1.5 rounded border border-border-color text-xs text-text-muted hover:text-white hover:bg-surface-dark transition-colors disabled:opacity-50">Previous</button>
+                                            <button className="px-3 py-1.5 rounded border border-border-color text-xs text-text-muted hover:text-white hover:bg-surface-dark transition-colors">Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted flex-shrink-0 z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Vehicle Docs Module V2.1</span>
+                            <div className="flex items-center gap-4">
+                                <span>Data Source: <span className="text-success">Web BFF</span></span>
+                                <span>System Status: <span className="text-success">Operational</span></span>
+                                <span>Last Sync: <span className="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const AddDocument = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
+                                        <Link to="/" className="hover:text-white cursor-pointer transition-colors">Documents</Link>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white">Add</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Add Vehicle Document</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} className="px-4 py-2 text-text-muted hover:text-white text-sm font-medium transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+                                    Upload Document
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">description</span>
+                                            Document Information
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Vehicle ID <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">directions_car</span>
+                                                </span>
+                                                <select className="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none">
+                                                    <option disabled="" defaultValue="">Select vehicle...</option>
+                                                    <option value="v001">VH-8293 (Ford Transit)</option>
+                                                    <option value="v002">VH-9921 (Mercedes Sprinter)</option>
+                                                    <option value="v003">VH-1022 (Toyota Hilux)</option>
+                                                </select>
+                                                <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">arrow_drop_down</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Document Type <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">category</span>
+                                                </span>
+                                                <select className="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none">
+                                                    <option disabled="" defaultValue="">Select type...</option>
+                                                    <option value="insurance">Insurance Certificate</option>
+                                                    <option value="registration">Vehicle Registration</option>
+                                                    <option value="maintenance">Maintenance Log</option>
+                                                    <option value="permit">Transport Permit</option>
+                                                </select>
+                                                <span className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">arrow_drop_down</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Document Number <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">tag</span>
+                                                </span>
+                                                <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="e.g. INS-2023-882910" type="text"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">date_range</span>
+                                            Validity & Authority
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Issue Date <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date"/>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Expiry Date <span className="text-danger">*</span></label>
+                                            <div className="relative">
+                                                <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date"/>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Issuing Authority</label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">account_balance</span>
+                                                </span>
+                                                <input className="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="e.g. Department of Motor Vehicles" type="text"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                        <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-primary text-[18px]">upload_file</span>
+                                            File Upload
+                                        </h3>
+                                    </div>
+                                    <div className="p-6 space-y-6">
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Attachment <span className="text-danger">*</span></label>
+                                            <div className="w-full h-48 rounded-lg border-2 border-dashed border-border-color bg-surface-darker hover:bg-border-color/20 transition-colors flex flex-col items-center justify-center cursor-pointer group relative">
+                                                <input accept=".pdf,.jpg,.png,.doc,.docx" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file"/>
+                                                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                    <span className="material-symbols-outlined text-primary text-[24px]">cloud_upload</span>
+                                                </div>
+                                                <p className="text-sm font-medium text-white mb-1">Click to upload or drag and drop</p>
+                                                <p className="text-xs text-text-muted">PDF, JPG, PNG or DOC (max 10MB)</p>
+                                            </div>
+                                        </div>
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="block text-xs font-medium text-text-muted mb-1.5">Remarks</label>
+                                            <textarea className="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 h-24 resize-none" placeholder="Add any additional notes about this document..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <footer className="mt-10 border-t border-border-color pt-6 pb-2 text-center text-[10px] text-text-muted">
+                                <span>© 2023 Enterprise Fleet Manager. Documents Module V2.1</span>
+                            </footer>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const DocumentDetail = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <nav aria-label="Breadcrumb" className="flex">
+                                    <ol className="flex items-center space-x-2">
+                                        <li>
+                                            <Link to="/" className="text-text-muted hover:text-white text-sm">Documents</Link>
+                                        </li>
+                                        <li>
+                                            <span className="text-border-color">/</span>
+                                        </li>
+                                        <li>
+                                            <a aria-current="page" className="text-white font-medium text-sm" href="#">DOC-2023-8942</a>
+                                        </li>
+                                    </ol>
+                                </nav>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/edit')} className="px-4 py-2 bg-surface-dark border border-border-color hover:bg-surface-light/5 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                    Edit Document
+                                </button>
+                                <button className="px-4 py-2 bg-surface-dark border border-border-color hover:bg-surface-light/5 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Download
+                                </button>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">verified</span>
+                                    Verify
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-primary">description</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Document Type</div>
+                                    <div className="text-lg font-bold text-white">Insurance Certificate</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Policy #998-A22-BC</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">event_busy</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Days until Expiry</div>
+                                    <div className="text-2xl font-bold text-warning">42 Days</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-warning h-full" style={{width: '25%'}}></div>
+                                    </div>
+                                    <div className="text-[10px] text-text-muted mt-1">Expires: Dec 15, 2023</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">verified_user</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Verification Status</div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="w-2 h-2 rounded-full bg-success"></span>
+                                        <div className="text-xl font-bold text-success">Verified</div>
+                                    </div>
+                                    <div className="text-[10px] text-text-muted mt-1">Last check: 2 days ago</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-white">account_balance</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Issuing Authority</div>
+                                    <div className="text-lg font-bold text-white">Allianz Global</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Corporate Division</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col h-full min-h-[600px]">
+                                        <div className="border-b border-border-color px-4 pt-4 flex gap-6">
+                                            <button className="pb-3 border-b-2 border-primary text-primary text-sm font-medium flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px]">info</span>
+                                                Overview
+                                            </button>
+                                            <button className="pb-3 border-b-2 border-transparent text-text-muted hover:text-white transition-colors text-sm font-medium flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                                File Preview
+                                            </button>
+                                        </div>
+                                        <div className="p-6 flex-1">
+                                            <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                                                <div className="col-span-2 pb-2 border-b border-border-color">
+                                                    <h3 className="text-white text-sm font-semibold">Document Details</h3>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Document Name</label>
+                                                    <div className="text-white text-sm">Vehicle Insurance Policy 2023-2024</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Category</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">INSURANCE</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Issue Date</label>
+                                                    <div className="text-white text-sm">Dec 15, 2022</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Expiry Date</label>
+                                                    <div className="text-white text-sm font-medium text-warning">Dec 15, 2023</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Document Number</label>
+                                                    <div className="text-white text-sm font-mono">DOC-2023-8942-AZ</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Coverage Amount</label>
+                                                    <div className="text-white text-sm">$2,000,000.00 USD</div>
+                                                </div>
+                                                <div className="col-span-2 pt-4 pb-2 border-b border-border-color">
+                                                    <h3 className="text-white text-sm font-semibold">Metadata</h3>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">File Name</label>
+                                                    <div className="text-white text-sm truncate">insurance_cert_ford_transit_2023.pdf</div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">File Size</label>
+                                                    <div className="text-white text-sm">2.4 MB</div>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-medium text-text-muted uppercase mb-1">Notes</label>
+                                                    <div className="text-text-muted text-sm bg-surface-darker p-3 rounded border border-border-color">
+                                                        Comprehensive coverage including third-party liability and natural disasters. Automatically renewed unless cancelled 30 days prior.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">local_shipping</span>
+                                                Vehicle Context
+                                            </h3>
+                                            <a className="text-primary text-xs hover:underline" href="#">View Vehicle</a>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded bg-surface-darker border border-border-color flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-text-muted">directions_bus</span>
+                                                </div>
+                                                <div>
+                                                    <div className="text-white font-bold text-sm">Ford Transit 350</div>
+                                                    <div className="text-text-muted text-xs">2022 Model • Cargo Van</div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-3 pt-2">
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-text-muted">Registration No.</span>
+                                                    <span className="text-white font-mono bg-surface-darker px-2 py-0.5 rounded border border-border-color">KY-592-LP</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-text-muted">VIN</span>
+                                                    <span className="text-white font-mono text-xs">1FTNE2EW0KDA12...</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-text-muted">Organization</span>
+                                                    <span className="text-white">Logistics North Ltd.</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-sm">
+                                                    <span className="text-text-muted">Status</span>
+                                                    <span className="text-success text-xs font-bold uppercase border border-success/30 bg-success/10 px-2 py-0.5 rounded">Active</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1">
+                                        <div className="p-4 border-b border-border-color bg-surface-darker">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                                                Audit Trail
+                                            </h3>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+                                            <div className="relative pl-4 border-l border-border-color space-y-6">
+                                                <div className="relative">
+                                                    <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-success border-2 border-surface-dark"></div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs text-text-muted">Oct 24, 2023 • 14:30</span>
+                                                        <span className="text-sm font-medium text-white">Document Verified</span>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-5 h-5 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-white">SJ</div>
+                                                            <span className="text-xs text-text-muted">Verified by <span className="text-white">Sarah Jenkins</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="relative">
+                                                    <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-primary border-2 border-surface-dark"></div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs text-text-muted">Oct 22, 2023 • 09:15</span>
+                                                        <span className="text-sm font-medium text-white">Metadata Updated</span>
+                                                        <span className="text-xs text-text-muted">Added coverage amount details.</span>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-5 h-5 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-white">AM</div>
+                                                            <span className="text-xs text-text-muted">Updated by <span className="text-white">Alex Morgan</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="relative">
+                                                    <div className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-border-color border-2 border-surface-dark"></div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-xs text-text-muted">Oct 22, 2023 • 09:10</span>
+                                                        <span className="text-sm font-medium text-white">Document Uploaded</span>
+                                                        <span className="text-xs text-text-muted">Initial upload via web portal.</span>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <div className="w-5 h-5 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-white">AM</div>
+                                                            <span className="text-xs text-text-muted">Uploaded by <span className="text-white">Alex Morgan</span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 border-t border-border-color bg-surface-darker rounded-b-xl">
+                                            <button className="w-full py-1.5 text-xs text-text-muted hover:text-white transition-colors flex items-center justify-center gap-2">
+                                                <span className="material-symbols-outlined text-[14px]">expand_more</span>
+                                                View Full History
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Document Module V2.1</span>
+                            <div className="flex items-center gap-4">
+                                <span>Storage: <span className="text-success">Encrypted (AES-256)</span></span>
+                                <span>Last Sync: <span className="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const EditDocument = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col justify-center">
+                                <nav className="flex items-center text-xs text-text-muted mb-1">
+                                    <Link to="/" className="hover:text-white transition-colors">Documents</Link>
+                                    <span className="mx-2">/</span>
+                                    <Link to="/detail" className="hover:text-white transition-colors">Vehicle #4092</Link>
+                                    <span className="mx-2">/</span>
+                                    <span className="text-white">Edit Insurance Policy</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold">Edit Vehicle Document</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/detail')} className="px-4 py-2 border border-border-color bg-surface-dark hover:bg-surface-darker text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/detail')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="max-w-5xl mx-auto space-y-6">
+                                <div className="grid grid-cols-12 gap-6">
+                                    <div className="col-span-12 lg:col-span-8 space-y-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                                <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-primary text-[18px]">description</span>
+                                                    Document Details
+                                                </h3>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30">
+                                                    Active
+                                                </span>
+                                            </div>
+                                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Document Name</label>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 transition-all" type="text" defaultValue="Commercial Auto Insurance Policy 2023-2024"/>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Document Type</label>
+                                                    <div className="relative">
+                                                        <select className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none cursor-pointer">
+                                                            <option>Insurance Policy</option>
+                                                            <option>Registration</option>
+                                                            <option>Maintenance Record</option>
+                                                            <option>Inspection Report</option>
+                                                        </select>
+                                                        <span className="material-symbols-outlined absolute right-3 top-2.5 text-text-muted pointer-events-none text-lg">expand_more</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Vehicle Association</label>
+                                                    <div className="relative">
+                                                        <select className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none cursor-pointer">
+                                                            <option>Ford Transit - VIN 8849</option>
+                                                            <option>Toyota Camry - VIN 1029</option>
+                                                            <option>Chevy Bolt - VIN 5591</option>
+                                                        </select>
+                                                        <span className="material-symbols-outlined absolute right-3 top-2.5 text-text-muted pointer-events-none text-lg">expand_more</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Issue Date</label>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="date" defaultValue="2023-01-15"/>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Expiration Date</label>
+                                                    <input className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="date" defaultValue="2024-01-15"/>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-medium text-text-muted mb-1.5">Notes</label>
+                                                    <textarea className="w-full bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 transition-all custom-scrollbar resize-none" rows="3" defaultValue="Standard coverage including liability and collision. Renewed for FY24."></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                                <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-primary text-[18px]">attachment</span>
+                                                    File Attachment
+                                                </h3>
+                                            </div>
+                                            <div className="p-6">
+                                                <div className="flex items-center justify-between bg-surface-darker border border-border-color rounded-lg p-4 mb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                                                            <span className="material-symbols-outlined text-red-500">picture_as_pdf</span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-medium text-white">insurance_policy_v2_signed.pdf</p>
+                                                            <p className="text-xs text-text-muted">2.4 MB • PDF Document</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button className="p-2 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Download">
+                                                            <span className="material-symbols-outlined text-[20px]">download</span>
+                                                        </button>
+                                                        <button className="p-2 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Preview">
+                                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="relative border-2 border-dashed border-border-color rounded-lg p-8 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-surface-darker/50 transition-all cursor-pointer group">
+                                                    <input className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file"/>
+                                                    <div className="w-10 h-10 rounded-full bg-surface-darker border border-border-color flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                                        <span className="material-symbols-outlined text-text-muted group-hover:text-primary">upload_file</span>
+                                                    </div>
+                                                    <p className="text-sm text-white font-medium mb-1">Replace current file</p>
+                                                    <p className="text-xs text-text-muted">Drag and drop or click to browse</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="col-span-12 lg:col-span-4 space-y-6">
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                                <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-text-muted text-[18px]">info</span>
+                                                    System Metadata
+                                                </h3>
+                                            </div>
+                                            <div className="p-6 space-y-4">
+                                                <div>
+                                                    <span className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1">Document ID</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm text-white font-mono bg-surface-darker px-2 py-1 rounded border border-border-color">DOC-2023-8849-A</span>
+                                                        <button className="text-text-muted hover:text-white">
+                                                            <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="h-px bg-border-color"></div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1">Uploaded By</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-white font-bold">JD</div>
+                                                        <span className="text-sm text-white">John Doe</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-text-muted block mt-0.5">Jan 15, 2023 at 09:30 AM</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-1">Last Updated</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[10px] text-white font-bold">AM</div>
+                                                        <span className="text-sm text-white">Alex Morgan</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-text-muted block mt-0.5">Oct 20, 2023 at 02:15 PM</span>
+                                                </div>
+                                                <div className="h-px bg-border-color"></div>
+                                                <div>
+                                                    <span className="text-xs font-medium text-text-muted uppercase tracking-wider block mb-2">Access Level</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                            Fleet Admins
+                                                        </span>
+                                                        <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                                            Managers
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                            <div className="px-6 py-4 border-b border-border-color bg-surface-darker">
+                                                <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-warning text-[18px]">verified</span>
+                                                    Compliance Check
+                                                </h3>
+                                            </div>
+                                            <div className="p-6">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <span className="text-sm text-white">Validity Status</span>
+                                                    <span className="text-sm font-bold text-success flex items-center gap-1">
+                                                        <span className="w-2 h-2 rounded-full bg-success"></span> Valid
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="material-symbols-outlined text-success text-[18px] mt-0.5">check_circle</span>
+                                                        <div>
+                                                            <p className="text-xs text-white font-medium">Document type matches vehicle</p>
+                                                            <p className="text-[10px] text-text-muted">Policy covers commercial use</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="material-symbols-outlined text-success text-[18px] mt-0.5">check_circle</span>
+                                                        <div>
+                                                            <p className="text-xs text-white font-medium">Within active date range</p>
+                                                            <p className="text-[10px] text-text-muted">Expires in 85 days</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-start gap-3">
+                                                        <span className="material-symbols-outlined text-text-muted text-[18px] mt-0.5">pending</span>
+                                                        <div>
+                                                            <p className="text-xs text-text-muted font-medium">Verification pending</p>
+                                                            <p className="text-[10px] text-text-muted">Manual review required for renewal</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-6 pt-4 border-t border-border-color">
+                                                    <button className="w-full py-2 bg-surface-darker hover:bg-border-color border border-border-color rounded text-xs text-text-muted hover:text-white font-medium transition-colors">
+                                                        View Audit History
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const SettingsView = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <Link to="/" className="hover:text-white">Documents</Link>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-white font-medium">Settings</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Vehicle Document Configuration</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="px-3 py-1.5 bg-surface-dark border border-border-color hover:bg-border-color text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">history</span>
+                                    View Audit Log
+                                </button>
+                                <button onClick={() => navigate('/')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-white">folder_open</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Documents</div>
+                                    <div className="text-2xl font-bold text-white">8,492</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Across 1,204 vehicles</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">warning</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Expiring Soon</div>
+                                    <div className="text-2xl font-bold text-warning">142</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Next 30 days</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-danger">gpp_bad</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Non-Compliant</div>
+                                    <div className="text-2xl font-bold text-danger">28</div>
+                                    <div className="text-[10px] text-danger mt-1">Missing mandatory docs</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">task</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Verification Rate</div>
+                                    <div className="text-2xl font-bold text-success">98.2%</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Last 7 days avg</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6 mb-6">
+                                <div className="col-span-12 lg:col-span-7 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <span className="p-2 rounded bg-surface-darker border border-border-color text-primary">
+                                                <span className="material-symbols-outlined">notifications_active</span>
+                                            </span>
+                                            <div>
+                                                <h3 className="text-white text-sm font-bold">Expiry Alerts Configuration</h3>
+                                                <p className="text-xs text-text-muted">Define when stakeholders should be notified about expiring documents.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-6">
+                                            <div>
+                                                <label className="text-xs font-medium text-text-muted mb-2 block uppercase tracking-wide">Notification Thresholds (Days Before Expiry)</label>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="bg-surface-darker p-3 rounded border border-border-color">
+                                                        <div className="flex justify-between mb-1">
+                                                            <span className="text-xs text-text-muted">First Alert</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <input defaultChecked="" className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <input className="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" defaultValue="60"/>
+                                                            <span className="text-xs text-text-muted">days</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-surface-darker p-3 rounded border border-border-color">
+                                                        <div className="flex justify-between mb-1">
+                                                            <span className="text-xs text-warning">Urgent Alert</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <input defaultChecked="" className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <input className="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" defaultValue="30"/>
+                                                            <span className="text-xs text-text-muted">days</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-surface-darker p-3 rounded border border-border-color border-l-4 border-l-danger">
+                                                        <div className="flex justify-between mb-1">
+                                                            <span className="text-xs text-danger font-bold">Critical Alert</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <input defaultChecked="" className="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <input className="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" defaultValue="7"/>
+                                                            <span className="text-xs text-text-muted">days</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="pt-4 border-t border-border-color">
+                                                <label className="text-xs font-medium text-text-muted mb-3 block uppercase tracking-wide">Recipient Settings</label>
+                                                <div className="space-y-3">
+                                                    <label className="flex items-center justify-between p-3 rounded bg-surface-darker hover:bg-surface-darker/80 transition cursor-pointer border border-transparent hover:border-border-color">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="material-symbols-outlined text-text-muted">person</span>
+                                                            <div className="text-sm text-white">Notify Driver Assigned</div>
+                                                        </div>
+                                                        <input defaultChecked="" className="rounded border-border-color bg-surface-dark text-primary focus:ring-0" type="checkbox"/>
+                                                    </label>
+                                                    <label className="flex items-center justify-between p-3 rounded bg-surface-darker hover:bg-surface-darker/80 transition cursor-pointer border border-transparent hover:border-border-color">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="material-symbols-outlined text-text-muted">admin_panel_settings</span>
+                                                            <div className="text-sm text-white">Notify Fleet Manager</div>
+                                                        </div>
+                                                        <input defaultChecked="" className="rounded border-border-color bg-surface-dark text-primary focus:ring-0" type="checkbox"/>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <span className="p-2 rounded bg-surface-darker border border-border-color text-success">
+                                                <span className="material-symbols-outlined">fact_check</span>
+                                            </span>
+                                            <div>
+                                                <h3 className="text-white text-sm font-bold">Verification Workflow</h3>
+                                                <p className="text-xs text-text-muted">Set rules for how new documents are validated and approved.</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+                                                <div className="mt-1">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input defaultChecked="" className="sr-only peer" type="checkbox" value=""/>
+                                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-white">Require Manual Approval</h4>
+                                                    <p className="text-xs text-text-muted mt-1">All uploaded documents must be manually reviewed by an admin before status changes to 'Valid'.</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+                                                <div className="mt-1">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input className="sr-only peer" type="checkbox" value=""/>
+                                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-white">AI Optical Character Recognition (OCR)</h4>
+                                                    <p className="text-xs text-text-muted mt-1">Automatically extract dates and numbers. Auto-approve if confidence score &gt; 90%.</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+                                                <div className="mt-1">
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input defaultChecked="" className="sr-only peer" type="checkbox" value=""/>
+                                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-white">Block Vehicle Assignment on Expiry</h4>
+                                                    <p className="text-xs text-text-muted mt-1">Prevent dispatch of vehicles with critical documents that are expired or missing.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full">
+                                        <div className="p-5 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-xl">
+                                            <h3 className="text-white text-sm font-bold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary">category</span>
+                                                Document Categories
+                                            </h3>
+                                            <button className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded transition-colors font-semibold border border-primary/20">
+                                                + Add New
+                                            </button>
+                                        </div>
+                                        <div className="p-4 flex items-center gap-2 border-b border-border-color bg-surface-darker/50">
+                                            <span className="material-symbols-outlined text-text-muted text-[18px]">search</span>
+                                            <input className="bg-transparent border-none text-xs text-white focus:ring-0 w-full placeholder-text-muted/50 p-0" placeholder="Filter categories..." type="text"/>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
+                                            <div className="divide-y divide-border-color">
+                                                {[
+                                                    { name: 'Vehicle Registration', desc: 'Government issued registration proofs', active: true, mandatory: true },
+                                                    { name: 'Insurance Policy', desc: 'Commercial liability coverage', active: true, mandatory: true },
+                                                    { name: 'Emissions Certificate', desc: 'Environmental compliance docs', active: true, mandatory: false, tag: 'Regional' },
+                                                    { name: 'Service Contract', desc: 'Extended warranty or maintenance plans', active: true, mandatory: false },
+                                                    { name: 'Fuel Card Agreement', desc: 'Corporate fleet card issuance', active: false, mandatory: false, tag: 'Draft', tagColor: 'border-color' },
+                                                ].map((cat, idx) => (
+                                                    <div key={idx} className="p-4 hover:bg-surface-darker transition-colors group">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div>
+                                                                <h4 className="text-sm font-medium text-white">{cat.name}</h4>
+                                                                <p className="text-[10px] text-text-muted mt-0.5">{cat.desc}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button className="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center justify-between mt-3">
+                                                            <div className="flex gap-2">
+                                                                {cat.active ? (
+                                                                    <span className="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">Active</span>
+                                                                ) : (
+                                                                    <span className={`px-2 py-0.5 rounded text-[10px] bg-${cat.tagColor || 'border-color'} text-text-muted`}>{cat.tag || 'Inactive'}</span>
+                                                                )}
+                                                                {cat.tag && cat.active && <span className="px-2 py-0.5 rounded text-[10px] bg-border-color text-text-muted">{cat.tag}</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                    <input defaultChecked={cat.mandatory} className="sr-only peer" type="checkbox" value=""/>
+                                                                    <div className="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="p-3 border-t border-border-color bg-surface-darker rounded-b-xl flex justify-center">
+                                            <button className="text-xs text-primary hover:underline">View All Categories</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">restore</span>
+                                        Recent Configuration Changes
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-4 py-3 font-semibold">Timestamp</th>
+                                                <th className="px-4 py-3 font-semibold">Admin</th>
+                                                <th className="px-4 py-3 font-semibold">Action</th>
+                                                <th className="px-4 py-3 font-semibold">Details</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:32:01</td>
+                                                <td className="px-4 py-3 font-medium text-white">alex.morgan@fleet.com</td>
+                                                <td className="px-4 py-3 text-white">Update Threshold</td>
+                                                <td className="px-4 py-3 text-text-muted">Changed 'Urgent Alert' from 45 to 30 days</td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 23, 09:15:22</td>
+                                                <td className="px-4 py-3 font-medium text-white">sarah.k@fleet.com</td>
+                                                <td className="px-4 py-3 text-white">Create Category</td>
+                                                <td className="px-4 py-3 text-text-muted">Added 'Emissions Certificate' category</td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 22, 11:05:40</td>
+                                                <td className="px-4 py-3 font-medium text-white">system</td>
+                                                <td className="px-4 py-3 text-white">Policy Sync</td>
+                                                <td className="px-4 py-3 text-text-muted">Synced mandatory fields from HQ policy</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Documents Module V2.1</span>
+                            <div className="flex items-center gap-4">
+                                <span>Storage: <span className="text-success">Encrypted</span></span>
+                                <span>System Status: <span className="text-success">Operational</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Wrapper ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<DocumentsList />} />
+                        <Route path="/add" element={<AddDocument />} />
+                        <Route path="/detail" element={<DocumentDetail />} />
+                        <Route path="/edit" element={<EditDocument />} />
+                        <Route path="/settings" element={<SettingsView />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
