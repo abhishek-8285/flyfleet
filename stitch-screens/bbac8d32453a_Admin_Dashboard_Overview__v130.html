@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Data Governance Settings View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }.toggle-checkbox:checked {
+            right: 0;
+            border-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">dataset</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetData</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Data Management</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">folder_shared</span>
+<span class="text-sm font-medium">Data Catalog</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">rule</span>
+<span class="text-sm font-medium">Quality Rules</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Governance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">policy</span>
+<span class="text-sm font-medium">Policies</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="text-sm font-medium">Audit Trail</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Compliance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">gavel</span>
+<span class="text-sm font-medium">GDPR Controls</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Data Steward</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col justify-center">
+<div class="flex items-center text-xs text-text-muted mb-1 space-x-2">
+<span>Governance</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white font-medium">Settings</span>
+</div>
+<h2 class="text-white text-lg font-bold flex items-center gap-2">
+                    Data Governance Configuration
+                </h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+<span class="text-xs text-text-muted font-medium">System Status: Active</span>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-text-muted text-xs font-semibold uppercase">Active Policies</span>
+<span class="material-symbols-outlined text-primary text-xl">policy</span>
+</div>
+<div class="text-2xl font-bold text-white">24</div>
+<div class="text-[10px] text-text-muted mt-1">Global enforcement enabled</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-text-muted text-xs font-semibold uppercase">Data Requests (24h)</span>
+<span class="material-symbols-outlined text-success text-xl">download</span>
+</div>
+<div class="text-2xl font-bold text-white">1,842</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +12% vs avg
+                        </div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-text-muted text-xs font-semibold uppercase">Pending Reviews</span>
+<span class="material-symbols-outlined text-warning text-xl">pending_actions</span>
+</div>
+<div class="text-2xl font-bold text-white">12</div>
+<div class="text-[10px] text-warning mt-1">Requires attention</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-text-muted text-xs font-semibold uppercase">Storage Used</span>
+<span class="material-symbols-outlined text-text-muted text-xl">database</span>
+</div>
+<div class="text-2xl font-bold text-white">4.2 TB</div>
+<div class="text-[10px] text-text-muted mt-1">82% of allocated quota</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<section class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                                Default Data Retention Policies
+                            </h3>
+<p class="text-text-muted text-xs mt-1">Define how long different data types are stored before being automatically archived or deleted.</p>
+</div>
+<div class="p-5 space-y-5">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-2">Telemetry Data</label>
+<div class="flex items-center gap-2">
+<input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="90"/>
+<select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+<option>Days</option>
+<option>Months</option>
+<option>Years</option>
+</select>
+</div>
+<p class="text-[10px] text-text-muted mt-2">Includes GPS points, speed logs, and engine status.</p>
+</div>
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-2">User Activity Logs</label>
+<div class="flex items-center gap-2">
+<input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="12"/>
+<select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+<option>Months</option>
+<option>Days</option>
+<option>Years</option>
+</select>
+</div>
+<p class="text-[10px] text-text-muted mt-2">Login history, modification trails, and access logs.</p>
+</div>
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-2">Driver Sensitive PII</label>
+<div class="flex items-center gap-2">
+<input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="3"/>
+<select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+<option>Years</option>
+<option>Months</option>
+</select>
+</div>
+<p class="text-[10px] text-text-muted mt-2">License details, medical certs, and contact info.</p>
+</div>
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<label class="block text-xs font-medium text-text-muted mb-2">Incident Reports</label>
+<div class="flex items-center gap-2">
+<input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" value="7"/>
+<select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+<option>Years</option>
+<option>Months</option>
+</select>
+</div>
+<p class="text-[10px] text-text-muted mt-2">Accident logs and insurance claims data.</p>
+</div>
+</div>
+</div>
+</section>
+<section class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">visibility_off</span>
+                                PII Masking Configuration
+                            </h3>
+<p class="text-text-muted text-xs mt-1">Configure default masking rules for Personally Identifiable Information in exports and dashboard views.</p>
+</div>
+<div class="p-0">
+<div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+<div>
+<div class="text-sm font-medium text-white">Email Addresses</div>
+<div class="text-[11px] text-text-muted">Mask characters before the @ symbol (e.g., j***@fleet.com)</div>
+</div>
+<div class="flex items-center gap-4">
+<select class="bg-surface-darker text-xs text-white border border-border-color rounded px-2 py-1.5 outline-none focus:border-primary">
+<option>Partial Mask</option>
+<option>Full Mask</option>
+<option>No Mask</option>
+</select>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+</div>
+<div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+<div>
+<div class="text-sm font-medium text-white">Phone Numbers</div>
+<div class="text-[11px] text-text-muted">Hide all but last 4 digits</div>
+</div>
+<div class="flex items-center gap-4">
+<select class="bg-surface-darker text-xs text-white border border-border-color rounded px-2 py-1.5 outline-none focus:border-primary">
+<option>Last 4 Visible</option>
+<option>Full Mask</option>
+</select>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+</div>
+<div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+<div>
+<div class="text-sm font-medium text-white">Driver License Numbers</div>
+<div class="text-[11px] text-text-muted">Strict masking for all non-admin roles</div>
+</div>
+<div class="flex items-center gap-4">
+<select class="bg-surface-darker text-xs text-white border border-border-color rounded px-2 py-1.5 outline-none focus:border-primary">
+<option>Full Hash</option>
+<option>Partial Mask</option>
+</select>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+</div>
+<div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+<div>
+<div class="text-sm font-medium text-white">Credit Card / Banking</div>
+<div class="text-[11px] text-text-muted">PCI-DSS compliant masking</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs text-warning bg-warning/10 px-2 py-1 rounded border border-warning/20">Locked by Compliance</span>
+<label class="relative inline-flex items-center cursor-pointer opacity-50 cursor-not-allowed">
+<input checked="" class="sr-only peer" disabled="" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-warning">auto_delete</span>
+                                Automated Expiry Rules
+                            </h3>
+</div>
+<div class="p-4 flex flex-col gap-4">
+<div class="flex items-start gap-3">
+<div class="flex h-5 items-center">
+<input class="h-4 w-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" id="inactive_users" type="checkbox"/>
+</div>
+<div class="text-sm">
+<label class="font-medium text-white" for="inactive_users">Inactive User Accounts</label>
+<p class="text-text-muted text-xs mt-0.5">Automatically suspend accounts inactive for &gt; 180 days.</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<div class="flex h-5 items-center">
+<input checked="" class="h-4 w-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" id="temp_files" type="checkbox"/>
+</div>
+<div class="text-sm">
+<label class="font-medium text-white" for="temp_files">Temporary Export Files</label>
+<p class="text-text-muted text-xs mt-0.5">Delete generated CSV/PDF exports from server storage after 24 hours.</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<div class="flex h-5 items-center">
+<input checked="" class="h-4 w-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" id="api_tokens" type="checkbox"/>
+</div>
+<div class="text-sm">
+<label class="font-medium text-white" for="api_tokens">Unused API Tokens</label>
+<p class="text-text-muted text-xs mt-0.5">Revoke tokens with no activity for 60 days.</p>
+</div>
+</div>
+<div class="mt-2 pt-3 border-t border-border-color">
+<button class="w-full py-2 bg-surface-darker hover:bg-border-color text-text-muted hover:text-white text-xs font-medium rounded border border-border-color transition-colors">
+                                     Configure Exceptions
+                                 </button>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">timer</span>
+                                Download Link TTL
+                            </h3>
+</div>
+<div class="p-5 flex flex-col items-center justify-center gap-4">
+<div class="relative w-32 h-32 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+<path class="text-surface-darker" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary drop-shadow-[0_0_10px_rgba(19,127,236,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-bold text-white">48</span>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Hours</span>
+</div>
+</div>
+<div class="w-full">
+<input class="w-full h-2 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="168" min="1" type="range" value="48"/>
+<div class="flex justify-between text-[10px] text-text-muted mt-2">
+<span>1h</span>
+<span>24h</span>
+<span>7d</span>
+</div>
+</div>
+<p class="text-center text-xs text-text-muted">
+                                Secure links for data exports will expire automatically after this duration.
+                            </p>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-success">verified</span>
+                                Compliance Status
+                            </h3>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center justify-between text-xs">
+<span class="text-white font-medium">GDPR (EU)</span>
+<span class="px-2 py-0.5 rounded bg-success/10 text-success border border-success/20 font-bold text-[10px]">COMPLIANT</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="text-white font-medium">CCPA (California)</span>
+<span class="px-2 py-0.5 rounded bg-success/10 text-success border border-success/20 font-bold text-[10px]">COMPLIANT</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="text-white font-medium">SOC 2 Type II</span>
+<span class="px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20 font-bold text-[10px]">AUDIT PENDING</span>
+</div>
+</div>
+<div class="p-3 bg-surface-darker/50 border-t border-border-color">
+<a class="flex items-center justify-center gap-2 text-primary text-xs hover:underline" href="#">
+                                 Download Compliance Report
+                                 <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden mt-6">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">manage_history</span>
+                        Configuration Audit Log
+                    </h3>
+<div class="flex items-center gap-2">
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Timestamp</th>
+<th class="px-4 py-3 font-semibold">Admin User</th>
+<th class="px-4 py-3 font-semibold">Action</th>
+<th class="px-4 py-3 font-semibold">Module</th>
+<th class="px-4 py-3 font-semibold text-right">Change Detail</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 26, 09:15:22</td>
+<td class="px-4 py-3 font-medium text-white">alex.morgan@fleet.com</td>
+<td class="px-4 py-3 text-white">Update Retention</td>
+<td class="px-4 py-3 text-text-muted">Telemetry Data</td>
+<td class="px-4 py-3 text-right text-xs font-mono text-text-muted">
+<span class="text-danger">60d</span> → <span class="text-success">90d</span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 25, 16:42:10</td>
+<td class="px-4 py-3 font-medium text-white">sarah.c@fleet.com</td>
+<td class="px-4 py-3 text-white">Enable Masking</td>
+<td class="px-4 py-3 text-text-muted">PII Configuration</td>
+<td class="px-4 py-3 text-right text-xs font-mono text-text-muted">
+                                    Phone: Full Mask
+                                </td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 11:20:05</td>
+<td class="px-4 py-3 font-medium text-white">system_auto</td>
+<td class="px-4 py-3 text-white">Cleanup Job</td>
+<td class="px-4 py-3 text-text-muted">Expiry Rules</td>
+<td class="px-4 py-3 text-right text-xs font-mono text-text-muted">
+                                    Removed 14 temp files
+                                </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Data Governance Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Encryption: <span class="text-success">AES-256</span></span>
+<span>Storage Region: <span class="text-white">US-East-1</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

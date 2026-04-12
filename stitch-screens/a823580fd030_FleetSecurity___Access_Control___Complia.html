@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Access Control & Compliance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .matrix-row:hover {
+            background-color: rgba(35, 54, 72, 0.4);
+        }
+        .matrix-cell {
+            position: relative;
+        }
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: #16202a;
+        }
+        .matrix-row:hover .sticky-col {
+            background-color: #1c2834; 
+        }
+        .table-row-hover:hover td {
+            background-color: rgba(35, 54, 72, 0.4);
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = () => {
+            const navigate = useNavigate();
+            const location = useLocation();
+
+            const isActive = (path) => location.pathname === path;
+            const getLinkClass = (path) => 
+                isActive(path) 
+                ? "flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary transition-colors" 
+                : "flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors border-l-4 border-transparent";
+
+            return (
+                <aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div class="p-6 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span class="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+                        <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors border-l-4 border-transparent">
+                            <span class="material-symbols-outlined">dashboard</span>
+                            <span class="text-sm font-medium">Overview</span>
+                        </Link>
+                         <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors border-l-4 border-transparent">
+                            <span class="material-symbols-outlined">admin_panel_settings</span>
+                            <span class="text-sm font-medium">MFA Center</span>
+                        </Link>
+                        
+                        {/* Expanded Access Control Section Logic Simulation */}
+                        <div className={isActive('/') || isActive('/matrix') || isActive('/users') ? "" : ""}>
+                            <Link to="/" className={getLinkClass('/')}>
+                                <span class="material-symbols-outlined">vpn_key</span>
+                                <span class="text-sm font-medium">Access Control</span>
+                            </Link>
+                            {(isActive('/') || isActive('/matrix') || isActive('/users') || isActive('/compliance')) && (
+                                <div class="pl-11 pr-3 py-1 space-y-1">
+                                    <Link to="/" className={`block py-1.5 text-sm ${isActive('/') ? "text-white font-medium" : "text-text-muted hover:text-white"}`}>Roles List</Link>
+                                    <Link to="/matrix" className={`block py-1.5 text-sm ${isActive('/matrix') ? "text-white font-medium" : "text-text-muted hover:text-white"}`}>Role Matrix</Link>
+                                    <Link to="/users" className={`block py-1.5 text-sm ${isActive('/users') ? "text-white font-medium" : "text-text-muted hover:text-white"}`}>User Assignments</Link>
+                                </div>
+                            )}
+                        </div>
+
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                        <Link to="/logs" className={getLinkClass('/logs')}>
+                            <span class="material-symbols-outlined">troubleshoot</span>
+                            <span class="text-sm font-medium">Audit Logs</span>
+                        </Link>
+                        <Link to="/compliance" className={getLinkClass('/compliance')}>
+                             <span class="material-symbols-outlined">fact_check</span>
+                            <span class="text-sm font-medium">Compliance</span>
+                        </Link>
+
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+                         <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors border-l-4 border-transparent">
+                            <span class="material-symbols-outlined">group</span>
+                            <span class="text-sm font-medium">Directory</span>
+                        </a>
+                    </nav>
+                    <div class="p-4 border-t border-border-color">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span class="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button class="ml-auto text-text-muted hover:text-white">
+                                <span class="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- Pages ---
+
+        // Screen 1: Roles List
+        const RolesListPage = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col justify-center">
+                                <div class="flex items-center gap-2 text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-0.5">
+                                    <span>Security Suite</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span>Access Control</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">Roles</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold">Roles &amp; Permissions</h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/60" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">add_moderator</span>
+                                    Create Custom Role
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div class="p-3 bg-primary/10 rounded-lg text-primary">
+                                        <span class="material-symbols-outlined text-2xl">policy</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-white">24</div>
+                                        <div class="text-xs text-text-muted">Total Roles Defined</div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div class="p-3 bg-success/10 rounded-lg text-success">
+                                        <span class="material-symbols-outlined text-2xl">verified</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-white">6</div>
+                                        <div class="text-xs text-text-muted">System Defaults</div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div class="p-3 bg-warning/10 rounded-lg text-warning">
+                                        <span class="material-symbols-outlined text-2xl">edit_note</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-white">18</div>
+                                        <div class="text-xs text-text-muted">Custom Roles</div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex items-center gap-4">
+                                    <div class="p-3 bg-surface-darker rounded-lg text-text-muted border border-border-color">
+                                        <span class="material-symbols-outlined text-2xl">group_add</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-white">452</div>
+                                        <div class="text-xs text-text-muted">Users Assigned</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-280px)] min-h-[500px]">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                                        Defined Roles
+                                    </h3>
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                            <span class="text-xs text-text-muted font-medium">Show System Roles</span>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input defaultChecked class="sr-only peer" type="checkbox"/>
+                                                <div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+                                            </label>
+                                        </div>
+                                        <div class="h-6 w-px bg-border-color mx-1"></div>
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Filter">
+                                            <span class="material-symbols-outlined text-[18px]">filter_list</span>
+                                        </button>
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Export">
+                                            <span class="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-auto custom-scrollbar">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="sticky top-0 z-10 bg-surface-darker border-b border-border-color shadow-sm">
+                                            <tr class="text-xs text-text-muted uppercase tracking-wider">
+                                                <th class="px-6 py-3 font-semibold w-1/5">Role Name</th>
+                                                <th class="px-6 py-3 font-semibold w-1/4">Description</th>
+                                                <th class="px-6 py-3 font-semibold">Organization</th>
+                                                <th class="px-6 py-3 font-semibold text-center">Users Assigned</th>
+                                                <th class="px-6 py-3 font-semibold">Created At</th>
+                                                <th class="px-6 py-3 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="text-sm divide-y divide-border-color">
+                                            <tr class="hover:bg-surface-darker/50 transition-colors group">
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-8 h-8 rounded bg-primary/20 text-primary flex items-center justify-center">
+                                                            <span class="material-symbols-outlined text-lg">admin_panel_settings</span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="font-medium text-white flex items-center gap-2">
+                                                                Super Admin
+                                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-darker border border-border-color text-text-muted">System</span>
+                                                            </div>
+                                                            <div class="text-[10px] text-text-muted mt-0.5">ID: role_001</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-text-muted">
+                                                    Full access to all system resources, settings, and user management. Cannot be deleted.
+                                                </td>
+                                                <td class="px-6 py-4 text-white">Global Fleet Inc.</td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-darker border border-border-color text-white">
+                                                        3
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-text-muted text-xs">
+                                                    Jan 12, 2023<br/>
+                                                    <span class="opacity-60">System Init</span>
+                                                </td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => navigate('/matrix')} class="p-1.5 rounded hover:bg-primary/20 hover:text-primary text-text-muted transition-colors" title="View Matrix">
+                                                            <span class="material-symbols-outlined text-[18px]">grid_view</span>
+                                                        </button>
+                                                        <button class="p-1.5 rounded hover:bg-surface-light/10 text-text-muted transition-colors" title="Clone Role">
+                                                            <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                                        </button>
+                                                        <button class="p-1.5 rounded text-border-color cursor-not-allowed" disabled title="Cannot delete System Role">
+                                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <tr class="hover:bg-surface-darker/50 transition-colors group cursor-pointer" onClick={() => navigate('/matrix')}>
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                                                            <span class="material-symbols-outlined text-lg">local_shipping</span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="font-medium text-white flex items-center gap-2">
+                                                                Fleet Manager
+                                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-darker border border-border-color text-text-muted">System</span>
+                                                            </div>
+                                                            <div class="text-[10px] text-text-muted mt-0.5">ID: role_002</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-text-muted">
+                                                    Can manage vehicles, drivers, and view operational reports. Restricted from security settings.
+                                                </td>
+                                                <td class="px-6 py-4 text-white">Global Fleet Inc.</td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span class="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-darker border border-border-color text-white">
+                                                        142
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-text-muted text-xs">
+                                                    Jan 15, 2023<br/>
+                                                    <span class="opacity-60">System Init</span>
+                                                </td>
+                                                <td class="px-6 py-4 text-right">
+                                                    <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={(e) => {e.stopPropagation(); navigate('/matrix')}} class="p-1.5 rounded hover:bg-primary/20 hover:text-primary text-text-muted transition-colors" title="View Matrix">
+                                                            <span class="material-symbols-outlined text-[18px]">grid_view</span>
+                                                        </button>
+                                                        <button onClick={(e) => e.stopPropagation()} class="p-1.5 rounded hover:bg-surface-light/10 text-text-muted transition-colors" title="Clone Role">
+                                                            <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                                        </button>
+                                                        <button onClick={(e) => e.stopPropagation()} class="p-1.5 rounded text-border-color cursor-not-allowed" disabled title="Cannot delete System Role">
+                                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* ... More rows can be added here following the same pattern ... */}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="bg-surface-darker border-t border-border-color p-3 flex items-center justify-between">
+                                    <span class="text-xs text-text-muted">Showing 1-2 of 24 roles</span>
+                                    <div class="flex items-center gap-1">
+                                        <button class="px-2 py-1 text-xs text-text-muted hover:text-white rounded hover:bg-surface-dark">Previous</button>
+                                        <button class="w-6 h-6 flex items-center justify-center rounded bg-primary text-white text-xs font-bold">1</button>
+                                        <button class="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-white text-xs hover:bg-surface-dark">2</button>
+                                        <button class="px-2 py-1 text-xs text-text-muted hover:text-white rounded hover:bg-surface-dark">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                            <span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+                            <div class="flex items-center gap-4">
+                                <span>Encryption: <span class="text-success">AES-256</span></span>
+                                <span>System Status: <span class="text-success">Operational</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 2: Matrix Editor
+        const MatrixPage = () => {
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2 text-[11px] text-text-muted uppercase font-semibold tracking-wide">
+                                        <Link to="/" class="hover:text-white cursor-pointer">Access Control</Link>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <Link to="/" class="hover:text-white cursor-pointer">Roles</Link>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span class="text-primary">Fleet Manager</span>
+                                    </div>
+                                    <h2 class="text-white text-lg font-bold mt-0.5">Role Permission Matrix</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <Link to="/" class="px-4 py-2 bg-transparent hover:bg-surface-dark text-text-muted hover:text-white text-xs font-semibold rounded border border-border-color transition-colors inline-block text-center">
+                                    Cancel
+                                </Link>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Permissions
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                             {/* Stats Grid for Matrix */}
+                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <div class="text-text-muted text-xs font-medium uppercase mb-1">Role Name</div>
+                                            <div class="text-xl font-bold text-white flex items-center gap-2">
+                                                Fleet Manager
+                                                <span class="material-symbols-outlined text-text-muted text-sm cursor-pointer hover:text-white">edit</span>
+                                            </div>
+                                            <div class="text-[11px] text-text-muted mt-2">Core operational role for regional management</div>
+                                        </div>
+                                        <div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-primary">
+                                            <span class="material-symbols-outlined">badge</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <div class="text-text-muted text-xs font-medium uppercase mb-1">Effective Users</div>
+                                            <div class="text-xl font-bold text-white">24</div>
+                                            <div class="flex -space-x-2 mt-2">
+                                                <div class="w-6 h-6 rounded-full bg-blue-500 border border-surface-dark text-[8px] flex items-center justify-center text-white">JD</div>
+                                                <div class="w-6 h-6 rounded-full bg-green-500 border border-surface-dark text-[8px] flex items-center justify-center text-white">AS</div>
+                                                <div class="w-6 h-6 rounded-full bg-purple-500 border border-surface-dark text-[8px] flex items-center justify-center text-white">MK</div>
+                                                <div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color text-[8px] flex items-center justify-center text-text-muted">+21</div>
+                                            </div>
+                                        </div>
+                                        <div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-success">
+                                            <span class="material-symbols-outlined">group_add</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <div class="text-text-muted text-xs font-medium uppercase mb-1">Role Type</div>
+                                            <div class="text-xl font-bold text-white">Custom</div>
+                                            <div class="mt-2 flex items-center gap-2">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
+                                                    High Privilege
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-warning">
+                                            <span class="material-symbols-outlined">security</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Matrix Table Container */}
+                            <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col shadow-xl">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-xl">
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-2 rounded bg-primary/10 text-primary">
+                                            <span class="material-symbols-outlined">grid_view</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-white font-semibold text-sm">Permission Matrix</h3>
+                                            <p class="text-text-muted text-[11px]">Manage granular access control for each module</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative">
+                                            <span class="material-symbols-outlined absolute left-2.5 top-1.5 text-text-muted text-[18px]">search</span>
+                                            <input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50" placeholder="Filter modules..." type="text"/>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto custom-scrollbar rounded-b-xl">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-surface-darker border-b border-border-color">
+                                                <th class="sticky-col px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider w-64 border-r border-border-color shadow-[4px_0_12px_-4px_rgba(0,0,0,0.5)]">
+                                                    Module / Resource
+                                                </th>
+                                                {['View', 'Create', 'Edit', 'Delete', 'Export', 'Approve'].map(h => (
+                                                    <th key={h} class="px-4 py-4 text-center text-xs font-bold text-text-muted uppercase tracking-wider w-32">
+                                                        {h}
+                                                    </th>
+                                                ))}
+                                                <th class="px-4 py-4 text-center text-xs font-bold text-text-muted uppercase tracking-wider w-32 border-l border-border-color bg-surface-darker">
+                                                    All
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-border-color">
+                                            {/* Example Row 1: Vehicles */}
+                                            <tr class="matrix-row group transition-colors">
+                                                <td class="sticky-col px-6 py-4 border-r border-border-color shadow-[4px_0_12px_-4px_rgba(0,0,0,0.5)]">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-8 h-8 rounded bg-surface-darker border border-border-color flex items-center justify-center text-text-muted group-hover:text-white transition-colors">
+                                                            <span class="material-symbols-outlined text-[18px]">directions_car</span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-sm font-medium text-white">Vehicles</div>
+                                                            <div class="text-[10px] text-text-muted">Fleet assets management</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {[true, true, true, false, true, false].map((checked, i) => (
+                                                    <td key={i} class="px-4 py-4 text-center">
+                                                        {checked !== null ? (
+                                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                                <input type="checkbox" defaultChecked={checked} class="sr-only peer" />
+                                                                <div class="w-9 h-5 bg-surface-darker border border-border-color peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-white peer-checked:border-success"></div>
+                                                            </label>
+                                                        ) : (
+                                                             <span class="inline-block w-2 h-0.5 bg-border-color rounded-full"></span>
+                                                        )}
+                                                    </td>
+                                                ))}
+                                                <td class="px-4 py-4 text-center border-l border-border-color bg-surface-darker/30">
+                                                    <button class="text-xs text-primary hover:underline">Select All</button>
+                                                </td>
+                                            </tr>
+                                            {/* Row 2: Drivers */}
+                                            <tr class="matrix-row group transition-colors">
+                                                <td class="sticky-col px-6 py-4 border-r border-border-color shadow-[4px_0_12px_-4px_rgba(0,0,0,0.5)]">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-8 h-8 rounded bg-surface-darker border border-border-color flex items-center justify-center text-text-muted group-hover:text-white transition-colors">
+                                                            <span class="material-symbols-outlined text-[18px]">person_pin</span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-sm font-medium text-white">Drivers</div>
+                                                            <div class="text-[10px] text-text-muted">Personnel records</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                {[true, true, true, false, false, false].map((checked, i) => (
+                                                    <td key={i} class="px-4 py-4 text-center">
+                                                         <label class="relative inline-flex items-center cursor-pointer">
+                                                            <input type="checkbox" defaultChecked={checked} class="sr-only peer" />
+                                                            <div class="w-9 h-5 bg-surface-darker border border-border-color peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-white peer-checked:border-success"></div>
+                                                        </label>
+                                                    </td>
+                                                ))}
+                                                <td class="px-4 py-4 text-center border-l border-border-color bg-surface-darker/30">
+                                                    <button class="text-xs text-primary hover:underline">Select All</button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                         <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Access Control V2.0</span>
+                            <div class="flex items-center gap-4">
+                                <span>Last modified by: <span class="text-white">alex.m</span> (2 mins ago)</span>
+                                <span>Policy Status: <span class="text-warning">Unsaved Changes</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:45 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 3: User Assignment
+        const UsersPage = () => {
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2 text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                                    <span>Access Control</span>
+                                    <span class="text-border-color">/</span>
+                                    <span class="text-primary font-bold">User Assignments</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold">User Role Assignment Hub</h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center text-xs text-text-muted gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                    Sync Active
+                                </div>
+                                <div class="h-6 w-px bg-border-color"></div>
+                                <button class="px-3 py-1.5 rounded border border-border-color text-text-muted hover:text-white hover:bg-surface-dark transition-colors text-xs font-medium flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                                    Reset
+                                </button>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Assignments
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 flex overflow-hidden">
+                            {/* Users List Column */}
+                            <div class="w-1/2 flex flex-col border-r border-border-color bg-surface-dark">
+                                <div class="p-4 border-b border-border-color bg-surface-darker">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">group</span>
+                                            Users
+                                        </h3>
+                                        <button class="text-xs text-primary hover:underline">Select All</button>
+                                    </div>
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined absolute left-2.5 top-2 text-text-muted text-[18px]">search</span>
+                                        <input class="w-full bg-surface-dark border border-border-color rounded pl-9 pr-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search users by name or email..." type="text"/>
+                                    </div>
+                                    <div class="mt-3 flex items-center gap-2">
+                                        <button class="px-2 py-1 bg-primary/10 text-primary border border-primary/20 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 hover:bg-primary/20">
+                                            <span class="material-symbols-outlined text-[14px]">layers</span> Bulk Assignment
+                                        </button>
+                                        <div class="ml-auto text-[10px] text-text-muted">Showing 24 of 1,204 users</div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                    <div class="group flex items-center justify-between p-3 rounded bg-primary/10 border border-primary/30 cursor-pointer">
+                                        <div class="flex items-center gap-3">
+                                            <div class="relative">
+                                                <div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">AS</div>
+                                                <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-surface-dark"></div>
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-medium text-white">Anna Smith</span>
+                                                <span class="text-xs text-text-muted">anna.s@fleet.com</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col items-end gap-1">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">Sales Manager</span>
+                                            <span class="text-[10px] text-primary font-medium">Editing...</span>
+                                        </div>
+                                    </div>
+                                    <div class="group flex items-center justify-between p-3 rounded hover:bg-surface-darker border border-transparent hover:border-border-color cursor-pointer transition-all">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">JD</div>
+                                            <div class="flex flex-col">
+                                                <span class="text-sm font-medium text-white">John Doe</span>
+                                                <span class="text-xs text-text-muted">john.doe@fleet.com</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col items-end gap-1">
+                                            <div class="flex gap-1">
+                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">Driver</span>
+                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">+1</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* More users... */}
+                                </div>
+                            </div>
+                            
+                            {/* Role Selection Column */}
+                            <div class="w-1/2 flex flex-col bg-surface-darker">
+                                <div class="p-4 border-b border-border-color">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">verified_user</span>
+                                            Assign Roles to Selected
+                                        </h3>
+                                        <span class="text-[10px] text-text-muted uppercase tracking-wider font-bold">Anna Smith</span>
+                                    </div>
+                                    <p class="text-xs text-text-muted mb-3">Select one or more roles to apply. Changes are staged until saved.</p>
+                                </div>
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                                    {/* Role Groups */}
+                                    <div>
+                                        <div class="text-[10px] uppercase font-bold text-text-muted mb-2 flex items-center gap-2">
+                                            <span class="w-1 h-1 rounded-full bg-text-muted"></span> Administration
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="flex items-start gap-3 p-3 rounded bg-surface-dark border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+                                                <input class="mt-1 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-surface-dark focus:ring-primary w-4 h-4" type="checkbox"/>
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Super Admin</div>
+                                                    <div class="text-xs text-text-muted mt-0.5">Full system access, including billing and security settings.</div>
+                                                </div>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-3 rounded bg-surface-dark border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+                                                <input defaultChecked class="mt-1 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-surface-dark focus:ring-primary w-4 h-4" type="checkbox"/>
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Fleet Manager</div>
+                                                    <div class="text-xs text-text-muted mt-0.5">Can manage vehicles, drivers, and view reports.</div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {/* More groups... */}
+                                </div>
+                                <div class="p-4 border-t border-border-color bg-surface-dark/50">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="text-xs font-semibold text-white uppercase tracking-wider">Effective Permissions Preview</h4>
+                                        <span class="text-[10px] text-text-muted">Based on selected roles</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <span class="inline-flex items-center px-2 py-1 rounded bg-success/10 text-success border border-success/20 text-[10px] font-mono">
+                                            <span class="material-symbols-outlined text-[12px] mr-1">check</span>
+                                            vehicles.read
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-1 rounded bg-success/10 text-success border border-success/20 text-[10px] font-mono">
+                                            <span class="material-symbols-outlined text-[12px] mr-1">check</span>
+                                            vehicles.update
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-1 rounded bg-surface-dark border border-border-color text-text-muted text-[10px] font-mono opacity-50">
+                                            <span class="material-symbols-outlined text-[12px] mr-1">block</span>
+                                            billing.manage
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 4: Logs
+        const LogsPage = () => {
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2 text-xs text-text-muted mb-1">
+                                    <span>ACCESS CONTROL</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">AUDIT LOGS</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-white text-lg font-bold">Permission Audit Logs</h2>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-dark border border-border-color text-text-muted">
+                                        Read Only
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2 text-xs text-text-muted bg-surface-dark border border-border-color rounded px-3 py-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                    Live Monitoring
+                                </div>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">download</span>
+                                    Download Audit Report
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 flex overflow-hidden">
+                            <aside class="w-64 border-r border-border-color bg-surface-darker/50 p-4 overflow-y-auto custom-scrollbar flex-shrink-0">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-sm font-semibold text-white">Filters</h3>
+                                    <button class="text-xs text-primary hover:text-primary-dark">Reset</button>
+                                </div>
+                                <div class="space-y-6">
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Date Range</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span class="material-symbols-outlined text-text-muted text-[16px]">calendar_today</span>
+                                            </span>
+                                            <select class="w-full bg-surface-dark border border-border-color text-white text-xs rounded pl-9 py-2 focus:ring-1 focus:ring-primary focus:border-primary">
+                                                <option>Last 24 Hours</option>
+                                                <option>Last 7 Days</option>
+                                                <option>Last 30 Days</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Module</label>
+                                        <div class="space-y-1">
+                                            <label class="flex items-center gap-2 p-2 rounded hover:bg-surface-dark cursor-pointer transition-colors">
+                                                <input defaultChecked class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                                <span class="text-xs text-white">All Modules</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 p-2 rounded hover:bg-surface-dark cursor-pointer transition-colors">
+                                                <input class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5" type="checkbox"/>
+                                                <span class="text-xs text-text-muted">User Management</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+                            <div class="flex-1 flex flex-col min-w-0 bg-background-dark">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative w-64">
+                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">filter_list</span>
+                                            </span>
+                                            <input class="w-full bg-surface-dark border border-border-color text-white text-xs rounded pl-9 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter by resource target..." type="text"/>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Refresh">
+                                            <span class="material-symbols-outlined text-[20px]">refresh</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-auto custom-scrollbar p-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden shadow-sm">
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr class="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/80 backdrop-blur sticky top-0 z-10">
+                                                        <th class="px-4 py-3 font-semibold w-40">Timestamp</th>
+                                                        <th class="px-4 py-3 font-semibold w-48">Actor</th>
+                                                        <th class="px-4 py-3 font-semibold w-48">Target</th>
+                                                        <th class="px-4 py-3 font-semibold w-32">Action</th>
+                                                        <th class="px-4 py-3 font-semibold">Details</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-xs divide-y divide-border-color">
+                                                    <tr class="table-row-hover transition-colors group">
+                                                        <td class="px-4 py-3 text-text-muted whitespace-nowrap font-mono">Oct 24, 14:45:22</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold">AM</div>
+                                                                <span class="text-white font-medium">Alex Morgan</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted">
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="material-symbols-outlined text-[14px]">badge</span>
+                                                                Role: FleetManager
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">GRANTED</span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white font-mono bg-surface-darker/50 rounded border border-border-color/50">
+                                                            Added ["edit_maintenance"]
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="table-row-hover transition-colors group">
+                                                        <td class="px-4 py-3 text-text-muted whitespace-nowrap font-mono">Oct 24, 14:12:05</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="w-5 h-5 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[10px] font-bold">SY</div>
+                                                                <span class="text-white font-medium">System Auto</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted">
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="material-symbols-outlined text-[14px]">person</span>
+                                                                user: john.doe
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">REVOKED</span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white font-mono bg-surface-darker/50 rounded border border-border-color/50">
+                                                            access_billing
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+        
+        // Screen 5: Compliance
+        const CompliancePage = () => {
+             return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <h2 class="text-white text-lg font-bold">Access Review &amp; Compliance Hub</h2>
+                                    <div class="flex items-center gap-2 mt-0.5 text-[11px] text-text-muted font-medium uppercase tracking-wider">
+                                        <span>ACCESS CONTROL</span>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span class="text-primary">REVIEWS</span>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/30 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[12px]">schedule</span>
+                                    Quarterly Audit Active
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right mr-2 hidden xl:block">
+                                    <div class="text-xs text-text-muted">Next Compliance Deadline</div>
+                                    <div class="text-sm font-semibold text-white">Nov 15, 2023</div>
+                                </div>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[18px]">download</span>
+                                    Export Access Report
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-primary">fact_check</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Pending Reviews</div>
+                                    <div class="text-2xl font-bold text-white">48</div>
+                                    <div class="text-[10px] text-warning flex items-center gap-1 mt-1">
+                                        <span class="material-symbols-outlined text-[12px]">priority_high</span>
+                                        Action required
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Reviews Completed</div>
+                                    <div class="text-2xl font-bold text-success">842</div>
+                                    <div class="text-[10px] text-text-muted mt-1">94% completion rate</div>
+                                    <div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div class="bg-success h-full" style={{width: '94%'}}></div>
+                                    </div>
+                                </div>
+                                {/* More stats */}
+                            </div>
+                            
+                            {/* Charts Area */}
+                            <div class="grid grid-cols-12 gap-6 mb-6">
+                                <div class="col-span-12 lg:col-span-8 bg-surface-dark rounded-xl border border-border-color p-5 h-80 flex flex-col">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">pie_chart</span>
+                                            Role Distribution Overview
+                                        </h3>
+                                    </div>
+                                    <div class="flex-1 flex items-center justify-around px-4">
+                                        {/* Simplified SVG Donut */}
+                                        <div class="relative w-48 h-48 flex-shrink-0">
+                                            <svg class="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
+                                                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#233648" strokeWidth="3"></circle>
+                                                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#137fec" strokeDasharray="60, 100" strokeDashoffset="0" strokeWidth="3"></circle>
+                                                <circle cx="18" cy="18" fill="none" r="15.915" stroke="#10b981" strokeDasharray="25, 100" strokeDashoffset="-60" strokeWidth="3"></circle>
+                                            </svg>
+                                            <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                                <span class="text-2xl font-bold text-white">890</span>
+                                                <span class="text-[10px] text-text-muted uppercase">Total Identities</span>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-3 w-1/2 max-w-xs">
+                                            <div class="flex justify-between items-center group cursor-pointer hover:bg-surface-darker p-1 rounded transition-colors">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="w-3 h-3 rounded bg-primary"></span>
+                                                    <span class="text-xs text-text-muted group-hover:text-white">Standard Users</span>
+                                                </div>
+                                                <span class="text-xs font-bold text-white">534 (60%)</span>
+                                            </div>
+                                            {/* Legend items */}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-12 lg:col-span-4 bg-surface-dark rounded-xl border border-border-color p-5 h-80 flex flex-col">
+                                    <h3 class="text-white text-sm font-semibold mb-4 flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-warning text-[18px]">key</span>
+                                        Privileged Access
+                                    </h3>
+                                    <div class="flex-1 flex flex-col justify-center gap-4">
+                                        {/* Bars */}
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1">
+                                                <span class="text-text-muted">Full System Access</span>
+                                                <span class="text-white font-medium">8 Users</span>
+                                            </div>
+                                            <div class="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                                <div class="bg-danger h-full rounded-full" style={{width: '15%'}}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Review Table */}
+                            <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <div>
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-warning text-[18px]">pending_actions</span>
+                                            Pending Access Reviews
+                                        </h3>
+                                        <p class="text-[10px] text-text-muted mt-0.5">Approve or revoke access for these users based on recent activity and role changes.</p>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th class="px-4 py-3 font-semibold">User Entity</th>
+                                                <th class="px-4 py-3 font-semibold">Role</th>
+                                                <th class="px-4 py-3 font-semibold">Risk Score</th>
+                                                <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="text-sm">
+                                            <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">JD</div>
+                                                        <div>
+                                                            <div class="text-white font-medium text-xs">James Dalton</div>
+                                                            <div class="text-[10px] text-text-muted">james.d@fleet.com</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Database Admin</span>
+                                                </td>
+                                                <td class="px-4 py-3">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="h-1.5 w-16 bg-surface-darker rounded-full overflow-hidden">
+                                                            <div class="h-full bg-warning" style={{width: '65%'}}></div>
+                                                        </div>
+                                                        <span class="text-[10px] text-warning font-mono">MED</span>
+                                                    </div>
+                                                </td>
+                                                <td class="px-4 py-3 text-right">
+                                                    <div class="flex items-center justify-end gap-2">
+                                                        <button class="px-2 py-1 bg-success/10 hover:bg-success/20 text-success border border-success/20 rounded text-[10px] font-bold uppercase transition-colors">Approve</button>
+                                                        <button class="px-2 py-1 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded text-[10px] font-bold uppercase transition-colors">Revoke</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<RolesListPage />} />
+                        <Route path="/matrix" element={<MatrixPage />} />
+                        <Route path="/users" element={<UsersPage />} />
+                        <Route path="/logs" element={<LogsPage />} />
+                        <Route path="/compliance" element={<CompliancePage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

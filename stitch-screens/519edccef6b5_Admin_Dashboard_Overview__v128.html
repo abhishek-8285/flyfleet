@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Consolidated Troubleshooting Logs View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                        "info": "#0ea5e9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }.code-block {
+            counter-reset: line;
+        }
+        .code-line::before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 1.5em;
+            margin-right: 1em;
+            color: #555;
+            text-align: right;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">terminal</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetOps</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="text-sm font-medium">Fleet Status</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Support Tools</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="text-sm font-medium">Tickets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">bug_report</span>
+<span class="text-sm font-medium">Troubleshooting Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="text-sm font-medium">Data Explorer</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings_suggest</span>
+<span class="text-sm font-medium">Config Management</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Sarah Jenkins</span>
+<span class="text-xs text-text-muted truncate">L3 Support Engineer</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+<span>Support</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">Troubleshooting Logs</span>
+</div>
+<h2 class="text-white text-lg font-bold">Consolidated Debugging Logs</h2>
+</div>
+<span class="ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-dark text-text-muted border border-border-color">
+                        Live Stream
+                    </span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-dark border border-border-color rounded-lg p-0.5 h-9">
+<button class="px-3 h-full text-xs font-medium rounded-md bg-surface-darker text-white shadow-sm border border-border-color">Live</button>
+<button class="px-3 h-full text-xs font-medium rounded-md text-text-muted hover:text-white transition-colors">Paused</button>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+                        Export Evidence
+                    </button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<div class="flex-1 flex flex-col min-w-0 border-r border-border-color">
+<div class="p-4 border-b border-border-color bg-surface-dark flex gap-3 items-center">
+<div class="relative flex-1 max-w-md">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</span>
+<input class="w-full bg-surface-darker border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search by message, trace ID, or user..." type="text"/>
+</div>
+<div class="h-8 w-[1px] bg-border-color mx-1"></div>
+<select class="bg-surface-darker text-xs text-text-muted border border-border-color rounded px-3 py-2 outline-none focus:border-primary">
+<option>All Modules</option>
+<option>Auth Service</option>
+<option>Fleet API</option>
+<option>Payment Gateway</option>
+</select>
+<select class="bg-surface-darker text-xs text-text-muted border border-border-color rounded px-3 py-2 outline-none focus:border-primary">
+<option>All Severities</option>
+<option class="text-danger">Error</option>
+<option class="text-warning">Warning</option>
+<option class="text-info">Info</option>
+</select>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-[10px] text-text-muted">Showing 1-50 of 2,492 logs</span>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white disabled:opacity-50">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-surface-darker">
+<table class="w-full text-left border-collapse table-fixed">
+<thead class="sticky top-0 z-10 bg-[#16202a] shadow-sm">
+<tr class="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider font-semibold">
+<th class="px-4 py-2 w-40">Timestamp</th>
+<th class="px-4 py-2 w-24">Severity</th>
+<th class="px-4 py-2 w-32">Module</th>
+<th class="px-4 py-2 w-auto">Message</th>
+<th class="px-4 py-2 w-32">Trace ID</th>
+</tr>
+</thead>
+<tbody class="text-[13px] font-mono divide-y divide-border-color/50">
+<tr class="bg-danger/5 hover:bg-danger/10 cursor-pointer transition-colors border-l-2 border-l-danger">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:32:01.452</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30">ERROR</span>
+</td>
+<td class="px-4 py-2 text-white">AuthService</td>
+<td class="px-4 py-2 text-white truncate">Failed to validate token signature: key expired</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_8f92a1</td>
+</tr>
+<tr class="bg-warning/5 hover:bg-warning/10 cursor-pointer transition-colors border-l-2 border-l-warning">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:58.102</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning/20 text-warning border border-warning/30">WARN</span>
+</td>
+<td class="px-4 py-2 text-white">RateLimiter</td>
+<td class="px-4 py-2 text-white truncate">User 4921 approaching API limit (95%)</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_7b12c4</td>
+</tr>
+<tr class="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:55.004</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span>
+</td>
+<td class="px-4 py-2 text-white">FleetManager</td>
+<td class="px-4 py-2 text-text-muted truncate">Vehicle status updated: V-8821 -&gt; Active</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_6d88e2</td>
+</tr>
+<tr class="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:52.331</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span>
+</td>
+<td class="px-4 py-2 text-white">PaymentGateway</td>
+<td class="px-4 py-2 text-text-muted truncate">Webhook received from Stripe: payment_intent.succeeded</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_5a44f9</td>
+</tr>
+<tr class="bg-danger/5 hover:bg-danger/10 cursor-pointer transition-colors border-l-2 border-l-danger">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:45.122</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30">ERROR</span>
+</td>
+<td class="px-4 py-2 text-white">Database</td>
+<td class="px-4 py-2 text-white truncate">Connection timeout: pgbouncer-main-02</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_4c33d1</td>
+</tr>
+<tr class="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:40.887</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span>
+</td>
+<td class="px-4 py-2 text-white">AuditLogger</td>
+<td class="px-4 py-2 text-text-muted truncate">Admin login successful: alex.morgan@fleet.com</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_3b22a8</td>
+</tr>
+<tr class="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:35.421</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span>
+</td>
+<td class="px-4 py-2 text-white">FleetManager</td>
+<td class="px-4 py-2 text-text-muted truncate">Route calculation started for Trip-992</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_2a11b7</td>
+</tr>
+<tr class="bg-warning/5 hover:bg-warning/10 cursor-pointer transition-colors border-l-2 border-l-warning">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:30.112</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning/20 text-warning border border-warning/30">WARN</span>
+</td>
+<td class="px-4 py-2 text-white">MapService</td>
+<td class="px-4 py-2 text-white truncate">Geocoding API latency high (4500ms)</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_1z99c6</td>
+</tr>
+<tr class="hover:bg-surface-dark transition-colors border-l-2 border-l-transparent hover:border-l-border-color">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:25.553</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-info/10 text-info border border-info/20">INFO</span>
+</td>
+<td class="px-4 py-2 text-white">NotificationSvc</td>
+<td class="px-4 py-2 text-text-muted truncate">Push notification sent to device_id_882</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_0y88d5</td>
+</tr>
+<tr class="bg-danger/5 hover:bg-danger/10 cursor-pointer transition-colors border-l-2 border-l-danger">
+<td class="px-4 py-2 text-text-muted whitespace-nowrap">2023-10-24 14:31:20.001</td>
+<td class="px-4 py-2">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30">ERROR</span>
+</td>
+<td class="px-4 py-2 text-white">AuthService</td>
+<td class="px-4 py-2 text-white truncate">Invalid credentials provided for user ID 8821</td>
+<td class="px-4 py-2 text-primary hover:underline cursor-pointer">tid_9x77e4</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="w-96 bg-surface-dark border-l border-border-color flex flex-col flex-shrink-0 z-20 shadow-xl">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="font-bold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">find_in_page</span>
+                            Log Detail
+                        </h3>
+<div class="flex gap-2">
+<button class="text-text-muted hover:text-white" title="Copy Trace ID">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+<button class="text-text-muted hover:text-white" title="Share Log">
+<span class="material-symbols-outlined text-[18px]">share</span>
+</button>
+<button class="text-text-muted hover:text-white" title="Close Panel">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs font-mono text-text-muted">tid_8f92a1</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/20 text-danger border border-danger/30 uppercase">Error</span>
+</div>
+<h4 class="text-white font-medium text-sm leading-snug">Failed to validate token signature: key expired</h4>
+<div class="mt-2 flex items-center gap-2 text-xs text-text-muted">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                2023-10-24 14:32:01.452 UTC
+                            </div>
+</div>
+<div class="grid grid-cols-2 gap-3 text-xs">
+<div class="p-2.5 rounded bg-surface-darker border border-border-color">
+<div class="text-text-muted mb-1">Service</div>
+<div class="text-white font-medium">AuthService</div>
+</div>
+<div class="p-2.5 rounded bg-surface-darker border border-border-color">
+<div class="text-text-muted mb-1">Environment</div>
+<div class="text-white font-medium">Production</div>
+</div>
+<div class="p-2.5 rounded bg-surface-darker border border-border-color">
+<div class="text-text-muted mb-1">User ID</div>
+<div class="text-primary hover:underline cursor-pointer">usr_99281</div>
+</div>
+<div class="p-2.5 rounded bg-surface-darker border border-border-color">
+<div class="text-text-muted mb-1">Client IP</div>
+<div class="text-white font-mono">192.168.1.42</div>
+</div>
+</div>
+<div>
+<div class="flex items-center justify-between mb-2">
+<h5 class="text-xs font-bold uppercase tracking-wider text-text-muted">Stack Trace</h5>
+<button class="text-[10px] text-primary hover:underline">Copy Full Trace</button>
+</div>
+<div class="bg-[#0d1117] rounded-md border border-border-color p-3 overflow-x-auto">
+<pre class="text-[11px] font-mono text-gray-300 leading-relaxed code-block"><code class="language-java">io.jsonwebtoken.ExpiredJwtException: JWT expired at 2023-10-24T14:30:00Z. Current time: 2023-10-24T14:32:01Z
+    at io.jsonwebtoken.impl.DefaultJwtParser.parse(DefaultJwtParser.java:401)
+    at com.fleet.auth.TokenValidator.validate(TokenValidator.java:45)
+    at com.fleet.auth.AuthFilter.doFilter(AuthFilter.java:28)
+    at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:320)
+    at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:101)</code></pre>
+</div>
+</div>
+<div>
+<h5 class="text-xs font-bold uppercase tracking-wider text-text-muted mb-2">Request Context</h5>
+<div class="bg-surface-darker rounded-md border border-border-color p-3">
+<div class="flex gap-2 mb-2">
+<span class="text-[10px] font-bold bg-primary/20 text-primary px-1.5 rounded">POST</span>
+<span class="text-[10px] font-mono text-white">/api/v1/vehicles/status</span>
+</div>
+<pre class="text-[10px] font-mono text-text-muted overflow-x-auto whitespace-pre-wrap">{
+  "headers": {
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "User-Agent": "FleetMobile/2.4.1 (iOS 16.2)"
+  }
+}</pre>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-color bg-surface-darker">
+<button class="w-full py-2 bg-surface-dark hover:bg-border-color border border-border-color text-white text-xs font-medium rounded transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">bug_report</span>
+                            Create Jira Ticket
+                        </button>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted flex-shrink-0 z-20">
+<span>© 2023 Enterprise Fleet Manager. Support Module V2.0</span>
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-success"></span> WebSocket: Connected</span>
+<span>Latency: <span class="text-white font-mono">24ms</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

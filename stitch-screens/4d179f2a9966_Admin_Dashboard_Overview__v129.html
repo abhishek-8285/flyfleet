@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Channel Preference Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">notifications_active</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetNotif</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Preferences</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">settings_suggest</span>
+<span class="text-sm font-medium">Global Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">app_registration</span>
+<span class="text-sm font-medium">Channel Routing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">event_note</span>
+<span class="text-sm font-medium">Delivery Schedules</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium">Usage Reports</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBNUqaw_rCdHziMgeIjiGEsXyT6ChdZnOFCaC8hP7Q4bnGCfW004mHlPyONIS1nb3cv8e6uJ2bu8lYfrsgaKAvi8b_70TvmafnFS4nrFsEW18Cm_ZrD06iQY_cO5IfMW2yPv-DIjJqafwmftJDPxNWl8hZhqECI3RDlxCwsTzOfqPfYsxrUkRZZiea9XGnhX0wb1xB6JF6S99btfIGUW9sL-CxKxAG5djha-vVUuFZjzk65S8wyBzzl-kKbeJdwEDQxZFf3nQBRm5g");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">System Admin</span>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav class="flex text-[10px] text-text-muted mb-0.5 items-center gap-1">
+<span>Channel Preferences</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary font-medium">Global Settings</span>
+</nav>
+<h2 class="text-white text-lg font-bold leading-tight">System Default Preferences</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-3 py-1.5 bg-surface-dark border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                    Global Reset
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="max-w-6xl mx-auto space-y-6">
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4 flex gap-4">
+<span class="material-symbols-outlined text-primary">info</span>
+<div>
+<h4 class="text-sm font-semibold text-white">Default Configuration for New Users</h4>
+<p class="text-xs text-text-muted mt-1 leading-relaxed">Changes made here define the initial "System Default" state for every new user added to the platform. Existing users who have "Use System Default" enabled will be updated immediately.</p>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker/30 flex justify-between items-center">
+<h3 class="text-sm font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">hub</span>
+                                    Standard Channels
+                                </h3>
+<span class="text-[10px] text-text-muted uppercase font-bold tracking-widest">Global State</span>
+</div>
+<div class="p-5 space-y-4">
+<div class="flex items-center justify-between py-3 border-b border-border-color/50 last:border-0">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-text-muted">
+<span class="material-symbols-outlined">mail</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">Email Notifications</div>
+<div class="text-xs text-text-muted">Primary communication channel for alerts and reports.</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div class="flex items-center justify-between py-3 border-b border-border-color/50 last:border-0">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-text-muted">
+<span class="material-symbols-outlined">sms</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">SMS Alerts</div>
+<div class="text-xs text-text-muted">Immediate text notifications for critical fleet incidents.</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div class="flex items-center justify-between py-3 border-b border-border-color/50 last:border-0">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-text-muted">
+<span class="material-symbols-outlined">notification_important</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">In-App Push</div>
+<div class="text-xs text-text-muted">Real-time desktop browser notifications while active.</div>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-5 py-4 border-b border-border-color bg-surface-darker/30">
+<h3 class="text-sm font-semibold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-warning text-[20px]">smart_toy</span>
+                                    Default Behaviors
+                                </h3>
+</div>
+<div class="p-5 grid grid-cols-2 gap-6">
+<div class="p-4 rounded-lg bg-surface-darker border border-border-color">
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-white uppercase tracking-wider">Digest Mode</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-[11px] text-text-muted">Group non-critical alerts into a single daily email by default.</p>
+</div>
+<div class="p-4 rounded-lg bg-surface-darker border border-border-color">
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-white uppercase tracking-wider">Auto-Subscription</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-8 h-4 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<p class="text-[11px] text-text-muted">Automatically subscribe new users to mandatory safety alerts.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col max-h-[400px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">history</span>
+                                    Recent Changes
+                                </h3>
+<button class="text-primary text-xs hover:underline">Full Log</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-3">
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="w-1 h-8 rounded-full bg-primary flex-shrink-0 mt-1"></div>
+<div>
+<div class="text-xs font-medium text-white">SMS Default Disabled</div>
+<div class="text-[10px] text-text-muted">By Alex Morgan • 2h ago</div>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-1 h-8 rounded-full bg-warning flex-shrink-0 mt-1"></div>
+<div>
+<div class="text-xs font-medium text-white">Digest Window Adjusted</div>
+<div class="text-[10px] text-text-muted">By System Automation • 5h ago</div>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-1 h-8 rounded-full bg-success flex-shrink-0 mt-1"></div>
+<div>
+<div class="text-xs font-medium text-white">Email TLS Enforced</div>
+<div class="text-[10px] text-text-muted">By Security Bot • Oct 23</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4">
+<h3 class="text-white text-xs font-bold uppercase tracking-widest mb-4">Resource Center</h3>
+<div class="space-y-2">
+<a class="flex items-center justify-between p-2 rounded hover:bg-surface-darker transition-colors group" href="#">
+<span class="text-xs text-text-muted group-hover:text-white">API Documentation</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted">open_in_new</span>
+</a>
+<a class="flex items-center justify-between p-2 rounded hover:bg-surface-darker transition-colors group" href="#">
+<span class="text-xs text-text-muted group-hover:text-white">Webhook Configuration</span>
+<span class="material-symbols-outlined text-[14px] text-text-muted">link</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm">Preference Audit Stream</h3>
+<div class="flex items-center gap-2">
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 w-48 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter audit logs..." type="text"/>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Timestamp</th>
+<th class="px-4 py-3 font-semibold">User Agent</th>
+<th class="px-4 py-3 font-semibold">Action</th>
+<th class="px-4 py-3 font-semibold">Previous Value</th>
+<th class="px-4 py-3 font-semibold">New Value</th>
+<th class="px-4 py-3 font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:32:01</td>
+<td class="px-4 py-3 font-medium text-white">alex.admin</td>
+<td class="px-4 py-3 text-white">Toggle Channel</td>
+<td class="px-4 py-3 text-danger font-mono text-xs">OFF (SMS)</td>
+<td class="px-4 py-3 text-success font-mono text-xs">ON (SMS)</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase">Applied</span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 12:15:22</td>
+<td class="px-4 py-3 font-medium text-white">system.core</td>
+<td class="px-4 py-3 text-white">Policy Update</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">Digest=12h</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">Digest=24h</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">Sync</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Preference Engine V2.1</span>
+<div class="flex items-center gap-4">
+<span>BFF Endpoint: <span class="font-mono">/notifications/preferences</span></span>
+<span>System: <span class="text-success uppercase">Active</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

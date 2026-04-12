@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vehicle Management List</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#192633", // Slightly lighter than background-dark for cards/headers
+                        "border-dark": "#324d67",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col overflow-x-hidden">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-border-dark bg-[#111a22] px-6 py-3 lg:px-10 sticky top-0 z-30">
+<div class="flex items-center gap-4 text-white">
+<div class="size-6 text-primary">
+<span class="material-symbols-outlined text-[28px]">local_shipping</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Fleet Command</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-300 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-white text-sm font-medium leading-normal" href="#">Inventory</a>
+<a class="text-slate-300 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Drivers</a>
+<a class="text-slate-300 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Maintenance</a>
+<a class="text-slate-300 hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden sm:flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-surface-dark border border-border-dark text-white text-sm font-medium hover:bg-[#233648] transition-colors">
+<span class="truncate">Log Out</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-surface-dark" data-alt="User avatar image showing a professional headshot" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAgWR2gGajq16vuIN4RG2TRrbbjEbv0HhE1F2elXAcVgCcdaK5YVhkAC2vWgwgifI-l2jIAmN0YZ8_Ezb3IHBUJq-cPlBgMHVnrAXD3PYjT1LqT5KNpH7S88tjobI9otXQH2klRZjZgIo_I_SIB1hImhawHuSytkeDTJfBSu5z9RRD8tZqR6xXxj2s-iDcR8uNTx4EsGyHGQu_ITBzu2qFv-dBYFvtZlK0o54bcXZ2CZDf_r92aOBnF_ciFqIlkN-z9QS3hzkVYXJI");'></div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col px-6 py-6 lg:px-10 xl:px-14 max-w-[1600px] mx-auto w-full">
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Vehicle Inventory</h1>
+<p class="text-[#92adc9] text-sm md:text-base font-normal">Manage entire fleet assets, track health, and assign drivers in real-time.</p>
+</div>
+<button class="flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg h-10 px-5 bg-primary hover:bg-blue-600 text-white text-sm font-bold shadow-lg shadow-blue-900/20 transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span class="truncate">Add Vehicle</span>
+</button>
+</div>
+<!-- Toolbar (Search & Filters) -->
+<div class="flex flex-col lg:flex-row gap-4 mb-6 justify-between items-start lg:items-center">
+<!-- Search -->
+<div class="w-full lg:w-96">
+<label class="flex w-full items-center h-10 rounded-lg bg-surface-dark border border-border-dark focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all overflow-hidden">
+<div class="flex items-center justify-center pl-3 text-[#92adc9]">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full bg-transparent border-none text-white placeholder-[#92adc9] text-sm focus:ring-0 px-3 h-full" placeholder="Search by Plate, VIN, or Driver..."/>
+</label>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap gap-3 items-center w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+<span class="text-[#92adc9] text-xs font-semibold uppercase tracking-wider mr-1 hidden xl:block">Filters:</span>
+<!-- Status Filter -->
+<div class="relative group">
+<button class="flex h-9 items-center gap-2 rounded-lg bg-surface-dark border border-border-dark hover:border-gray-500 px-3 transition-colors">
+<span class="text-[#92adc9] text-xs font-medium uppercase tracking-wider">Status</span>
+<span class="w-[1px] h-4 bg-border-dark"></span>
+<span class="text-white text-sm font-medium">Active</span>
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">arrow_drop_down</span>
+</button>
+</div>
+<!-- Type Filter -->
+<div class="relative group">
+<button class="flex h-9 items-center gap-2 rounded-lg bg-surface-dark border border-border-dark hover:border-gray-500 px-3 transition-colors">
+<span class="text-[#92adc9] text-xs font-medium uppercase tracking-wider">Type</span>
+<span class="w-[1px] h-4 bg-border-dark"></span>
+<span class="text-white text-sm font-medium">All Types</span>
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">arrow_drop_down</span>
+</button>
+</div>
+<!-- Driver Filter -->
+<div class="relative group">
+<button class="flex h-9 items-center gap-2 rounded-lg bg-surface-dark border border-border-dark hover:border-gray-500 px-3 transition-colors">
+<span class="text-[#92adc9] text-xs font-medium uppercase tracking-wider">Driver</span>
+<span class="w-[1px] h-4 bg-border-dark"></span>
+<span class="text-white text-sm font-medium">Assigned</span>
+<span class="material-symbols-outlined text-[#92adc9] text-[20px]">arrow_drop_down</span>
+</button>
+</div>
+<button class="flex items-center justify-center size-9 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors ml-auto lg:ml-2 border border-transparent hover:border-border-dark" title="Clear Filters">
+<span class="material-symbols-outlined text-[20px]">filter_alt_off</span>
+</button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="flex flex-col flex-1 min-h-[500px] bg-[#111a22] rounded-lg border border-border-dark overflow-hidden shadow-xl">
+<div class="overflow-x-auto w-full">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#192633] border-b border-border-dark">
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider w-[120px]">Vehicle ID</th>
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider">Plate &amp; Model</th>
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider">Driver</th>
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider">Health Status</th>
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider hidden md:table-cell">Last Sync</th>
+<th class="px-6 py-3 text-xs font-semibold text-[#92adc9] uppercase tracking-wider text-right w-[80px]">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<!-- Row 1 -->
+<tr class="group hover:bg-[#1a2634] transition-colors">
+<td class="px-6 py-3">
+<a class="text-primary hover:text-blue-400 font-medium text-sm font-mono" href="#">#V-1024</a>
+</td>
+<td class="px-6 py-3">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">ABC-1234</span>
+<span class="text-[#92adc9] text-xs">2022 Ford Transit</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center ring-1 ring-border-dark" data-alt="Avatar of driver Sarah J." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCoNFd6aQW9LdA04vdXna5csujWa4xtGZHpdrPInk0tsvsFT5VMugmTt-dxyYHVmZtEeo6xwi73UhBpdXXfm9Um8jj-TMNHyfSvUQr1CKIl3bm6RL4jq4ucHpBog_q_reOj0fXmXXqJTKH9thK9265pJdrnAiNxho0sSdqsjWOCwL_JVx9MUsAN1Cf-xudBqX915LK1sSuJK1gPRdzeWsfw_JL3XKi2zrHS-kmr7tCFAwbdb-tiQnU3YKS-QP_Ro8L3H_AsSMeDf-s");'></div>
+<div class="flex flex-col">
+<span class="text-white text-sm">Sarah Jenkins</span>
+<span class="text-[#92adc9] text-xs">ID: D-442</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Active
+                                </span>
+</td>
+<td class="px-6 py-3 hidden md:table-cell">
+<span class="text-[#92adc9] text-sm">2 mins ago</span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-[#92adc9] hover:text-white p-1 rounded hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-[#1a2634] transition-colors">
+<td class="px-6 py-3">
+<a class="text-primary hover:text-blue-400 font-medium text-sm font-mono" href="#">#V-1025</a>
+</td>
+<td class="px-6 py-3">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">XYZ-5678</span>
+<span class="text-[#92adc9] text-xs">2023 Chev Silverado</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-700 flex items-center justify-center ring-1 ring-border-dark">
+<span class="material-symbols-outlined text-[#92adc9] text-sm">person_off</span>
+</div>
+<span class="text-[#92adc9] italic text-sm">Unassigned</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+<span class="size-1.5 rounded-full bg-amber-500"></span>
+                                    Maintenance
+                                </span>
+</td>
+<td class="px-6 py-3 hidden md:table-cell">
+<span class="text-[#92adc9] text-sm">1 hour ago</span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-[#92adc9] hover:text-white p-1 rounded hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-[#1a2634] transition-colors">
+<td class="px-6 py-3">
+<a class="text-primary hover:text-blue-400 font-medium text-sm font-mono" href="#">#V-1026</a>
+</td>
+<td class="px-6 py-3">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">LMN-9012</span>
+<span class="text-[#92adc9] text-xs">2021 Toyota Prius</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center ring-1 ring-border-dark" data-alt="Avatar of driver Mike R." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA_-zNoq_pXqJDuvMAUlkguUgwH8eublcRgRtKneCFEqcLJvpDIvxI0_41alAMUdZkYUyIwbBx2FfTjq_Mg33oCLYlI5CBxKJdaFX1BQmdXO-79cD_5olxSodr3oCY3KRMRyoXJDiJc_8gSftddu-1a1pRCtRELy-2g13m7SEcbGaNebWRYylqDg1RcoIuVAck5IiGIpBtKAirSsfAbGGgbtQFPZ39aXOj1dV7IX6Wot9QwlC1sk8ZpJCG-9_sXliCXvWSuBHWT8xI");'></div>
+<div class="flex flex-col">
+<span class="text-white text-sm">Mike Ross</span>
+<span class="text-[#92adc9] text-xs">ID: D-109</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+<span class="material-symbols-outlined text-[14px]">wifi_off</span>
+                                    Offline
+                                </span>
+</td>
+<td class="px-6 py-3 hidden md:table-cell">
+<span class="text-[#92adc9] text-sm">2 days ago</span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-[#92adc9] hover:text-white p-1 rounded hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-[#1a2634] transition-colors">
+<td class="px-6 py-3">
+<a class="text-primary hover:text-blue-400 font-medium text-sm font-mono" href="#">#V-1027</a>
+</td>
+<td class="px-6 py-3">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">QRS-3456</span>
+<span class="text-[#92adc9] text-xs">2022 Ford F-150</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-cover bg-center ring-1 ring-border-dark" data-alt="Avatar of driver David K." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuByCSV2Ymwu_yCXGyFbwpPA5TYEAOJiq0j1QMrHa7Yl1Bv9cWGqQXTW0K1jFA2DlpfCxwtzJQ5tG8gpBNKvxtsmOh3x3hBJv1kWYGeqFVjswa7la_hURWD6MuW6KbrVlEkwC6FiTPZwUiiUMJXzAm-HM5Zc6dbO_Ya97am0sMLc0xukC1izoMtQ8sFij7eJmJiPtb64JQ5CUd--rKSkxKRh3H9dKt4l1kjqYup-nhA1z1ZssWH22evgulBE_u85G-nLn_ZReFFxOhw");'></div>
+<div class="flex flex-col">
+<span class="text-white text-sm">David Kim</span>
+<span class="text-[#92adc9] text-xs">ID: D-331</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Active
+                                </span>
+</td>
+<td class="px-6 py-3 hidden md:table-cell">
+<span class="text-[#92adc9] text-sm">5 mins ago</span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-[#92adc9] hover:text-white p-1 rounded hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group hover:bg-[#1a2634] transition-colors">
+<td class="px-6 py-3">
+<a class="text-primary hover:text-blue-400 font-medium text-sm font-mono" href="#">#V-1028</a>
+</td>
+<td class="px-6 py-3">
+<div class="flex flex-col">
+<span class="text-white font-medium text-sm">TUV-7890</span>
+<span class="text-[#92adc9] text-xs">2023 Tesla Model 3</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-700 flex items-center justify-center ring-1 ring-border-dark">
+<span class="material-symbols-outlined text-[#92adc9] text-sm">person_off</span>
+</div>
+<span class="text-[#92adc9] italic text-sm">Unassigned</span>
+</div>
+</td>
+<td class="px-6 py-3">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+<span class="material-symbols-outlined text-[14px]">error</span>
+                                    Critical
+                                </span>
+</td>
+<td class="px-6 py-3 hidden md:table-cell">
+<span class="text-[#92adc9] text-sm">10 mins ago</span>
+</td>
+<td class="px-6 py-3 text-right">
+<button class="text-[#92adc9] hover:text-white p-1 rounded hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="mt-auto border-t border-border-dark bg-[#192633] px-6 py-3 flex items-center justify-between">
+<p class="text-sm text-[#92adc9]">Showing <span class="font-medium text-white">1</span> to <span class="font-medium text-white">5</span> of <span class="font-medium text-white">45</span> results</p>
+<div class="flex items-center gap-2">
+<button class="flex items-center justify-center size-8 rounded border border-border-dark text-[#92adc9] hover:bg-surface-dark hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="flex items-center justify-center size-8 rounded bg-primary text-white font-medium text-sm shadow-md shadow-blue-900/40">1</button>
+<button class="flex items-center justify-center size-8 rounded border border-border-dark text-[#92adc9] hover:bg-[#233648] hover:text-white text-sm transition-colors">2</button>
+<button class="flex items-center justify-center size-8 rounded border border-border-dark text-[#92adc9] hover:bg-[#233648] hover:text-white text-sm transition-colors">3</button>
+<span class="text-[#92adc9] px-1">...</span>
+<button class="flex items-center justify-center size-8 rounded border border-border-dark text-[#92adc9] hover:bg-[#233648] hover:text-white text-sm transition-colors">8</button>
+<button class="flex items-center justify-center size-8 rounded border border-border-dark text-[#92adc9] hover:bg-surface-dark hover:text-white">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Success Toast (Visible for demo) -->
+<div class="fixed top-24 right-6 z-50 animate-bounce-in">
+<div class="flex items-center w-full max-w-xs p-4 rounded-lg shadow-xl bg-surface-dark border border-green-500/20 text-white" role="alert">
+<div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-500/10 rounded-lg">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+</div>
+<div class="ml-3 text-sm font-normal">Vehicle inventory synced successfully.</div>
+<button aria-label="Close" class="ml-auto -mx-1.5 -my-1.5 bg-transparent text-[#92adc9] hover:text-white rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 inline-flex h-8 w-8" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+</div>
+<!-- Assign Driver Modal (Hidden by default, structure ready) -->
+<!-- Remove 'hidden' class from the outer div to display modal -->
+<div aria-labelledby="modal-title" aria-modal="true" class="fixed inset-0 z-50 flex items-center justify-center hidden" role="dialog">
+<!-- Backdrop -->
+<div class="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+<!-- Modal Panel -->
+<div class="relative transform overflow-hidden rounded-xl bg-[#111a22] border border-border-dark text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+<div class="px-6 py-6">
+<div class="flex items-center justify-between mb-5">
+<h3 class="text-lg font-semibold leading-6 text-white" id="modal-title">Assign Driver</h3>
+<button class="text-[#92adc9] hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium leading-6 text-[#92adc9] mb-1">Select Vehicle</label>
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-dark border border-border-dark">
+<span class="text-white font-medium">2023 Chev Silverado</span>
+<span class="text-xs text-[#92adc9] bg-[#233648] px-2 py-1 rounded">XYZ-5678</span>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium leading-6 text-[#92adc9] mb-1">Driver</label>
+<div class="relative">
+<div class="flex items-center w-full rounded-lg bg-surface-dark border border-border-dark px-3 py-2.5 shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary">
+<span class="material-symbols-outlined text-[#92adc9] mr-2">search</span>
+<input class="block w-full border-0 bg-transparent p-0 text-white placeholder:text-gray-500 focus:ring-0 sm:text-sm" placeholder="Search for a driver..." type="text"/>
+</div>
+<!-- Dropdown Results (Simulated) -->
+<ul class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-[#192633] py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm border border-border-dark">
+<li class="relative cursor-default select-none py-2 pl-3 pr-9 text-white hover:bg-primary/20">
+<div class="flex items-center">
+<div class="h-6 w-6 flex-shrink-0 rounded-full bg-indigo-500"></div>
+<span class="ml-3 truncate font-medium">Tom Cook</span>
+<span class="ml-2 truncate text-gray-500">Available</span>
+</div>
+</li>
+<!-- More items... -->
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-[#192633] px-6 py-4 flex flex-row-reverse gap-3">
+<button class="inline-flex w-full justify-center rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 sm:w-auto" type="button">Confirm Assignment</button>
+<button class="inline-flex w-full justify-center rounded-lg bg-transparent border border-border-dark px-3 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-gray-700 hover:bg-gray-800 sm:w-auto" type="button">Cancel</button>
+</div>
+</div>
+</div>
+</body></html>

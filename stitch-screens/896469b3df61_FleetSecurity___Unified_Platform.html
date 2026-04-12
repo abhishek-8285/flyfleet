@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Unified Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .search-shortcut {
+            font-family: monospace;
+            border: 1px solid #233648;
+            background: #16202a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: #92adc9;
+        }
+        .timeline-connector {
+            position: absolute;
+            top: 3.5rem;
+            bottom: -1rem;
+            left: 1.5rem;
+            width: 2px;
+            background-color: #233648;
+            z-index: 0;
+        }
+        .timeline-item:last-child .timeline-connector {
+            display: none;
+        }
+    </style>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const currentPath = location.pathname;
+
+            const isActive = (path) => currentPath === path;
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Platform</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">search</span>
+                            <span className="text-sm font-medium">Global Search</span>
+                        </Link>
+                        <Link to="/timeline" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/timeline') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span className="material-symbols-outlined">history</span>
+                            <span className="text-sm font-medium">Activity Timeline</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">admin_panel_settings</span>
+                            <span className="text-sm font-medium">MFA Center</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">vpn_key</span>
+                            <span className="text-sm font-medium">Access Control</span>
+                        </a>
+
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                         <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">troubleshoot</span>
+                            <span className="text-sm font-medium">Audit Logs</span>
+                        </a>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">warning</span>
+                            <span className="text-sm font-medium">Threat Alerts</span>
+                        </a>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // --- Screen 1: Search Page ---
+
+        const SearchPage = () => {
+            const [searchTerm, setSearchTerm] = useState("");
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-20 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20 gap-8">
+                            <div className="flex flex-col">
+                                <div className="flex items-center text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">
+                                    <span>Platform</span>
+                                    <span className="mx-2">/</span>
+                                    <span className="text-primary">Global Search</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold">Unified Search</h2>
+                            </div>
+                            <div className="flex-1 max-w-3xl">
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <span className="material-symbols-outlined text-text-muted group-focus-within:text-primary transition-colors">search</span>
+                                    </div>
+                                    <input 
+                                        autoFocus
+                                        className="block w-full pl-12 pr-12 py-3 bg-surface-dark border border-border-color rounded-lg text-sm text-white placeholder-text-muted focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all shadow-lg" 
+                                        placeholder="Search for vehicles, drivers, trips, or alerts..." 
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                        <span className="search-shortcut">/</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="p-2 text-text-muted hover:text-white hover:bg-surface-dark rounded-lg transition-colors relative">
+                                    <span className="material-symbols-outlined">notifications</span>
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border border-surface-darker"></span>
+                                </button>
+                                <button className="p-2 text-text-muted hover:text-white hover:bg-surface-dark rounded-lg transition-colors">
+                                    <span className="material-symbols-outlined">settings</span>
+                                </button>
+                            </div>
+                        </header>
+                        
+                        <div className="flex-1 flex overflow-hidden">
+                            <aside className="w-80 bg-surface-dark border-r border-border-color flex-shrink-0 overflow-y-auto custom-scrollbar p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-[18px]">filter_alt</span>
+                                        Faceted Filters
+                                    </h3>
+                                    <button className="text-[10px] text-primary hover:text-primary-dark uppercase font-bold tracking-wider">Reset All</button>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">Entity Type</label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+                                                <input defaultChecked className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+                                                <div className="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px] text-text-muted">directions_car</span>
+                                                    Vehicles
+                                                </div>
+                                                <span className="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">124</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+                                                <input defaultChecked className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+                                                <div className="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px] text-text-muted">person</span>
+                                                    Drivers
+                                                </div>
+                                                <span className="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">48</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+                                                <input className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+                                                <div className="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px] text-text-muted">route</span>
+                                                    Trips
+                                                </div>
+                                                <span className="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">892</span>
+                                            </label>
+                                            <label className="flex items-center gap-3 p-2 rounded hover:bg-surface-darker cursor-pointer transition-colors group">
+                                                <input className="w-4 h-4 rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary" type="checkbox"/>
+                                                <div className="flex items-center gap-2 text-sm text-white group-hover:text-primary transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px] text-text-muted">notifications_active</span>
+                                                    Alerts
+                                                </div>
+                                                <span className="ml-auto text-[10px] bg-surface-darker px-1.5 py-0.5 rounded text-text-muted border border-border-color">15</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-border-color"></div>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">Date Range</label>
+                                        <select className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                            <option>Last 24 Hours</option>
+                                            <option>Last 7 Days</option>
+                                            <option>Last 30 Days</option>
+                                            <option>Custom Range</option>
+                                        </select>
+                                    </div>
+                                    <div className="h-px bg-border-color"></div>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">Organization</label>
+                                        <div className="relative">
+                                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="material-symbols-outlined text-text-muted text-[16px]">business</span>
+                                            </span>
+                                            <input className="w-full bg-surface-darker border border-border-color rounded pl-9 pr-3 py-2 text-sm text-white placeholder-text-muted focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Filter by org..." type="text"/>
+                                        </div>
+                                        <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-1 mt-2">
+                                            <div className="px-2 py-1.5 text-xs text-white bg-surface-darker rounded border border-border-color flex justify-between cursor-pointer hover:border-primary">
+                                                <span>Logistics North</span>
+                                                <span className="text-primary font-bold">✓</span>
+                                            </div>
+                                            <div className="px-2 py-1.5 text-xs text-text-muted hover:text-white hover:bg-surface-darker rounded cursor-pointer transition-colors">
+                                                <span>East Coast Fleet</span>
+                                            </div>
+                                            <div className="px-2 py-1.5 text-xs text-text-muted hover:text-white hover:bg-surface-darker rounded cursor-pointer transition-colors">
+                                                <span>Global Transport</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="h-px bg-border-color"></div>
+                                    <div className="space-y-3">
+                                        <label className="text-xs font-semibold text-text-muted uppercase tracking-wider">Status</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button className="px-3 py-1 rounded-full text-[10px] font-medium bg-success/10 text-success border border-success/20 hover:bg-success/20 transition-colors">Active</button>
+                                            <button className="px-3 py-1 rounded-full text-[10px] font-medium bg-warning/10 text-warning border border-warning/20 hover:bg-warning/20 transition-colors">Warning</button>
+                                            <button className="px-3 py-1 rounded-full text-[10px] font-medium bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 transition-colors">Critical</button>
+                                            <button className="px-3 py-1 rounded-full text-[10px] font-medium bg-surface-darker text-text-muted border border-border-color hover:text-white hover:border-white transition-colors">Inactive</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+                            
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-background-dark">
+                                <div className="flex flex-col gap-4 mb-6">
+                                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                                        <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mr-2 whitespace-nowrap">Recent:</span>
+                                        <button className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-dark border border-border-color text-xs text-text-muted hover:text-white hover:border-primary transition-colors whitespace-nowrap">
+                                            <span className="material-symbols-outlined text-[14px]">history</span>
+                                            "Ford Transit"
+                                        </button>
+                                        <button className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-dark border border-border-color text-xs text-text-muted hover:text-white hover:border-primary transition-colors whitespace-nowrap">
+                                            <span className="material-symbols-outlined text-[14px]">history</span>
+                                            "Driver John Doe"
+                                        </button>
+                                        <div className="w-px h-4 bg-border-color mx-2"></div>
+                                        <span className="text-xs font-semibold text-text-muted uppercase tracking-wider mr-2 whitespace-nowrap">Saved:</span>
+                                        <button className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-xs text-primary hover:bg-primary/20 transition-colors whitespace-nowrap">
+                                            <span className="material-symbols-outlined text-[14px]">bookmark</span>
+                                            Critical Alerts (Last 24h)
+                                        </button>
+                                    </div>
+                                    <div className="flex justify-between items-end border-b border-border-color pb-2">
+                                        <div>
+                                            <h3 className="text-white font-bold text-lg">Search Results</h3>
+                                            <p className="text-xs text-text-muted">Found <span className="text-white font-medium">172</span> matches for query</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-text-muted">Sort by:</span>
+                                            <select className="bg-surface-dark border border-border-color rounded px-2 py-1 text-xs text-white focus:ring-1 focus:ring-primary outline-none">
+                                                <option>Relevance</option>
+                                                <option>Date (Newest)</option>
+                                                <option>Date (Oldest)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4 max-w-5xl">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-primary/50 transition-colors group cursor-pointer relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-primary/30 transition-colors">
+                                                <span className="material-symbols-outlined text-primary">directions_car</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">Vehicle</span>
+                                                    <span className="text-xs text-text-muted font-mono">ID: V-2023-8841</span>
+                                                    <span className="w-1 h-1 rounded-full bg-text-muted"></span>
+                                                    <span className="text-xs text-success flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                        Active
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-white font-semibold text-base mb-1 group-hover:text-primary transition-colors">Ford Transit Connect - Unit 42</h4>
+                                                <p className="text-sm text-text-muted line-clamp-2">
+                                                    Assigned to <span className="text-white font-medium">Logistics North</span> division. Currently located at <span className="text-white">Warehouse B, Sector 4</span>. Last maintenance check completed on Oct 12, 2023. Telemetry indicates normal operation.
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">location_on</span> San Francisco, CA</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">speed</span> 0 km/h (Parked)</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">battery_charging_full</span> 12.4V</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2 self-center">
+                                                <button className="px-3 py-1.5 bg-surface-darker hover:bg-primary hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                                    Open Detail
+                                                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-primary/50 transition-colors group cursor-pointer relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-indigo-500/30 transition-colors">
+                                                <span className="material-symbols-outlined text-indigo-500">person</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">Driver</span>
+                                                    <span className="text-xs text-text-muted font-mono">ID: D-9921</span>
+                                                    <span className="w-1 h-1 rounded-full bg-text-muted"></span>
+                                                    <span className="text-xs text-warning flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                                        On Break
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-white font-semibold text-base mb-1 group-hover:text-indigo-400 transition-colors">Michael Chen</h4>
+                                                <p className="text-sm text-text-muted line-clamp-2">
+                                                    Senior Driver, <span className="text-white">East Coast Fleet</span>. Operating <span className="text-white">Volvo VNL 860</span>. Current shift started 4h 30m ago. Compliance status: Green.
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">badge</span> License Valid</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">star</span> 4.9 Rating</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">phone</span> +1 (555) 012-3456</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2 self-center">
+                                                <button className="px-3 py-1.5 bg-surface-darker hover:bg-indigo-600 hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                                    Open Detail
+                                                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-danger/50 transition-colors group cursor-pointer relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-danger"></div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-danger/30 transition-colors">
+                                                <span className="material-symbols-outlined text-danger">warning</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-danger/10 text-danger border border-danger/20">Alert</span>
+                                                    <span className="text-xs text-text-muted font-mono">ID: A-7732</span>
+                                                    <span className="text-xs text-text-muted ml-auto">2 mins ago</span>
+                                                </div>
+                                                <h4 className="text-white font-semibold text-base mb-1 group-hover:text-danger transition-colors">Harsh Braking Event Detected</h4>
+                                                <p className="text-sm text-text-muted line-clamp-2">
+                                                    Triggered by vehicle <span className="text-white">V-2023-8841</span> at Highway 101 Junction. G-Force exceeded threshold (0.8g). Camera footage available for review.
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
+                                                    <span className="flex items-center gap-1 text-danger"><span className="material-symbols-outlined text-[14px]">priority_high</span> High Severity</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">videocam</span> Clip Ready</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2 self-center">
+                                                <button className="px-3 py-1.5 bg-surface-darker hover:bg-danger hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                                    Open Detail
+                                                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-emerald-500/50 transition-colors group cursor-pointer relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-lg bg-surface-darker flex items-center justify-center border border-border-color flex-shrink-0 group-hover:border-emerald-500/30 transition-colors">
+                                                <span className="material-symbols-outlined text-emerald-500">route</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">Trip</span>
+                                                    <span className="text-xs text-text-muted font-mono">ID: T-4451-X</span>
+                                                    <span className="w-1 h-1 rounded-full bg-text-muted"></span>
+                                                    <span className="text-xs text-emerald-500 flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                        In Progress
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-white font-semibold text-base mb-1 group-hover:text-emerald-400 transition-colors">Route 66 Delivery - Batch #4</h4>
+                                                <p className="text-sm text-text-muted line-clamp-2">
+                                                    Origin: <span className="text-white">Chicago Hub</span> -&gt; Destination: <span className="text-white">St. Louis Distribution Center</span>. ETA: 14:30 CST. Currently on schedule.
+                                                </p>
+                                                <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">distance</span> 245 mi remaining</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">schedule</span> 3h 15m elapsed</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2 self-center">
+                                                <button className="px-3 py-1.5 bg-surface-darker hover:bg-emerald-600 hover:text-white border border-border-color text-text-muted text-xs font-medium rounded transition-colors flex items-center gap-2">
+                                                    Open Detail
+                                                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-8 flex justify-center pb-8">
+                                    <button className="px-4 py-2 bg-surface-darker border border-border-color text-sm text-text-muted hover:text-white hover:border-primary rounded-lg transition-colors">
+                                        Load More Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                            <span>© 2023 Enterprise Fleet Manager. Global Search Module V2.0</span>
+                            <div className="flex items-center gap-4">
+                                <span>Index Status: <span className="text-success">Synced</span></span>
+                                <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Timeline Page ---
+
+        const TimelinePage = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">
+                                        <span>Platform</span>
+                                        <span className="text-border-color">/</span>
+                                        <span className="text-primary">Activity Timeline</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Unified Activity Timeline</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">search</span>
+                                    </span>
+                                    <input className="bg-surface-dark border border-border-color text-sm text-white rounded-lg pl-10 pr-4 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none w-64 placeholder-text-muted/60" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button className="px-3 py-1.5 bg-surface-dark border border-border-color hover:bg-surface-darker text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">refresh</span>
+                                    Refresh Feed
+                                </button>
+                            </div>
+                        </header>
+                        
+                        <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 pb-2 flex-shrink-0">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                        <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-symbols-outlined text-4xl text-primary">event_note</span>
+                                        </div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Daily Events Count</div>
+                                        <div className="text-2xl font-bold text-white">4,285</div>
+                                        <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                            <span className="material-symbols-outlined text-[12px]">trending_up</span>
+                                            +12% vs yesterday
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                        <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-symbols-outlined text-4xl text-danger">crisis_alert</span>
+                                        </div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Critical Alerts (24h)</div>
+                                        <div className="text-2xl font-bold text-danger">12</div>
+                                        <div className="text-[10px] text-danger flex items-center gap-1 mt-1">
+                                            <span className="material-symbols-outlined text-[12px]">priority_high</span>
+                                            Requires immediate action
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                        <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <span className="material-symbols-outlined text-4xl text-success">local_shipping</span>
+                                        </div>
+                                        <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Trips</div>
+                                        <div className="text-2xl font-bold text-success">842</div>
+                                        <div className="text-[10px] text-text-muted mt-1">Currently on route</div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-2">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-white font-semibold text-sm">Today</h3>
+                                        <span className="text-xs text-text-muted">October 24, 2023</span>
+                                    </div>
+                                    <div className="space-y-0 relative pb-10">
+                                        <div className="timeline-item relative pl-16 py-3 group">
+                                            <div className="timeline-connector"></div>
+                                            <div className="absolute left-0 top-3 w-12 h-12 rounded-full bg-surface-darker border border-danger/30 flex items-center justify-center z-10 shadow-[0_0_10px_rgba(239,68,68,0.15)]">
+                                                <span className="material-symbols-outlined text-danger">warning</span>
+                                            </div>
+                                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-danger/40 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-danger/10 text-danger border border-danger/20">Critical Alert</span>
+                                                        <span className="text-xs text-text-muted">14:32:01</span>
+                                                    </div>
+                                                    <button className="text-primary text-xs hover:underline flex items-center gap-1">
+                                                        View Details <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="text-white text-sm font-semibold mb-1">Vehicle Breakdown Reported</h4>
+                                                <p className="text-text-muted text-xs leading-relaxed mb-3">Vehicle <span className="text-white font-medium">Truck-892</span> reported engine failure on I-95 Southbound. Driver <span className="text-white font-medium">John Doe</span> initiated SOS signal.</p>
+                                                <div className="flex items-center gap-3 mt-2 text-[11px] text-text-muted bg-surface-darker/50 p-2 rounded border border-border-color/50">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">person</span> John Doe</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">location_on</span> Lat: 40.7128, Long: -74.0060</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="timeline-item relative pl-16 py-3 group">
+                                            <div className="timeline-connector"></div>
+                                            <div className="absolute left-0 top-3 w-12 h-12 rounded-full bg-surface-darker border border-success/30 flex items-center justify-center z-10">
+                                                <span className="material-symbols-outlined text-success">route</span>
+                                            </div>
+                                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-success/40 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">Trip Started</span>
+                                                        <span className="text-xs text-text-muted">14:15:22</span>
+                                                    </div>
+                                                    <button className="text-primary text-xs hover:underline flex items-center gap-1">
+                                                        View Details <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="text-white text-sm font-semibold mb-1">Delivery Route #4022 Initiated</h4>
+                                                <p className="text-text-muted text-xs leading-relaxed">Trip started from <span className="text-white font-medium">Distribution Center A</span> towards <span className="text-white font-medium">Boston Metro Area</span>.</p>
+                                                <div className="flex items-center gap-2 mt-3">
+                                                    <div className="h-6 w-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white font-bold">MR</div>
+                                                    <span className="text-xs text-white">Mike Ross</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="timeline-item relative pl-16 py-3 group">
+                                            <div className="timeline-connector"></div>
+                                            <div className="absolute left-0 top-3 w-12 h-12 rounded-full bg-surface-darker border border-primary/30 flex items-center justify-center z-10">
+                                                <span className="material-symbols-outlined text-primary">settings_suggest</span>
+                                            </div>
+                                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-primary/40 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">Config Change</span>
+                                                        <span className="text-xs text-text-muted">13:45:10</span>
+                                                    </div>
+                                                    <button className="text-primary text-xs hover:underline flex items-center gap-1">
+                                                        View Details <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="text-white text-sm font-semibold mb-1">Speed Limit Policy Update</h4>
+                                                <p className="text-text-muted text-xs leading-relaxed">Global speed threshold updated from <span className="line-through opacity-70">75 MPH</span> to <span className="text-white font-medium">70 MPH</span> for Heavy Duty Fleet.</p>
+                                                <div className="flex items-center gap-2 mt-3">
+                                                    <div className="bg-center bg-no-repeat bg-cover rounded-full size-6 border border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                                                    <span className="text-xs text-white">Alex Morgan (Admin)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="timeline-item relative pl-16 py-3 group">
+                                            <div className="timeline-connector"></div>
+                                            <div className="absolute left-0 top-3 w-12 h-12 rounded-full bg-surface-darker border border-border-color flex items-center justify-center z-10">
+                                                <span className="material-symbols-outlined text-text-muted">login</span>
+                                            </div>
+                                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-border-color/80 transition-colors opacity-75 hover:opacity-100">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface-darker text-text-muted border border-border-color">User Login</span>
+                                                        <span className="text-xs text-text-muted">13:30:05</span>
+                                                    </div>
+                                                    <button className="text-primary text-xs hover:underline flex items-center gap-1">
+                                                        View Details <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="text-white text-sm font-semibold mb-1">Successful Login</h4>
+                                                <p className="text-text-muted text-xs leading-relaxed">User accessed the dashboard via Web Client from IP 192.168.1.42.</p>
+                                                <div className="flex items-center gap-2 mt-3">
+                                                    <div className="h-6 w-6 rounded-full bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-[10px] text-purple-200 font-bold">SC</div>
+                                                    <span className="text-xs text-white">Sarah Connor</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="timeline-item relative pl-16 py-3 group">
+                                            <div className="timeline-connector"></div>
+                                            <div className="absolute left-0 top-3 w-12 h-12 rounded-full bg-surface-darker border border-warning/30 flex items-center justify-center z-10">
+                                                <span className="material-symbols-outlined text-warning">sensors</span>
+                                            </div>
+                                            <div className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-warning/40 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">Device Warning</span>
+                                                        <span className="text-xs text-text-muted">12:10:55</span>
+                                                    </div>
+                                                    <button className="text-primary text-xs hover:underline flex items-center gap-1">
+                                                        View Details <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                                <h4 className="text-white text-sm font-semibold mb-1">Telematics Signal Weak</h4>
+                                                <p className="text-text-muted text-xs leading-relaxed">Intermittent signal loss detected on Unit #221 in Sector 4. Last ping latency &gt; 500ms.</p>
+                                                <div className="flex items-center gap-3 mt-2 text-[11px] text-text-muted bg-surface-darker/50 p-2 rounded border border-border-color/50">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">developer_board</span> ECU-ID: 882910</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-center py-6">
+                                            <div className="flex items-center gap-2 text-text-muted text-xs">
+                                                <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                                Loading older events...
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <aside className="w-full md:w-80 bg-surface-dark border-l border-border-color flex flex-col flex-shrink-0 z-20 shadow-xl">
+                                <div className="p-4 border-b border-border-color flex items-center justify-between">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+                                        Timeline Filters
+                                    </h3>
+                                    <button className="text-[10px] text-primary hover:text-primary-dark font-medium uppercase tracking-wide">Reset All</button>
+                                </div>
+                                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Date Range</label>
+                                        <div className="relative">
+                                            <button className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-left flex items-center justify-between group hover:border-text-muted transition-colors">
+                                                <span className="text-sm text-white">Oct 24 - Oct 24, 2023</span>
+                                                <span className="material-symbols-outlined text-text-muted text-[16px] group-hover:text-white">calendar_month</span>
+                                            </button>
+                                            <div className="flex gap-2 mt-2">
+                                                <button className="flex-1 py-1 text-[10px] bg-primary text-white rounded border border-primary font-medium">Today</button>
+                                                <button className="flex-1 py-1 text-[10px] bg-surface-darker text-text-muted hover:text-white rounded border border-border-color font-medium">Yesterday</button>
+                                                <button className="flex-1 py-1 text-[10px] bg-surface-darker text-text-muted hover:text-white rounded border border-border-color font-medium">Week</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Event Types</label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked className="form-checkbox rounded bg-surface-darker border-border-color text-primary focus:ring-primary focus:ring-offset-surface-dark h-4 w-4" type="checkbox"/>
+                                                <span className="text-sm text-text-muted group-hover:text-white transition-colors">Critical Alerts</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked className="form-checkbox rounded bg-surface-darker border-border-color text-primary focus:ring-primary focus:ring-offset-surface-dark h-4 w-4" type="checkbox"/>
+                                                <span className="text-sm text-text-muted group-hover:text-white transition-colors">Trip Events</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked className="form-checkbox rounded bg-surface-darker border-border-color text-primary focus:ring-primary focus:ring-offset-surface-dark h-4 w-4" type="checkbox"/>
+                                                <span className="text-sm text-text-muted group-hover:text-white transition-colors">System Changes</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="form-checkbox rounded bg-surface-darker border-border-color text-primary focus:ring-primary focus:ring-offset-surface-dark h-4 w-4" type="checkbox"/>
+                                                <span className="text-sm text-text-muted group-hover:text-white transition-colors">User Logins</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="form-checkbox rounded bg-surface-darker border-border-color text-primary focus:ring-primary focus:ring-offset-surface-dark h-4 w-4" type="checkbox"/>
+                                                <span className="text-sm text-text-muted group-hover:text-white transition-colors">Device Events</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Entity</label>
+                                        <div className="relative">
+                                            <span className="absolute inset-y-0 left-0 flex items-center pl-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[16px]">directions_car</span>
+                                            </span>
+                                            <input className="w-full bg-surface-darker border border-border-color text-sm text-white rounded px-2 pl-8 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/60" placeholder="Search Vehicle ID..." type="text"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">User / Actor</label>
+                                        <div className="relative">
+                                            <span className="absolute inset-y-0 left-0 flex items-center pl-2">
+                                                <span className="material-symbols-outlined text-text-muted text-[16px]">person_search</span>
+                                            </span>
+                                            <input className="w-full bg-surface-darker border border-border-color text-sm text-white rounded px-2 pl-8 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/60" placeholder="Search User..." type="text"/>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Severity</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            <button className="px-2 py-1 text-[10px] rounded border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20 transition-colors">Critical</button>
+                                            <button className="px-2 py-1 text-[10px] rounded border border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 transition-colors">Warning</button>
+                                            <button className="px-2 py-1 text-[10px] rounded border border-border-color bg-surface-darker text-text-muted hover:text-white transition-colors">Info</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker">
+                                    <button className="w-full py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center justify-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                        Apply Filters
+                                    </button>
+                                </div>
+                            </aside>
+                        </div>
+                        
+                        <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                            <span>© 2023 Enterprise Fleet Manager. Platform V2.4</span>
+                            <div className="flex items-center gap-4">
+                                <span>System Status: <span className="text-success">Operational</span></span>
+                                <span>Data Lag: <span className="font-mono text-white">~45ms</span></span>
+                                <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Component ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<SearchPage />} />
+                        <Route path="/timeline" element={<TimelinePage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

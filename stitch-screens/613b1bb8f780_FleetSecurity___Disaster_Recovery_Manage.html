@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Disaster Recovery Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                        "info": "#3b82f6",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: #111a22; 
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #233648; 
+                border-radius: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #334d66; 
+            }
+            .log-line:hover {
+                background-color: rgba(19, 127, 236, 0.05);
+            }
+            @keyframes pulse-soft {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+            .animate-pulse-soft {
+                animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .settings-card {
+                @apply bg-surface-dark border border-border-color rounded-xl overflow-hidden;
+            }
+            .settings-header {
+                @apply px-5 py-4 border-b border-border-color bg-surface-darker/30 flex items-center justify-between;
+            }
+            .settings-content {
+                @apply p-5;
+            }
+            .input-dark {
+                @apply bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none w-full;
+            }
+            .label-dark {
+                @apply block text-xs font-medium text-text-muted uppercase mb-1.5 tracking-wider;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = ({ activeTab, brand = "FleetSecurity", icon = "shield_lock" }) => {
+            const location = useLocation();
+            
+            const navItems = [
+                { icon: 'dashboard', label: 'Overview', path: '/' },
+                { icon: 'backup', label: 'DR Testing', path: '/list' },
+                { icon: 'history', label: 'Recovery Logs', path: '/detail/DR-2023-094' },
+                { icon: 'settings_suggest', label: 'Settings', path: '/settings' },
+            ];
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span className="material-symbols-outlined">{icon}</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">{brand}</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Resilience Management</div>
+                        {navItems.map((item) => (
+                            <Link 
+                                key={item.path}
+                                to={item.path}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                                    location.pathname === item.path 
+                                    ? "bg-primary/10 text-primary border-l-4 border-primary" 
+                                    : "text-text-muted hover:bg-border-color hover:text-white"
+                                }`}
+                            >
+                                <span className="material-symbols-outlined">{item.icon}</span>
+                                <span className="text-sm font-medium">{item.label}</span>
+                            </Link>
+                        ))}
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                        <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">troubleshoot</span>
+                            <span className="text-sm font-medium">Audit Logs</span>
+                        </a>
+                        <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">warning</span>
+                            <span className="text-sm font-medium">Threat Alerts</span>
+                        </a>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = ({ version = "V2.4" }) => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                <div className="flex items-center gap-4">
+                    <span>© 2023 Enterprise Fleet Manager. DR Module {version}</span>
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-success"></span> BFF API Connected</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span>Last Sync: <span className="text-white font-mono">14:38:12 UTC</span></span>
+                    <span>Endpoint: <span className="text-primary">GET /dr/tests</span></span>
+                    <span>System Health: <span className="text-success">Nominal</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Screen 1: List View ---
+
+        const ListView = () => {
+            const navigate = useNavigate();
+            const tests = [
+                { id: "DR-2023-0842", name: "Core Database Failover", meta: "High priority • Oracle 19c Cluster", type: "FAILOVER", typeColor: "purple", env: "Production-US-East-1", status: "RUNNING", startTime: "Today, 14:30:00 UTC" },
+                { id: "DR-2023-0841", name: "Legacy API Backup Verification", meta: "Routine • Weekly Check", type: "BACKUP", typeColor: "blue", env: "Staging-Internal", status: "PASSED", startTime: "Today, 09:15:22 UTC" },
+                { id: "DR-2023-0845", name: "Full Regional Restore Drill", meta: "Critical • Bi-annual compliance", type: "RESTORE", typeColor: "amber", env: "Production-EU-West", status: "SCHEDULED", startTime: "Oct 26, 04:00:00 UTC" },
+                { id: "DR-2023-0839", name: "S3 Object Level Restore", meta: "Investigation required • Auth timeout", type: "RESTORE", typeColor: "amber", env: "Dev-Sandbox-01", status: "FAILED", startTime: "Oct 23, 22:10:45 UTC" },
+                { id: "DR-2023-0835", name: "K8s Cluster Node Recovery", meta: "Cancelled by operator", type: "FAILOVER", typeColor: "purple", env: "Production-US-West-2", status: "ABORTED", startTime: "Oct 22, 11:05:00 UTC" },
+                { id: "DR-2023-0834", name: "Incremental Snap Check", meta: "Standard maintenance", type: "BACKUP", typeColor: "blue", env: "UAT-Mirror", status: "PASSED", startTime: "Oct 21, 09:00:00 UTC" },
+            ];
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-text-muted uppercase tracking-widest">
+                                    <span>Disaster Recovery</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary">DR Testing</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold leading-tight">DR Test Scenarios</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded-lg pl-10 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button 
+                                    onClick={() => navigate('/create')}
+                                    className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">add_task</span>
+                                    Schedule DR Test
+                                </button>
+                            </div>
+                        </header>
+                        <div className="p-6 pb-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="bg-surface-dark border border-border-color rounded-xl p-4">
+                                <div className="text-text-muted text-[10px] font-bold uppercase mb-1">Total Tests</div>
+                                <div className="flex items-end justify-between">
+                                    <span className="text-2xl font-bold text-white">128</span>
+                                    <span className="text-xs text-success flex items-center gap-1 font-medium">
+                                        <span className="material-symbols-outlined text-[14px]">trending_up</span>+12%
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark border border-border-color rounded-xl p-4">
+                                <div className="text-text-muted text-[10px] font-bold uppercase mb-1">Success Rate</div>
+                                <div className="flex items-end justify-between">
+                                    <span className="text-2xl font-bold text-success">94.2%</span>
+                                    <div className="w-20 bg-border-color h-1.5 rounded-full overflow-hidden mb-2">
+                                        <div className="bg-success h-full w-[94%]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark border border-border-color rounded-xl p-4">
+                                <div className="text-text-muted text-[10px] font-bold uppercase mb-1">Avg Recovery Time</div>
+                                <div className="flex items-end justify-between">
+                                    <span className="text-2xl font-bold text-white">18m 42s</span>
+                                    <span className="text-xs text-info font-medium">Optimized</span>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark border border-border-color rounded-xl p-4">
+                                <div className="text-text-muted text-[10px] font-bold uppercase mb-1">Next Scheduled</div>
+                                <div className="flex items-end justify-between">
+                                    <span className="text-2xl font-bold text-warning">02:14:00</span>
+                                    <span className="text-xs text-text-muted">UTC</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-hidden p-6">
+                            <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/30">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-white font-semibold text-sm">Active Test Registry</h3>
+                                        <div className="flex rounded-lg overflow-hidden border border-border-color">
+                                            <button className="px-3 py-1 bg-primary/20 text-primary text-[10px] font-bold uppercase">All Tests</button>
+                                            <button className="px-3 py-1 hover:bg-surface-dark text-text-muted text-[10px] font-bold uppercase transition-colors">Scheduled</button>
+                                            <button className="px-3 py-1 hover:bg-surface-dark text-text-muted text-[10px] font-bold uppercase transition-colors">In Progress</button>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors">
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar flex-1">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="sticky top-0 z-10">
+                                            <tr className="text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker border-b border-border-color">
+                                                <th className="px-6 py-4 font-semibold">Test ID</th>
+                                                <th className="px-6 py-4 font-semibold">Test Name</th>
+                                                <th className="px-6 py-4 font-semibold">Type</th>
+                                                <th className="px-6 py-4 font-semibold">Environment</th>
+                                                <th className="px-6 py-4 font-semibold">Status</th>
+                                                <th className="px-6 py-4 font-semibold">Start Time</th>
+                                                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm divide-y divide-border-color/50">
+                                            {tests.map((test) => (
+                                                <tr key={test.id} className="hover:bg-surface-darker/50 transition-colors cursor-pointer" onClick={() => navigate(`/detail/${test.id}`)}>
+                                                    <td className="px-6 py-4 font-mono text-xs text-primary">{test.id}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-white">{test.name}</div>
+                                                        <div className="text-[10px] text-text-muted">{test.meta}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-1 rounded text-[10px] font-bold bg-${test.typeColor}-500/10 text-${test.typeColor}-400 border border-${test.typeColor}-500/20`}>{test.type}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-text-muted">{test.env}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold 
+                                                            ${test.status === 'RUNNING' ? 'bg-primary/10 text-primary border-primary/20' : 
+                                                              test.status === 'PASSED' ? 'bg-success/10 text-success border-success/20' : 
+                                                              test.status === 'FAILED' ? 'bg-danger/10 text-danger border-danger/20' : 
+                                                              'bg-surface-dark border-border-color text-text-muted'}`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${test.status === 'RUNNING' ? 'bg-primary animate-pulse' : 
+                                                                test.status === 'PASSED' ? 'bg-success' : 
+                                                                test.status === 'FAILED' ? 'bg-danger' : 'bg-text-muted'}`}></span>
+                                                            {test.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-text-muted text-xs whitespace-nowrap">{test.startTime}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button className="text-text-muted hover:text-white"><span className="material-symbols-outlined text-[20px]">more_vert</span></button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t border-border-color bg-surface-darker/50 flex items-center justify-between">
+                                    <div className="text-xs text-text-muted">Showing <span className="text-white font-semibold">1-10</span> of <span className="text-white font-semibold">128</span> tests</div>
+                                    <div className="flex items-center gap-2">
+                                        <button className="px-3 py-1.5 rounded border border-border-color text-text-muted hover:bg-surface-dark transition-colors disabled:opacity-50" disabled>
+                                            <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                                        </button>
+                                        <button className="px-3 py-1.5 rounded bg-primary text-white text-xs font-bold">1</button>
+                                        <button className="px-3 py-1.5 rounded border border-border-color text-text-muted hover:bg-surface-dark transition-colors text-xs font-bold">2</button>
+                                        <button className="px-3 py-1.5 rounded border border-border-color text-text-muted hover:bg-surface-dark transition-colors text-xs font-bold">3</button>
+                                        <span className="text-text-muted text-xs">...</span>
+                                        <button className="px-3 py-1.5 rounded border border-border-color text-text-muted hover:bg-surface-dark transition-colors text-xs font-bold">13</button>
+                                        <button className="px-3 py-1.5 rounded border border-border-color text-text-muted hover:bg-surface-dark transition-colors">
+                                            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Form View ---
+
+        const CreateTestView = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex text-[10px] uppercase tracking-widest text-text-muted gap-2 mb-0.5">
+                                    <span onClick={() => navigate('/')} className="hover:text-primary cursor-pointer transition-colors">Disaster Recovery</span>
+                                    <span>/</span>
+                                    <span onClick={() => navigate('/list')} className="hover:text-primary cursor-pointer transition-colors">DR Testing</span>
+                                    <span>/</span>
+                                    <span className="text-primary font-bold">New Test</span>
+                                </nav>
+                                <h2 className="text-white text-lg font-bold leading-tight">Run DR Test</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/list')} className="px-4 py-2 border border-border-color text-text-muted hover:text-white hover:bg-surface-dark text-xs font-semibold rounded transition-colors">Cancel</button>
+                                <button onClick={() => navigate('/detail/DR-NEW')} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">play_arrow</span> Initiate Test
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            <div className="max-w-4xl mx-auto space-y-8">
+                                <section>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+                                            <span className="material-symbols-outlined text-[20px]">settings</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white text-base font-semibold">Test Configuration</h3>
+                                            <p className="text-[11px] text-text-muted">Define the basic parameters for the disaster recovery simulation.</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-dark p-6 rounded-xl border border-border-color">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Test Name</label>
+                                            <input className="w-full bg-surface-darker border border-border-color rounded px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-600" placeholder="e.g. Q4 Regional Failover Drill" type="text"/>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Test Type</label>
+                                            <div className="relative">
+                                                <select className="w-full appearance-none bg-surface-darker border border-border-color rounded px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all">
+                                                    <option disabled selected value="">Select Test Type</option>
+                                                    <option value="backup">Backup Integrity</option>
+                                                    <option value="restore">Data Restore</option>
+                                                    <option value="failover">Full Failover</option>
+                                                </select>
+                                                <span className="material-symbols-outlined absolute right-3 top-2.5 text-text-muted pointer-events-none">expand_more</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Target Environment</label>
+                                            <div className="relative">
+                                                <select className="w-full appearance-none bg-surface-darker border border-border-color rounded px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all">
+                                                    <option disabled selected value="">Select Environment</option>
+                                                    <option value="staging">Staging (Sandboxed)</option>
+                                                    <option value="uat">UAT</option>
+                                                    <option value="prod">Production (Drill Mode)</option>
+                                                </select>
+                                                <span className="material-symbols-outlined absolute right-3 top-2.5 text-text-muted pointer-events-none">expand_more</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                                <section>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 rounded bg-success/20 flex items-center justify-center text-success">
+                                            <span className="material-symbols-outlined text-[20px]">task_alt</span>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-white text-base font-semibold">Success Criteria</h3>
+                                            <p className="text-[11px] text-text-muted">Identify specific metrics and outcomes required for a successful test.</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark p-6 rounded-xl border border-border-color">
+                                        <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Detailed Criteria</label>
+                                        <textarea className="w-full bg-surface-darker border border-border-color rounded px-4 py-3 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-slate-600 resize-none" placeholder="Describe RTO/RPO expectations, expected latency, and system availability targets..." rows="4"></textarea>
+                                        <div className="mt-4 flex gap-4 text-[11px] text-text-muted italic">
+                                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">info</span> Minimum 50 characters</span>
+                                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">timer</span> RTO Target: &lt; 15 mins</span>
+                                        </div>
+                                    </div>
+                                </section>
+                                <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg flex gap-4">
+                                    <span className="material-symbols-outlined text-primary">verified</span>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-primary mb-1">Pre-flight check active</h4>
+                                        <p className="text-xs text-text-muted leading-relaxed">System has verified that there is sufficient capacity in the target environment <span className="text-white font-semibold">"Staging"</span> to perform this operation. POST /dr/tests endpoint is ready.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer version="v2.4.0" />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 3: Detail View ---
+
+        const DetailView = () => {
+            const { id } = ReactRouterDOM.useParams();
+            const navigate = useNavigate();
+
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">
+                                    <span onClick={() => navigate('/list')} className="cursor-pointer hover:text-primary">DR TESTING</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary">DETAIL</span>
+                                </nav>
+                                <div className="flex items-center gap-3">
+                                    <h2 className="text-white text-lg font-bold">Q4 Infrastructure Failover Validation</h2>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">ID: {id}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => navigate('/list')} className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">cancel</span> Abort Test
+                                </button>
+                                <button className="px-4 py-2 bg-primary/50 text-white/50 text-xs font-semibold rounded flex items-center gap-2 cursor-not-allowed border border-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">play_arrow</span> Execute Test
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Test Type</div>
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-lg font-bold text-white">Full Failover Simulation</div>
+                                        <span className="material-symbols-outlined text-primary/40">settings_backup_restore</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Target Environment</div>
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-lg font-bold text-white">US-EAST-2 (Recovery)</div>
+                                        <span className="material-symbols-outlined text-primary/40">cloud_done</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Current Duration</div>
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-lg font-bold text-white">01h 12m 44s</div>
+                                        <span className="material-symbols-outlined text-primary/40">timer</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between ring-1 ring-primary/30 bg-primary/5">
+                                    <div className="text-text-muted text-[10px] font-bold uppercase tracking-wider mb-1">Current Status</div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse-soft"></span>
+                                        <div className="text-lg font-bold text-primary">RUNNING</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">analytics</span>Execution Progress
+                                            </h3>
+                                            <span className="text-[11px] text-text-muted font-mono">STEP 3 OF 5 • 65% COMPLETE</span>
+                                        </div>
+                                        <div className="relative pt-1">
+                                            <div className="flex items-center justify-between text-xs mb-3">
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="w-6 h-6 rounded-full bg-success text-white flex items-center justify-center mb-2"><span className="material-symbols-outlined text-[14px]">check</span></div>
+                                                    <span className="text-white font-medium text-[10px]">Initialization</span>
+                                                </div>
+                                                <div className="h-0.5 bg-success flex-1 -mt-6"></div>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="w-6 h-6 rounded-full bg-success text-white flex items-center justify-center mb-2"><span className="material-symbols-outlined text-[14px]">check</span></div>
+                                                    <span className="text-white font-medium text-[10px]">Storage Replication</span>
+                                                </div>
+                                                <div className="h-0.5 bg-primary flex-1 -mt-6"></div>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="w-8 h-8 rounded-full border-2 border-primary bg-background-dark text-primary flex items-center justify-center mb-1 -mt-1 ring-4 ring-primary/10"><span className="material-symbols-outlined text-[18px] animate-spin">autorenew</span></div>
+                                                    <span className="text-primary font-bold text-[10px]">Service Failover</span>
+                                                </div>
+                                                <div className="h-0.5 bg-border-color flex-1 -mt-6"></div>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="w-6 h-6 rounded-full bg-border-color text-text-muted flex items-center justify-center mb-2"><span className="material-symbols-outlined text-[14px]">pending</span></div>
+                                                    <span className="text-text-muted font-medium text-[10px]">Data Integrity</span>
+                                                </div>
+                                                <div className="h-0.5 bg-border-color flex-1 -mt-6"></div>
+                                                <div className="flex flex-col items-center flex-1">
+                                                    <div className="w-6 h-6 rounded-full bg-border-color text-text-muted flex items-center justify-center mb-2"><span className="material-symbols-outlined text-[14px]">flag</span></div>
+                                                    <span className="text-text-muted font-medium text-[10px]">Final Report</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#05090e] rounded-xl border border-border-color flex flex-col h-[300px]">
+                                        <div className="p-3 border-b border-border-color flex justify-between items-center bg-[#0b1219]">
+                                            <h3 className="text-white text-xs font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[16px]">terminal</span>Live System Logs
+                                            </h3>
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center gap-1.5 text-[10px] text-success">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-success"></span>Streaming
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-4 font-mono text-[11px] leading-relaxed custom-scrollbar">
+                                            <div className="log-line py-0.5 pl-2 flex gap-4"><span className="text-text-muted/50">14:30:15.12</span><span className="text-blue-400 font-bold">[INFO]</span><span className="text-slate-300">Initiating failover sequence for US-EAST-1 cluster...</span></div>
+                                            <div className="log-line py-0.5 pl-2 flex gap-4"><span className="text-text-muted/50">14:30:18.45</span><span className="text-blue-400 font-bold">[INFO]</span><span className="text-slate-300">Quiescing source database nodes... Success.</span></div>
+                                            <div className="log-line py-0.5 pl-2 flex gap-4 bg-primary/5 border-primary border-l-2"><span className="text-text-muted/50">14:35:12.88</span><span className="text-primary font-bold">[RUN]</span><span className="text-slate-300">Updating DNS records (TTL 60s) for public endpoints...</span></div>
+                                            <div className="log-line py-0.5 pl-2 flex gap-4"><span className="text-text-muted/50">14:35:14.32</span><span className="text-warning font-bold">[WARN]</span><span className="text-warning/80">Latency detected in API Gateway propagation.</span></div>
+                                            <div className="log-line py-0.5 pl-2 flex gap-4 opacity-50 italic text-slate-500">14:36:15.00 Listening for system events...</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div className="p-4 border-b border-border-color"><h3 className="text-white text-sm font-semibold">Test Metadata</h3></div>
+                                        <div className="p-5 space-y-4">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-text-muted uppercase tracking-wider block mb-2">Initiated By</label>
+                                                <div className="flex items-center gap-3 bg-surface-darker p-3 rounded-lg border border-border-color">
+                                                    <div className="w-8 h-8 rounded bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">AM</div>
+                                                    <div className="flex flex-col"><span className="text-sm text-white font-medium">Alex Morgan</span><span className="text-[10px] text-text-muted">alex.morgan@fleet.co</span></div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-surface-darker rounded border border-border-color p-3 font-mono text-[10px] text-text-muted break-all">
+                                                arn:aws:logs:us-east-1:12345678:log-group/dr-tests/validation-2023-094
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div className="p-4 border-b border-border-color"><h3 className="text-white text-sm font-semibold">Anomalies</h3></div>
+                                        <div className="p-4 space-y-2">
+                                            <div className="p-3 bg-danger/5 border border-danger/20 rounded-lg">
+                                                <div className="flex items-center gap-2 mb-1"><span className="material-symbols-outlined text-danger text-[18px]">error</span><span className="text-xs font-bold text-danger">Resource Exhaustion</span></div>
+                                                <p className="text-[10px] text-text-muted">Node US-E-2-BAK-04 reached 95% CPU during mounting.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 4: Settings View ---
+
+        const SettingsView = () => {
+            const navigate = useNavigate();
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar activeTab="settings" brand="FleetRecovery" icon="backup" />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-text-muted uppercase">
+                                    <span>DR Testing</span>
+                                    <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                    <span className="text-primary">Settings</span>
+                                </div>
+                                <h2 className="text-white text-lg font-bold leading-tight">DR Test Configuration</h2>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                    <span className="text-[10px] text-text-muted uppercase font-bold">API Status</span>
+                                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                                    <span className="text-xs text-white font-medium">Connected</span>
+                                </div>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">save</span> Save All Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark p-4 rounded-xl border border-border-color">
+                                    <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Scheduled Tests</div>
+                                    <div className="text-2xl font-bold text-white">12 <span className="text-xs font-normal text-text-muted">/ Month</span></div>
+                                </div>
+                                <div className="bg-surface-dark p-4 rounded-xl border border-border-color">
+                                    <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Avg RTO Status</div>
+                                    <div className="text-2xl font-bold text-success">Within SLA</div>
+                                </div>
+                                <div className="bg-surface-dark p-4 rounded-xl border border-border-color">
+                                    <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Compliance Score</div>
+                                    <div className="text-2xl font-bold text-white">98%</div>
+                                </div>
+                                <div className="bg-surface-dark p-4 rounded-xl border border-border-color">
+                                    <div className="text-[10px] text-text-muted uppercase font-bold mb-1">Retention Size</div>
+                                    <div className="text-2xl font-bold text-primary">2.4 TB</div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <section className="settings-card">
+                                        <div className="settings-header">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[20px]">calendar_today</span>Test Automation Schedule
+                                            </h3>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input checked className="sr-only peer" type="checkbox" />
+                                                <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                            </label>
+                                        </div>
+                                        <div className="settings-content grid grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="label-dark">Automation Frequency</label>
+                                                <select className="input-dark">
+                                                    <option>Weekly (Saturdays 02:00 UTC)</option>
+                                                    <option>Monthly</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="label-dark">Simulation Intensity</label>
+                                                <select className="input-dark"><option>Normal (Standard)</option><option>High (Stress)</option></select>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <section className="settings-card">
+                                        <div className="settings-header">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[20px]">notifications_active</span>System Notification Recipients
+                                            </h3>
+                                        </div>
+                                        <div className="settings-content space-y-4">
+                                            <div className="flex items-center justify-between p-3 bg-surface-darker rounded border border-border-color">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary"><span className="material-symbols-outlined text-[18px]">group</span></div>
+                                                    <div><div className="text-sm font-medium text-white">DR Response Team</div><div className="text-[10px] text-text-muted uppercase">Distribution List</div></div>
+                                                </div>
+                                                <div className="flex gap-4"><div className="flex items-center gap-2"><input checked className="rounded border-border-color bg-surface-dark text-primary" type="checkbox"/><span className="text-xs text-text-muted">Critical</span></div></div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <section className="settings-card">
+                                        <div className="settings-header"><h3 className="text-white text-sm font-semibold flex items-center gap-2"><span className="material-symbols-outlined text-primary text-[20px]">verified_user</span>Compliance Summary</h3></div>
+                                        <div className="settings-content space-y-4">
+                                            <div className="flex items-center justify-between text-xs"><span className="text-text-muted">SOC2 Readiness</span><span className="text-success font-bold">Compliant</span></div>
+                                            <div className="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden"><div className="bg-success h-full" style={{width: '100%'}}></div></div>
+                                            <div className="flex items-center justify-between text-xs mt-4"><span className="text-text-muted">GDPR Data Localization</span><span className="text-success font-bold">Compliant</span></div>
+                                        </div>
+                                    </section>
+                                    <div className="bg-primary/10 border border-primary/30 rounded-xl p-5">
+                                        <h4 className="text-white text-sm font-bold mb-2">Need Assistance?</h4>
+                                        <p className="text-xs text-text-muted leading-relaxed mb-4">DR parameters must be tuned carefully to avoid impact on production environments.</p>
+                                        <button className="w-full py-2 bg-surface-dark border border-border-color rounded text-xs text-white font-medium hover:bg-border-color transition-colors flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-[16px]">support_agent</span> Contact Recovery Architect
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Entry Point ---
+
+        const App = () => {
+            return (
+                <MemoryRouter initialEntries={['/list']}>
+                    <Routes>
+                        <Route path="/" element={<ListView />} />
+                        <Route path="/list" element={<ListView />} />
+                        <Route path="/create" element={<CreateTestView />} />
+                        <Route path="/detail/:id" element={<DetailView />} />
+                        <Route path="/settings" element={<SettingsView />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Driver Profile Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111a22",
+                        "surface-dark": "#1c2834", 
+                        "border-dark": "#324d67"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #324d67; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b6a88; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased overflow-hidden selection:bg-primary selection:text-white">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- Side Navigation -->
+<div class="hidden lg:flex w-72 flex-col border-r border-border-dark bg-background-dark p-4 flex-shrink-0">
+<div class="flex flex-col gap-4 h-full">
+<!-- User/Brand Info -->
+<div class="flex gap-3 items-center px-2 py-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 shadow-lg ring-1 ring-white/10" data-alt="Abstract blue geometric logo for fleet admin" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBqgQOPg6ERxrLJYSIc9dPKJQLmaa81GQpuo3r04eDYjyKCa8lI4PCvJHH1MUfl8vifFuR6Mrs5Y7w3E1_xo1CxXP0mvsqZO_ngn6ICoF3jFfKWlKOHowj5z5UYPQNjAfGBaHSWmOPrD_t8fQJ4Ecl9tY1mk2bZimmcoLsk5nkKW9AjpuhKcvBt721_riq5PKL5c7K1pcxkk3XRbmTXUGRBj71v5Sll1NS9gqknziWwLV3-bpC5gwA9L6xuwS6rNqHuDZOFZh7vvic");'></div>
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-tight">Fleet Admin</h1>
+<p class="text-[#92adc9] text-xs font-normal">Enterprise Portal</p>
+</div>
+</div>
+<!-- Nav Links -->
+<nav class="flex flex-col gap-2 mt-4 flex-1">
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[#92adc9] group-hover:text-white transition-colors">dashboard</span>
+<p class="text-sm font-medium">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg bg-primary/20 text-white border border-primary/20 shadow-sm" href="#">
+<span class="material-symbols-outlined text-primary fill-1">steering_wheel_heat</span>
+<p class="text-sm font-bold">Drivers</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[#92adc9] group-hover:text-white transition-colors">local_shipping</span>
+<p class="text-sm font-medium">Vehicles</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[#92adc9] group-hover:text-white transition-colors">bar_chart</span>
+<p class="text-sm font-medium">Reports</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[#92adc9] group-hover:text-white transition-colors">folder_open</span>
+<p class="text-sm font-medium">Documents</p>
+</a>
+</nav>
+<!-- Bottom Settings -->
+<div class="mt-auto">
+<a class="flex items-center gap-3 px-3 py-3 rounded-lg text-[#92adc9] hover:bg-surface-dark hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined text-[#92adc9] group-hover:text-white transition-colors">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</a>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- Top Header / Mobile Menu Trigger -->
+<header class="h-16 border-b border-border-dark bg-background-dark/95 backdrop-blur flex items-center justify-between px-6 lg:px-8 shrink-0 z-10 sticky top-0">
+<div class="flex items-center gap-4">
+<button class="lg:hidden text-white p-1">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<nav class="flex items-center text-sm text-[#92adc9]">
+<span class="hover:text-white cursor-pointer transition-colors">Drivers</span>
+<span class="material-symbols-outlined text-base mx-2">chevron_right</span>
+<span class="text-white font-medium">Profile Details</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="size-8 rounded-full bg-surface-dark flex items-center justify-center text-white hover:bg-primary transition-colors relative">
+<span class="material-symbols-outlined text-sm">notifications</span>
+<span class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-background-dark"></span>
+</button>
+<div class="size-8 rounded-full bg-gray-500 bg-cover bg-center" data-alt="Admin user profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDV03E1DNIpvoJUGtRx0QCXknjjwm5A-yrhH3X48ApJyF0mrQUHlUXCTWW4HIaNCHA-cPgjluYKlzPOjioaiwi4jJGLkeVmARzbW_kFN6Ed2AKiuX5nINZL4boEzS5zc77cqJE_jWxHV7QtfvDHNkrN8gxrvDrRPrwEN9yNJvS8ffuoyIIKZSViUZGZZwmW4M9w0iaQcmlv9wmUjN4EzamGSu9RHRah839ETpQ6OEzDutvy-IJod_hlRNT9p_LjfkSvOhClrWTGJPY");'></div>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
+<div class="max-w-7xl mx-auto flex flex-col gap-6">
+<!-- Profile Header Card -->
+<div class="rounded-xl border border-border-dark bg-surface-dark/50 p-6 backdrop-blur-sm">
+<div class="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+<div class="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left w-full md:w-auto">
+<div class="relative">
+<div class="size-24 lg:size-28 bg-center bg-no-repeat bg-cover rounded-full ring-4 ring-background-dark shadow-xl" data-alt="Portrait of a professional truck driver smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBxxPO0IJjuHew96CLryA4tQI5wzuhcHWq5gWEBNpRI5i6wSmnKuZLwztKLxT86Lq6vjQqSGfhsIVe1XfehA-4igyjCoFii4OtCHw7rwgk22pidy1103RN3xh37zFK49PJo91U-h7ge_a06ZnNCjg14s0m5QUUzVZ3yIGXqlQLrRIZsVLMfv-GQvLEIYRDpYmGug3-zo1fmTAR88Zf9O1M8EPbs9gzP0L_hJifCKgOoX2L17i-VGxAjH_DyikgxFChcSnVpUtBbxpI");'></div>
+<div class="absolute bottom-1 right-1 size-6 bg-green-500 border-4 border-surface-dark rounded-full" title="On Duty"></div>
+</div>
+<div class="flex flex-col gap-1">
+<h1 class="text-white text-3xl font-bold tracking-tight">{{DRIVER_NAME}}</h1>
+<div class="flex flex-wrap gap-x-4 gap-y-1 items-center justify-center sm:justify-start text-[#92adc9] text-sm">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-base">badge</span> ID: #8492</span>
+<span class="hidden sm:inline text-gray-600">•</span>
+<span class="flex items-center gap-1 text-green-400 font-medium"><span class="material-symbols-outlined text-base">check_circle</span> On Duty</span>
+</div>
+<div class="flex flex-wrap gap-3 mt-3 justify-center sm:justify-start">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background-dark border border-border-dark">
+<span class="material-symbols-outlined text-primary text-sm">call</span>
+<span class="text-xs text-white font-medium">+1 (555) 012-3456</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background-dark border border-border-dark">
+<span class="material-symbols-outlined text-primary text-sm">mail</span>
+<span class="text-xs text-white font-medium">driver.name@fleet.com</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-3 w-full md:w-auto justify-center md:justify-end">
+<button class="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white text-sm font-bold rounded-lg transition-all shadow-lg shadow-blue-500/20 w-full md:w-auto">
+<span class="material-symbols-outlined text-lg">chat</span>
+<span>Message</span>
+</button>
+<button class="flex items-center justify-center gap-2 px-4 py-2 bg-surface-dark border border-border-dark hover:border-gray-500 text-white text-sm font-bold rounded-lg transition-all w-full md:w-auto">
+<span class="material-symbols-outlined text-lg">edit</span>
+<span>Edit</span>
+</button>
+<button class="flex items-center justify-center gap-2 px-4 py-2 bg-surface-dark border border-border-dark hover:border-red-500/50 hover:text-red-400 text-[#92adc9] text-sm font-bold rounded-lg transition-all w-full md:w-auto" title="Suspend Driver">
+<span class="material-symbols-outlined text-lg">block</span>
+</button>
+</div>
+</div>
+</div>
+<!-- KPI Quick Stats -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/50 transition-colors group">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-[#92adc9] text-sm font-medium">Total Distance</p>
+<h3 class="text-white text-2xl font-bold mt-1 group-hover:text-primary transition-colors">12,450 <span class="text-base font-normal text-gray-500">mi</span></h3>
+</div>
+<div class="p-2 rounded-lg bg-background-dark text-primary">
+<span class="material-symbols-outlined">distance</span>
+</div>
+</div>
+<div class="mt-4 flex items-center gap-1 text-xs text-green-400">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+12% vs last month</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/50 transition-colors group">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-[#92adc9] text-sm font-medium">Total Hours</p>
+<h3 class="text-white text-2xl font-bold mt-1 group-hover:text-primary transition-colors">1,204 <span class="text-base font-normal text-gray-500">hrs</span></h3>
+</div>
+<div class="p-2 rounded-lg bg-background-dark text-purple-400">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+<div class="mt-4 flex items-center gap-1 text-xs text-green-400">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+<span>Within compliance</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/50 transition-colors group">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-[#92adc9] text-sm font-medium">Safety Incidents</p>
+<h3 class="text-white text-2xl font-bold mt-1 group-hover:text-red-400 transition-colors">2</h3>
+</div>
+<div class="p-2 rounded-lg bg-background-dark text-red-400">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<div class="mt-4 flex items-center gap-1 text-xs text-[#92adc9]">
+<span class="material-symbols-outlined text-sm">history</span>
+<span>Last incident 14d ago</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 hover:border-primary/50 transition-colors group">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-[#92adc9] text-sm font-medium">Vehicle Assigned</p>
+<h3 class="text-white text-xl font-bold mt-1 truncate">Ford Transit #44</h3>
+</div>
+<div class="p-2 rounded-lg bg-background-dark text-orange-400">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+</div>
+<div class="mt-4 flex items-center gap-1 text-xs text-[#92adc9]">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span>Assigned since Nov 01</span>
+</div>
+</div>
+</div>
+<!-- Performance Visualizations -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Safety Score Gauge -->
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6 flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-white font-bold text-lg">Safety Score</h3>
+<button class="text-[#92adc9] hover:text-white"><span class="material-symbols-outlined text-xl">more_horiz</span></button>
+</div>
+<div class="flex-1 flex flex-col items-center justify-center relative min-h-[200px]">
+<!-- SVG Gauge Implementation -->
+<div class="relative size-48">
+<svg class="size-full -rotate-90" viewbox="0 0 36 36">
+<!-- Background Circle -->
+<path class="text-background-dark" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<!-- Progress Circle (92%) -->
+<path class="text-primary drop-shadow-[0_0_10px_rgba(19,127,236,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="92, 100" stroke-linecap="round" stroke-width="3"></path>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-4xl font-black text-white">92</span>
+<span class="text-xs text-[#92adc9] font-medium uppercase tracking-wider mt-1">Excellent</span>
+</div>
+</div>
+<p class="text-center text-sm text-[#92adc9] mt-4">Top 5% of fleet drivers</p>
+</div>
+</div>
+<!-- Fuel Efficiency Line Chart (Visual Simulation) -->
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6 flex flex-col lg:col-span-1">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-white font-bold text-lg">Fuel Efficiency</h3>
+<select class="bg-background-dark border-none text-xs text-[#92adc9] rounded py-1 px-2 focus:ring-1 focus:ring-primary">
+<option>Last 30 Days</option>
+<option>Last 7 Days</option>
+</select>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-2 relative min-h-[200px]">
+<div class="flex items-end justify-between h-32 w-full gap-2 px-2">
+<!-- Bars simulation representing line points roughly -->
+<div class="w-full bg-gradient-to-t from-primary/10 to-transparent rounded-t-lg h-full relative overflow-hidden border-b border-white/10">
+<!-- SVG Line Simulation -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none">
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#137fec;stop-opacity:0.3"></stop>
+<stop offset="100%" style="stop-color:#137fec;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,80 Q30,70 60,90 T120,60 T180,40 T240,70 T300,30 V150 H0 Z" fill="url(#grad1)"></path>
+<path d="M0,80 Q30,70 60,90 T120,60 T180,40 T240,70 T300,30" fill="none" stroke="#137fec" stroke-width="2"></path>
+<!-- Data point hover effect simulation -->
+<circle cx="180" cy="40" fill="#fff" r="4" stroke="#137fec" stroke-width="2"></circle>
+</svg>
+<!-- Tooltip simulation -->
+<div class="absolute top-2 left-1/2 -translate-x-1/2 bg-white text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-lg">
+                                            8.5 MPG
+                                        </div>
+</div>
+</div>
+<div class="flex justify-between text-xs text-[#92adc9] px-2 mt-2">
+<span>Nov 1</span>
+<span>Nov 10</span>
+<span>Nov 20</span>
+<span>Today</span>
+</div>
+</div>
+</div>
+<!-- Driving Hours Bar Chart -->
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6 flex flex-col lg:col-span-1">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-white font-bold text-lg">Driving Hours</h3>
+<div class="flex items-center gap-2 text-xs">
+<span class="size-2 rounded-full bg-primary"></span> Drive
+                                    <span class="size-2 rounded-full bg-white/20"></span> Rest
+                                </div>
+</div>
+<div class="flex-1 flex flex-col justify-end">
+<div class="flex items-end justify-between h-40 gap-3">
+<!-- Mon -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-12 relative overflow-hidden"></div>
+<div class="w-full bg-primary rounded-t-sm h-20 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Mon</span>
+</div>
+<!-- Tue -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-14 relative overflow-hidden"></div>
+<div class="w-full bg-primary rounded-t-sm h-24 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Tue</span>
+</div>
+<!-- Wed -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-10 relative overflow-hidden"></div>
+<div class="w-full bg-primary rounded-t-sm h-16 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Wed</span>
+</div>
+<!-- Thu -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-12 relative overflow-hidden"></div>
+<div class="w-full bg-primary rounded-t-sm h-28 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Thu</span>
+</div>
+<!-- Fri -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-16 relative overflow-hidden"></div>
+<div class="w-full bg-primary rounded-t-sm h-14 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Fri</span>
+</div>
+<!-- Sat -->
+<div class="flex flex-col items-center gap-2 flex-1 group cursor-pointer">
+<div class="w-full bg-white/10 rounded-t-sm h-20 relative overflow-hidden"></div>
+<div class="w-full bg-primary/30 rounded-t-sm h-6 group-hover:bg-blue-400 transition-colors"></div>
+<span class="text-xs text-[#92adc9]">Sat</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Tabs & Table -->
+<div class="flex flex-col gap-4">
+<!-- Tabs -->
+<div class="border-b border-white/10">
+<nav aria-label="Tabs" class="-mb-px flex space-x-8">
+<a class="border-primary text-primary whitespace-nowrap border-b-2 py-4 px-1 text-sm font-bold" href="#">
+                                    Overview
+                                </a>
+<a class="border-transparent text-[#92adc9] hover:border-gray-300 hover:text-white whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">
+                                    Trip History
+                                </a>
+<a class="border-transparent text-[#92adc9] hover:border-gray-300 hover:text-white whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">
+                                    Vehicle Inspections
+                                </a>
+<a class="border-transparent text-[#92adc9] hover:border-gray-300 hover:text-white whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium" href="#">
+                                    Documents
+                                </a>
+</nav>
+</div>
+<!-- Recent Activity Table -->
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-border-dark flex justify-between items-center">
+<h3 class="text-white font-bold text-lg">Recent Trips</h3>
+<button class="text-sm text-primary hover:text-blue-400 font-medium">View All History</button>
+</div>
+<div class="overflow-x-auto">
+<table class="min-w-full text-left text-sm whitespace-nowrap">
+<thead class="bg-background-dark/50 text-[#92adc9] uppercase text-xs font-semibold">
+<tr>
+<th class="px-6 py-3" scope="col">Date &amp; Time</th>
+<th class="px-6 py-3" scope="col">Route</th>
+<th class="px-6 py-3" scope="col">Vehicle</th>
+<th class="px-6 py-3" scope="col">Duration</th>
+<th class="px-6 py-3 text-right" scope="col">Safety Flags</th>
+<th class="px-6 py-3 text-right" scope="col">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-white font-medium">
+                                                Nov 24, 2023 <span class="text-[#92adc9] font-normal block text-xs">08:30 AM</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white">Chicago, IL <span class="text-[#92adc9]">→</span> Detroit, MI</span>
+<span class="text-xs text-[#92adc9]">285 miles</span>
+</div>
+</td>
+<td class="px-6 py-4 text-[#92adc9]">Ford Transit #44</td>
+<td class="px-6 py-4 text-white">4h 15m</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 ring-1 ring-inset ring-green-400/20">None</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-[#92adc9] hover:text-white"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-white font-medium">
+                                                Nov 23, 2023 <span class="text-[#92adc9] font-normal block text-xs">07:15 AM</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white">St. Louis, MO <span class="text-[#92adc9]">→</span> Chicago, IL</span>
+<span class="text-xs text-[#92adc9]">297 miles</span>
+</div>
+</td>
+<td class="px-6 py-4 text-[#92adc9]">Ford Transit #44</td>
+<td class="px-6 py-4 text-white">5h 02m</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center gap-1 rounded-full bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-400 ring-1 ring-inset ring-yellow-400/20">
+                                                    Hard Braking (1)
+                                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-[#92adc9] hover:text-white"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-white font-medium">
+                                                Nov 22, 2023 <span class="text-[#92adc9] font-normal block text-xs">09:00 AM</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white">Kansas City, MO <span class="text-[#92adc9]">→</span> St. Louis, MO</span>
+<span class="text-xs text-[#92adc9]">248 miles</span>
+</div>
+</td>
+<td class="px-6 py-4 text-[#92adc9]">Ford Transit #44</td>
+<td class="px-6 py-4 text-white">3h 50m</td>
+<td class="px-6 py-4 text-right">
+<span class="inline-flex items-center rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 ring-1 ring-inset ring-green-400/20">None</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-[#92adc9] hover:text-white"><span class="material-symbols-outlined">visibility</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

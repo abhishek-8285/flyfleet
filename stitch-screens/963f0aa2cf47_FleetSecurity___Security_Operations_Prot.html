@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Security Operations Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ec5b13",
+                        "primary-dark": "#d44a0b",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "sans": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Common Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            
+            const isActive = (path) => {
+                return location.pathname === path ? 
+                    "bg-primary/10 text-primary border-l-4 border-primary" : 
+                    "text-text-muted hover:bg-border-color hover:text-white transition-colors";
+            };
+
+            return (
+                <aside className="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div className="p-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(236,91,19,0.3)]">
+                            <span className="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div className="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+                        <Link to="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/')}`}>
+                            <span className="material-symbols-outlined">dashboard</span>
+                            <span className="text-sm font-medium">Overview</span>
+                        </Link>
+                        <Link to="/mfa-center" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/mfa-center')}`}>
+                            <span className="material-symbols-outlined">admin_panel_settings</span>
+                            <span className="text-sm font-medium">MFA Center</span>
+                        </Link>
+                        <Link to="/sessions" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/sessions')}`}>
+                             <span className="material-symbols-outlined">devices</span>
+                            <span className="text-sm font-medium">Sessions</span>
+                        </Link>
+                         <Link to="/access-review" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/access-review')}`}>
+                            <span className="material-symbols-outlined">fact_check</span>
+                            <span className="text-sm font-medium">Access Review</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+                        <Link to="/audit-logs" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/audit-logs')}`}>
+                            <span className="material-symbols-outlined">troubleshoot</span>
+                            <span className="text-sm font-medium">Audit Logs</span>
+                        </Link>
+                        <Link to="/threat-alerts" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/threat-alerts')}`}>
+                            <span className="material-symbols-outlined">warning</span>
+                            <span className="text-sm font-medium">Threat Alerts</span>
+                        </Link>
+                        <Link to="/ip-access" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive('/ip-access')}`}>
+                            <span className="material-symbols-outlined">vpn_key</span>
+                            <span className="text-sm font-medium">IP Access</span>
+                        </Link>
+                        
+                        <div className="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+                        <a className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span className="material-symbols-outlined">group</span>
+                            <span className="text-sm font-medium">Directory</span>
+                        </a>
+                    </nav>
+                    <div className="p-4 border-t border-border-color">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div className="flex flex-col overflow-hidden">
+                                <span className="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span className="text-xs text-text-muted truncate">Super Admin</span>
+                            </div>
+                            <button className="ml-auto text-text-muted hover:text-white">
+                                <span className="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = () => (
+            <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                <span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+                <div className="flex items-center gap-4">
+                    <span>Encryption: <span className="text-success">AES-256</span></span>
+                    <span>System Status: <span className="text-success">Operational</span></span>
+                    <span>Server Time: <span className="font-mono text-white">14:35 UTC</span></span>
+                </div>
+            </footer>
+        );
+
+        // --- Screen Components ---
+
+        // Screen 1: Login Activity Audit Logs
+        const AuditLogsScreen = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <nav aria-label="Breadcrumb" className="flex">
+                                    <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                                        <li className="inline-flex items-center">
+                                            <a className="inline-flex items-center text-[11px] font-bold uppercase text-text-muted hover:text-white" href="#">
+                                                SECURITY SUITE
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <div className="flex items-center">
+                                                <span className="material-symbols-outlined text-text-muted text-sm mx-1">chevron_right</span>
+                                                <span className="text-[11px] font-bold uppercase text-white">LOGINS</span>
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </nav>
+                                <div className="h-4 w-px bg-border-color"></div>
+                                <h2 className="text-white text-lg font-bold">Login Activity</h2>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">search</span>
+                                    </div>
+                                    <input className="bg-surface-dark border border-border-color text-xs text-white rounded-lg pl-10 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder-text-muted" placeholder="Global Search (User, IP, ID)..." type="text"/>
+                                </div>
+                                <button className="px-3 py-2 bg-surface-dark hover:bg-border-color text-white text-xs font-semibold rounded-lg border border-border-color flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">download</span>
+                                    Export CSV
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex flex-1 overflow-hidden">
+                            <aside className="w-64 bg-surface-dark border-r border-border-color flex flex-col z-10 overflow-y-auto custom-scrollbar">
+                                <div className="p-4 border-b border-border-color">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-primary">filter_alt</span>
+                                            Filters
+                                        </h3>
+                                        <button className="text-[10px] text-text-muted hover:text-white underline">Reset</button>
+                                    </div>
+                                </div>
+                                <div className="p-4 space-y-6">
+                                    <div>
+                                        <label className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide">Login Status</label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="text-sm text-white group-hover:text-primary transition-colors">Success</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="text-sm text-white group-hover:text-primary transition-colors">Failure</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="text-sm text-white group-hover:text-primary transition-colors">Challenged (MFA)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-border-color pt-6">
+                                        <label className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide">Date Range</label>
+                                        <select className="w-full bg-surface-darker border border-border-color text-white text-xs rounded-lg p-2 focus:ring-primary focus:border-primary mb-2">
+                                            <option>Last 24 Hours</option>
+                                            <option>Last 7 Days</option>
+                                            <option>Last 30 Days</option>
+                                            <option>Custom Range</option>
+                                        </select>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input className="bg-surface-darker border border-border-color text-white text-[10px] rounded-lg p-1.5 focus:ring-primary focus:border-primary" type="date"/>
+                                            <input className="bg-surface-darker border border-border-color text-white text-[10px] rounded-lg p-1.5 focus:ring-primary focus:border-primary" type="date"/>
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-border-color pt-6">
+                                        <label className="block text-xs font-medium text-text-muted mb-2 uppercase tracking-wide">Severity</label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="flex items-center gap-1.5 text-sm text-white">
+                                                    <span className="w-2 h-2 rounded-full bg-danger"></span>
+                                                    Critical
+                                                </span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="flex items-center gap-1.5 text-sm text-white">
+                                                    <span className="w-2 h-2 rounded-full bg-warning"></span>
+                                                    Warning
+                                                </span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer group">
+                                                <input className="rounded border-border-color bg-surface-darker text-primary focus:ring-primary focus:ring-offset-surface-darker w-4 h-4" type="checkbox"/>
+                                                <span className="flex items-center gap-1.5 text-sm text-white">
+                                                    <span className="w-2 h-2 rounded-full bg-success"></span>
+                                                    Normal
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-auto p-4 border-t border-border-color bg-surface-darker/50">
+                                    <button className="w-full py-2 bg-primary hover:bg-primary-dark text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors shadow-lg shadow-primary/20">
+                                        Apply Filters
+                                    </button>
+                                </div>
+                            </aside>
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                <div className="flex-1 overflow-auto custom-scrollbar p-6">
+                                    <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col overflow-hidden shadow-xl">
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-border-color text-[11px] text-text-muted uppercase tracking-wider bg-surface-darker/80 backdrop-blur-sm sticky top-0 z-10">
+                                                        <th className="px-6 py-4 font-semibold w-48">Timestamp</th>
+                                                        <th className="px-6 py-4 font-semibold w-64">User</th>
+                                                        <th className="px-6 py-4 font-semibold w-40">IP Address</th>
+                                                        <th className="px-6 py-4 font-semibold">Device Info</th>
+                                                        <th className="px-6 py-4 font-semibold w-48">Location</th>
+                                                        <th className="px-6 py-4 font-semibold text-right w-32">Status</th>
+                                                        <th className="px-6 py-4 w-10"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="text-sm divide-y divide-border-color">
+                                                    <tr className="hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs whitespace-nowrap">
+                                                            <div>Oct 24, 2023</div>
+                                                            <div className="text-[10px] opacity-70">14:32:01 UTC</div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-primary">JD</div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-white font-medium">john.doe@fleet.com</span>
+                                                                    <span className="text-[10px] text-text-muted">ID: USR-8821</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs">
+                                                            <span className="px-2 py-0.5 rounded-lg bg-surface-darker border border-border-color">192.168.1.42</span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px]">laptop_mac</span>
+                                                                <span className="text-xs">Chrome on macOS</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted text-xs">New York, US</td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 shadow-sm shadow-danger/5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                                                FAILURE
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr className="hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs whitespace-nowrap">
+                                                            <div>Oct 24, 2023</div>
+                                                            <div className="text-[10px] opacity-70">14:30:15 UTC</div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-purple-400">SC</div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-white font-medium">sarah.c@fleet.com</span>
+                                                                    <span className="text-[10px] text-text-muted">ID: USR-1029</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs">
+                                                            <span className="px-2 py-0.5 rounded-lg bg-surface-darker border border-border-color">10.0.0.55</span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px]">smartphone</span>
+                                                                <span className="text-xs">FleetApp on iOS</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted text-xs">London, UK</td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-success/10 text-success border border-success/20 shadow-sm shadow-success/5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                                SUCCESS
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr className="hover:bg-surface-darker/50 transition-colors group cursor-pointer bg-danger/5">
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs whitespace-nowrap">
+                                                            <div>Oct 24, 2023</div>
+                                                            <div className="text-[10px] opacity-70">14:15:33 UTC</div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-text-muted">UNK</div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-white font-medium">admin</span>
+                                                                    <span className="text-[10px] text-text-muted">ID: ---</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted font-mono text-xs">
+                                                            <span className="px-2 py-0.5 rounded-lg bg-surface-darker border border-border-color">185.220.101.44</span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[16px]">question_mark</span>
+                                                                <span className="text-xs">Unknown Device</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-text-muted text-xs">Moscow, RU</td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 shadow-sm shadow-danger/5">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                                                BLOCKED
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-3.5 text-right">
+                                                            <button className="text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <span className="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="bg-surface-darker/50 p-4 border-t border-border-color flex items-center justify-between">
+                                            <span className="text-xs text-text-muted">Showing <span className="text-white font-medium">1-8</span> of <span className="text-white font-medium">12,458</span> events</span>
+                                            <div className="flex items-center gap-2">
+                                                <button className="p-1 rounded-lg text-text-muted hover:text-white hover:bg-border-color disabled:opacity-50">
+                                                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                                </button>
+                                                <button className="px-2 py-1 rounded-lg text-xs bg-primary text-white font-bold">1</button>
+                                                <button className="px-2 py-1 rounded-lg text-xs text-text-muted hover:text-white hover:bg-border-color">2</button>
+                                                <button className="px-2 py-1 rounded-lg text-xs text-text-muted hover:text-white hover:bg-border-color">3</button>
+                                                <span className="text-xs text-text-muted">...</span>
+                                                <button className="px-2 py-1 rounded-lg text-xs text-text-muted hover:text-white hover:bg-border-color">42</button>
+                                                <button className="p-1 rounded-lg text-text-muted hover:text-white hover:bg-border-color">
+                                                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 2: Active Session Management
+        const SessionsScreen = () => {
+            return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider mb-0.5">
+                                        <span>Security Suite</span>
+                                        <span className="text-border-color">/</span>
+                                        <span className="text-primary font-semibold">Sessions</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Active Session Management Dashboard</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-dark border border-border-color text-xs text-text-muted">
+                                    <span className="material-symbols-outlined text-[14px] text-success">circle</span>
+                                    System Healthy
+                                </div>
+                                <button className="px-4 py-2 bg-danger/10 hover:bg-danger/20 border border-danger/30 text-danger text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-danger/5">
+                                    <span className="material-symbols-outlined text-[16px]">block</span>
+                                    Revoke All Sessions
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-primary">devices</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Active Sessions</div>
+                                    <div className="text-2xl font-bold text-white">3,842</div>
+                                    <div className="text-[10px] text-success flex items-center gap-1 mt-1">
+                                        <span className="material-symbols-outlined text-[12px]">trending_up</span>
+                                        +12% vs last hour
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-danger">warning</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">High-Risk Sessions</div>
+                                    <div className="text-2xl font-bold text-danger">24</div>
+                                    <div className="text-[10px] text-text-muted mt-1">Flagged for review</div>
+                                    <div className="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div className="bg-danger h-full" style={{width: '15%'}}></div>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">smartphone</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Mobile vs Desktop</div>
+                                    <div className="flex items-end gap-2 mt-1">
+                                        <span className="text-2xl font-bold text-white">45%</span>
+                                        <span className="text-sm text-text-muted mb-1">Mobile</span>
+                                    </div>
+                                    <div className="w-full flex h-1 rounded-full mt-2 overflow-hidden bg-border-color">
+                                        <div className="bg-warning h-full" style={{width: '45%'}}></div>
+                                        <div className="bg-primary h-full" style={{width: '55%'}}></div>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] text-text-muted mt-1">
+                                        <span>1,729 Mobile</span>
+                                        <span>2,113 Desktop</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col overflow-hidden">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">table_rows</span>
+                                        Current Active Sessions
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <input className="bg-surface-dark border border-border-color text-xs text-white rounded-lg px-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search user, IP, or device..." type="text"/>
+                                        <button className="p-1.5 hover:bg-border-color rounded-lg text-text-muted hover:text-white">
+                                            <span className="material-symbols-outlined text-[18px]">filter_list</span>
+                                        </button>
+                                        <button className="p-1.5 hover:bg-border-color rounded-lg text-text-muted hover:text-white">
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-4 py-3 font-semibold">User</th>
+                                                <th className="px-4 py-3 font-semibold">Device</th>
+                                                <th className="px-4 py-3 font-semibold">IP Address</th>
+                                                <th className="px-4 py-3 font-semibold">Location</th>
+                                                <th className="px-4 py-3 font-semibold">Last Active</th>
+                                                <th className="px-4 py-3 font-semibold">Risk Score</th>
+                                                <th className="px-4 py-3 font-semibold text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold border border-primary/30">JD</div>
+                                                        <div>
+                                                            <div className="text-white font-medium">John Doe</div>
+                                                            <div className="text-[10px] text-text-muted">john.doe@fleet.com</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2 text-text-muted">
+                                                        <span className="material-symbols-outlined text-[16px]">laptop_mac</span>
+                                                        <span>MacBook Pro 16"</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">192.168.1.42</td>
+                                                <td className="px-4 py-3 text-text-muted">New York, US</td>
+                                                <td className="px-4 py-3 text-white">Just now</td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                        LOW
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-xs font-medium text-danger hover:text-white bg-transparent hover:bg-danger border border-danger/30 hover:border-danger px-3 py-1 rounded-lg transition-all">
+                                                        Force Logout
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors bg-danger/5">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-danger/20 text-danger flex items-center justify-center text-xs font-bold border border-danger/30">MR</div>
+                                                        <div>
+                                                            <div className="text-white font-medium">Mike Ross</div>
+                                                            <div className="text-[10px] text-text-muted">mike.ross@fleet.com</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2 text-text-muted">
+                                                        <span className="material-symbols-outlined text-[16px]">desktop_windows</span>
+                                                        <span>Windows Workstation</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-text-muted font-mono text-xs">185.12.44.21</td>
+                                                <td className="px-4 py-3 text-text-muted">Moscow, RU</td>
+                                                <td className="px-4 py-3 text-white">12 mins ago</td>
+                                                <td className="px-4 py-3">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                                        CRITICAL
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <button className="text-xs font-medium text-white bg-danger hover:bg-red-600 border border-danger px-3 py-1 rounded-lg transition-all shadow-lg shadow-danger/20">
+                                                        Force Logout
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="px-4 py-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
+                                    <div className="text-xs text-text-muted">
+                                        Showing <span className="font-medium text-white">1-5</span> of <span className="font-medium text-white">3,842</span> active sessions
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="px-3 py-1 text-xs font-medium text-text-muted hover:text-white bg-surface-dark border border-border-color rounded-lg hover:bg-border-color transition-colors disabled:opacity-50" disabled>Previous</button>
+                                        <button className="px-3 py-1 text-xs font-medium text-text-muted hover:text-white bg-surface-dark border border-border-color rounded-lg hover:bg-border-color transition-colors">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 3: IP Access & Firewall Controls
+        const IPAccessScreen = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[11px] text-text-muted font-medium mb-0.5 uppercase tracking-wide">
+                                        <span>Security Suite</span>
+                                        <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span className="text-primary">IP Restrictions</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">IP Access & Firewall Controls</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-dark border border-border-color">
+                                    <span className="text-xs text-text-muted font-medium">Firewall Active</span>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input defaultChecked className="sr-only peer" type="checkbox" />
+                                        <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                    </label>
+                                </div>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">add_moderator</span>
+                                    Add IP Rule
+                                </button>
+                            </div>
+                        </header>
+                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-white">rule</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Active Rules</div>
+                                    <div className="text-2xl font-bold text-white">128</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-danger">block</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Blocked Requests (24h)</div>
+                                    <div className="text-2xl font-bold text-danger">2,405</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                     <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-success">public</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Allowed Traffic</div>
+                                    <div className="text-2xl font-bold text-success">98.2%</div>
+                                </div>
+                                 <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                     <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span className="material-symbols-outlined text-4xl text-warning">location_disabled</span>
+                                    </div>
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Geo-Blocked Zones</div>
+                                    <div className="text-2xl font-bold text-warning">14</div>
+                                </div>
+                            </div>
+                             <div className="grid grid-cols-12 gap-6 mb-6">
+                                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col h-full">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center">
+                                            <h3 className="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-warning text-[18px]">public_off</span>
+                                                Geofencing Restrictions
+                                            </h3>
+                                        </div>
+                                         <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                                            <div className="space-y-1">
+                                                 <div className="flex items-center justify-between p-3 hover:bg-surface-darker rounded-lg transition-colors group border border-transparent hover:border-border-color">
+                                                    <div className="flex items-center gap-3">
+                                                        <img alt="RU" className="w-5 h-3.5 rounded-sm object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjXMM51kGC_Soj9rMYc5Su11Yk7qeKBJe8A6XRKGG1dpAgWdt006H1-L_vDcQc_QaLXPLkd6kwbAOEXvZXx98vpr1s-jQl7S5m6Sopa8AlZ7hUwHuhfC5oB1r3EtRcgFUXaVpPshFt2CHAJ5HnrlAomtrluhwRfcRxdJpAEqW1wquvZeRHtebZo__DnMj-ajvWCp0jB5f5PDuA6wOZXq7GJa8UGKz1v3JdrhvlTuZ2QjjL20chmPcNhKFRN6tG8FMQcs1Bh1hRsZw"/>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm text-white font-medium">Russian Federation</span>
+                                                            <span className="text-[10px] text-text-muted">High Risk Zone</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-lg">DENY ALL</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                     <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col h-full overflow-hidden">
+                                        <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-primary text-[18px]">list_alt</span>
+                                                Whitelist / Blocklist Rules
+                                            </h3>
+                                        </div>
+                                        <div className="flex-1 overflow-x-auto">
+                                             <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                        <th className="px-4 py-3 font-semibold w-12 text-center"></th>
+                                                        <th className="px-4 py-3 font-semibold">Rule ID</th>
+                                                        <th className="px-4 py-3 font-semibold">IP Range / CIDR</th>
+                                                        <th className="px-4 py-3 font-semibold">Type</th>
+                                                        <th className="px-4 py-3 font-semibold text-right">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="text-sm">
+                                                    <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td className="px-4 py-3 text-center"></td>
+                                                        <td className="px-4 py-3 font-mono text-xs text-text-muted">R-2941</td>
+                                                        <td className="px-4 py-3 font-mono text-xs text-white">192.168.0.0/24</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                                ALLOW
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button className="text-text-muted hover:text-primary transition-colors"><span className="material-symbols-outlined text-[18px]">edit</span></button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                     </div>
+                                </div>
+                             </div>
+                         </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 4: Access Review & Approval Flow
+        const AccessReviewScreen = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+                                        <span>Security Suite</span>
+                                        <span className="text-border-color">/</span>
+                                        <span className="text-primary">Access Review</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Access Review Workflow</h2>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-surface-dark border border-border-color">
+                                    <span className="text-xs text-text-muted font-medium">Auto-Save</span>
+                                    <span className="flex h-2 w-2 relative">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                                    </span>
+                                </div>
+                                <button className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                    Complete Review
+                                </button>
+                            </div>
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="mb-8">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-white text-sm font-semibold">Review Progress: Q3 Security Audit</h3>
+                                    <span className="text-xs text-text-muted">45% Complete</span>
+                                </div>
+                                <div className="w-full bg-surface-dark rounded-full h-2 border border-border-color mb-6 overflow-hidden">
+                                    <div className="bg-primary h-full rounded-full transition-all duration-500" style={{width: '45%'}}></div>
+                                </div>
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="bg-surface-darker p-4 rounded-lg border border-primary/30 relative">
+                                        <div className="absolute top-3 right-3 text-primary">
+                                            <span className="material-symbols-outlined text-lg">check_circle</span>
+                                        </div>
+                                        <div className="text-xs text-text-muted uppercase font-bold mb-1">Step 1</div>
+                                        <div className="text-sm text-white font-medium">Identity Verification</div>
+                                    </div>
+                                     <div className="bg-surface-dark p-4 rounded-lg border border-border-color relative shadow-[0_0_0_1px_rgba(236,91,19,0.3)]">
+                                        <div className="absolute top-3 right-3 text-primary animate-pulse">
+                                            <span className="material-symbols-outlined text-lg">radio_button_checked</span>
+                                        </div>
+                                        <div className="text-xs text-primary uppercase font-bold mb-1">Step 2</div>
+                                        <div className="text-sm text-white font-medium">Role Assignment Review</div>
+                                    </div>
+                                    <div className="bg-surface-dark p-4 rounded-lg border border-border-color relative opacity-60">
+                                        <div className="text-xs text-text-muted uppercase font-bold mb-1">Step 3</div>
+                                        <div className="text-sm text-white font-medium">Policy Compliance Check</div>
+                                    </div>
+                                     <div className="bg-surface-dark p-4 rounded-lg border border-border-color relative opacity-60">
+                                        <div className="text-xs text-text-muted uppercase font-bold mb-1">Step 4</div>
+                                        <div className="text-sm text-white font-medium">Final Sign-off</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col overflow-hidden h-[calc(100%-180px)] min-h-[500px]">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker sticky top-0 z-10">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-text-muted text-[18px]">manage_accounts</span>
+                                            User Role Assignments
+                                        </h3>
+                                    </div>
+                                </div>
+                                <div className="overflow-y-auto custom-scrollbar flex-1">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead className="sticky top-0 z-10 bg-surface-darker shadow-sm">
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+                                                <th className="px-6 py-3 font-semibold">User Identity</th>
+                                                <th className="px-6 py-3 font-semibold">Effective Role</th>
+                                                <th className="px-6 py-3 font-semibold">Risk Score</th>
+                                                <th className="px-6 py-3 font-semibold text-right">Review Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm divide-y divide-border-color">
+                                            <tr className="hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">JD</div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm text-white font-medium">John Doe</span>
+                                                            <span className="text-[11px] text-text-muted">john.doe@fleet.com</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                                        <span className="material-symbols-outlined text-[14px]">engineering</span>
+                                                        Fleet Manager
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="text-[10px] font-bold text-success">Low</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+                                                        <button className="px-3 py-1.5 rounded-lg bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">Revoke</button>
+                                                        <button className="px-3 py-1.5 rounded-lg bg-success/10 hover:bg-success/20 text-success border border-success/30 text-xs font-medium transition-colors flex items-center gap-1">Approve</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                         <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 5: Security Threats & Alerts Feed
+        const ThreatAlertsScreen = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-2 text-[10px] text-text-muted font-mono uppercase tracking-wider mb-0.5">
+                                        <span className="hover:text-white cursor-pointer">Security Suite</span>
+                                        <span className="material-symbols-outlined text-[12px]">chevron_right</span>
+                                        <span className="text-white">Alerts</span>
+                                    </div>
+                                    <h2 className="text-white text-lg font-bold">Security Threats & Alerts Feed</h2>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-danger/20 text-danger border border-danger/30 animate-pulse">
+                                    Live Feed Active
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button className="px-4 py-2 bg-surface-dark border border-border-color hover:bg-surface-darker text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">pause</span>
+                                    Pause Feed
+                                </button>
+                            </div>
+                        </header>
+                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase">Active Threats</div>
+                                        <div className="text-2xl font-bold text-white mt-1">24</div>
+                                    </div>
+                                    <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center text-danger">
+                                        <span className="material-symbols-outlined">notification_important</span>
+                                    </div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-text-muted text-xs font-medium uppercase">Suspicious Users</div>
+                                        <div className="text-2xl font-bold text-white mt-1">8</div>
+                                    </div>
+                                    <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning">
+                                        <span className="material-symbols-outlined">person_alert</span>
+                                    </div>
+                                </div>
+                            </div>
+                             <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between text-xs text-text-muted px-2 uppercase tracking-wider font-semibold">
+                                    <span>Latest Events</span>
+                                    <span>Updated: Just now</span>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border-l-4 border-l-danger border border-y-border-color border-r-border-color p-0 hover:bg-surface-darker transition-colors group">
+                                    <div className="p-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
+                                        <div className="flex-shrink-0 pt-1 md:pt-0">
+                                            <div className="w-10 h-10 rounded-lg bg-danger/10 flex items-center justify-center text-danger animate-pulse">
+                                                <span className="material-symbols-outlined">gpp_bad</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <h3 className="text-white font-bold text-sm">Brute Force Attempt</h3>
+                                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-danger text-white">Critical</span>
+                                                <span className="text-xs text-text-muted flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[14px]">schedule</span> 2 mins ago
+                                                </span>
+                                            </div>
+                                            <p className="text-text-muted text-xs mb-2">Multiple failed login attempts detected from a single IP address targeting valid user accounts.</p>
+                                        </div>
+                                         <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button className="flex-1 md:flex-none px-3 py-1.5 bg-surface-darker border border-border-color hover:bg-border-color text-text-muted hover:text-white text-xs font-medium rounded-lg transition-colors">
+                                                Acknowledge
+                                            </button>
+                                            <button className="flex-1 md:flex-none px-3 py-1.5 bg-danger/10 border border-danger/30 hover:bg-danger/20 text-danger text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1">
+                                                <span className="material-symbols-outlined text-[14px]">block</span>
+                                                Block IP
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+                        <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 6: User MFA Status & Reset Controls
+        const MFACenterScreen = () => {
+             return (
+                <div className="flex h-screen w-full">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-white text-lg font-bold">User MFA Enforcement Management</h2>
+                                    <p className="text-[11px] text-text-muted mt-0.5 uppercase tracking-wide">Security Suite / MFA Enforcement</p>
+                                </div>
+                                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
+                                    High Security Mode
+                                </span>
+                            </div>
+                             <div className="flex items-center gap-4">
+                                <button className="px-4 py-2 bg-danger hover:bg-red-600 text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-danger/20 ring-1 ring-white/10">
+                                    <span className="material-symbols-outlined text-[16px]">phonelink_erase</span>
+                                    Force Global MFA Reset
+                                </button>
+                            </div>
+                        </header>
+                         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">Total Active Users</div>
+                                    <div className="text-2xl font-bold text-white">12,458</div>
+                                </div>
+                                <div className="bg-surface-dark rounded-lg border border-border-color p-4 relative overflow-hidden group">
+                                    <div className="text-text-muted text-xs font-medium uppercase mb-1">MFA Configured</div>
+                                    <div className="text-2xl font-bold text-success">98.2%</div>
+                                </div>
+                            </div>
+                            <div className="bg-surface-dark rounded-lg border border-border-color flex flex-col overflow-hidden h-full min-h-[500px]">
+                                <div className="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 className="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-text-muted text-[18px]">manage_accounts</span>
+                                        User MFA Status
+                                    </h3>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th className="px-6 py-3 font-semibold">User Identity</th>
+                                                <th className="px-6 py-3 font-semibold">MFA Status</th>
+                                                <th className="px-6 py-3 font-semibold">Primary Method</th>
+                                                <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            <tr className="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">JD</div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm text-white font-medium">John Doe</span>
+                                                            <span className="text-[11px] text-text-muted">john.doe@fleet.com</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                        ACTIVE
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2 text-text-muted">
+                                                        <span className="material-symbols-outlined text-[18px]">smartphone</span>
+                                                        <span className="text-white">TOTP App</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                        <button className="px-3 py-1.5 bg-danger/10 border border-danger/20 hover:bg-danger/20 text-xs text-danger font-medium rounded-lg transition-colors flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                                                            Reset MFA
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                         <Footer />
+                    </main>
+                </div>
+            );
+        };
+
+
+        // --- App Component ---
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<AuditLogsScreen />} />
+                        <Route path="/audit-logs" element={<AuditLogsScreen />} />
+                        <Route path="/sessions" element={<SessionsScreen />} />
+                        <Route path="/ip-access" element={<IPAccessScreen />} />
+                        <Route path="/access-review" element={<AccessReviewScreen />} />
+                        <Route path="/threat-alerts" element={<ThreatAlertsScreen />} />
+                        <Route path="/mfa-center" element={<MFACenterScreen />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

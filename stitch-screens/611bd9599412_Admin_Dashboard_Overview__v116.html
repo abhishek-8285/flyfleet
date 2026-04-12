@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trip Real-time Telemetry View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .map-grid line {
+            stroke: #233648;
+            stroke-width: 0.5;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetCommand</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-sm font-medium">Live Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">route</span>
+<span class="text-sm font-medium">Trips</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Assets</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="text-sm font-medium">Drivers</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Maintenance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-medium">Service Logs</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+<span class="hover:text-white cursor-pointer transition-colors">Trips</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white font-mono">TRIP-2023-8942</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary font-medium">Telemetry</span>
+</div>
+<h2 class="text-white text-lg font-bold flex items-center gap-2">
+                        Trip Telemetry View
+                        <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Auto-Refresh</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<button class="px-4 py-2 bg-surface-dark hover:bg-surface-light hover:text-black border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Export CSV
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">videocam</span>
+                    Live Video
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-hidden flex flex-col lg:flex-row">
+<div class="flex-1 flex flex-col h-full min-w-0 border-r border-border-color bg-background-dark overflow-y-auto custom-scrollbar">
+<div class="flex-1 min-h-[400px] relative bg-[#0b1219] group">
+<div class="absolute inset-0 opacity-40 map-grid">
+<svg class="w-full h-full" height="100%" width="100%">
+<pattern height="40" id="grid" patternUnits="userSpaceOnUse" width="40">
+<path d="M 40 0 L 0 0 0 40" fill="none" stroke="#233648" stroke-width="1"></path>
+</pattern>
+<rect fill="url(#grid)" height="100%" width="100%"></rect>
+<path d="M-10,300 Q150,280 300,400 T600,350 T900,500" fill="none" stroke="#16202a" stroke-width="12"></path>
+<path d="M-10,300 Q150,280 300,400 T600,350 T900,500" fill="none" stroke="#233648" stroke-width="2"></path>
+<path d="M100,290 Q250,270 350,380 L380,370" fill="none" stroke="#137fec" stroke-dasharray="8,4" stroke-width="3"></path>
+</svg>
+</div>
+<div class="absolute top-4 left-4 flex flex-col gap-2">
+<button class="bg-surface-darker/90 backdrop-blur border border-border-color p-2 rounded text-text-muted hover:text-white hover:bg-primary transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="bg-surface-darker/90 backdrop-blur border border-border-color p-2 rounded text-text-muted hover:text-white hover:bg-primary transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="bg-surface-darker/90 backdrop-blur border border-border-color p-2 rounded text-text-muted hover:text-white hover:bg-primary transition-colors mt-2">
+<span class="material-symbols-outlined">my_location</span>
+</button>
+</div>
+<div class="absolute top-[370px] left-[380px] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+<div class="bg-surface-darker/80 text-white text-[10px] px-2 py-1 rounded mb-1 border border-border-color backdrop-blur whitespace-nowrap">
+                            Vehicle #8942 • 65 km/h
+                        </div>
+<div class="relative">
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-white shadow-[0_0_0_4px_rgba(19,127,236,0.3)] animate-pulse"></div>
+<div class="absolute -inset-4 bg-primary/20 rounded-full animate-ping"></div>
+</div>
+</div>
+<div class="absolute top-4 right-4 flex gap-2">
+<div class="bg-surface-darker/90 backdrop-blur border border-border-color px-3 py-2 rounded flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold">ETA</span>
+<span class="text-white text-sm font-bold font-mono">15:42</span>
+</div>
+<div class="bg-surface-darker/90 backdrop-blur border border-border-color px-3 py-2 rounded flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold">Remaining</span>
+<span class="text-white text-sm font-bold font-mono">42 km</span>
+</div>
+</div>
+</div>
+<div class="h-64 border-t border-border-color bg-surface-darker p-4 flex flex-col shrink-0">
+<div class="flex justify-between items-center mb-2">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">speed</span>
+                            Speed &amp; Ignition Profile
+                        </h3>
+<div class="flex gap-2">
+<button class="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded">1H</button>
+<button class="text-[10px] bg-surface-dark text-text-muted border border-border-color px-2 py-0.5 rounded hover:text-white">6H</button>
+<button class="text-[10px] bg-surface-dark text-text-muted border border-border-color px-2 py-0.5 rounded hover:text-white">24H</button>
+</div>
+</div>
+<div class="flex-1 relative w-full h-full">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 150">
+<defs>
+<linearGradient id="speedGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#137fec" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#137fec" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="120" y2="120"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="80" y2="80"></line>
+<line stroke="#233648" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="40" y2="40"></line>
+<path d="M0,120 C50,120 80,60 150,50 C220,40 250,90 300,70 C350,50 400,30 450,40 C500,50 550,100 600,80 C650,60 700,50 800,45" fill="none" stroke="#137fec" stroke-width="2"></path>
+<path d="M0,120 C50,120 80,60 150,50 C220,40 250,90 300,70 C350,50 400,30 450,40 C500,50 550,100 600,80 C650,60 700,50 800,45 V150 H0 Z" fill="url(#speedGradient)"></path>
+<rect fill="#ef4444" height="10" rx="2" width="100" x="0" y="140"></rect> 
+<rect fill="#10b981" height="10" rx="2" width="695" x="105" y="140"></rect> 
+</svg>
+<div class="absolute top-2 left-2 text-[9px] text-text-muted flex flex-col gap-8">
+<span>120 km/h</span>
+<span>60 km/h</span>
+<span>0 km/h</span>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-96 flex flex-col bg-surface-dark border-l border-border-color h-full z-10 shrink-0">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">sensors</span>
+                        Live Telemetry Feed
+                    </h3>
+<div class="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+</div>
+<div class="grid grid-cols-2 gap-3 p-4 border-b border-border-color bg-surface-darker/50">
+<div class="bg-surface-dark border border-border-color rounded p-3 flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold mb-1">Current Speed</span>
+<div class="flex items-end gap-1">
+<span class="text-2xl font-bold text-white">65</span>
+<span class="text-xs text-text-muted mb-1">km/h</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color rounded p-3 flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold mb-1">Fuel Level</span>
+<div class="flex items-end gap-1">
+<span class="text-2xl font-bold text-warning">42</span>
+<span class="text-xs text-text-muted mb-1">%</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color rounded p-3 flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold mb-1">Odometer</span>
+<div class="flex items-end gap-1">
+<span class="text-lg font-bold text-white">124,592</span>
+<span class="text-xs text-text-muted mb-1">km</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color rounded p-3 flex flex-col">
+<span class="text-[10px] text-text-muted uppercase font-bold mb-1">Engine RPM</span>
+<div class="flex items-end gap-1">
+<span class="text-lg font-bold text-white">2,100</span>
+<span class="text-xs text-text-muted mb-1">rpm</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+<div class="sticky top-0 bg-surface-dark/95 backdrop-blur px-4 py-2 text-[10px] text-text-muted font-bold uppercase border-b border-border-color z-10 flex justify-between">
+<span>Timeline</span>
+<span>Latest 50 events</span>
+</div>
+<div class="divide-y divide-border-color">
+<div class="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-primary bg-surface-darker/30">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-mono text-primary font-bold">14:35:42</span>
+<span class="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">IGNITION ON</span>
+</div>
+<div class="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+<div class="flex justify-between">
+<span class="text-text-muted">Speed:</span>
+<span class="text-white font-medium">65 km/h</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">Fuel:</span>
+<span class="text-warning font-medium">42%</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">GPS:</span>
+<span class="text-white font-mono text-[10px]">34.05, -118.24</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">Alt:</span>
+<span class="text-white font-medium">120m</span>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-transparent opacity-80">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-mono text-text-muted">14:35:38</span>
+<span class="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">IGNITION ON</span>
+</div>
+<div class="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+<div class="flex justify-between">
+<span class="text-text-muted">Speed:</span>
+<span class="text-white font-medium">64 km/h</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">Fuel:</span>
+<span class="text-warning font-medium">42%</span>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-transparent opacity-60">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-mono text-text-muted">14:35:30</span>
+<span class="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">IGNITION ON</span>
+</div>
+<div class="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+<div class="flex justify-between">
+<span class="text-text-muted">Speed:</span>
+<span class="text-white font-medium">62 km/h</span>
+</div>
+<div class="flex justify-between">
+<span class="text-text-muted">Fuel:</span>
+<span class="text-warning font-medium">42%</span>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-warning bg-warning/5 opacity-50">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-mono text-warning font-bold">14:35:15</span>
+<span class="text-[10px] bg-warning/10 text-warning px-1.5 py-0.5 rounded border border-warning/20">HARSH BRAKING</span>
+</div>
+<div class="text-xs text-text-muted mt-1">
+                                Deceleration &gt; 3 m/s² detected.
+                            </div>
+<div class="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+<div class="flex justify-between">
+<span class="text-text-muted">Speed:</span>
+<span class="text-white font-medium">45 km/h</span>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors cursor-pointer border-l-2 border-transparent opacity-40">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-mono text-text-muted">14:35:10</span>
+<span class="text-[10px] bg-success/10 text-success px-1.5 py-0.5 rounded border border-success/20">IGNITION ON</span>
+</div>
+<div class="grid grid-cols-2 gap-y-1 gap-x-4 text-xs mt-2">
+<div class="flex justify-between">
+<span class="text-text-muted">Speed:</span>
+<span class="text-white font-medium">58 km/h</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+<span>© 2023 Enterprise Fleet Manager. Telemetry Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Data Stream: <span class="text-success">Connected</span></span>
+<span>Latency: <span class="font-mono text-white">42ms</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

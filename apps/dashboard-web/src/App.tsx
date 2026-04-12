@@ -198,6 +198,35 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({
   return hasToken ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+/**
+ * Role-based route guard.
+ * Redirects to /unauthorized if the user's role is not in the allowed list.
+ */
+const RoleGuard: React.FC<{
+  allowed: string[];
+  children: React.ReactNode;
+}> = ({ allowed, children }) => {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
+  const role = effectiveUser?.role?.toLowerCase() || '';
+
+  if (allowed.length === 0 || allowed.includes(role) || allowed.includes('*')) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/unauthorized" replace />;
+};
+
+/** Convenience: combines auth check + role check */
+const PermissionRoute: React.FC<{
+  allowed: string[];
+  children: React.ReactNode;
+}> = ({ allowed, children }) => (
+  <PrivateRoute>
+    <RoleGuard allowed={allowed}>{children}</RoleGuard>
+  </PrivateRoute>
+);
+
 const DynamicAdminLayout: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const isLoading = useSelector((state: RootState) => state.auth.loading);
@@ -408,7 +437,7 @@ function App() {
 
               {/* Security Management Module (Expansion) — already wrapped inside /security PrivateRoute above */}
 
-              {/* Admin Portal */}
+              {/* Admin Portal — layout is open to all authenticated users, but child routes are role-gated */}
               <Route
                 path="/admin"
                 element={
@@ -420,29 +449,36 @@ function App() {
               >
                 <Route index element={<GlobalAdminDashboard />} />
                 <Route path="dashboard" element={<GlobalAdminDashboard />} />
-                <Route path="organizations" element={<Organizations />} />
-                <Route path="organizations/new" element={<AddOrganization />} />
+                {/* Admin-only: org management, user management */}
+                <Route path="organizations" element={
+                  <RoleGuard allowed={["admin", "super_admin"]}><Organizations /></RoleGuard>
+                } />
+                <Route path="organizations/new" element={
+                  <RoleGuard allowed={["admin", "super_admin"]}><AddOrganization /></RoleGuard>
+                } />
                 <Route
                   path="organizations/:id"
-                  element={<OrganizationDetail />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationDetail /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/edit"
-                  element={<EditOrganization />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><EditOrganization /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/settings"
-                  element={<OrganizationSettings />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationSettings /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/users"
-                  element={<OrganizationUsers />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationUsers /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/vehicles"
-                  element={<OrganizationVehicles />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationVehicles /></RoleGuard>}
                 />
-                <Route path="users" element={<Users />} />
+                <Route path="users" element={
+                  <RoleGuard allowed={["admin", "super_admin"]}><Users /></RoleGuard>
+                } />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/new" element={<FleetAddVehicle />} />
                 <Route path="vehicles/:id" element={<FleetVehicleDetail />} />
@@ -529,23 +565,23 @@ function App() {
                 />
                 <Route
                   path="governance/settings"
-                  element={<GovernanceSettingsView />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><GovernanceSettingsView /></RoleGuard>}
                 />
 
-                {/* Billing Module */}
-                <Route path="billing" element={<BillingDashboard />} />
-                <Route path="billing/new" element={<InvoiceForm />} />
+                {/* Billing Module — admin only */}
+                <Route path="billing" element={<RoleGuard allowed={["admin", "super_admin"]}><BillingDashboard /></RoleGuard>} />
+                <Route path="billing/new" element={<RoleGuard allowed={["admin", "super_admin"]}><InvoiceForm /></RoleGuard>} />
                 <Route
                   path="billing/invoices/:id"
-                  element={<InvoiceDetail />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><InvoiceDetail /></RoleGuard>}
                 />
                 <Route
                   path="billing/invoices/:id/edit"
-                  element={<InvoiceForm />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><InvoiceForm /></RoleGuard>}
                 />
                 <Route
                   path="billing/settings"
-                  element={<BillingSettingsPage />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><BillingSettingsPage /></RoleGuard>}
                 />
 
                 {/* Notification Module */}
@@ -568,64 +604,65 @@ function App() {
                   element={<UserPreferenceDetail />}
                 />
 
-                {/* Reports Module */}
-                <Route path="reports" element={<ScheduledReportsList />} />
-                <Route path="reports/create" element={<CreateReport />} />
-                <Route path="reports/history" element={<ExecutionHistory />} />
+                {/* Reports Module — admin + fleet_manager */}
+                <Route path="reports" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><ScheduledReportsList /></RoleGuard>} />
+                <Route path="reports/create" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><CreateReport /></RoleGuard>} />
+                <Route path="reports/history" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><ExecutionHistory /></RoleGuard>} />
 
-                <Route path="dr" element={<RestorePointsPage />} />
-                <Route path="dr/create" element={<CreateBackupView />} />
-                <Route path="dr/:id" element={<BackupDetailView />} />
-                <Route path="dr/restores" element={<RestorePointsPage />} />
+                {/* Disaster Recovery — admin only */}
+                <Route path="dr" element={<RoleGuard allowed={["admin", "super_admin"]}><RestorePointsPage /></RoleGuard>} />
+                <Route path="dr/create" element={<RoleGuard allowed={["admin", "super_admin"]}><CreateBackupView /></RoleGuard>} />
+                <Route path="dr/:id" element={<RoleGuard allowed={["admin", "super_admin"]}><BackupDetailView /></RoleGuard>} />
+                <Route path="dr/restores" element={<RoleGuard allowed={["admin", "super_admin"]}><RestorePointsPage /></RoleGuard>} />
                 <Route
                   path="dr/restores/initiate"
-                  element={<InitiateRestorePage />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><InitiateRestorePage /></RoleGuard>}
                 />
-                <Route path="dr/restores/:id" element={<DetailRestorePage />} />
+                <Route path="dr/restores/:id" element={<RoleGuard allowed={["admin", "super_admin"]}><DetailRestorePage /></RoleGuard>} />
 
-                {/* DR Testing Module */}
-                <Route path="dr/tests" element={<DRTestListView />} />
-                <Route path="dr/tests/create" element={<CreateDRTestView />} />
+                {/* DR Testing — admin only */}
+                <Route path="dr/tests" element={<RoleGuard allowed={["admin", "super_admin"]}><DRTestListView /></RoleGuard>} />
+                <Route path="dr/tests/create" element={<RoleGuard allowed={["admin", "super_admin"]}><CreateDRTestView /></RoleGuard>} />
                 <Route
                   path="dr/tests/settings"
-                  element={<DRTestSettingsView />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><DRTestSettingsView /></RoleGuard>}
                 />
-                <Route path="dr/tests/:id" element={<DRTestDetailView />} />
+                <Route path="dr/tests/:id" element={<RoleGuard allowed={["admin", "super_admin"]}><DRTestDetailView /></RoleGuard>} />
 
-                {/* RBAC Module */}
-                <Route path="rbac/roles" element={<Roles />} />
+                {/* RBAC — admin + super_admin only */}
+                <Route path="rbac/roles" element={<RoleGuard allowed={["admin", "super_admin"]}><Roles /></RoleGuard>} />
                 <Route
                   path="rbac/roles/:id/permissions"
-                  element={<RoleMatrix />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><RoleMatrix /></RoleGuard>}
                 />
-                <Route path="rbac/assignments" element={<UserAssignments />} />
-                <Route path="rbac/logs" element={<SecurityLogs />} />
+                <Route path="rbac/assignments" element={<RoleGuard allowed={["admin", "super_admin"]}><UserAssignments /></RoleGuard>} />
+                <Route path="rbac/logs" element={<RoleGuard allowed={["admin", "super_admin"]}><SecurityLogs /></RoleGuard>} />
 
-                {/* Global Settings Module */}
-                <Route path="settings/platform" element={<PlatformConfig />} />
-                <Route path="settings/flags" element={<FeatureFlags />} />
+                {/* Global Settings — admin only */}
+                <Route path="settings/platform" element={<RoleGuard allowed={["admin", "super_admin"]}><PlatformConfig /></RoleGuard>} />
+                <Route path="settings/flags" element={<RoleGuard allowed={["admin", "super_admin"]}><FeatureFlags /></RoleGuard>} />
                 <Route
                   path="settings/localization"
-                  element={<Localization />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><Localization /></RoleGuard>}
                 />
-                <Route path="settings/templates" element={<Templates />} />
+                <Route path="settings/templates" element={<RoleGuard allowed={["admin", "super_admin"]}><Templates /></RoleGuard>} />
                 <Route
                   path="settings/channels"
-                  element={<NotificationChannels />}
+                  element={<RoleGuard allowed={["admin", "super_admin"]}><NotificationChannels /></RoleGuard>}
                 />
-                <Route path="settings/policies" element={<PoliciesLimits />} />
+                <Route path="settings/policies" element={<RoleGuard allowed={["admin", "super_admin"]}><PoliciesLimits /></RoleGuard>} />
 
-                {/* Device Diagnostics Module */}
+                {/* Device Diagnostics — admin + fleet_manager */}
                 <Route
                   path="devices/diagnostics"
-                  element={<DeviceDashboard />}
+                  element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><DeviceDashboard /></RoleGuard>}
                 />
-                <Route path="devices/twins" element={<DeviceTwins />} />
-                <Route path="devices/telemetry" element={<DeviceTelemetry />} />
-                <Route path="devices/commands" element={<RemoteCommands />} />
+                <Route path="devices/twins" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><DeviceTwins /></RoleGuard>} />
+                <Route path="devices/telemetry" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><DeviceTelemetry /></RoleGuard>} />
+                <Route path="devices/commands" element={<RoleGuard allowed={["admin", "super_admin"]}><RemoteCommands /></RoleGuard>} />
                 <Route
                   path="devices/:id/diagnostics"
-                  element={<DeviceDiagnostics />}
+                  element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><DeviceDiagnostics /></RoleGuard>}
                 />
                 <Route
                   path="devices/:id/telemetry"
@@ -646,7 +683,7 @@ function App() {
                 {/* Future: etc */}
               </Route>
 
-              {/* Monitoring Module - Custom Layout */}
+              {/* Monitoring Module — admin + fleet_manager */}
               <Route
                 path="/admin/monitoring"
                 element={
@@ -655,22 +692,23 @@ function App() {
                   </PrivateRoute>
                 }
               >
-                <Route index element={<SystemHealth />} />
-                <Route path="metrics" element={<MetricsHub />} />
-                <Route path="logs" element={<LogViewer />} />
-                <Route path="jobs" element={<QueueMonitor />} />
-                <Route path="sla" element={<SLAReport />} />
+                <Route index element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><SystemHealth /></RoleGuard>} />
+                <Route path="metrics" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><MetricsHub /></RoleGuard>} />
+                <Route path="logs" element={<RoleGuard allowed={["admin", "super_admin"]}><LogViewer /></RoleGuard>} />
+                <Route path="jobs" element={<RoleGuard allowed={["admin", "super_admin"]}><QueueMonitor /></RoleGuard>} />
+                <Route path="sla" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><SLAReport /></RoleGuard>} />
               </Route>
 
-              {/* Fix 12: Support module — refactored from 7 independent PrivateRoute+SupportLayout
-                   wrappers into a single nested route tree. One auth guard, one layout. */}
+              {/* Support module — admin only */}
               <Route
                 path="/support"
                 element={
                   <PrivateRoute>
-                    <SupportLayout>
-                      <SupportDashboard />
-                    </SupportLayout>
+                    <RoleGuard allowed={["admin", "super_admin"]}>
+                      <SupportLayout>
+                        <SupportDashboard />
+                      </SupportLayout>
+                    </RoleGuard>
                   </PrivateRoute>
                 }
               />
@@ -678,7 +716,9 @@ function App() {
                 path="/support"
                 element={
                   <PrivateRoute>
-                    <SupportLayout>{null}</SupportLayout>
+                    <RoleGuard allowed={["admin", "super_admin"]}>
+                      <SupportLayout>{null}</SupportLayout>
+                    </RoleGuard>
                   </PrivateRoute>
                 }
               >
@@ -712,8 +752,21 @@ function App() {
 
               {/* 404 Catch-all */}
               <Route path="*" element={<Navigate to="/error" replace />} />
+              {/* Unauthorized page */}
+              <Route path="/unauthorized" element={
+                <div className="min-h-screen flex items-center justify-center bg-[#0a1118]">
+                  <div className="text-center p-8">
+                    <span className="material-symbols-outlined text-6xl text-rose-500 mb-4">block</span>
+                    <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+                    <p className="text-text-muted mb-6">You don't have permission to view this page.</p>
+                    <a href="/admin" className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors">
+                      Go to Dashboard
+                    </a>
+                  </div>
+                </div>
+              } />
             </Routes>
-            <ScenarioSwitcher />
+            {/* <ScenarioSwitcher /> Disabled: dev-only mock widget */}
           </BrowserRouter>
         </RBACProvider>
       </AuthProvider>

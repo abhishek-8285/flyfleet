@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Job Error Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Modules</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">cloud_upload</span>
+<span class="text-sm font-medium">Bulk Uploads</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">schedule</span>
+<span class="text-sm font-medium">Maintenance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-sm font-medium">Drivers</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<nav aria-label="Breadcrumb" class="flex text-xs text-text-muted mb-1">
+<ol class="inline-flex items-center space-x-1 md:space-x-2">
+<li class="inline-flex items-center">
+<a class="inline-flex items-center hover:text-white" href="#">
+                                    Bulk Uploads
+                                </a>
+</li>
+<li>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+<a class="hover:text-white" href="#">Job #8492</a>
+</div>
+</li>
+<li aria-current="page">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+<span class="text-white font-medium">Errors</span>
+</div>
+</li>
+</ol>
+</nav>
+<h2 class="text-white text-lg font-bold">Upload Job Error Detail</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color text-xs text-text-muted">
+<span class="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
+                    Status: Failed
+                </span>
+<div class="h-6 w-px bg-border-color"></div>
+<button class="text-text-muted hover:text-white">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12">
+<div class="bg-surface-dark rounded-xl border border-border-color p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="flex items-start gap-4">
+<div class="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger">
+<span class="material-symbols-outlined text-3xl">report_problem</span>
+</div>
+<div>
+<h3 class="text-white text-lg font-bold mb-1">23 Errors Found</h3>
+<p class="text-text-muted text-sm">
+                                    The bulk upload for "Q4_Fleet_Addition.csv" encountered errors. 
+                                    <br/>142 records processed successfully, 23 failed.
+                                </p>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row gap-3">
+<button class="px-4 py-2 bg-surface-darker hover:bg-border-color border border-border-color text-text-muted hover:text-white text-sm font-medium rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                                Back to Jobs
+                            </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                                Download Error File
+                            </button>
+</div>
+</div>
+</div>
+<div class="col-span-12">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-320px)] min-h-[400px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-danger text-[18px]">error_outline</span>
+                                Specific Row Errors
+                            </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1.5 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search by vehicle or error..." type="text"/>
+</div>
+<select class="bg-surface-dark border border-border-color text-xs text-white rounded px-3 py-1.5 focus:ring-1 focus:ring-primary outline-none">
+<option>All Error Types</option>
+<option>Duplicate</option>
+<option>Format</option>
+<option>Mandatory</option>
+</select>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10">
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker">
+<th class="px-4 py-3 font-semibold w-24">Row #</th>
+<th class="px-4 py-3 font-semibold w-48">Vehicle Number</th>
+<th class="px-4 py-3 font-semibold w-40">Error Type</th>
+<th class="px-4 py-3 font-semibold">Error Description</th>
+<th class="px-4 py-3 font-semibold text-right w-32">Action</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">4</td>
+<td class="px-4 py-3 font-medium text-white">V-8921-X</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase">
+                                                Duplicate
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Vehicle ID "V-8921-X" already exists in the system database.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">12</td>
+<td class="px-4 py-3 font-medium text-white">Pending Reg</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">
+                                                Mandatory
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Field "VIN" is required but was empty in the source file.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">15</td>
+<td class="px-4 py-3 font-medium text-white">TX-9912-KL</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">
+                                                Format
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Invalid date format for "Purchase Date". Expected YYYY-MM-DD, received MM/DD/YYYY.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">22</td>
+<td class="px-4 py-3 font-medium text-white">CA-2210-ZZ</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">
+                                                Mandatory
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Field "Model Year" is missing.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">34</td>
+<td class="px-4 py-3 font-medium text-white">NY-1029-PP</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">
+                                                Format
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Mileage must be a numeric value. Received "12,000 km".</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">41</td>
+<td class="px-4 py-3 font-medium text-white">FL-5512-AB</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase">
+                                                Duplicate
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">VIN matches an archived vehicle record. Please restore instead of create.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">56</td>
+<td class="px-4 py-3 font-medium text-white">V-0000-XX</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">
+                                                Mandatory
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Field "Lease Type" cannot be null for leased vehicles.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-text-muted font-mono text-xs">62</td>
+<td class="px-4 py-3 font-medium text-white">WA-3321-CD</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">
+                                                Format
+                                            </span>
+</td>
+<td class="px-4 py-3 text-text-muted">Cost center code "CC-99" does not match regex pattern ^CC-\d{3}$.</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker/50 flex items-center justify-between text-xs text-text-muted">
+<span>Showing 1 to 8 of 23 errors</span>
+<div class="flex items-center gap-2">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-dark border border-border-color text-text-muted hover:text-white disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-primary text-white font-medium">1</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-dark border border-border-color text-text-muted hover:text-white">2</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-dark border border-border-color text-text-muted hover:text-white">3</button>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-dark border border-border-color text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Bulk Upload Module V2.0</span>
+<div class="flex items-center gap-4">
+<span>Job ID: <span class="text-white font-mono">8492</span></span>
+<span>Processor: <span class="text-success">Active</span></span>
+<span>Server Time: <span class="font-mono text-white">14:42 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

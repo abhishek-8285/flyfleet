@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Access Review &amp; Approval Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">fact_check</span>
+<span class="text-sm font-medium">Access Review</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-0.5">
+<span>Security Suite</span>
+<span class="text-border-color">/</span>
+<span class="text-primary">Access Review</span>
+</div>
+<h2 class="text-white text-lg font-bold">Access Review Workflow</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-xs text-text-muted font-medium">Auto-Save</span>
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+</span>
+</div>
+<button class="px-4 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Generate Access Report
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                    Complete Review
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="mb-8">
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-white text-sm font-semibold">Review Progress: Q3 Security Audit</h3>
+<span class="text-xs text-text-muted">45% Complete</span>
+</div>
+<div class="w-full bg-surface-dark rounded-full h-2 border border-border-color mb-6 overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-500" style="width: 45%"></div>
+</div>
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface-darker p-4 rounded-lg border border-primary/30 relative">
+<div class="absolute top-3 right-3 text-primary">
+<span class="material-symbols-outlined text-lg">check_circle</span>
+</div>
+<div class="text-xs text-text-muted uppercase font-bold mb-1">Step 1</div>
+<div class="text-sm text-white font-medium">Identity Verification</div>
+<div class="mt-2 text-[10px] text-text-muted">Verified 1,240 users against HR records.</div>
+</div>
+<div class="bg-surface-dark p-4 rounded-lg border border-border-color relative shadow-[0_0_0_1px_rgba(19,127,236,0.3)]">
+<div class="absolute top-3 right-3 text-primary animate-pulse">
+<span class="material-symbols-outlined text-lg">radio_button_checked</span>
+</div>
+<div class="text-xs text-primary uppercase font-bold mb-1">Step 2</div>
+<div class="text-sm text-white font-medium">Role Assignment Review</div>
+<div class="mt-2 text-[10px] text-text-muted">Currently reviewing privileged access.</div>
+</div>
+<div class="bg-surface-dark p-4 rounded-lg border border-border-color relative opacity-60">
+<div class="absolute top-3 right-3 text-text-muted">
+<span class="material-symbols-outlined text-lg">radio_button_unchecked</span>
+</div>
+<div class="text-xs text-text-muted uppercase font-bold mb-1">Step 3</div>
+<div class="text-sm text-white font-medium">Policy Compliance Check</div>
+<div class="mt-2 text-[10px] text-text-muted">Pending completion of role review.</div>
+</div>
+<div class="bg-surface-dark p-4 rounded-lg border border-border-color relative opacity-60">
+<div class="absolute top-3 right-3 text-text-muted">
+<span class="material-symbols-outlined text-lg">radio_button_unchecked</span>
+</div>
+<div class="text-xs text-text-muted uppercase font-bold mb-1">Step 4</div>
+<div class="text-sm text-white font-medium">Final Sign-off</div>
+<div class="mt-2 text-[10px] text-text-muted">Executive approval required.</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100%-180px)] min-h-[500px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">manage_accounts</span>
+                        User Role Assignments
+                    </h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-dark text-text-muted border border-border-color">
+                        Showing 1-10 of 42 Pending
+                    </span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center bg-surface-dark border border-border-color rounded px-3 py-1.5 w-64 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-text-muted text-[16px] mr-2">search</span>
+<input class="bg-transparent border-none text-xs text-white p-0 w-full focus:ring-0 placeholder-text-muted" placeholder="Filter by user or role..." type="text"/>
+</div>
+<div class="h-6 w-px bg-border-color mx-1"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-transparent hover:border-border-color">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+<span class="text-xs font-medium">Filters</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors border border-transparent hover:border-border-color">
+<span class="material-symbols-outlined text-[16px]">sort</span>
+<span class="text-xs font-medium">Sort</span>
+</button>
+</div>
+</div>
+<div class="overflow-y-auto custom-scrollbar flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-surface-darker shadow-sm">
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+<th class="px-6 py-3 font-semibold w-12">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</th>
+<th class="px-6 py-3 font-semibold">User Identity</th>
+<th class="px-6 py-3 font-semibold">Effective Role</th>
+<th class="px-6 py-3 font-semibold">Resource Scope</th>
+<th class="px-6 py-3 font-semibold">Last Active</th>
+<th class="px-6 py-3 font-semibold">Risk Score</th>
+<th class="px-6 py-3 font-semibold text-right">Review Action</th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-color">
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        JD
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">John Doe</span>
+<span class="text-[11px] text-text-muted">john.doe@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+<span class="material-symbols-outlined text-[14px]">engineering</span>
+                                    Fleet Manager
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                All Vehicles (Global)
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">Today, 09:42 AM</span>
+<span class="text-[10px] text-text-muted">Via Web Portal</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-success h-full" style="width: 15%"></div>
+</div>
+<span class="text-[10px] font-bold text-success">Low</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-success/10 hover:bg-success/20 text-success border border-success/30 text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        AS
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-warning rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Anna Smith</span>
+<span class="text-[11px] text-text-muted">anna.s@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20">
+<span class="material-symbols-outlined text-[14px]">admin_panel_settings</span>
+                                    Super Admin
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                System Wide
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">Oct 22, 14:15</span>
+<span class="text-[10px] text-text-muted">Via API Key</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-warning h-full" style="width: 65%"></div>
+</div>
+<span class="text-[10px] font-bold text-warning">Medium</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-dark hover:bg-success/20 hover:text-success hover:border-success/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+<tr class="bg-danger/5 hover:bg-danger/10 transition-colors group border-l-2 border-l-danger">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        MR
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-text-muted rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Mark Ross</span>
+<span class="text-[11px] text-text-muted">mark.r@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+<span class="material-symbols-outlined text-[14px]">support_agent</span>
+                                    Support L2
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                EU Region
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">35 days ago</span>
+<span class="text-[10px] text-danger">Inactive &gt; 30d</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-danger h-full" style="width: 85%"></div>
+</div>
+<span class="text-[10px] font-bold text-danger">High</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-danger hover:bg-danger/90 text-white border border-danger/30 text-xs font-medium transition-colors flex items-center gap-1 shadow-lg shadow-danger/20">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-dark hover:bg-success/20 hover:text-success hover:border-success/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        JL
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Jessica Lee</span>
+<span class="text-[11px] text-text-muted">jessica.l@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+                                    Audit Viewer
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                Finance Data
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">Yesterday, 16:20</span>
+<span class="text-[10px] text-text-muted">Via Web Portal</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-success h-full" style="width: 5%"></div>
+</div>
+<span class="text-[10px] font-bold text-success">Low</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-dark hover:bg-success/20 hover:text-success hover:border-success/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        DK
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">David Kim</span>
+<span class="text-[11px] text-text-muted">david.k@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+<span class="material-symbols-outlined text-[14px]">engineering</span>
+                                    Fleet Manager
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                APAC Region
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">Oct 20, 08:30</span>
+<span class="text-[10px] text-text-muted">Via Mobile App</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-success h-full" style="width: 20%"></div>
+</div>
+<span class="text-[10px] font-bold text-success">Low</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-dark hover:bg-success/20 hover:text-success hover:border-success/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-6 py-4">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-offset-0 focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white relative">
+                                        RC
+                                        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-text-muted rounded-full border-2 border-surface-dark"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Robert Chen</span>
+<span class="text-[11px] text-text-muted">robert.c@fleet.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+<span class="material-symbols-outlined text-[14px]">support_agent</span>
+                                    Support L1
+                                </span>
+</td>
+<td class="px-6 py-4 text-text-muted text-xs">
+                                APAC Region
+                            </td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-white text-xs">2 days ago</span>
+<span class="text-[10px] text-text-muted">Via Web Portal</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-surface-darker rounded-full overflow-hidden border border-border-color">
+<div class="bg-warning h-full" style="width: 45%"></div>
+</div>
+<span class="text-[10px] font-bold text-warning">Medium</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1.5 rounded bg-surface-darker hover:bg-danger/20 hover:text-danger hover:border-danger/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">block</span>
+                                        Revoke
+                                    </button>
+<button class="px-3 py-1.5 rounded bg-surface-dark hover:bg-success/20 hover:text-success hover:border-success/30 text-text-muted border border-border-color text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        Approve
+                                    </button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
+<div class="text-[11px] text-text-muted">
+                    Showing <span class="text-white font-medium">1-6</span> of <span class="text-white font-medium">42</span> items
+                </div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded hover:bg-surface-dark text-text-muted disabled:opacity-50 transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<div class="flex items-center gap-1">
+<button class="w-6 h-6 rounded flex items-center justify-center text-[11px] font-medium bg-primary text-white">1</button>
+<button class="w-6 h-6 rounded flex items-center justify-center text-[11px] font-medium text-text-muted hover:bg-surface-dark hover:text-white transition-colors">2</button>
+<button class="w-6 h-6 rounded flex items-center justify-center text-[11px] font-medium text-text-muted hover:bg-surface-dark hover:text-white transition-colors">3</button>
+<span class="text-text-muted text-[10px]">...</span>
+<button class="w-6 h-6 rounded flex items-center justify-center text-[11px] font-medium text-text-muted hover:bg-surface-dark hover:text-white transition-colors">8</button>
+</div>
+<button class="p-1.5 rounded hover:bg-surface-dark text-text-muted transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+<div class="flex items-center gap-4">
+<span>Last Sync: <span class="text-white">Just now</span></span>
+<span>Audit Log ID: <span class="font-mono text-white">#AL-9928</span></span>
+</div>
+</footer>
+</main>
+</div>
+</body></html>

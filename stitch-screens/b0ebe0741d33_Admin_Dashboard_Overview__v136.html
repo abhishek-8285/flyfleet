@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DR Test Settings - Fleet Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .settings-card {
+            @apply bg-surface-dark border border-border-color rounded-xl overflow-hidden;
+        }
+        .settings-header {
+            @apply px-5 py-4 border-b border-border-color bg-surface-darker/30 flex items-center justify-between;
+        }
+        .settings-content {
+            @apply p-5;
+        }
+        .input-dark {
+            @apply bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none w-full;
+        }
+        .label-dark {
+            @apply block text-xs font-medium text-text-muted uppercase mb-1.5 tracking-wider;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">backup</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetRecovery</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">DR Testing</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium">Test History</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">settings_suggest</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Configuration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">storage</span>
+<span class="text-sm font-medium">Recovery Targets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">network_node</span>
+<span class="text-sm font-medium">Failover Logic</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">DR Coordinator</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<div class="flex items-center gap-2 text-[10px] font-bold tracking-widest text-text-muted uppercase">
+<span>DR Testing</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary">Settings</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight">DR Test Configuration</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+<span class="text-[10px] text-text-muted uppercase font-bold">API Status</span>
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span class="text-xs text-white font-medium">Connected</span>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save All Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark p-4 rounded-xl border border-border-color">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Scheduled Tests</div>
+<div class="text-2xl font-bold text-white">12 <span class="text-xs font-normal text-text-muted">/ Month</span></div>
+</div>
+<div class="bg-surface-dark p-4 rounded-xl border border-border-color">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Avg RTO Status</div>
+<div class="text-2xl font-bold text-success">Within SLA</div>
+</div>
+<div class="bg-surface-dark p-4 rounded-xl border border-border-color">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Compliance Score</div>
+<div class="text-2xl font-bold text-white">98%</div>
+</div>
+<div class="bg-surface-dark p-4 rounded-xl border border-border-color">
+<div class="text-[10px] text-text-muted uppercase font-bold mb-1">Retention Size</div>
+<div class="text-2xl font-bold text-primary">2.4 TB</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<section class="settings-card">
+<div class="settings-header">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+                                Test Automation Schedule
+                            </h3>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div class="settings-content grid grid-cols-2 gap-6">
+<div>
+<label class="label-dark">Automation Frequency</label>
+<select class="input-dark">
+<option>Weekly (Saturdays 02:00 UTC)</option>
+<option>Bi-Weekly</option>
+<option>Monthly</option>
+<option>Quarterly</option>
+</select>
+</div>
+<div>
+<label class="label-dark">Simulation Intensity</label>
+<select class="input-dark">
+<option>Normal (Standard Data Flux)</option>
+<option>High (Stress Test)</option>
+<option>Partial (Connectivity Only)</option>
+</select>
+</div>
+<div class="col-span-2">
+<label class="label-dark">Excluded Maintenance Windows</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-darker border border-border-color rounded text-xs text-text-muted flex items-center gap-1">
+                                        Sun 00:00 - 04:00 <button class="material-symbols-outlined text-[14px]">close</button>
+</span>
+<button class="px-2 py-1 border border-dashed border-border-color rounded text-xs text-primary hover:bg-primary/10">+ Add window</button>
+</div>
+</div>
+</div>
+</section>
+<section class="settings-card">
+<div class="settings-header">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">notifications_active</span>
+                                System Notification Recipients
+                            </h3>
+</div>
+<div class="settings-content">
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-surface-darker rounded border border-border-color">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">group</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">DR Response Team</div>
+<div class="text-[10px] text-text-muted uppercase">Distribution List • 8 Members</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">Critical</span>
+</div>
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">Results</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-darker rounded border border-border-color">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined text-[18px]">person</span>
+</div>
+<div>
+<div class="text-sm font-medium text-white">Security Liaison (on-call)</div>
+<div class="text-[10px] text-text-muted uppercase">External Contact • SMS + Email</div>
+</div>
+</div>
+<div class="flex gap-4">
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">Critical</span>
+</div>
+<div class="flex items-center gap-2">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">Results</span>
+</div>
+</div>
+</div>
+<button class="w-full py-2 border border-dashed border-border-color rounded text-xs text-text-muted hover:text-white hover:border-text-muted transition-colors">
+                                    + Add New Notification Recipient
+                                </button>
+</div>
+</div>
+</section>
+<section class="settings-card">
+<div class="settings-header">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">timer</span>
+                                SLA Thresholds
+                            </h3>
+</div>
+<div class="settings-content grid grid-cols-2 gap-8">
+<div class="space-y-4">
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="label-dark !mb-0">RTO Target (minutes)</label>
+<span class="text-xs font-mono text-primary">15m</span>
+</div>
+<input class="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="60" min="5" type="range" value="15"/>
+<div class="flex justify-between text-[10px] text-text-muted mt-1">
+<span>5m</span>
+<span>60m</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-1.5">
+<label class="label-dark !mb-0">RPO Target (minutes)</label>
+<span class="text-xs font-mono text-primary">5m</span>
+</div>
+<input class="w-full h-1.5 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="15" min="1" type="range" value="5"/>
+<div class="flex justify-between text-[10px] text-text-muted mt-1">
+<span>1m</span>
+<span>15m</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-darker/50 p-4 rounded-lg border border-border-color/50">
+<h4 class="text-xs font-bold text-white uppercase mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-warning">info</span>
+                                    Threshold Impacts
+                                </h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-[11px] text-text-muted">
+<span class="w-1.5 h-1.5 rounded-full bg-success mt-1 flex-shrink-0"></span>
+                                        Exceeding RTO by 50% triggers immediate executive failover review.
+                                    </li>
+<li class="flex items-start gap-2 text-[11px] text-text-muted">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mt-1 flex-shrink-0"></span>
+                                        RPO violation results in automatic data integrity validation suite launch.
+                                    </li>
+</ul>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<section class="settings-card">
+<div class="settings-header">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">inventory_2</span>
+                                Data Retention Rules
+                            </h3>
+</div>
+<div class="settings-content space-y-4">
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] font-bold text-success uppercase mb-1">Forever</div>
+<div class="text-sm font-medium text-white">Metadata &amp; Audit Logs</div>
+<p class="text-[11px] text-text-muted mt-1">Compliance policy: FED-DR-011. Metadata associated with all DR tests is preserved indefinitely for regulatory auditing.</p>
+</div>
+<div class="p-3 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] font-bold text-warning uppercase mb-1">90 Days</div>
+<div class="text-sm font-medium text-white">Full Packet Captures</div>
+<p class="text-[11px] text-text-muted mt-1">Detailed network traffic logs from simulated environments.</p>
+</div>
+<div class="p-3 bg-surface-darker rounded border border-border-color opacity-70">
+<div class="text-[10px] font-bold text-text-muted uppercase mb-1">7 Days</div>
+<div class="text-sm font-medium text-white">Ephemeral Workload Snapshots</div>
+<p class="text-[11px] text-text-muted mt-1">Temporary volumes created during the testing lifecycle.</p>
+</div>
+</div>
+<div class="px-5 py-3 bg-primary/5 border-t border-border-color">
+<a class="text-xs text-primary font-medium flex items-center gap-1 hover:underline" href="#">
+                                Request retention policy change
+                                <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+</a>
+</div>
+</section>
+<section class="settings-card">
+<div class="settings-header">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+                                Compliance Summary
+                            </h3>
+</div>
+<div class="settings-content">
+<div class="space-y-4">
+<div class="flex items-center justify-between text-xs">
+<span class="text-text-muted">SOC2 Readiness</span>
+<span class="text-success font-bold">Compliant</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-success h-full" style="width: 100%"></div>
+</div>
+<div class="flex items-center justify-between text-xs mt-4">
+<span class="text-text-muted">GDPR Data Localization</span>
+<span class="text-success font-bold">Compliant</span>
+</div>
+<div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+<div class="bg-success h-full" style="width: 100%"></div>
+</div>
+<div class="flex items-center justify-between text-xs mt-4">
+<span class="text-text-muted">Encryption at Rest</span>
+<span class="text-success font-bold">AES-256</span>
+</div>
+<div class="flex items-center justify-between text-xs mt-4">
+<span class="text-text-muted">Last Policy Review</span>
+<span class="text-white">Oct 12, 2023</span>
+</div>
+</div>
+</div>
+</section>
+<div class="bg-primary/10 border border-primary/30 rounded-xl p-5">
+<h4 class="text-white text-sm font-bold mb-2">Need Assistance?</h4>
+<p class="text-xs text-text-muted leading-relaxed mb-4">DR parameters must be tuned carefully to avoid impact on production staging environments.</p>
+<button class="w-full py-2 bg-surface-dark border border-border-color rounded text-xs text-white font-medium hover:bg-border-color transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">support_agent</span>
+                            Contact Recovery Architect
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. DR Testing Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>BFF Service: <span class="text-success">Connected (/dr/tests)</span></span>
+<span>Environment: <span class="text-primary font-bold">Production</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

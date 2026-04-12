@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Integrations Marketplace &amp; List View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">extension</span>
+<span class="text-sm font-medium">Integrations</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col justify-center">
+<div class="flex items-center gap-2 text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-0.5">
+<span>System Settings</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">Integrations</span>
+</div>
+<h2 class="text-white text-lg font-bold">Integrations Marketplace</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-white material-symbols-outlined text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-sm text-white rounded-lg pl-9 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/60" placeholder="Search integrations..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add New Integration
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="flex flex-wrap items-center gap-3 mb-6">
+<button class="px-3 py-1.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-xs font-medium hover:bg-primary/30 transition-colors">All Integrations</button>
+<button class="px-3 py-1.5 rounded-full bg-surface-dark border border-border-color text-text-muted text-xs font-medium hover:text-white hover:border-text-muted transition-colors">Active</button>
+<button class="px-3 py-1.5 rounded-full bg-surface-dark border border-border-color text-text-muted text-xs font-medium hover:text-white hover:border-text-muted transition-colors">Available</button>
+<div class="w-px h-6 bg-border-color mx-2"></div>
+<button class="px-3 py-1.5 rounded-full bg-surface-dark border border-border-color text-text-muted text-xs font-medium hover:text-white hover:border-text-muted transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">cloud</span> Cloud
+                </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-dark border border-border-color text-text-muted text-xs font-medium hover:text-white hover:border-text-muted transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">sms</span> SMS
+                </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-dark border border-border-color text-text-muted text-xs font-medium hover:text-white hover:border-text-muted transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">dataset</span> ERP
+                </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-success/10 border border-success/20 text-[10px] font-bold text-success uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Connected
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0">
+<div class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-xs">Tw</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Twilio</h3>
+<p class="text-text-muted text-xs mt-0.5">SMS &amp; Communications</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Provides SMS gateways for MFA delivery and urgent fleet notifications. High reliability tier.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">SMS Gateway</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Last Sync</span>
+<span class="text-white">2 mins ago</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="text-xs text-text-muted hover:text-white font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">settings</span> Configure
+                        </button>
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[8px] text-white">JD</div>
+<div class="w-6 h-6 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-[8px] text-white">AS</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-success/10 border border-success/20 text-[10px] font-bold text-success uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Connected
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0">
+<div class="w-8 h-8 rounded bg-[#FF9900] flex items-center justify-center text-black font-bold text-[10px]">AWS</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">AWS Cloud</h3>
+<p class="text-text-muted text-xs mt-0.5">Infrastructure</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Cloud storage for audit logs and scalable computing resources for fleet analytics.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">Cloud Provider</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Last Sync</span>
+<span class="text-white">Just now</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="text-xs text-text-muted hover:text-white font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">settings</span> Configure
+                        </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 hover:border-danger/50 transition-all group flex flex-col h-full relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-danger/10 border border-danger/20 text-[10px] font-bold text-danger uppercase tracking-wider">
+<span class="material-symbols-outlined text-[10px]">warning</span> Error
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0">
+<div class="w-8 h-8 bg-[#008FD3] flex items-center justify-center text-white font-bold text-[10px]">SAP</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">SAP ERP</h3>
+<p class="text-text-muted text-xs mt-0.5">Resource Planning</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Synchronization with central HR and finance databases for employee provisioning.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">ERP System</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Last Sync</span>
+<span class="text-danger">Failed 2h ago</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="text-xs text-danger hover:text-danger-400 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span> Retry Sync
+                        </button>
+<button class="text-xs text-text-muted hover:text-white font-medium">Logs</button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color border-dashed p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden opacity-90">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-surface-darker border border-border-color text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                            Available
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0 grayscale group-hover:grayscale-0 transition-all">
+<div class="w-8 h-8 flex items-center justify-center text-blue-500 font-bold text-[14px] material-symbols-outlined">map</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Google Maps</h3>
+<p class="text-text-muted text-xs mt-0.5">Geolocation</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Real-time vehicle tracking and route optimization visualization integration.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">Maps API</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Cost</span>
+<span class="text-white">Usage Based</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="w-full py-1.5 bg-surface-darker hover:bg-primary hover:text-white border border-border-color hover:border-primary rounded text-xs text-text-muted font-medium transition-all">
+                            Enable Integration
+                        </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color border-dashed p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden opacity-90">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-surface-darker border border-border-color text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                            Available
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0 grayscale group-hover:grayscale-0 transition-all">
+<div class="w-8 h-8 rounded bg-[#4A154B] flex items-center justify-center text-white font-bold text-[10px]">Slack</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Slack</h3>
+<p class="text-text-muted text-xs mt-0.5">Notifications</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Push security alerts and system health notifications to specific Slack channels.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">ChatOps</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Cost</span>
+<span class="text-white">Free</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="w-full py-1.5 bg-surface-darker hover:bg-primary hover:text-white border border-border-color hover:border-primary rounded text-xs text-text-muted font-medium transition-all">
+                            Enable Integration
+                        </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-success/10 border border-success/20 text-[10px] font-bold text-success uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-success"></span> Connected
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0">
+<div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-[8px]">okta</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Okta SSO</h3>
+<p class="text-text-muted text-xs mt-0.5">Identity</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Centralized identity management and single sign-on for fleet dashboard access.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">IdP / SSO</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Last Sync</span>
+<span class="text-white">10 mins ago</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="text-xs text-text-muted hover:text-white font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">settings</span> Configure
+                        </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color border-dashed p-5 hover:border-primary/50 transition-all group flex flex-col h-full relative overflow-hidden opacity-90">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-surface-darker border border-border-color text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                            Available
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0 grayscale group-hover:grayscale-0 transition-all">
+<div class="w-8 h-8 flex items-center justify-center text-green-700 font-bold text-[14px]">Z</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Zendesk</h3>
+<p class="text-text-muted text-xs mt-0.5">Support</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Automatically create support tickets for detected fleet security anomalies.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">CRM</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Cost</span>
+<span class="text-white">License</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="w-full py-1.5 bg-surface-darker hover:bg-primary hover:text-white border border-border-color hover:border-primary rounded text-xs text-text-muted font-medium transition-all">
+                            Enable Integration
+                        </button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 hover:border-warning/50 transition-all group flex flex-col h-full relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-warning/10 border border-warning/20 text-[10px] font-bold text-warning uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span> Disconnected
+                        </span>
+</div>
+<div class="flex items-start gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-white p-2 flex items-center justify-center shrink-0">
+<div class="w-8 h-8 flex items-center justify-center text-blue-600 font-bold text-[14px] material-symbols-outlined">grid_view</div>
+</div>
+<div>
+<h3 class="text-white font-semibold text-base">Azure AD</h3>
+<p class="text-text-muted text-xs mt-0.5">Identity</p>
+</div>
+</div>
+<p class="text-text-muted text-xs mb-4 line-clamp-2 flex-grow">
+                        Legacy identity provider. Currently disabled in favor of Okta SSO migration.
+                    </p>
+<div class="grid grid-cols-2 gap-2 text-[10px] text-text-muted uppercase font-semibold mb-4 bg-surface-darker p-2 rounded border border-border-color">
+<div>
+<span class="block text-text-muted/60 mb-0.5">Type</span>
+<span class="text-white">IdP</span>
+</div>
+<div>
+<span class="block text-text-muted/60 mb-0.5">Last Sync</span>
+<span class="text-text-muted">30 days ago</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-border-color">
+<button class="text-xs text-warning hover:text-warning/80 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">link</span> Reconnect
+                        </button>
+<button class="text-xs text-text-muted hover:text-danger font-medium">Remove</button>
+</div>
+</div>
+</div>
+<div class="mt-8 p-8 border border-dashed border-border-color rounded-xl flex flex-col items-center justify-center text-center bg-surface-darker/50">
+<div class="w-12 h-12 rounded-full bg-surface-dark border border-border-color flex items-center justify-center mb-3 text-text-muted">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<h3 class="text-white font-semibold text-sm">Need a custom integration?</h3>
+<p class="text-text-muted text-xs mt-1 max-w-md">
+                    Our API allows you to build custom connectors for your specific fleet management needs. Check the documentation for more details.
+                </p>
+<div class="flex gap-3 mt-4">
+<button class="px-4 py-2 bg-surface-dark hover:bg-surface-darker text-white text-xs font-medium rounded border border-border-color transition-colors">
+                        View API Docs
+                    </button>
+<button class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium rounded border border-primary/20 transition-colors">
+                        Contact Sales
+                    </button>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+<span>© 2023 Enterprise Fleet Manager. Integrations Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>API Status: <span class="text-success">Online</span></span>
+<span>Webhooks: <span class="text-success">Active</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

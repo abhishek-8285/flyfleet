@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trip History and Route Replay</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922", // As requested in prompt context
+                        "surface-dark": "#1f2937",
+                        "border-dark": "#233648",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #324d67; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b6a88; 
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+
+        /* Input Range Slider Customization */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+        }
+        input[type=range]:focus {
+            outline: none; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-border-dark bg-[#111a22] px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Fleet Command</h2>
+</div>
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#92adc9] flex border-none bg-border-dark items-center justify-center pl-4 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-border-dark focus:border-none h-full placeholder:text-[#92adc9] px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="Search trips, drivers..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-[#92adc9] hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-white text-sm font-medium leading-normal" href="#">Trips</a>
+<a class="text-[#92adc9] hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Drivers</a>
+<a class="text-[#92adc9] hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Maintenance</a>
+<a class="text-[#92adc9] hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-3">
+<button class="text-[#92adc9] hover:text-white">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-border-dark" data-alt="User avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCy0GxmicKbRVbrQodMuiGGB-ecFlvm5_5t5TtEYbYJD2kWNUPQQ3XoRnSBsyE4fE_btkbWQgBkVBdT3qxnCcPh0stfcwAPRyVDRWFa5H9a0iB7NLJFAlBzQ80JKk214fMrmWPu0esKcEV0lMiDpcTQL97RY6nX0UVGT2PHmw7kF1YoR2BA0Ys8pN2IPMu62swAIajxeGLirv-tpZ7IZGlErNYIx_8l1YxGVhIhLySynbpaDD-EfhUvnl5svackFwG2OpFygayyN98");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-4 lg:p-6 w-full max-w-[1600px] mx-auto flex flex-col gap-6">
+<!-- Breadcrumbs & Heading -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 text-sm text-[#92adc9] mb-1">
+<span>Trips</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-white">Review</span>
+</div>
+<h1 class="text-2xl md:text-3xl font-black text-white tracking-tight">Trip History &amp; Replay</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-border-dark hover:bg-[#324d67] rounded-lg text-white text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span>Last 30 Days</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 rounded-lg text-white text-sm font-bold transition-colors shadow-lg shadow-blue-900/20">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>Export Report</span>
+</button>
+</div>
+</div>
+<!-- Trips Table (Condensed List) -->
+<div class="rounded-xl border border-border-dark bg-[#111a22] overflow-hidden flex flex-col">
+<div class="px-4 py-3 border-b border-border-dark flex items-center justify-between bg-[#192633]/50">
+<h3 class="text-white font-semibold text-sm">Recent Trips</h3>
+<div class="flex gap-2">
+<span class="text-xs font-medium px-2 py-1 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">All (1,204)</span>
+<span class="text-xs font-medium px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20">Incidents (14)</span>
+<span class="text-xs font-medium px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Completed (1,150)</span>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead class="bg-[#192633] text-[#92adc9]">
+<tr>
+<th class="px-4 py-3 font-medium">Status</th>
+<th class="px-4 py-3 font-medium">Trip ID</th>
+<th class="px-4 py-3 font-medium">Vehicle</th>
+<th class="px-4 py-3 font-medium">Driver</th>
+<th class="px-4 py-3 font-medium">Duration</th>
+<th class="px-4 py-3 font-medium">Distance</th>
+<th class="px-4 py-3 font-medium">Safety Score</th>
+<th class="px-4 py-3 font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<!-- Active Row -->
+<tr class="bg-primary/5 border-l-2 border-l-primary cursor-pointer hover:bg-[#1f2937]">
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400">
+<span class="size-1.5 rounded-full bg-emerald-400"></span>
+                                    Completed
+                                </span>
+</td>
+<td class="px-4 py-3 text-white font-medium">TR-2023-884</td>
+<td class="px-4 py-3 text-white">V-102 (Freightliner)</td>
+<td class="px-4 py-3 text-white">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-cover bg-center" data-alt="Driver avatar small" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDVAytLUHlMvbKmFJ5HxxlZiedycnB1ts5tmqDLoRVR7z1XaBY76betzh9sVg64NzkRtNITaF5MyahlsWNpLz79oZyhiP405GKxjxnRQj7PjC9IF34UQLxBWfeSx_8nvULqyZV24z1sT3OOVBNcq_IY2RPwSBr4peem5PCpzED6mSeeWuKXl0Zh9Y91qq5L-DCjN36UbKAYyDqo8KoO-LIVsd-O-LklAHrJXOYDgqNnURLmPicYUdq6TLtJ7Yl8muvy4FR0mZlMZY0");'></div>
+                                    Michael B.
+                                </div>
+</td>
+<td class="px-4 py-3 text-[#92adc9]">8h 30m</td>
+<td class="px-4 py-3 text-[#92adc9]">320 mi</td>
+<td class="px-4 py-3">
+<span class="text-amber-400 font-bold">88</span>
+<span class="text-[#5b728a] text-xs">/100</span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-primary hover:text-blue-400 font-medium text-xs">View Details</button>
+</td>
+</tr>
+<!-- Other Row -->
+<tr class="hover:bg-[#1f2937] transition-colors cursor-pointer text-[#92adc9]">
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400">
+<span class="size-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                                    In Progress
+                                </span>
+</td>
+<td class="px-4 py-3 font-medium">TR-2023-889</td>
+<td class="px-4 py-3">V-115 (Volvo VNL)</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-gray-600 flex items-center justify-center text-[10px] text-white font-bold">JD</div>
+                                    John D.
+                                </div>
+</td>
+<td class="px-4 py-3">4h 12m</td>
+<td class="px-4 py-3">180 mi</td>
+<td class="px-4 py-3">
+<span class="text-emerald-400 font-bold">96</span>
+<span class="text-[#5b728a] text-xs">/100</span>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-[#5b728a] hover:text-white font-medium text-xs">View Details</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Master-Detail Split View -->
+<div class="flex flex-col lg:flex-row gap-6 h-auto lg:h-[800px]">
+<!-- Left Pane: Trip Details & Events -->
+<div class="w-full lg:w-1/3 flex flex-col gap-4">
+<!-- Driver & Stats Card -->
+<div class="bg-surface-dark border border-border-dark rounded-xl p-5 shadow-sm">
+<div class="flex items-start justify-between mb-4">
+<div class="flex gap-3">
+<div class="size-12 rounded-full bg-cover bg-center border-2 border-border-dark" data-alt="Driver profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDw7QddcAwF0pZy0-oO2_8Atsc6RwIxvUrl03Ot03FQDk3DkYHdXVXUL6tNUOQsc-7b3M-VgGxvwhIXWWDAGTc72orJem8W_CzEqIijuPARcgz5oupDJjir_iCigDSyyE1y4GhbxbLVADITf_jYBhX001FDMWxlx_3bhG95kMthU3O_aSaVqj63YXlxp2DLsJH6njDriM-6B3O5nTD29r257iCZRkwwHamRYpoJrmfyTgyVpFCgct_ff4Ypt30qdWeC0XoIVOxSrLk");'></div>
+<div>
+<h3 class="text-white font-bold text-base">Michael Bernthal</h3>
+<p class="text-[#92adc9] text-xs">ID: DRV-8842 • Senior Driver</p>
+</div>
+</div>
+<div class="text-right">
+<div class="text-emerald-400 text-lg font-bold">95</div>
+<div class="text-[10px] text-[#92adc9] uppercase tracking-wider">Score</div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2 border-t border-border-dark pt-4">
+<div class="bg-[#111a22] rounded p-2 text-center">
+<div class="text-[#92adc9] text-[10px] uppercase mb-1">Distance</div>
+<div class="text-white font-mono text-sm font-medium">320 mi</div>
+</div>
+<div class="bg-[#111a22] rounded p-2 text-center">
+<div class="text-[#92adc9] text-[10px] uppercase mb-1">Max Spd</div>
+<div class="text-amber-400 font-mono text-sm font-medium">78 mph</div>
+</div>
+<div class="bg-[#111a22] rounded p-2 text-center">
+<div class="text-[#92adc9] text-[10px] uppercase mb-1">Idle Time</div>
+<div class="text-white font-mono text-sm font-medium">45m</div>
+</div>
+</div>
+</div>
+<!-- Events Timeline -->
+<div class="flex-1 bg-surface-dark border border-border-dark rounded-xl p-5 overflow-hidden flex flex-col">
+<h4 class="text-white font-bold text-sm mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">timeline</span>
+                        Trip Events
+                    </h4>
+<div class="flex-1 overflow-y-auto pr-2 relative space-y-0">
+<!-- Connecting Line -->
+<div class="absolute left-[19px] top-2 bottom-2 w-0.5 bg-[#324d67]"></div>
+<!-- Event Item: Start -->
+<div class="relative flex gap-4 pb-6 group cursor-pointer">
+<div class="z-10 relative mt-1 flex-shrink-0">
+<div class="size-10 rounded-full bg-[#111a22] border-2 border-[#324d67] group-hover:border-primary flex items-center justify-center text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">key</span>
+</div>
+</div>
+<div class="flex-1 bg-[#111a22] p-3 rounded-lg border border-transparent group-hover:border-border-dark transition-colors">
+<div class="flex justify-between items-start">
+<span class="text-white text-sm font-medium">Trip Started</span>
+<span class="text-[#92adc9] text-xs font-mono">08:00 AM</span>
+</div>
+<p class="text-[#5b728a] text-xs mt-1">Depot 4, San Diego, CA</p>
+</div>
+</div>
+<!-- Event Item: Speeding -->
+<div class="relative flex gap-4 pb-6 group cursor-pointer">
+<div class="z-10 relative mt-1 flex-shrink-0">
+<div class="size-10 rounded-full bg-[#111a22] border-2 border-amber-500/50 group-hover:border-amber-500 flex items-center justify-center text-amber-400 transition-colors">
+<span class="material-symbols-outlined text-[18px]">speed</span>
+</div>
+</div>
+<div class="flex-1 bg-amber-500/5 p-3 rounded-lg border border-amber-500/10 group-hover:border-amber-500/30 transition-colors">
+<div class="flex justify-between items-start">
+<span class="text-amber-200 text-sm font-medium">Speeding Alert</span>
+<span class="text-amber-200/60 text-xs font-mono">08:45 AM</span>
+</div>
+<p class="text-amber-200/50 text-xs mt-1">78 mph in 65 mph zone</p>
+</div>
+</div>
+<!-- Event Item: Harsh Braking -->
+<div class="relative flex gap-4 pb-6 group cursor-pointer">
+<div class="z-10 relative mt-1 flex-shrink-0">
+<div class="size-10 rounded-full bg-[#111a22] border-2 border-red-500/50 group-hover:border-red-500 flex items-center justify-center text-red-400 transition-colors">
+<span class="material-symbols-outlined text-[18px]">report_problem</span>
+</div>
+</div>
+<div class="flex-1 bg-red-500/5 p-3 rounded-lg border border-red-500/10 group-hover:border-red-500/30 transition-colors">
+<div class="flex justify-between items-start">
+<span class="text-red-200 text-sm font-medium">Harsh Braking</span>
+<span class="text-red-200/60 text-xs font-mono">10:12 AM</span>
+</div>
+<p class="text-red-200/50 text-xs mt-1">-11 mph/s deceleration</p>
+</div>
+</div>
+<!-- Event Item: Rest Stop -->
+<div class="relative flex gap-4 pb-6 group cursor-pointer">
+<div class="z-10 relative mt-1 flex-shrink-0">
+<div class="size-10 rounded-full bg-[#111a22] border-2 border-[#324d67] group-hover:border-primary flex items-center justify-center text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">local_cafe</span>
+</div>
+</div>
+<div class="flex-1 bg-[#111a22] p-3 rounded-lg border border-transparent group-hover:border-border-dark transition-colors">
+<div class="flex justify-between items-start">
+<span class="text-white text-sm font-medium">Rest Stop</span>
+<span class="text-[#92adc9] text-xs font-mono">12:30 PM</span>
+</div>
+<p class="text-[#5b728a] text-xs mt-1">Travel Center, Irvine</p>
+</div>
+</div>
+<!-- Event Item: Delivery -->
+<div class="relative flex gap-4 pb-2 group cursor-pointer">
+<div class="z-10 relative mt-1 flex-shrink-0">
+<div class="size-10 rounded-full bg-[#111a22] border-2 border-emerald-500/50 group-hover:border-emerald-500 flex items-center justify-center text-emerald-400 transition-colors">
+<span class="material-symbols-outlined text-[18px] filled">check_circle</span>
+</div>
+</div>
+<div class="flex-1 bg-emerald-500/5 p-3 rounded-lg border border-emerald-500/10 group-hover:border-emerald-500/30 transition-colors">
+<div class="flex justify-between items-start">
+<span class="text-emerald-200 text-sm font-medium">Delivery Completed</span>
+<span class="text-emerald-200/60 text-xs font-mono">04:30 PM</span>
+</div>
+<p class="text-emerald-200/50 text-xs mt-1">Client: TechCorp HQ</p>
+<!-- POD Images -->
+<div class="flex gap-2 mt-3">
+<div class="size-12 rounded bg-cover bg-center border border-emerald-500/20 cursor-pointer hover:opacity-80 transition-opacity" data-alt="Signature POD" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAx17p0TmA8j97XN_Fiud_K-tScQr_tCm2KYdv3HTKe1JWr_NcpDfE-HlqwsV6pwuWJPgEggbVf9waEb2n_12qNk23fYuOVkR0eHjj0O67gkBBB1X0ibqoP4FWjmLkWbz0cRc3ZrzP94c1KbNt8gf-qW9G8AeIDoRceIgD1HPNW1X6ImHLHBZ1uyDK45DpkYa-8WhQ7Juud8J6hjgXI_narbJ-V9GrlyLMBRRPlIA8z51t4WPHtsM8goD5qaCy8UjOszieU0oUT5jE");'></div>
+<div class="size-12 rounded bg-cover bg-center border border-emerald-500/20 cursor-pointer hover:opacity-80 transition-opacity" data-alt="Package Photo POD" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC_dVQNFsZjJ29bddzcinDfV-pKwFrHHArYTDAHcUR6R4fTHc3ckWprJ5byjp9Wj6cpZghdUWumRVi8smj9o5eW1clCz1yAyL_tiu8ZTfaMlZsLsfC9rM7yskTcdGTJBxn6CMZcLO8ZA2TYkHuboHy5c244GK36Df-iIK9-lJmZVx8cJY32aCi0UC8PyJpXduheNHsD8j-XN97Zf2EfQNkT_iR9b9odreDcwk_TU8VSTP60wgtlN9YuvFvZCaygVF4yN2qEBzCn2ZM");'></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Pane: Route Map Replay -->
+<div class="w-full lg:w-2/3 flex flex-col gap-4">
+<div class="h-full w-full rounded-xl border border-border-dark relative overflow-hidden group">
+<!-- Dark Map Background Placeholder -->
+<div class="absolute inset-0 bg-[#0f1623]" data-location="Los Angeles Metro Area" style="">
+<!-- Simulation of Map Tiles (using CSS gradients for abstract map look) -->
+<div class="w-full h-full opacity-30" style="background-image: radial-gradient(#233648 1px, transparent 1px); background-size: 20px 20px;"></div>
+<!-- Abstract Roads -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+<!-- Background Roads -->
+<path d="M-100 200 Q 300 300 600 200 T 1200 400" fill="none" stroke="#1f2937" stroke-width="8"></path>
+<path d="M200 800 Q 400 400 600 500 T 1000 100" fill="none" stroke="#1f2937" stroke-width="6"></path>
+<!-- Main Route Path (Blue) -->
+<path d="M100 650 Q 300 550 450 600 T 700 450 T 850 300 T 1000 250" fill="none" stroke="#137fec" stroke-dasharray="10 0" stroke-linecap="round" stroke-width="4"></path>
+<!-- Highlight Segment (Speeding) -->
+<path d="M450 600 Q 480 590 510 585" fill="none" stroke="#f59e0b" stroke-linecap="round" stroke-width="4"></path>
+</svg>
+<!-- Map Markers -->
+<!-- Start Point -->
+<div class="absolute left-[85px] top-[635px] flex flex-col items-center">
+<div class="size-3 bg-white rounded-full ring-4 ring-white/20"></div>
+<span class="mt-1 text-[10px] font-bold text-white bg-black/50 px-1 rounded backdrop-blur-sm">Start</span>
+</div>
+<!-- Incident Pin -->
+<div class="absolute left-[480px] top-[570px] flex flex-col items-center">
+<span class="material-symbols-outlined text-amber-500 text-[24px] drop-shadow-lg">speed</span>
+</div>
+<!-- Current Vehicle Position (Animated Simulation) -->
+<div class="absolute left-[700px] top-[435px] -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute size-12 bg-primary/20 rounded-full animate-ping"></div>
+<div class="size-8 bg-primary rounded-full border-2 border-white shadow-xl flex items-center justify-center transform rotate-45">
+<span class="material-symbols-outlined text-white text-[16px]">navigation</span>
+</div>
+<div class="absolute -top-10 bg-surface-dark px-2 py-1 rounded text-xs text-white font-mono border border-border-dark whitespace-nowrap shadow-lg">
+                                    64 mph
+                                </div>
+</div>
+</div>
+<!-- End Point -->
+<div class="absolute left-[985px] top-[235px] flex flex-col items-center">
+<span class="material-symbols-outlined text-emerald-500 text-[28px] filled drop-shadow-lg">location_on</span>
+<span class="text-[10px] font-bold text-white bg-black/50 px-1 rounded backdrop-blur-sm">End</span>
+</div>
+</div>
+<!-- Map Overlay Controls (Top Right) -->
+<div class="absolute top-4 right-4 flex flex-col gap-2">
+<div class="bg-surface-dark/90 backdrop-blur border border-border-dark rounded-lg flex flex-col overflow-hidden shadow-lg">
+<button class="p-2 hover:bg-white/10 text-white border-b border-border-dark"><span class="material-symbols-outlined text-[20px]">add</span></button>
+<button class="p-2 hover:bg-white/10 text-white"><span class="material-symbols-outlined text-[20px]">remove</span></button>
+</div>
+<button class="bg-surface-dark/90 backdrop-blur border border-border-dark rounded-lg p-2 text-white hover:bg-white/10 shadow-lg">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</button>
+</div>
+<!-- Playback Controls (Bottom Floating Bar) -->
+<div class="absolute bottom-6 left-6 right-6">
+<div class="bg-surface-dark/90 backdrop-blur-md border border-border-dark rounded-xl p-4 shadow-2xl flex flex-col gap-2">
+<!-- Slider Track -->
+<div class="relative w-full h-6 flex items-center group/slider">
+<!-- Track Background -->
+<div class="absolute w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%]"></div> <!-- Progress -->
+</div>
+<!-- Event Markers on Track -->
+<div class="absolute left-[15%] size-2 rounded-full bg-amber-500 border border-surface-dark cursor-pointer hover:scale-150 transition-transform tooltip" title="Speeding"></div>
+<div class="absolute left-[40%] size-2 rounded-full bg-red-500 border border-surface-dark cursor-pointer hover:scale-150 transition-transform"></div>
+<!-- Slider Input -->
+<input class="absolute w-full h-full opacity-0 cursor-pointer z-20" max="100" min="0" type="range" value="65"/>
+<!-- Custom Thumb (Visual only, aligned roughly with 65%) -->
+<div class="absolute left-[65%] size-4 bg-white rounded-full shadow border-2 border-primary pointer-events-none z-10 -translate-x-1/2"></div>
+</div>
+<!-- Controls Row -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="size-8 rounded-full bg-primary text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/20">
+<span class="material-symbols-outlined filled text-[20px]">pause</span>
+</button>
+<div class="flex flex-col">
+<span class="text-white text-sm font-bold font-mono">11:42:30 AM</span>
+<span class="text-[#92adc9] text-xs">Oct 24, 2023</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center gap-2 bg-[#111a22] rounded-lg p-1 border border-border-dark">
+<button class="px-2 py-1 text-xs text-[#92adc9] hover:text-white rounded hover:bg-white/5">1x</button>
+<button class="px-2 py-1 text-xs text-white bg-white/10 rounded font-medium shadow-sm">2x</button>
+<button class="px-2 py-1 text-xs text-[#92adc9] hover:text-white rounded hover:bg-white/5">4x</button>
+</div>
+<button class="text-[#92adc9] hover:text-white" title="Map Settings">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="text-[#92adc9] hover:text-white" title="Expand Map">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

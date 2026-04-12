@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Error &amp; Exception Log Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .code-block {
+            background-color: #0b1219;
+            border: 1px solid #233648;
+            border-radius: 4px;
+            padding: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #d1d5db;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">MFA Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">bug_report</span>
+<span class="text-sm font-medium">Error Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Settings</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configuration</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">DevOps Engineer</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden relative">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<div class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold">
+<span>Monitoring</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">Error Logs</span>
+</div>
+<h2 class="text-white text-lg font-bold">Error &amp; Exception Log Viewer</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded-md pl-9 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted" placeholder="Global Search (ID, Msg, Trace)..." type="text"/>
+</div>
+<button class="px-3 py-2 bg-surface-dark hover:bg-border-color border border-border-color text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Export Logs
+                </button>
+<button class="p-2 bg-primary hover:bg-primary-dark text-white rounded-md transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+</button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<div class="w-64 bg-surface-dark border-r border-border-color flex flex-col flex-shrink-0 z-10">
+<div class="p-4 border-b border-border-color flex justify-between items-center">
+<h3 class="text-xs font-bold text-white uppercase tracking-wider">Filters</h3>
+<button class="text-[10px] text-primary hover:underline">Clear All</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+<div class="space-y-2">
+<label class="text-xs font-medium text-text-muted">Time Range</label>
+<select class="w-full bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Last 15 minutes</option>
+<option selected="">Last 1 Hour</option>
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option>Custom Range</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-text-muted">Severity</label>
+<div class="space-y-1">
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input checked="" class="rounded border-border-color bg-surface-darker text-danger focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-danger font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">dangerous</span> CRITICAL
+                                </span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input checked="" class="rounded border-border-color bg-surface-darker text-warning focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-warning font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> WARNING
+                                </span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-primary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">info</span> INFO
+                                </span>
+</label>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-text-muted">Service</label>
+<div class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input checked="" class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">auth-service</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input checked="" class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">payment-gateway</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">notification-worker</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">fleet-manager-api</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer hover:bg-surface-darker p-1.5 rounded transition-colors">
+<input class="rounded border-border-color bg-surface-darker text-primary focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-xs text-text-muted">telemetry-ingest</span>
+</label>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-text-muted">Error Type</label>
+<input class="w-full bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="e.g. NullPointer..." type="text"/>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-hidden flex flex-col">
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-background-dark p-0">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-surface-darker border-b border-border-color shadow-sm">
+<tr>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-40">Timestamp</th>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-32">Service</th>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-24">Severity</th>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-48">Error Type</th>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Message</th>
+<th class="px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider text-right w-20">Count</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-color">
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors bg-surface-darker/30 border-l-2 border-l-transparent hover:border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:32:05</span>
+<span class="text-[10px] text-text-muted">3 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            auth-service
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                            CRITICAL
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-danger font-mono truncate max-w-[12rem]">DatabaseConnectionError</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Connection refused to postgres-primary:5432. Retries exhausted.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">42</td>
+</tr>
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors bg-surface-darker/30 border-l-2 border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:31:58</span>
+<span class="text-[10px] text-text-muted">4 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            payment-gateway
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                            CRITICAL
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-danger font-mono truncate max-w-[12rem]">PaymentDeclinedException</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Transaction ID tx_998877 failed validation. Insufficient funds response from provider.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">12</td>
+</tr>
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:30:12</span>
+<span class="text-[10px] text-text-muted">6 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            notification-worker
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                            WARNING
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-warning font-mono truncate max-w-[12rem]">RateLimitExceeded</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Email provider rate limit reached. Backing off for 60s.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">156</td>
+</tr>
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:28:44</span>
+<span class="text-[10px] text-text-muted">8 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            fleet-manager-api
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                            WARNING
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-warning font-mono truncate max-w-[12rem]">InvalidGeoCords</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Received invalid coordinates from device ID: 8821. Skipping update.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">8</td>
+</tr>
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:25:33</span>
+<span class="text-[10px] text-text-muted">11 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            telemetry-ingest
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                            CRITICAL
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-danger font-mono truncate max-w-[12rem]">KafkaTimeout</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Failed to publish message to topic 'vehicle-events'. Broker not available.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">205</td>
+</tr>
+<tr class="group hover:bg-surface-dark cursor-pointer transition-colors border-l-2 border-l-transparent hover:border-l-primary">
+<td class="px-4 py-2.5">
+<div class="flex flex-col">
+<span class="text-xs text-white font-mono">2023-10-24 14:24:10</span>
+<span class="text-[10px] text-text-muted">12 mins ago</span>
+</div>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-surface-darker border border-border-color text-text-muted">
+                                            auth-service
+                                        </span>
+</td>
+<td class="px-4 py-2.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                            WARNING
+                                        </span>
+</td>
+<td class="px-4 py-2.5 text-xs text-warning font-mono truncate max-w-[12rem]">TokenExpired</td>
+<td class="px-4 py-2.5">
+<div class="text-xs text-white truncate max-w-md">Refresh token used is expired. User ID: 5512 required login.</div>
+</td>
+<td class="px-4 py-2.5 text-right text-xs font-bold text-white">89</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="bg-surface-darker border-t border-border-color p-2 flex items-center justify-between z-10">
+<span class="text-[10px] text-text-muted">Showing 1-15 of 2,405 logs</span>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<span class="text-[10px] text-white">Page 1</span>
+<button class="p-1 text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="w-[450px] bg-surface-dark border-l border-border-color flex flex-col flex-shrink-0 z-20 shadow-xl">
+<div class="p-4 border-b border-border-color flex justify-between items-start">
+<div>
+<h3 class="text-sm font-bold text-white font-mono">PaymentDeclinedException</h3>
+<p class="text-xs text-text-muted mt-1">payment-gateway • 4 mins ago</p>
+</div>
+<div class="flex gap-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 h-fit">
+                        CRITICAL
+                    </span>
+<button class="text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Occurrences Trend (24h)</h4>
+<span class="text-xs text-danger font-bold">12 events</span>
+</div>
+<div class="h-16 w-full relative border-b border-l border-border-color bg-surface-darker/50 rounded-sm p-1">
+<svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 30">
+<path d="M0,28 L10,25 L20,28 L30,15 L40,20 L50,5 L60,18 L70,22 L80,25 L90,28 L100,28" fill="none" stroke="#ef4444" stroke-width="1.5"></path>
+<circle cx="50" cy="5" fill="#ef4444" r="2"></circle>
+</svg>
+</div>
+</div>
+<div class="space-y-2">
+<h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Message</h4>
+<div class="p-3 bg-surface-darker rounded border border-border-color text-xs text-white">
+                        Transaction ID tx_998877 failed validation. Insufficient funds response from provider.
+                    </div>
+</div>
+<div class="space-y-2">
+<h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Environment Metadata</h4>
+<div class="grid grid-cols-2 gap-2">
+<div class="p-2 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] text-text-muted">Host</div>
+<div class="text-xs text-white font-mono">prod-pay-worker-04</div>
+</div>
+<div class="p-2 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] text-text-muted">Region</div>
+<div class="text-xs text-white font-mono">us-east-1</div>
+</div>
+<div class="p-2 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] text-text-muted">User ID</div>
+<div class="text-xs text-white font-mono">u_882910</div>
+</div>
+<div class="p-2 bg-surface-darker rounded border border-border-color">
+<div class="text-[10px] text-text-muted">Request ID</div>
+<div class="text-xs text-white font-mono">req_abc123</div>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<h4 class="text-xs font-semibold text-text-muted uppercase tracking-wider">Stacktrace</h4>
+<button class="text-[10px] text-primary hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">content_copy</span> Copy
+                    </button>
+</div>
+<div class="code-block custom-scrollbar max-h-60 overflow-y-auto">com.fleet.payment.exception.PaymentDeclinedException: Insufficient funds
+    at com.fleet.payment.service.TransactionService.process(TransactionService.java:142)
+    at com.fleet.payment.worker.PaymentWorker.handleMessage(PaymentWorker.java:88)
+    at com.fleet.messaging.kafka.Consumer.poll(Consumer.java:45)
+    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+    at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+    at java.base/java.lang.Thread.run(Thread.java:829)
+Caused by: com.stripe.exception.CardException: Your card was declined.
+    at com.stripe.net.LiveStripeResponseGetter.handleError(LiveStripeResponseGetter.java:120)
+    ... 15 more</div>
+</div>
+</div>
+<div class="p-4 border-t border-border-color bg-surface-darker">
+<div class="flex gap-3">
+<button class="flex-1 py-2 bg-surface-dark hover:bg-border-color border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded transition-colors">
+                        Create Ticket
+                    </button>
+<button class="flex-1 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded transition-colors">
+                        Investigate
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+<span>© 2023 Enterprise Fleet Manager. Monitoring Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Log Stream: <span class="text-success">Connected</span></span>
+<span>Latency: <span class="font-mono text-white">42ms</span></span>
+<span>Server Time: <span class="font-mono text-white">14:36 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

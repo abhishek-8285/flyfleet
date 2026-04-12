@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }.tooltip-trigger:hover .tooltip-content {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetCommand</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Menu</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-sm font-medium">Live Map</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-sm font-medium">Fleet</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="text-sm font-medium">Drivers</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-medium">Maintenance</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Analytics</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium">History</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<h2 class="text-white text-lg font-bold">Dashboard Overview</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden md:block group">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="bg-border-color text-white text-sm rounded-lg pl-10 pr-10 py-2 w-64 border-none focus:ring-1 focus:ring-primary placeholder-text-muted transition-all group-focus-within:w-72" placeholder="Search vehicles, drivers..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<kbd class="hidden sm:inline-block h-5 px-1.5 border border-[#334d66] rounded font-sans text-[10px] font-medium text-text-muted flex items-center justify-center min-w-[20px]">/</kbd>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative group">
+<button class="relative p-2 text-text-muted hover:text-white hover:bg-border-color rounded-full transition-colors group-hover:bg-border-color">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2.5 bg-red-500 rounded-full border-2 border-surface-darker"></span>
+</button>
+<div class="absolute right-0 top-full mt-2 w-64 bg-surface-dark border border-border-color rounded-lg shadow-xl hidden group-hover:block z-50">
+<div class="p-3 border-b border-border-color flex justify-between items-center">
+<span class="text-xs font-semibold text-white">Notifications</span>
+<div class="flex gap-1">
+<span class="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded cursor-pointer hover:bg-red-500/30">Crit</span>
+<span class="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded cursor-pointer hover:bg-blue-500/30">Info</span>
+</div>
+</div>
+<div class="max-h-48 overflow-y-auto">
+<div class="p-3 border-b border-border-color hover:bg-border-color/50 cursor-pointer">
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-red-500 text-sm mt-0.5">error</span>
+<div>
+<p class="text-xs text-white">Engine Overheat #301</p>
+<p class="text-[10px] text-text-muted">2 mins ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<button class="p-2 text-text-muted hover:text-white hover:bg-border-color rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<div class="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
+<div class="flex flex-wrap items-center gap-3">
+<div class="relative">
+<select class="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+<option>Today: Oct 24</option>
+<option>Last 7 Days</option>
+<option>Last 30 Days</option>
+<option>Custom Range</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">calendar_today</span>
+</div>
+<div class="relative">
+<select class="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+<option>Global Fleet Ops</option>
+<option>North America Div</option>
+<option>Europe Logistics</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">domain</span>
+</div>
+<div class="relative hidden lg:block">
+<select class="appearance-none bg-surface-dark border border-border-color text-text-muted text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+<option>UTC-05:00 (EST)</option>
+<option>UTC+00:00 (GMT)</option>
+<option>UTC-08:00 (PST)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">schedule</span>
+</div>
+</div>
+<div class="flex items-center gap-3 ml-auto">
+<div class="flex items-center gap-2 text-xs text-text-muted bg-border-color/30 px-2 py-1 rounded border border-border-color/50">
+<span class="material-symbols-outlined text-[14px] text-emerald-500 animate-pulse">radio_button_checked</span>
+<span>Live</span>
+</div>
+<div class="h-4 w-px bg-border-color"></div>
+<button class="text-text-muted hover:text-white transition-colors" title="Manual Refresh">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="text-xs text-text-muted">Auto:</span>
+<select class="bg-transparent text-xs text-white border-none p-0 pr-4 focus:ring-0 cursor-pointer font-medium">
+<option>30s</option>
+<option>1m</option>
+<option>5m</option>
+<option>Off</option>
+</select>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 max-w-[1600px] mx-auto pb-6">
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+<div class="flex justify-between items-start z-10 relative">
+<div class="tooltip-trigger relative">
+<div class="flex items-center gap-1 mb-1">
+<p class="text-text-muted text-sm font-medium">Live Vehicles</p>
+<span class="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">info</span>
+</div>
+<div class="tooltip-content hidden absolute top-full left-0 mt-2 p-2 bg-surface-darker border border-border-color rounded shadow-xl text-[10px] text-text-muted w-48 z-20">
+                                    Count of vehicles with 'Ignition On' signal received within last 5 minutes.
+                                </div>
+<h3 class="text-3xl font-bold text-white tracking-tight">842</h3>
+</div>
+<div class="p-2 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">directions_bus</span>
+</div>
+</div>
+<div class="mt-4 flex items-center text-sm">
+<span class="text-emerald-500 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                5%
+                            </span>
+<span class="text-[#64748b] ml-2">vs last week</span>
+</div>
+<div class="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
+<span>Source: Telematics V2</span>
+<span class="text-emerald-500/80">99.9% Uptime</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+<div class="flex justify-between items-start z-10 relative">
+<div class="tooltip-trigger relative">
+<div class="flex items-center gap-1 mb-1">
+<p class="text-text-muted text-sm font-medium">Active Trips</p>
+<span class="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">info</span>
+</div>
+<div class="tooltip-content hidden absolute top-full left-0 mt-2 p-2 bg-surface-darker border border-border-color rounded shadow-xl text-[10px] text-text-muted w-48 z-20">
+                                    Trips currently in 'En Route' status with assigned driver.
+                                </div>
+<h3 class="text-3xl font-bold text-white tracking-tight">125</h3>
+</div>
+<div class="p-2 bg-purple-500/10 rounded-lg text-purple-500">
+<span class="material-symbols-outlined">route</span>
+</div>
+</div>
+<div class="mt-4 flex items-center text-sm">
+<span class="text-emerald-500 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                2%
+                            </span>
+<span class="text-[#64748b] ml-2">vs last week</span>
+</div>
+<div class="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
+<span>Source: Dispatch API</span>
+<span class="text-text-muted">Updated 10s ago</span>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl p-5 border border-border-color shadow-sm relative overflow-visible group flex flex-col justify-between">
+<div class="flex justify-between items-start z-10 relative">
+<div class="w-full">
+<div class="flex justify-between items-start w-full">
+<div class="tooltip-trigger relative">
+<div class="flex items-center gap-1 mb-1">
+<p class="text-text-muted text-sm font-medium">Active Alerts</p>
+<span class="material-symbols-outlined text-[14px] text-text-muted/50 hover:text-primary cursor-help">info</span>
+</div>
+<div class="tooltip-content hidden absolute top-full left-0 mt-2 p-2 bg-surface-darker border border-border-color rounded shadow-xl text-[10px] text-text-muted w-48 z-20">
+                                            Unresolved vehicle health or driving behavior alerts.
+                                        </div>
+</div>
+<div class="p-2 bg-red-500/10 rounded-lg text-red-500">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mt-1">
+<h3 class="text-3xl font-bold text-white tracking-tight">3</h3>
+<span class="text-xs text-text-muted">Total</span>
+</div>
+<div class="flex gap-3 mt-3">
+<a class="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors" href="#">
+<div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+<span class="text-xs font-semibold text-red-400">2 Critical</span>
+</a>
+<a class="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors" href="#">
+<div class="w-2 h-2 rounded-full bg-orange-500"></div>
+<span class="text-xs font-semibold text-orange-400">1 Warning</span>
+</a>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-border-color text-[10px] text-[#64748b] flex justify-between items-center">
+<span>Source: Event Stream</span>
+<a class="text-primary hover:underline" href="#">View Log →</a>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color shadow-sm flex flex-col h-[500px] overflow-hidden relative group/map">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker z-10 relative">
+<h3 class="text-white font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">public</span>
+                                Live Fleet Map
+                            </h3>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 mr-2">
+<label class="text-xs text-text-muted font-medium cursor-pointer">Heatmap</label>
+<button aria-checked="false" class="w-8 h-4 rounded-full bg-border-color relative transition-colors focus:outline-none hover:bg-primary/50" role="switch">
+<span class="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full transition-transform"></span>
+</button>
+</div>
+<div class="h-4 w-px bg-border-color"></div>
+<div class="flex gap-1 bg-border-color/50 p-1 rounded">
+<button class="px-3 py-1 text-xs font-medium text-white bg-surface-dark rounded shadow-sm">Map</button>
+<button class="px-3 py-1 text-xs font-medium text-text-muted hover:text-white transition-colors">Satellite</button>
+</div>
+</div>
+</div>
+<div class="relative flex-1 bg-[#0f151b] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-70" data-alt="Dark themed map" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCeeeLxaUXFSywPWOUz7sSShAB3uQmjmm05fXrxnJMrtOj-77MaaA_rwghU8aFYgdEN25a4Zu_KRt4Bww_5vIegatJal2ZEZwc-jWi6kSXdQy3FKD1_7k4VpFPnvvH8JhhczyN8RmE4dQe7Igd7R_Y3Q2A8cUV3JoEubwD_1yrEB0VImkaOpvLuj7MtoMf4v4Vfp7EmLAR1LIeGUzUqVgEPm__oaIqEyfwohYrEJheP1zpnGNTy0WkwKZgcqRa3hJZyETmgEvoDzR4");'></div>
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-40" preserveAspectRatio="none" viewBox="0 0 100 100">
+<polygon fill="rgba(19, 127, 236, 0.2)" points="20,20 40,20 45,40 25,45" stroke="#137fec" stroke-dasharray="1" stroke-width="0.2"></polygon>
+</svg>
+<div class="absolute top-[25%] left-[30%] text-[10px] text-primary font-bold uppercase tracking-wider opacity-60">Geofence: Zone A</div>
+<div class="absolute top-4 left-4 z-20">
+<div class="relative shadow-lg">
+<input class="bg-surface-darker border border-border-color text-white text-xs rounded pl-8 pr-3 py-2 w-48 focus:ring-1 focus:ring-primary shadow-sm placeholder-text-muted/70" placeholder="Search map area..." type="text"/>
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-base text-text-muted">search</span>
+</div>
+</div>
+<div class="absolute top-4 right-4 bg-surface-darker/90 backdrop-blur-sm border border-border-color rounded p-3 z-20 shadow-lg">
+<div class="text-[10px] font-semibold text-text-muted uppercase mb-2">Legend</div>
+<div class="space-y-1.5">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-white">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-xs text-white">Moving</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+<span class="text-xs text-white">Idling</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-red-500"></span>
+<span class="text-xs text-white">Alert</span>
+</div>
+</div>
+</div>
+<div class="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+<div class="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center animate-pulse">
+<div class="w-3 h-3 bg-primary rounded-full shadow-[0_0_10px_#137fec]"></div>
+</div>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-darker text-xs text-white p-2 rounded shadow-lg whitespace-nowrap border border-border-color z-20">
+<div class="font-bold">Vehicle #104</div>
+<div class="text-text-muted">Moving (45mph)</div>
+</div>
+</div>
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+<div class="w-8 h-8 bg-emerald-500/20 rounded-full flex items-center justify-center">
+<div class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_#10b981]"></div>
+</div>
+</div>
+<div class="absolute bottom-1/3 right-1/4 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer z-10">
+<div class="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center animate-bounce">
+<div class="w-3 h-3 bg-red-500 rounded-full shadow-[0_0_10px_#ef4444]"></div>
+</div>
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-surface-darker text-xs text-white p-2 rounded shadow-lg whitespace-nowrap border border-border-color z-20">
+<div class="font-bold text-red-400">Vehicle #301</div>
+<div class="text-text-muted">Engine Temp Alert</div>
+<a class="text-primary hover:underline mt-1 block" href="#">Drill down</a>
+</div>
+</div>
+<div class="absolute bottom-4 right-4 flex flex-col gap-2">
+<button class="w-8 h-8 bg-surface-dark border border-border-color text-white rounded flex items-center justify-center hover:bg-border-color shadow-lg">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+<button class="w-8 h-8 bg-surface-dark border border-border-color text-white rounded flex items-center justify-center hover:bg-border-color shadow-lg">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+</div>
+<div class="absolute bottom-1 left-1 px-2 py-1 bg-surface-darker/80 text-[10px] text-text-muted rounded backdrop-blur">
+                                © OpenMapTiles | Source: GIS Data
+                            </div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden flex flex-col">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold">Critical Vehicle Status</h3>
+<div class="flex gap-3">
+<button class="text-xs font-medium text-text-muted hover:text-white flex items-center gap-1 bg-border-color/30 px-2 py-1 rounded transition-colors">
+<span class="material-symbols-outlined text-[14px]">download</span>
+                                    CSV
+                                </button>
+<a class="text-primary text-sm font-medium hover:underline flex items-center" href="#">View All</a>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm text-text-muted">
+<thead class="bg-[#1d2936] text-xs uppercase font-medium">
+<tr>
+<th class="px-6 py-3 cursor-pointer hover:text-white group">
+<div class="flex items-center gap-1">Vehicle ID <span class="material-symbols-outlined text-[12px] opacity-0 group-hover:opacity-100">sort</span></div>
+</th>
+<th class="px-6 py-3">Driver</th>
+<th class="px-6 py-3">Status</th>
+<th class="px-6 py-3">Location</th>
+<th class="px-6 py-3 cursor-pointer hover:text-white group">
+<div class="flex items-center gap-1">Last Update <span class="material-symbols-outlined text-[12px] opacity-0 group-hover:opacity-100">arrow_downward</span></div>
+</th>
+<th class="px-6 py-3">SLA Aging</th>
+<th class="px-6 py-3 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-color">
+<tr class="hover:bg-[#1d2936] transition-colors">
+<td class="px-6 py-3 font-medium text-white">#301</td>
+<td class="px-6 py-3">M. Johnson</td>
+<td class="px-6 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">Engine Alert</span></td>
+<td class="px-6 py-3 text-xs">I-95 South, Exit 4</td>
+<td class="px-6 py-3 text-xs text-white">2 min ago</td>
+<td class="px-6 py-3 text-xs text-red-400 font-medium">15 min</td>
+<td class="px-6 py-3 text-right">
+<button class="text-primary hover:text-white text-xs">Detail</button>
+</td>
+</tr>
+<tr class="hover:bg-[#1d2936] transition-colors">
+<td class="px-6 py-3 font-medium text-white">#442</td>
+<td class="px-6 py-3">S. Williams</td>
+<td class="px-6 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/20">Maintenance</span></td>
+<td class="px-6 py-3 text-xs">Depot A</td>
+<td class="px-6 py-3 text-xs text-white">1 hr ago</td>
+<td class="px-6 py-3 text-xs text-yellow-500">2 hrs</td>
+<td class="px-6 py-3 text-right">
+<button class="text-primary hover:text-white text-xs">Detail</button>
+</td>
+</tr>
+<tr class="hover:bg-[#1d2936] transition-colors">
+<td class="px-6 py-3 font-medium text-white">#205</td>
+<td class="px-6 py-3">K. Davis</td>
+<td class="px-6 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">Accident</span></td>
+<td class="px-6 py-3 text-xs">Route 66, MP 12</td>
+<td class="px-6 py-3 text-xs text-white">5 min ago</td>
+<td class="px-6 py-3 text-xs text-red-500 font-bold">45 min</td>
+<td class="px-6 py-3 text-right">
+<button class="text-primary hover:text-white text-xs">Detail</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="bg-surface-darker px-4 py-2 border-t border-border-color text-[10px] text-text-muted flex justify-between">
+<span>Showing 3 of 3 Critical Items</span>
+<span>Source: Real-time DB</span>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl p-5 border border-border-color">
+<h3 class="text-white font-semibold mb-4">Quick Actions</h3>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+<span class="material-symbols-outlined mb-2 text-primary group-hover:text-white">add_circle</span>
+<span class="text-sm font-medium text-white">Add Vehicle</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+<span class="material-symbols-outlined mb-2 text-primary group-hover:text-white">person_add</span>
+<span class="text-sm font-medium text-white">Assign Driver</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+<span class="material-symbols-outlined mb-2 text-primary group-hover:text-white">assignment</span>
+<span class="text-sm font-medium text-white">Log Report</span>
+</button>
+<button class="flex flex-col items-center justify-center p-4 bg-surface-darker hover:bg-primary hover:text-white rounded-lg transition-all group text-center border border-transparent hover:shadow-lg hover:shadow-primary/20">
+<span class="material-symbols-outlined mb-2 text-primary group-hover:text-white">schedule</span>
+<span class="text-sm font-medium text-white">Schedule</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex-1 min-h-[400px] flex flex-col">
+<div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+<h3 class="text-white font-semibold">Recent Activity</h3>
+<button class="text-xs text-primary hover:text-white">Filter</button>
+</div>
+<div class="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
+<div class="flex gap-4 relative">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary z-10 ring-4 ring-surface-dark">
+<span class="material-symbols-outlined text-[16px]">play_arrow</span>
+</div>
+<div class="w-0.5 bg-border-color h-full absolute top-8"></div>
+</div>
+<div class="pb-2">
+<p class="text-sm text-white font-medium">Trip Started</p>
+<p class="text-xs text-text-muted mt-0.5">Vehicle #402 left Depot C headed to Downtown.</p>
+<span class="text-[10px] text-[#64748b] mt-1 block">2 mins ago</span>
+</div>
+</div>
+<div class="flex gap-4 relative">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 z-10 ring-4 ring-surface-dark">
+<span class="material-symbols-outlined text-[16px]">speed</span>
+</div>
+<div class="w-0.5 bg-border-color h-full absolute top-8"></div>
+</div>
+<div class="pb-2">
+<p class="text-sm text-white font-medium">Speed Alert</p>
+<p class="text-xs text-text-muted mt-0.5">Driver John D. exceeded 75mph on Route 66.</p>
+<span class="text-[10px] text-[#64748b] mt-1 block">15 mins ago</span>
+</div>
+</div>
+<div class="flex gap-4 relative">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 z-10 ring-4 ring-surface-dark">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+</div>
+<div class="w-0.5 bg-border-color h-full absolute top-8"></div>
+</div>
+<div class="pb-2">
+<p class="text-sm text-white font-medium">Delivery Complete</p>
+<p class="text-xs text-text-muted mt-0.5">Vehicle #112 arrived at destination.</p>
+<span class="text-[10px] text-[#64748b] mt-1 block">42 mins ago</span>
+</div>
+</div>
+<div class="flex gap-4 relative">
+<div class="flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-blue-400/20 flex items-center justify-center text-blue-400 z-10 ring-4 ring-surface-dark">
+<span class="material-symbols-outlined text-[16px]">local_gas_station</span>
+</div>
+</div>
+<div class="pb-2">
+<p class="text-sm text-white font-medium">Refueling</p>
+<p class="text-xs text-text-muted mt-0.5">Vehicle #892 refueling at Shell Station.</p>
+<span class="text-[10px] text-[#64748b] mt-1 block">1h ago</span>
+</div>
+</div>
+</div>
+<div class="px-4 py-3 bg-surface-darker border-t border-border-color text-center">
+<a class="text-xs text-primary hover:text-white" href="#">View All Activity</a>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-4 text-center text-xs text-[#64748b] pb-6 flex flex-col items-center gap-1">
+<span>© 2023 Enterprise Fleet Manager. All rights reserved.</span>
+<span class="text-[10px]">v2.4.1 | Server Time: <span class="font-mono">14:02 UTC</span></span>
+</footer>
+</div>
+</main>
+</div>
+
+</body></html>

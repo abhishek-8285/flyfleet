@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Roles &amp; Permissions - Enterprise Fleet Admin</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#1a2632", // Slightly lighter than bg-dark for cards
+                        "border-dark": "#233648",
+                        "text-secondary": "#92adc9",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar for dark theme */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334e68; 
+        }
+
+        /* Toggle Switch Styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #137fec;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #137fec;
+        }
+        
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white overflow-hidden h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-dark bg-[#111a22] px-6 py-3 shrink-0 z-20">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]">local_shipping</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Enterprise Fleet Admin</h2>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<!-- Search -->
+<label class="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full group">
+<div class="text-text-secondary flex border-none bg-surface-dark items-center justify-center pl-4 rounded-l-lg border-r-0 group-focus-within:text-primary transition-colors">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-surface-dark focus:border-none h-full placeholder:text-text-secondary px-4 rounded-l-none border-l-0 pl-2 text-sm font-normal leading-normal" placeholder="Search system..." value=""/>
+</div>
+</label>
+<!-- Notifications -->
+<button class="text-text-secondary hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 size-2 bg-red-500 rounded-full border-2 border-[#111a22]"></span>
+</button>
+<!-- User Profile -->
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 border border-border-dark" data-alt="Admin user profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCh6_3Xsgiyan9yUvGoBjVUZjw5HeIi3rEDTf19_kSBDzrFp9xk5yiKb7RRcYHHRg13py4dTJcUqe3ryi_2t3GOdbzxfCmq0RpTENIYyELCNPt-_ECCjlxhLvWjvtf4D9KeqWpBpd8CDvrk521qipylbMeiPos9QQVskD8VotPfVS-Ll_ctelRQb0q2lPF8YV1nkNa7v1hMIkONaQIJqGdLs0bKCSOrJry4UJ0Lupbd4GL2EupBZWCg4U7PxrZghRFa0EJDm569-lI");'></div>
+<div class="hidden lg:flex flex-col">
+<span class="text-sm font-medium text-white">Admin User</span>
+<span class="text-xs text-text-secondary">Super Admin</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden relative">
+<!-- Sidebar Navigation -->
+<aside class="w-64 bg-[#111a22] border-r border-border-dark flex-col hidden md:flex shrink-0">
+<div class="flex flex-col gap-1 p-4 overflow-y-auto">
+<div class="mb-6">
+<p class="px-3 text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Main Menu</p>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-sm font-medium">Drivers</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-medium">Maintenance</span>
+</a>
+</div>
+<div>
+<p class="px-3 text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Administration</p>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="text-sm font-medium">Roles &amp; Permissions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Billing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">System Settings</span>
+</a>
+</div>
+</div>
+<div class="mt-auto p-4 border-t border-border-dark">
+<a class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-white hover:bg-surface-dark rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-sm font-medium">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-[#0f151b] overflow-hidden">
+<!-- Breadcrumbs & Header -->
+<div class="px-6 pt-6 pb-2 shrink-0">
+<div class="flex items-center gap-2 mb-4">
+<a class="text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+<span class="text-text-secondary text-sm font-medium">/</span>
+<span class="text-white text-sm font-medium">Roles &amp; Permissions</span>
+</div>
+<div class="flex flex-wrap justify-between items-end gap-4 mb-2">
+<div class="flex flex-col gap-1">
+<h1 class="text-white text-2xl font-bold leading-tight">Roles &amp; Permissions Management</h1>
+<p class="text-text-secondary text-sm font-normal">Manage user roles, granular access levels, and view security audit logs.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-transparent border border-border-dark hover:bg-surface-dark text-white rounded-lg text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[20px]">history</span>
+                            View Audit Log
+                        </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-medium shadow-lg shadow-blue-500/20 transition-all">
+<span class="material-symbols-outlined text-[20px]">save</span>
+                            Save Changes
+                        </button>
+</div>
+</div>
+</div>
+<!-- Content Split Pane -->
+<div class="flex flex-1 p-6 gap-6 overflow-hidden">
+<!-- Left Pane: Roles List -->
+<div class="w-72 flex flex-col bg-[#111a22] border border-border-dark rounded-xl shadow-sm shrink-0 overflow-hidden">
+<div class="p-4 border-b border-border-dark flex justify-between items-center bg-[#16202a]">
+<h3 class="font-semibold text-white">Roles</h3>
+<button class="text-primary hover:text-blue-400 p-1 rounded hover:bg-primary/10 transition-colors" title="Add New Role">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+</div>
+<div class="p-3">
+<div class="relative mb-3">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-text-secondary text-[18px]">search</span>
+<input class="w-full bg-surface-dark border-none rounded-lg py-2 pl-9 pr-3 text-sm text-white placeholder-text-secondary focus:ring-1 focus:ring-primary" placeholder="Filter roles..." type="text"/>
+</div>
+<div class="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar" style="max-height: calc(100vh - 350px);">
+<!-- Role Item: Active -->
+<button class="flex flex-col p-3 rounded-lg bg-primary/10 border border-primary text-left group transition-all">
+<div class="flex justify-between items-start w-full mb-1">
+<span class="font-semibold text-white text-sm">Fleet Manager</span>
+<span class="size-2 rounded-full bg-green-500 mt-1.5 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+</div>
+<div class="flex justify-between items-end w-full">
+<span class="text-xs text-primary font-medium">24 Users</span>
+<span class="material-symbols-outlined text-[16px] text-primary">chevron_right</span>
+</div>
+</button>
+<!-- Role Item -->
+<button class="flex flex-col p-3 rounded-lg border border-transparent hover:bg-surface-dark hover:border-border-dark text-left group transition-all">
+<div class="flex justify-between items-start w-full mb-1">
+<span class="font-medium text-text-secondary group-hover:text-white transition-colors text-sm">Super Admin</span>
+<span class="material-symbols-outlined text-[14px] text-text-secondary">lock</span>
+</div>
+<div class="flex justify-between items-end w-full">
+<span class="text-xs text-text-secondary">System Default</span>
+</div>
+</button>
+<!-- Role Item -->
+<button class="flex flex-col p-3 rounded-lg border border-transparent hover:bg-surface-dark hover:border-border-dark text-left group transition-all">
+<div class="flex justify-between items-start w-full mb-1">
+<span class="font-medium text-text-secondary group-hover:text-white transition-colors text-sm">Driver</span>
+<span class="size-2 rounded-full bg-green-500 mt-1.5"></span>
+</div>
+<div class="flex justify-between items-end w-full">
+<span class="text-xs text-text-secondary">150 Users</span>
+</div>
+</button>
+<!-- Role Item -->
+<button class="flex flex-col p-3 rounded-lg border border-transparent hover:bg-surface-dark hover:border-border-dark text-left group transition-all">
+<div class="flex justify-between items-start w-full mb-1">
+<span class="font-medium text-text-secondary group-hover:text-white transition-colors text-sm">Maintenance Tech</span>
+<span class="size-2 rounded-full bg-gray-500 mt-1.5"></span>
+</div>
+<div class="flex justify-between items-end w-full">
+<span class="text-xs text-text-secondary">12 Users</span>
+</div>
+</button>
+<!-- Role Item -->
+<button class="flex flex-col p-3 rounded-lg border border-transparent hover:bg-surface-dark hover:border-border-dark text-left group transition-all">
+<div class="flex justify-between items-start w-full mb-1">
+<span class="font-medium text-text-secondary group-hover:text-white transition-colors text-sm">Auditor</span>
+<span class="size-2 rounded-full bg-green-500 mt-1.5"></span>
+</div>
+<div class="flex justify-between items-end w-full">
+<span class="text-xs text-text-secondary">3 Users</span>
+</div>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Pane: Permissions Matrix -->
+<div class="flex-1 flex flex-col bg-[#111a22] border border-border-dark rounded-xl shadow-sm overflow-hidden">
+<!-- Tabs -->
+<div class="flex border-b border-border-dark bg-[#16202a]">
+<button class="px-6 py-3 text-sm font-medium text-primary border-b-2 border-primary bg-primary/5 focus:outline-none">Permissions</button>
+<button class="px-6 py-3 text-sm font-medium text-text-secondary hover:text-white hover:bg-surface-dark transition-colors focus:outline-none">Assigned Users</button>
+<button class="px-6 py-3 text-sm font-medium text-text-secondary hover:text-white hover:bg-surface-dark transition-colors focus:outline-none">Audit Logs</button>
+</div>
+<!-- Role Configuration Header -->
+<div class="p-5 border-b border-border-dark flex justify-between items-center">
+<div>
+<h2 class="text-lg font-semibold text-white">Configuring: <span class="text-primary">Fleet Manager</span></h2>
+<p class="text-xs text-text-secondary mt-1">Last updated 2 days ago by Super Admin</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-2 bg-surface-dark px-3 py-1.5 rounded-lg border border-border-dark">
+<span class="text-xs text-text-secondary">Inheritance:</span>
+<span class="text-xs text-white font-medium">None</span>
+</div>
+<button class="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1.5 hover:bg-red-900/20 rounded-lg transition-colors border border-transparent hover:border-red-900/50">
+                                Delete Role
+                            </button>
+</div>
+</div>
+<!-- Matrix Table Area -->
+<div class="flex-1 overflow-auto bg-[#111a22]">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-dark sticky top-0 z-10 shadow-sm">
+<tr>
+<th class="p-4 text-xs font-semibold text-text-secondary uppercase tracking-wider w-1/4">Module Name</th>
+<th class="p-4 text-center w-32">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs font-semibold text-text-secondary uppercase tracking-wider">View</span>
+<button class="text-[10px] text-primary hover:underline">All</button>
+</div>
+</th>
+<th class="p-4 text-center w-32">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Create</span>
+<button class="text-[10px] text-primary hover:underline">All</button>
+</div>
+</th>
+<th class="p-4 text-center w-32">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Edit</span>
+<button class="text-[10px] text-primary hover:underline">All</button>
+</div>
+</th>
+<th class="p-4 text-center w-32">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Delete</span>
+<button class="text-[10px] text-text-secondary hover:underline">None</button>
+</div>
+</th>
+<th class="p-4 text-center w-32">
+<div class="flex flex-col items-center gap-1">
+<span class="text-xs font-semibold text-text-secondary uppercase tracking-wider">Export</span>
+<button class="text-[10px] text-primary hover:underline">All</button>
+</div>
+</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<!-- Row 1: Dashboard -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">Dashboard</p>
+<p class="text-xs text-text-secondary">Overview analytics</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center"><span class="w-4 h-1 bg-gray-700 rounded-full inline-block opacity-30" title="Not Applicable"></span></td>
+<td class="p-4 text-center"><span class="w-4 h-1 bg-gray-700 rounded-full inline-block opacity-30" title="Not Applicable"></span></td>
+<td class="p-4 text-center"><span class="w-4 h-1 bg-gray-700 rounded-full inline-block opacity-30" title="Not Applicable"></span></td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+<!-- Row 2: Vehicles -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-orange-500/10 text-orange-400">
+<span class="material-symbols-outlined text-[20px]">directions_car</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">Vehicles</p>
+<p class="text-xs text-text-secondary">Fleet inventory</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+<!-- Row 3: Drivers -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-green-500/10 text-green-400">
+<span class="material-symbols-outlined text-[20px]">person</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">Drivers</p>
+<p class="text-xs text-text-secondary">Personnel management</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+<!-- Row 4: Maintenance -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-red-500/10 text-red-400">
+<span class="material-symbols-outlined text-[20px]">build</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">Maintenance</p>
+<p class="text-xs text-text-secondary">Service logs &amp; schedule</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+<!-- Row 5: Financials -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+<span class="material-symbols-outlined text-[20px]">attach_money</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">Financials</p>
+<p class="text-xs text-text-secondary">Billing &amp; expenses</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+<!-- Row 6: Settings -->
+<tr class="hover:bg-surface-dark/50 transition-colors group">
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-gray-500/10 text-gray-400">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</div>
+<div>
+<p class="text-sm font-medium text-white">System Settings</p>
+<p class="text-xs text-text-secondary">Platform configuration</p>
+</div>
+</div>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+<td class="p-4 text-center">
+<label class="inline-flex relative items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Compact Audit Log Preview (Bottom of Matrix Panel) -->
+<div class="bg-[#16202a] border-t border-border-dark p-4 shrink-0">
+<h4 class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">Recent Role Activity</h4>
+<div class="flex flex-col gap-2">
+<div class="flex items-center text-sm gap-3 p-2 rounded hover:bg-surface-dark/50 transition-colors">
+<div class="bg-blue-500/20 text-blue-400 p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</div>
+<div class="flex-1">
+<span class="text-white">Admin</span> updated <span class="text-primary font-medium">Vehicles: Delete</span> permission
+                                </div>
+<span class="text-text-secondary text-xs">2 mins ago</span>
+</div>
+<div class="flex items-center text-sm gap-3 p-2 rounded hover:bg-surface-dark/50 transition-colors">
+<div class="bg-green-500/20 text-green-400 p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">person_add</span>
+</div>
+<div class="flex-1">
+<span class="text-white">System</span> assigned <span class="text-white font-medium">John Doe</span> to this role
+                                </div>
+<span class="text-text-secondary text-xs">4 hours ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

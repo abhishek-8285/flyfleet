@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetSecurity - Data Governance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="radio"]:checked {
+            background-color: #137fec;
+            border-color: #137fec;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 0 1px #137fec;
+            border-color: #137fec;
+        }
+        .timeline-connector {
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            bottom: -16px;
+            width: 2px;
+            background-color: #233648;
+            z-index: 0;
+        }
+        .timeline-item:last-child .timeline-connector {
+            display: none;
+        }
+    </style>
+    
+    <!-- React Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const navigate = useNavigate();
+
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div class="p-6 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span class="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+                    </div>
+                    <nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Governance Module</div>
+                        <Link to="/" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span class="material-symbols-outlined">cloud_download</span>
+                            <span class="text-sm font-medium">Data Requests</span>
+                        </Link>
+                         <Link to="/new" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/new') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span class="material-symbols-outlined">add_box</span>
+                            <span class="text-sm font-medium">New Request</span>
+                        </Link>
+                        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span class="material-symbols-outlined">policy</span>
+                            <span class="text-sm font-medium">Retention Policy</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Compliance</div>
+                        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span class="material-symbols-outlined">gavel</span>
+                            <span class="text-sm font-medium">GDPR Logs</span>
+                        </a>
+                        <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+                            <span class="material-symbols-outlined">fact_check</span>
+                            <span class="text-sm font-medium">Audits</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Settings</div>
+                        <Link to="/settings" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/settings') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span class="text-sm font-medium">Configuration</span>
+                        </Link>
+                    </nav>
+                    <div class="p-4 border-t border-border-color">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")' }}></div>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span class="text-xs text-text-muted truncate">Data Steward</span>
+                            </div>
+                            <button class="ml-auto text-text-muted hover:text-white">
+                                <span class="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        const RequestList = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+                                        <span>Governance</span>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span class="text-white">Data Requests</span>
+                                    </div>
+                                    <h2 class="text-white text-lg font-bold">Data Export Request List</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+                                        <span class="material-symbols-outlined text-[18px]">search</span>
+                                    </span>
+                                    <input class="bg-surface-dark border border-border-color text-sm text-white rounded-lg pl-9 pr-4 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all focus:w-80" placeholder="Global Search (ID, User, Scope)..." type="text" />
+                                </div>
+                                <button onClick={() => navigate('/new')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">add</span>
+                                    New Export Request
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex flex-1 overflow-hidden">
+                            <aside class="w-64 bg-surface-dark border-r border-border-color p-4 overflow-y-auto custom-scrollbar flex-shrink-0 hidden md:block">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-sm font-semibold text-white">Filters</h3>
+                                    <button class="text-[10px] text-primary hover:underline">Clear All</button>
+                                </div>
+                                <div class="space-y-6">
+                                    <div>
+                                        <label class="text-xs font-medium text-text-muted uppercase mb-3 block">Request Type</label>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Data Export</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Data Deletion</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Access Review</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-border-color">
+                                        <label class="text-xs font-medium text-text-muted uppercase mb-3 block">Status</label>
+                                        <div class="space-y-2">
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input defaultChecked class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Pending Approval</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Approved</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Rejected</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                <input class="rounded bg-surface-darker border-border-color text-primary focus:ring-0 w-4 h-4" type="checkbox" />
+                                                <span class="text-sm text-white group-hover:text-primary transition-colors">Expired</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-border-color">
+                                        <label class="text-xs font-medium text-text-muted uppercase mb-3 block">Request Date Range</label>
+                                        <div class="space-y-3">
+                                            <div>
+                                                <span class="text-[10px] text-text-muted block mb-1">From</span>
+                                                <input class="bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-1.5 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date" />
+                                            </div>
+                                            <div>
+                                                <span class="text-[10px] text-text-muted block mb-1">To</span>
+                                                <input class="bg-surface-darker border border-border-color text-xs text-white rounded px-2 py-1.5 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+                            <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                                <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full">
+                                    <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-text-muted text-[18px]">list_alt</span>
+                                            All Requests
+                                            <span class="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full border border-primary/30">128 Total</span>
+                                        </h3>
+                                        <div class="flex items-center gap-2">
+                                            <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Refresh">
+                                                <span class="material-symbols-outlined text-[18px]">refresh</span>
+                                            </button>
+                                            <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors" title="Export CSV">
+                                                <span class="material-symbols-outlined text-[18px]">download</span>
+                                            </button>
+                                            <div class="h-4 w-px bg-border-color mx-1"></div>
+                                            <select class="bg-surface-dark border border-border-color text-xs text-text-muted rounded px-2 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                <option>Sort by: Date (Newest)</option>
+                                                <option>Sort by: Date (Oldest)</option>
+                                                <option>Sort by: Status</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="overflow-x-auto flex-1">
+                                        <table class="w-full text-left border-collapse">
+                                            <thead class="sticky top-0 z-10 bg-surface-darker">
+                                                <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+                                                    <th class="px-4 py-3 font-semibold">Request ID</th>
+                                                    <th class="px-4 py-3 font-semibold">Request Type</th>
+                                                    <th class="px-4 py-3 font-semibold">Data Scope</th>
+                                                    <th class="px-4 py-3 font-semibold">Requested By</th>
+                                                    <th class="px-4 py-3 font-semibold">Request Date</th>
+                                                    <th class="px-4 py-3 font-semibold">Approval Status</th>
+                                                    <th class="px-4 py-3 font-semibold">Expiry Date</th>
+                                                    <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-sm divide-y divide-border-color">
+                                                {/* REQ-2023-8901 - Pending */}
+                                                <tr onClick={() => navigate('/detail')} class="hover:bg-surface-darker/50 transition-colors group cursor-pointer">
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <span class="font-mono text-xs text-primary font-medium">REQ-2023-8901</span>
+                                                    </td>
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-[16px]">download</span>
+                                                            <span class="text-white">EXPORT</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Telematics, Driver Logs</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white text-xs font-medium">Sarah Connor</span>
+                                                            <span class="text-[10px] text-text-muted">sarah.c@fleet.com</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 26, 2023 10:45 AM</td>
+                                                    <td class="px-4 py-3">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                                            PENDING
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Nov 02, 2023</td>
+                                                    <td class="px-4 py-3 text-right">
+                                                        <button onClick={(e) => { e.stopPropagation(); navigate('/edit'); }} class="text-text-muted hover:text-white transition-colors">
+                                                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {/* More rows... mocking a few */}
+                                                <tr class="hover:bg-surface-darker/50 transition-colors group">
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <span class="font-mono text-xs text-primary font-medium">REQ-2023-8894</span>
+                                                    </td>
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-danger text-[16px]">delete</span>
+                                                            <span class="text-white">DELETE</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Inactive User Accounts (Region: EU)</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white text-xs font-medium">Mike Ross</span>
+                                                            <span class="text-[10px] text-text-muted">mike.ross@fleet.com</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 25, 2023 03:12 PM</td>
+                                                    <td class="px-4 py-3">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                            APPROVED
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Nov 01, 2023</td>
+                                                    <td class="px-4 py-3 text-right">
+                                                        <button class="text-text-muted hover:text-white transition-colors">
+                                                            <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr class="hover:bg-surface-darker/50 transition-colors group">
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <span class="font-mono text-xs text-primary font-medium">REQ-2023-8842</span>
+                                                    </td>
+                                                    <td class="px-4 py-3 whitespace-nowrap">
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-indigo-400 text-[16px]">visibility</span>
+                                                            <span class="text-white">ACCESS</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs">Maintenance Logs Q3</td>
+                                                    <td class="px-4 py-3">
+                                                        <div class="flex flex-col">
+                                                            <span class="text-white text-xs font-medium">John Doe</span>
+                                                            <span class="text-[10px] text-text-muted">john.doe@fleet.com</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 2023 09:30 AM</td>
+                                                    <td class="px-4 py-3">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-danger"></span>
+                                                            REJECTED
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">-</td>
+                                                    <td class="px-4 py-3 text-right">
+                                                        <button class="text-text-muted hover:text-white transition-colors">
+                                                            <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="border-t border-border-color p-4 bg-surface-darker flex items-center justify-between">
+                                        <div class="text-xs text-text-muted">
+                                            Showing <span class="font-medium text-white">1</span> to <span class="font-medium text-white">8</span> of <span class="font-medium text-white">128</span> requests
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button class="px-3 py-1 text-xs font-medium text-text-muted bg-surface-dark border border-border-color rounded hover:text-white hover:bg-border-color transition-colors disabled:opacity-50" disabled>Previous</button>
+                                            <button class="px-3 py-1 text-xs font-medium text-white bg-primary rounded hover:bg-primary-dark transition-colors">1</button>
+                                            <button class="px-3 py-1 text-xs font-medium text-text-muted bg-surface-dark border border-border-color rounded hover:text-white hover:bg-border-color transition-colors">2</button>
+                                            <button class="px-3 py-1 text-xs font-medium text-text-muted bg-surface-dark border border-border-color rounded hover:text-white hover:bg-border-color transition-colors">3</button>
+                                            <span class="text-text-muted text-xs">...</span>
+                                            <button class="px-3 py-1 text-xs font-medium text-text-muted bg-surface-dark border border-border-color rounded hover:text-white hover:bg-border-color transition-colors">16</button>
+                                            <button class="px-3 py-1 text-xs font-medium text-text-muted bg-surface-dark border border-border-color rounded hover:text-white hover:bg-border-color transition-colors">Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                            <span>© 2023 Enterprise Fleet Manager. Data Governance Module V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>Data Privacy: <span class="text-success">Compliant</span></span>
+                                <span>System Status: <span class="text-success">Operational</span></span>
+                                <span>Server Time: <span class="font-mono text-white">15:42 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const NewRequest = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-2 text-xs text-text-muted mb-1">
+                                        <span class="cursor-pointer hover:text-white" onClick={() => navigate('/')}>Data Requests</span>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span class="text-white">New Request</span>
+                                    </div>
+                                    <h2 class="text-white text-lg font-bold">New Data Export Request</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button onClick={() => navigate('/')} class="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted text-xs font-semibold rounded transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">send</span>
+                                    Submit Request
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="max-w-4xl mx-auto space-y-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">badge</span>
+                                            Request Basics
+                                        </h3>
+                                        <span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 1 of 3</span>
+                                    </div>
+                                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider">User ID</label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span class="material-symbols-outlined text-text-muted text-[18px]">person</span>
+                                                </span>
+                                                <input class="bg-surface-darker border border-border-color text-sm text-white rounded w-full pl-10 pr-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary opacity-60 cursor-not-allowed" disabled type="text" value="alex.morgan" />
+                                            </div>
+                                            <p class="text-[10px] text-text-muted">Automatically populated from session</p>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Organization ID <span class="text-danger">*</span></label>
+                                            <div class="relative">
+                                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span class="material-symbols-outlined text-text-muted text-[18px]">domain</span>
+                                                </span>
+                                                <input class="bg-surface-darker border border-border-color text-sm text-white rounded w-full pl-10 pr-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600" placeholder="e.g. ORG-8821-X" type="text" />
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5 md:col-span-2">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Request Type <span class="text-danger">*</span></label>
+                                            <select class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary appearance-none">
+                                                <option disabled selected value="">Select request purpose...</option>
+                                                <option value="audit">Compliance Audit</option>
+                                                <option value="analytics">Fleet Performance Analytics</option>
+                                                <option value="migration">System Migration</option>
+                                                <option value="legal">Legal Hold / Discovery</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                                            Export Configuration
+                                        </h3>
+                                        <span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 2 of 3</span>
+                                    </div>
+                                    <div class="p-6 space-y-6">
+                                        <div class="space-y-3">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Data Scope <span class="text-danger">*</span></label>
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">directions_car</span>
+                                                        <input defaultChecked class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio" />
+                                                    </div>
+                                                    <span class="text-sm font-medium text-white">Vehicle Telemetry</span>
+                                                    <span class="text-xs text-text-muted mt-1">GPS, speed, and sensor data</span>
+                                                </label>
+                                                <label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">person_pin</span>
+                                                        <input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio" />
+                                                    </div>
+                                                    <span class="text-sm font-medium text-white">Driver Profiles</span>
+                                                    <span class="text-xs text-text-muted mt-1">PII, licenses, and history</span>
+                                                </label>
+                                                <label class="relative flex flex-col p-4 bg-surface-darker border border-border-color rounded-lg cursor-pointer hover:border-primary/50 transition-colors group">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors">cleaning</span>
+                                                        <input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="scope" type="radio" />
+                                                    </div>
+                                                    <span class="text-sm font-medium text-white">Maintenance Logs</span>
+                                                    <span class="text-xs text-text-muted mt-1">Repairs, costs, and service</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Export Format</label>
+                                                <div class="flex items-center gap-4 bg-surface-darker border border-border-color rounded p-2">
+                                                    <label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+                                                        <input defaultChecked class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio" />
+                                                        <span class="text-sm text-white">CSV</span>
+                                                    </label>
+                                                    <label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+                                                        <input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio" />
+                                                        <span class="text-sm text-white">JSON</span>
+                                                    </label>
+                                                    <label class="flex items-center gap-2 cursor-pointer px-3 py-1.5 rounded hover:bg-surface-dark transition-colors">
+                                                        <input class="text-primary focus:ring-0 bg-background-dark border-border-color" name="format" type="radio" />
+                                                        <span class="text-sm text-white">PDF Report</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Delivery Method</label>
+                                                <select class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary">
+                                                    <option value="direct">Direct Download</option>
+                                                    <option value="s3">Secure S3 Bucket</option>
+                                                    <option value="email">Email Link (Expires 24h)</option>
+                                                    <option value="sftp">Corporate SFTP</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="p-4 border-b border-border-color bg-surface-darker flex justify-between items-center">
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">description</span>
+                                            Additional Details
+                                        </h3>
+                                        <span class="text-[10px] text-text-muted uppercase tracking-wider font-medium">Step 3 of 3</span>
+                                    </div>
+                                    <div class="p-6">
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider">Comments / Justification</label>
+                                            <textarea class="bg-surface-darker border border-border-color text-sm text-white rounded w-full px-3 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 resize-none" placeholder="Please provide specific details about the required data subset or time range needed..." rows="4"></textarea>
+                                            <div class="flex justify-between items-center mt-2">
+                                                <p class="text-[10px] text-text-muted">Maximum 500 characters. Sensitive data will be masked automatically.</p>
+                                                <span class="text-[10px] text-text-muted">0 / 500</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-6 flex items-start gap-3 p-3 bg-primary/10 border border-primary/20 rounded">
+                                            <span class="material-symbols-outlined text-primary mt-0.5">info</span>
+                                            <div>
+                                                <h4 class="text-sm font-semibold text-white">Data Privacy Notice</h4>
+                                                <p class="text-xs text-text-muted mt-1">By submitting this request, you acknowledge that the exported data may contain confidential information. You agree to handle this data in accordance with the Enterprise Data Governance Policy v4.2.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Governance Module V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>Connection: <span class="text-success">Secure TLS 1.3</span></span>
+                                <span>API Status: <span class="text-success">Online</span></span>
+                                <span>Server Time: <span class="font-mono text-white">15:42 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const RequestDetail = () => {
+             const navigate = useNavigate();
+
+             return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-wider font-semibold mb-1">
+                                    <a class="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')}>Data Requests</a>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white">REQ-2023-8492</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold flex items-center gap-3">
+                                    Export Request: REQ-2023-8492
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/30">
+                                        Pending Approval
+                                    </span>
+                                </h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button class="px-3 py-1.5 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">print</span>
+                                    Print Details
+                                </button>
+                                <button class="px-3 py-1.5 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">help</span>
+                                    Support
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-white">dataset</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Request Type</div>
+                                    <div class="text-lg font-bold text-white truncate">Vehicle Telemetry Bulk</div>
+                                    <div class="text-[10px] text-text-muted flex items-center gap-1 mt-1">
+                                        <span class="material-symbols-outlined text-[12px]">database</span>
+                                        Schema V2.4
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-warning">rule</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Approval Status</div>
+                                    <div class="text-lg font-bold text-warning">Pending Review</div>
+                                    <div class="text-[10px] text-text-muted mt-1">Awaiting Data Steward</div>
+                                    <div class="w-full bg-border-color h-1 rounded-full mt-2 overflow-hidden">
+                                        <div class="bg-warning h-full" style={{ width: "50%" }}></div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-primary">description</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Export Format</div>
+                                    <div class="text-lg font-bold text-white">Apache Parquet</div>
+                                    <div class="text-[10px] text-success mt-1">Compression: Snappy</div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-danger">event_busy</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Expiry Date</div>
+                                    <div class="text-lg font-bold text-white">Oct 31, 2023</div>
+                                    <div class="text-[10px] text-danger mt-1">48 hours after approval</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-6">
+                                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-xl">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-primary text-[18px]">tune</span>
+                                                Scope Details
+                                            </h3>
+                                            <span class="text-xs text-text-muted">ID: 8492-AX-99</span>
+                                        </div>
+                                        <div class="p-6">
+                                            <div class="grid grid-cols-2 gap-x-8 gap-y-6">
+                                                <div>
+                                                    <h4 class="text-xs font-semibold text-text-muted uppercase mb-2">Data Source</h4>
+                                                    <div class="flex items-center gap-3 p-3 bg-surface-darker rounded border border-border-color">
+                                                        <div class="w-8 h-8 rounded bg-blue-900/30 flex items-center justify-center text-blue-400">
+                                                            <span class="material-symbols-outlined">directions_car</span>
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-sm text-white font-medium">Fleet Operations DB</div>
+                                                            <div class="text-[10px] text-text-muted">Production / Read-Replica</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-xs font-semibold text-text-muted uppercase mb-2">Requestor</h4>
+                                                    <div class="flex items-center gap-3 p-3 bg-surface-darker rounded border border-border-color">
+                                                        <div class="w-8 h-8 rounded-full bg-surface-dark border border-border-color flex items-center justify-center text-xs font-bold text-white">JD</div>
+                                                        <div>
+                                                            <div class="text-sm text-white font-medium">John Doe</div>
+                                                            <div class="text-[10px] text-text-muted">Analytics Team Lead</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <h4 class="text-xs font-semibold text-text-muted uppercase mb-2">Query Parameters</h4>
+                                                    <div class="bg-background-dark border border-border-color rounded p-3 font-mono text-xs text-gray-300 overflow-x-auto">
+                                                        <div class="flex flex-col gap-1">
+                                                            <span class="text-purple-400">SELECT</span> * <span class="text-purple-400">FROM</span> vehicle_telemetry
+                                                            <div class="pl-4">
+                                                                <span class="text-purple-400">WHERE</span> region <span class="text-purple-400">IN</span> ('NA-East', 'NA-West')<br/>
+                                                                <span class="text-purple-400">AND</span> timestamp <span class="text-purple-400">BETWEEN</span> '2023-01-01' <span class="text-purple-400">AND</span> '2023-09-30'<br/>
+                                                                <span class="text-purple-400">AND</span> vehicle_status = 'active'
+                                                            </div>
+                                                            <span class="text-purple-400">LIMIT</span> 50000;
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-xs font-semibold text-text-muted uppercase mb-2">Columns Included</h4>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">vehicle_id</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">timestamp</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">gps_lat</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">gps_long</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">speed_mph</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">fuel_level</span>
+                                                        <span class="px-2 py-1 rounded bg-surface-darker border border-border-color text-[11px] text-text-muted">engine_temp</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h4 class="text-xs font-semibold text-text-muted uppercase mb-2">Estimated Size</h4>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-lg font-bold text-white">~450 MB</span>
+                                                        <span class="text-xs text-text-muted">(Compressed)</span>
+                                                    </div>
+                                                    <div class="w-full bg-border-color h-1.5 rounded-full mt-2 overflow-hidden">
+                                                        <div class="bg-blue-500 h-full" style={{ width: "15%" }}></div>
+                                                    </div>
+                                                    <div class="text-[10px] text-text-muted mt-1">15% of daily quota used</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-surface-dark rounded-xl border border-border-color p-5 shadow-lg shadow-black/20">
+                                        <h3 class="text-white text-sm font-semibold mb-4">Approval Decision</h3>
+                                        <div class="flex flex-col gap-4">
+                                            <textarea class="w-full bg-background-dark border border-border-color rounded p-3 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none resize-none" placeholder="Add a comment or justification for your decision (optional)..." rows="3"></textarea>
+                                            <div class="flex items-center justify-end gap-3">
+                                                <button class="px-4 py-2 border border-danger/30 hover:bg-danger/10 text-danger text-sm font-semibold rounded flex items-center gap-2 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                                    Reject
+                                                </button>
+                                                <button onClick={() => navigate('/')} class="px-4 py-2 bg-success hover:bg-emerald-600 text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-emerald-500/20">
+                                                    <span class="material-symbols-outlined text-[18px]">check</span>
+                                                    Approve Request
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full min-h-[500px]">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker rounded-t-xl">
+                                            <h3 class="text-white text-sm font-semibold">Request Timeline</h3>
+                                        </div>
+                                        <div class="p-6 overflow-y-auto custom-scrollbar">
+                                            <div class="relative space-y-6">
+                                                <div class="relative pl-10 timeline-item">
+                                                    <div class="timeline-connector"></div>
+                                                    <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-darker border-2 border-warning text-warning flex items-center justify-center z-10 shadow-lg shadow-surface-dark">
+                                                        <span class="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                                    </div>
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-semibold text-warning uppercase tracking-wide">Pending Approval</span>
+                                                        <span class="text-[10px] text-text-muted mt-0.5">Oct 24, 2023 at 14:35 UTC</span>
+                                                        <p class="text-xs text-white mt-1 bg-surface-darker p-2 rounded border border-border-color">
+                                                            Request requires Data Steward approval due to sensitive PII columns included in scope.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div class="relative pl-10 timeline-item">
+                                                    <div class="timeline-connector"></div>
+                                                    <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-darker border-2 border-primary text-primary flex items-center justify-center z-10">
+                                                        <span class="material-symbols-outlined text-[16px]">security</span>
+                                                    </div>
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-semibold text-primary uppercase tracking-wide">Automated Security Check</span>
+                                                        <span class="text-[10px] text-text-muted mt-0.5">Oct 24, 2023 at 14:32 UTC</span>
+                                                        <div class="mt-1 space-y-1">
+                                                            <div class="flex items-center gap-2 text-[11px] text-success">
+                                                                <span class="material-symbols-outlined text-[12px]">check_circle</span> DLP Scan Passed
+                                                            </div>
+                                                            <div class="flex items-center gap-2 text-[11px] text-success">
+                                                                <span class="material-symbols-outlined text-[12px]">check_circle</span> User Permissions Valid
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="relative pl-10 timeline-item">
+                                                    <div class="timeline-connector"></div>
+                                                    <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-surface-darker border-2 border-text-muted text-text-muted flex items-center justify-center z-10">
+                                                        <span class="material-symbols-outlined text-[16px]">add_task</span>
+                                                    </div>
+                                                    <div class="flex flex-col">
+                                                        <span class="text-xs font-semibold text-text-muted uppercase tracking-wide">Request Created</span>
+                                                        <span class="text-[10px] text-text-muted mt-0.5">Oct 24, 2023 at 14:30 UTC</span>
+                                                        <p class="text-xs text-text-muted mt-1">
+                                                            User <strong>John Doe</strong> initiated bulk export request via API.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-4 border-t border-border-color bg-surface-darker/50 mt-auto">
+                                            <div class="flex items-start gap-3">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px] mt-0.5">info</span>
+                                                <p class="text-[11px] text-text-muted leading-relaxed">
+                                                    Audit trails are immutable and retained for 7 years according to compliance policy <a class="text-primary hover:underline" href="#">POL-AUDIT-01</a>.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Data Governance V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>Classification: <span class="text-warning">Internal Restricted</span></span>
+                                <span>System Status: <span class="text-success">Operational</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+             );
+        };
+
+        const EditRequest = () => {
+             const navigate = useNavigate();
+
+             return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div class="flex flex-col">
+                                    <nav aria-label="Breadcrumb" class="flex text-[11px] text-text-muted mb-0.5">
+                                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                                            <li class="inline-flex items-center">
+                                                <a class="inline-flex items-center hover:text-white cursor-pointer" onClick={() => navigate('/')}>
+                                                    Data Governance
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-center">
+                                                    <span class="material-symbols-outlined text-[12px] mx-1">chevron_right</span>
+                                                    <a class="hover:text-white cursor-pointer" onClick={() => navigate('/')}>Requests</a>
+                                                </div>
+                                            </li>
+                                            <li aria-current="page">
+                                                <div class="flex items-center">
+                                                    <span class="material-symbols-outlined text-[12px] mx-1">chevron_right</span>
+                                                    <span class="text-white">Edit Request #REQ-2023-894</span>
+                                                </div>
+                                            </li>
+                                        </ol>
+                                    </nav>
+                                    <h2 class="text-white text-lg font-bold">Edit Data Export Request</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20 flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                                    Status: Pending
+                                </span>
+                                <button onClick={() => navigate('/')} class="px-4 py-2 bg-surface-dark border border-border-color hover:bg-border-color text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Update Request
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="max-w-5xl mx-auto space-y-6">
+                                <div class="bg-primary/10 border-l-4 border-primary p-4 rounded-r flex items-start gap-3">
+                                    <span class="material-symbols-outlined text-primary mt-0.5">info</span>
+                                    <div>
+                                        <h3 class="text-sm font-medium text-white">Edit Mode Active</h3>
+                                        <p class="text-xs text-text-muted mt-1">This request is currently pending approval. You can modify the parameters below. Once approved, the request becomes immutable.</p>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                    <div class="p-5 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                        <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-text-muted text-[18px]">edit_note</span>
+                                            Request Details
+                                        </h3>
+                                        <span class="text-xs text-text-muted">ID: 8a7f9c2d-4b5e...</span>
+                                    </div>
+                                    <div class="p-6 grid grid-cols-12 gap-6">
+                                        <div class="col-span-12 lg:col-span-8 space-y-6">
+                                            <div>
+                                                <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Request Title</label>
+                                                <input class="w-full bg-background-dark border border-border-color rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" type="text" defaultValue="Q3 2023 Vehicle Telemetry Analysis" />
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Purpose of Export</label>
+                                                <textarea class="w-full bg-background-dark border border-border-color rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 custom-scrollbar" rows="4" defaultValue="Analyzing fuel efficiency trends across the heavy-duty fleet sector for the quarterly sustainability report. Need granular data on engine idling times and fuel consumption."></textarea>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-6">
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Data Domain</label>
+                                                    <select class="w-full bg-background-dark border border-border-color rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                        <option selected value="telemetry">Vehicle Telemetry</option>
+                                                        <option value="driver">Driver Behavior</option>
+                                                        <option value="maintenance">Maintenance Logs</option>
+                                                        <option value="finance">Financials</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Sensitivity Level</label>
+                                                    <select class="w-full bg-background-dark border border-border-color rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                        <option value="public">Public</option>
+                                                        <option selected value="internal">Internal Only</option>
+                                                        <option value="confidential">Confidential</option>
+                                                        <option value="restricted">Restricted</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="pt-4 border-t border-border-color">
+                                                <h4 class="text-sm font-medium text-white mb-4">Export Configuration</h4>
+                                                <div class="grid grid-cols-2 gap-6 mb-4">
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Format</label>
+                                                        <div class="flex gap-3">
+                                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                                <input defaultChecked class="w-4 h-4 text-primary bg-background-dark border-border-color focus:ring-primary focus:ring-offset-background-dark" name="format" type="radio" />
+                                                                <span class="text-sm text-text-muted group-hover:text-white transition-colors">CSV</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                                <input class="w-4 h-4 text-primary bg-background-dark border-border-color focus:ring-primary focus:ring-offset-background-dark" name="format" type="radio" />
+                                                                <span class="text-sm text-text-muted group-hover:text-white transition-colors">JSON</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2 cursor-pointer group">
+                                                                <input class="w-4 h-4 text-primary bg-background-dark border-border-color focus:ring-primary focus:ring-offset-background-dark" name="format" type="radio" />
+                                                                <span class="text-sm text-text-muted group-hover:text-white transition-colors">Parquet</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Compression</label>
+                                                        <select class="w-full bg-background-dark border border-border-color rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+                                                            <option value="none">None</option>
+                                                            <option selected value="gzip">GZIP</option>
+                                                            <option value="zip">ZIP</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5 uppercase tracking-wide">Fields to Include</label>
+                                                    <div class="bg-background-dark border border-border-color rounded-lg p-3 max-h-40 overflow-y-auto custom-scrollbar">
+                                                        <div class="space-y-2">
+                                                            <label class="flex items-center gap-2">
+                                                                <input defaultChecked class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-white">vehicle_id</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input defaultChecked class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-white">timestamp_utc</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input defaultChecked class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-white">gps_latitude</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input defaultChecked class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-white">gps_longitude</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input defaultChecked class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-white">fuel_level_percent</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-text-muted">engine_rpm</span>
+                                                            </label>
+                                                            <label class="flex items-center gap-2">
+                                                                <input class="rounded bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark" type="checkbox" />
+                                                                <span class="text-sm text-text-muted">odometer_km</span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-span-12 lg:col-span-4 space-y-6">
+                                            <div class="bg-surface-darker rounded-lg border border-border-color p-4">
+                                                <h4 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-4 border-b border-border-color pb-2">System Metadata</h4>
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <span class="text-xs text-text-muted block mb-1">Created By</span>
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">JD</div>
+                                                            <span class="text-sm text-white">John Doe</span>
+                                                        </div>
+                                                        <span class="text-[10px] text-text-muted ml-8">john.doe@fleet.com</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-text-muted block mb-1">Request Date</span>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-sm">calendar_today</span>
+                                                            <span class="text-sm text-white">Oct 24, 2023</span>
+                                                        </div>
+                                                        <span class="text-[10px] text-text-muted ml-6">10:42 AM UTC</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-text-muted block mb-1">Last Modified</span>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-sm">history</span>
+                                                            <span class="text-sm text-white">Oct 25, 2023</span>
+                                                        </div>
+                                                        <span class="text-[10px] text-text-muted ml-6">09:15 AM UTC by System</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="text-xs text-text-muted block mb-1">Region</span>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-sm">public</span>
+                                                            <span class="text-sm text-white">EU (Frankfurt)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="bg-surface-darker rounded-lg border border-border-color p-4">
+                                                <h4 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-4 border-b border-border-color pb-2">Approval Chain</h4>
+                                                <div class="relative pl-2 space-y-6 before:absolute before:left-[11px] before:top-2 before:h-[calc(100%-20px)] before:w-px before:bg-border-color">
+                                                    <div class="relative pl-6">
+                                                        <div class="absolute left-0 top-1 w-2.5 h-2.5 rounded-full bg-success border-2 border-surface-darker"></div>
+                                                        <span class="block text-xs font-bold text-white">Team Lead</span>
+                                                        <span class="text-[10px] text-success">Approved • Oct 24, 14:00</span>
+                                                        <div class="mt-1 text-xs text-text-muted">Sarah Connor</div>
+                                                    </div>
+                                                    <div class="relative pl-6">
+                                                        <div class="absolute left-0 top-1 w-2.5 h-2.5 rounded-full bg-warning border-2 border-surface-darker animate-pulse"></div>
+                                                        <span class="block text-xs font-bold text-white">Data Governance</span>
+                                                        <span class="text-[10px] text-warning">Pending Review</span>
+                                                        <div class="mt-1 text-xs text-text-muted">Unassigned</div>
+                                                    </div>
+                                                    <div class="relative pl-6 opacity-50">
+                                                        <div class="absolute left-0 top-1 w-2.5 h-2.5 rounded-full bg-border-color border-2 border-surface-darker"></div>
+                                                        <span class="block text-xs font-bold text-white">Security Officer</span>
+                                                        <span class="text-[10px] text-text-muted">Queue</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Data Governance Module V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>API Status: <span class="text-success">Connected</span></span>
+                                <span>System Status: <span class="text-success">Operational</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+             );
+        };
+
+        const SettingsView = () => {
+            const navigate = useNavigate();
+
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col justify-center">
+                                <div class="flex items-center text-xs text-text-muted mb-1 space-x-2">
+                                    <span>Governance</span>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white font-medium">Settings</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold flex items-center gap-2">
+                                    Data Governance Configuration
+                                </h2>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color">
+                                    <span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                                    <span class="text-xs text-text-muted font-medium">System Status: Active</span>
+                                </div>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-text-muted text-xs font-semibold uppercase">Active Policies</span>
+                                            <span class="material-symbols-outlined text-primary text-xl">policy</span>
+                                        </div>
+                                        <div class="text-2xl font-bold text-white">24</div>
+                                        <div class="text-[10px] text-text-muted mt-1">Global enforcement enabled</div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-text-muted text-xs font-semibold uppercase">Data Requests (24h)</span>
+                                            <span class="material-symbols-outlined text-success text-xl">download</span>
+                                        </div>
+                                        <div class="text-2xl font-bold text-white">1,842</div>
+                                        <div class="text-[10px] text-success flex items-center gap-1 mt-1">
+                                            <span class="material-symbols-outlined text-[12px]">trending_up</span> +12% vs avg
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-text-muted text-xs font-semibold uppercase">Pending Reviews</span>
+                                            <span class="material-symbols-outlined text-warning text-xl">pending_actions</span>
+                                        </div>
+                                        <div class="text-2xl font-bold text-white">12</div>
+                                        <div class="text-[10px] text-warning mt-1">Requires attention</div>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-text-muted text-xs font-semibold uppercase">Storage Used</span>
+                                            <span class="material-symbols-outlined text-text-muted text-xl">database</span>
+                                        </div>
+                                        <div class="text-2xl font-bold text-white">4.2 TB</div>
+                                        <div class="text-[10px] text-text-muted mt-1">82% of allocated quota</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-6">
+                                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <section class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="px-5 py-4 border-b border-border-color bg-surface-darker">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-primary">history</span>
+                                                Default Data Retention Policies
+                                            </h3>
+                                            <p class="text-text-muted text-xs mt-1">Define how long different data types are stored before being automatically archived or deleted.</p>
+                                        </div>
+                                        <div class="p-5 space-y-5">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div class="bg-surface-darker p-3 rounded border border-border-color">
+                                                    <label class="block text-xs font-medium text-text-muted mb-2">Telemetry Data</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="90" />
+                                                        <select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                                            <option>Days</option>
+                                                            <option>Months</option>
+                                                            <option>Years</option>
+                                                        </select>
+                                                    </div>
+                                                    <p class="text-[10px] text-text-muted mt-2">Includes GPS points, speed logs, and engine status.</p>
+                                                </div>
+                                                <div class="bg-surface-darker p-3 rounded border border-border-color">
+                                                    <label class="block text-xs font-medium text-text-muted mb-2">User Activity Logs</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="12" />
+                                                        <select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                                            <option>Months</option>
+                                                            <option>Days</option>
+                                                            <option>Years</option>
+                                                        </select>
+                                                    </div>
+                                                    <p class="text-[10px] text-text-muted mt-2">Login history, modification trails, and access logs.</p>
+                                                </div>
+                                                <div class="bg-surface-darker p-3 rounded border border-border-color">
+                                                    <label class="block text-xs font-medium text-text-muted mb-2">Driver Sensitive PII</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="3" />
+                                                        <select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                                            <option>Years</option>
+                                                            <option>Months</option>
+                                                        </select>
+                                                    </div>
+                                                    <p class="text-[10px] text-text-muted mt-2">License details, medical certs, and contact info.</p>
+                                                </div>
+                                                <div class="bg-surface-darker p-3 rounded border border-border-color">
+                                                    <label class="block text-xs font-medium text-text-muted mb-2">Incident Reports</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input class="bg-background-dark border border-border-color text-white text-sm rounded px-3 py-2 w-full focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="number" defaultValue="7" />
+                                                        <select class="bg-background-dark border border-border-color text-white text-sm rounded px-2 py-2 focus:ring-1 focus:ring-primary outline-none">
+                                                            <option>Years</option>
+                                                            <option>Months</option>
+                                                        </select>
+                                                    </div>
+                                                    <p class="text-[10px] text-text-muted mt-2">Accident logs and insurance claims data.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                    <section class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="px-5 py-4 border-b border-border-color bg-surface-darker">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-primary">visibility_off</span>
+                                                PII Masking Configuration
+                                            </h3>
+                                            <p class="text-text-muted text-xs mt-1">Configure default masking rules for Personally Identifiable Information in exports and dashboard views.</p>
+                                        </div>
+                                        <div class="p-0">
+                                            <div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Email Addresses</div>
+                                                    <div class="text-[11px] text-text-muted">Mask characters before the @ symbol (e.g., j***@fleet.com)</div>
+                                                </div>
+                                                <div class="flex items-center gap-4">
+                                                    <select class="bg-surface-darker text-xs text-white border border-border-color rounded px-2 py-1.5 outline-none focus:border-primary">
+                                                        <option>Partial Mask</option>
+                                                        <option>Full Mask</option>
+                                                        <option>No Mask</option>
+                                                    </select>
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input defaultChecked class="sr-only peer" type="checkbox" />
+                                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="border-b border-border-color last:border-0 p-4 flex items-center justify-between hover:bg-surface-darker/30 transition-colors">
+                                                <div>
+                                                    <div class="text-sm font-medium text-white">Phone Numbers</div>
+                                                    <div class="text-[11px] text-text-muted">Hide all but last 4 digits</div>
+                                                </div>
+                                                <div class="flex items-center gap-4">
+                                                    <select class="bg-surface-darker text-xs text-white border border-border-color rounded px-2 py-1.5 outline-none focus:border-primary">
+                                                        <option>Last 4 Visible</option>
+                                                        <option>Full Mask</option>
+                                                    </select>
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input defaultChecked class="sr-only peer" type="checkbox" />
+                                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {/* ... more rows ... */}
+                                        </div>
+                                    </section>
+                                </div>
+                                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-warning">auto_delete</span>
+                                                Automated Expiry Rules
+                                            </h3>
+                                        </div>
+                                        <div class="p-4 flex flex-col gap-4">
+                                            <div class="flex items-start gap-3">
+                                                <div class="flex h-5 items-center">
+                                                    <input class="h-4 w-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" id="inactive_users" type="checkbox" />
+                                                </div>
+                                                <div class="text-sm">
+                                                    <label class="font-medium text-white" htmlFor="inactive_users">Inactive User Accounts</label>
+                                                    <p class="text-text-muted text-xs mt-0.5">Automatically suspend accounts inactive for &gt; 180 days.</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start gap-3">
+                                                <div class="flex h-5 items-center">
+                                                    <input defaultChecked class="h-4 w-4 rounded border-border-color bg-surface-darker text-primary focus:ring-primary" id="temp_files" type="checkbox" />
+                                                </div>
+                                                <div class="text-sm">
+                                                    <label class="font-medium text-white" htmlFor="temp_files">Temporary Export Files</label>
+                                                    <p class="text-text-muted text-xs mt-0.5">Delete generated CSV/PDF exports from server storage after 24 hours.</p>
+                                                </div>
+                                            </div>
+                                            {/* ... */}
+                                        </div>
+                                    </div>
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-primary">timer</span>
+                                                Download Link TTL
+                                            </h3>
+                                        </div>
+                                        <div class="p-5 flex flex-col items-center justify-center gap-4">
+                                            <div class="relative w-32 h-32 flex items-center justify-center">
+                                                <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                                    <path class="text-surface-darker" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
+                                                    <path class="text-primary drop-shadow-[0_0_10px_rgba(19,127,236,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="75, 100" strokeWidth="3"></path>
+                                                </svg>
+                                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                                    <span class="text-3xl font-bold text-white">48</span>
+                                                    <span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Hours</span>
+                                                </div>
+                                            </div>
+                                            <div class="w-full">
+                                                <input class="w-full h-2 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="168" min="1" type="range" defaultValue="48" />
+                                                <div class="flex justify-between text-[10px] text-text-muted mt-2">
+                                                    <span>1h</span>
+                                                    <span>24h</span>
+                                                    <span>7d</span>
+                                                </div>
+                                            </div>
+                                            <p class="text-center text-xs text-text-muted">
+                                                Secure links for data exports will expire automatically after this duration.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {/* ... */}
+                                </div>
+                            </div>
+                            <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden mt-6">
+                                <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-text-muted text-[18px]">manage_history</span>
+                                        Configuration Audit Log
+                                    </h3>
+                                    <div class="flex items-center gap-2">
+                                        <button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                            <span class="material-symbols-outlined text-[18px]">download</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+                                                <th class="px-4 py-3 font-semibold">Timestamp</th>
+                                                <th class="px-4 py-3 font-semibold">Admin User</th>
+                                                <th class="px-4 py-3 font-semibold">Action</th>
+                                                <th class="px-4 py-3 font-semibold">Module</th>
+                                                <th class="px-4 py-3 font-semibold text-right">Change Detail</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="text-sm">
+                                            <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                <td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 26, 09:15:22</td>
+                                                <td class="px-4 py-3 font-medium text-white">alex.morgan@fleet.com</td>
+                                                <td class="px-4 py-3 text-white">Update Retention</td>
+                                                <td class="px-4 py-3 text-text-muted">Telemetry Data</td>
+                                                <td class="px-4 py-3 text-right text-xs font-mono text-text-muted">
+                                                    <span class="text-danger">60d</span> → <span class="text-success">90d</span>
+                                                </td>
+                                            </tr>
+                                            {/* ... */}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+                            <span>© 2023 Enterprise Fleet Manager. Data Governance Module V2.1</span>
+                            <div class="flex items-center gap-4">
+                                <span>Encryption: <span class="text-success">AES-256</span></span>
+                                <span>Storage Region: <span class="text-white">US-East-1</span></span>
+                                <span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<RequestList />} />
+                        <Route path="/new" element={<NewRequest />} />
+                        <Route path="/detail" element={<RequestDetail />} />
+                        <Route path="/edit" element={<EditRequest />} />
+                        <Route path="/settings" element={<SettingsView />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

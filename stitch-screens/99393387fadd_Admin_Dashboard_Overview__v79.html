@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Active Session Management Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .chart-grid line {
+            stroke: #233648;
+            stroke-dasharray: 4;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetSecurity</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Security Suite</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">devices</span>
+<span class="text-sm font-medium">Sessions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">vpn_key</span>
+<span class="text-sm font-medium">Access Control</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Monitoring</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">troubleshoot</span>
+<span class="text-sm font-medium">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Threat Alerts</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Users</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Directory</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Super Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 mb-0.5">
+<span class="text-[10px] font-semibold uppercase text-text-muted tracking-wider">Security Suite</span>
+<span class="text-[10px] text-text-muted">/</span>
+<span class="text-[10px] font-semibold uppercase text-primary tracking-wider">Sessions</span>
+</div>
+<h2 class="text-white text-lg font-bold">Active Session Management Hub</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
+</span>
+<span class="text-xs font-mono text-success">Live Monitoring</span>
+</div>
+<div class="w-px h-6 bg-border-color mx-2"></div>
+<button class="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 hover:border-danger/40 text-xs font-semibold rounded flex items-center gap-2 transition-all shadow-lg shadow-danger/5">
+<span class="material-symbols-outlined text-[16px]">block</span>
+                    Revoke All Sessions
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Active Sessions</div>
+<div class="text-3xl font-bold text-white">2,845</div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]">trending_up</span>
+                                +12% vs last hour
+                            </div>
+</div>
+<div class="p-3 bg-surface-darker rounded-lg border border-border-color text-primary">
+<span class="material-symbols-outlined text-2xl">devices_other</span>
+</div>
+</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-4 overflow-hidden">
+<div class="bg-primary h-full" style="width: 78%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group hover:border-danger/50 transition-colors">
+<div class="flex justify-between items-start">
+<div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">High-Risk Sessions</div>
+<div class="text-3xl font-bold text-danger">12</div>
+<div class="text-[10px] text-danger flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]">warning</span>
+                                Requires immediate review
+                            </div>
+</div>
+<div class="p-3 bg-surface-darker rounded-lg border border-border-color text-danger">
+<span class="material-symbols-outlined text-2xl">gpp_bad</span>
+</div>
+</div>
+<div class="w-full bg-border-color h-1 rounded-full mt-4 overflow-hidden">
+<div class="bg-danger h-full" style="width: 15%"></div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5 relative overflow-hidden group hover:border-border-color transition-colors">
+<div class="flex justify-between items-start mb-2">
+<div class="text-text-muted text-xs font-medium uppercase">Mobile vs Desktop</div>
+<div class="text-[10px] text-text-muted">Total Distribution</div>
+</div>
+<div class="flex items-end gap-2 mb-2">
+<span class="text-3xl font-bold text-white">65%</span>
+<span class="text-sm text-text-muted mb-1">Desktop</span>
+</div>
+<div class="flex h-3 w-full rounded-full overflow-hidden bg-surface-darker border border-border-color">
+<div class="bg-primary h-full" style="width: 65%"></div>
+<div class="bg-purple-500 h-full" style="width: 35%"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] font-medium">
+<div class="flex items-center gap-1.5 text-white">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+                            Desktop (1,849)
+                        </div>
+<div class="flex items-center gap-1.5 text-white">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                            Mobile (996)
+                        </div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-280px)]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">table_rows</span>
+                        Current Active Sessions
+                    </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="absolute left-2.5 top-1.5 material-symbols-outlined text-[18px] text-text-muted">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search user, IP or location..." type="text"/>
+</div>
+<button class="px-3 py-1.5 bg-surface-dark hover:bg-border-color border border-border-color rounded text-text-muted hover:text-white text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+                            Filters
+                        </button>
+<button class="px-3 py-1.5 bg-surface-dark hover:bg-border-color border border-border-color rounded text-text-muted hover:text-white text-xs font-medium transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                            Export
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto custom-scrollbar flex-1">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10 bg-surface-darker">
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider">
+<th class="px-4 py-3 font-semibold w-12 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</th>
+<th class="px-4 py-3 font-semibold">User Identity</th>
+<th class="px-4 py-3 font-semibold">Device Info</th>
+<th class="px-4 py-3 font-semibold">IP Address</th>
+<th class="px-4 py-3 font-semibold">Location</th>
+<th class="px-4 py-3 font-semibold">Last Active</th>
+<th class="px-4 py-3 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm divide-y divide-border-color">
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-indigo-500/20">JD</div>
+<div>
+<div class="font-medium text-white">John Doe</div>
+<div class="text-[11px] text-text-muted">john.doe@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">laptop_mac</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">MacBook Pro 16"</span>
+<span class="text-[10px] text-text-muted">macOS 14.1 • Chrome 118</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">192.168.1.42</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="US" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvoJNPdTgSeLCxiA2k9WksQMuiMaBCHhvVJ0cMptiGpVj6n3MSnjKb1kIghHSXXKDdm9y4v4gPg0gJF_5IXGfm3nnabM64VBycz2m40RugUzTcGaJS7URNVtOFvfWceIaNHX7F8KWUnNO11u7YXQ8eG_kblKSKF2r-IyeknQG8MNPsGKoAZtUvhD2ZhAtgzz8vWgmcrC3Ij-_o4h1hJWDFd6uYhFYP0n5Zu_2qEvoqpmYhxm01KSPXrdVJi-yVZ2UhqUacOH9h9DA"/>
+                                    New York, US
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-success text-xs font-medium">Active now</span>
+<span class="text-[10px] text-text-muted">Started 2h 15m ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-danger hover:text-danger hover:bg-danger/5 text-text-muted text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-emerald-500/20">SC</div>
+<div>
+<div class="font-medium text-white">Sarah Connor</div>
+<div class="text-[11px] text-text-muted">sarah.c@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">smartphone</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">iPhone 14 Pro</span>
+<span class="text-[10px] text-text-muted">iOS 17.0 • Fleet App</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">10.0.0.55</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="UK" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlWmrhzzRM54cClWCiUWs2XDCr7_01WgBoT70JN51u_IpkCQ_DDDVGiVjjVFFz02FrXmuWRuhPy6uwsJnnWOP17gONOLs0WWY7hCvugRJOx1r8Gvlh8NA9AayGu5TjF-o-VDAo_UJg-RUl7Dsol2rU0zBAgd3TLCORr--xqm6DplitGXM1non2-GoZwf0X5gyqhD_LVtC9AgiIznYZxTqtss-XwEZdB53WGkjAzbGogHAtr2_B2I8p8tLmGB9HIREfvlc-YCKrrsY"/>
+                                    London, UK
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-white text-xs">2 mins ago</span>
+<span class="text-[10px] text-text-muted">Started 45m ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-danger hover:text-danger hover:bg-danger/5 text-text-muted text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+<tr class="bg-danger/5 border-l-2 border-l-danger hover:bg-danger/10 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-orange-500/20">MR</div>
+<div>
+<div class="font-medium text-white flex items-center gap-2">
+                                                Mark Ross
+                                                <span class="px-1.5 py-0.5 rounded bg-danger text-white text-[9px] font-bold uppercase">Risk</span>
+</div>
+<div class="text-[11px] text-text-muted">mark.r@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">desktop_windows</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">Windows Workstation</span>
+<span class="text-[10px] text-text-muted">Win 11 • Edge</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">85.21.14.9</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="RU" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD58vTQYU0xrU6Bq6jscQngj4pullMoO9ykISBSa2c215ukoL6XMGZVzJqJKJoUuGQJ6J7tXWCU9vi5rty9YwyMiQDR_ZgPvCr_Wo5lFA5euA5pe5GsUD-OVcAwV_rTG4D_CTZZd0B0zRC1jmGkSyZnQDB1xAAcEzmqckVPR7pZmfHEsZqMLwS9cOK8Z-SF7oo4zjKPpg7DTIHsfhDywbhRpHtkDbDl-ZSesdWS_7-KyHI85ziatObsuE15agOYt8BbcOuK6vzG8ds"/>
+                                    Moscow, RU
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-white text-xs">5 mins ago</span>
+<span class="text-[10px] text-text-muted">Started 12m ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-danger text-white hover:bg-red-600 shadow-md shadow-danger/20 text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-text-muted">GU</div>
+<div>
+<div class="font-medium text-white">Guest User</div>
+<div class="text-[11px] text-text-muted">guest.user@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">tablet_mac</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">iPad Air</span>
+<span class="text-[10px] text-text-muted">iPadOS 17 • Safari</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">45.23.11.9</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="FR" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZUC_yUYZO9WnfBeb_f-X3uu7Io9qO5ksIA66f2UJ6wGC_4n4zJT8_8jy8sang9rORc0kyCzaX6sIn2_5lSDYjmlYh4bQgNVfYmt7gasQZRqwgxfcXEb_Xi7_sdvr-R-bxIBXFHgU-L4wR7Uvhfiu9I-wjlb7F3szHz2GigsT5h4F9ibAWAZHUzjLshyaqZuhbz4T5V93Vpi_hgJl3N6YppMKRrTzR1RIPcmxUHNLQk0GA8OdIskfN1RYymeEXxuYiF0fGZkINTno"/>
+                                    Paris, FR
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-white text-xs">15 mins ago</span>
+<span class="text-[10px] text-text-muted">Started 3h ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-danger hover:text-danger hover:bg-danger/5 text-text-muted text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-blue-500/20">DK</div>
+<div>
+<div class="font-medium text-white">David Kim</div>
+<div class="text-[11px] text-text-muted">david.k@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">laptop_chromebook</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">Pixelbook Go</span>
+<span class="text-[10px] text-text-muted">ChromeOS • Chrome</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">14.12.98.3</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="KR" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsHUByLhctM1f2YU4l73jyj80-TLHZemyP0-IeUdWRWDKHK2qGfsXYszhL7W2sojWrQl-uoUbEEo6GYX5Lkd6JAGMWZkZFBOSWJg35MhvFl_MEPYSA0l0VOaDz7Z9ts-sP7iJvfd2WP5vOZX8o4gA5k3iOUWpXCbkKi8ntK4kHXNmopADR1_LTMI9gwB9kbZIf9ctb-Qb4Gx5s9mVImdIly2z1llFiDymqW3V16rPFoTpZOzjANjtB2ME-2Tgncs0Uruu2XLftCyA"/>
+                                    Seoul, KR
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-white text-xs">22 mins ago</span>
+<span class="text-[10px] text-text-muted">Started 5h ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-danger hover:text-danger hover:bg-danger/5 text-text-muted text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+<tr class="hover:bg-surface-darker/50 transition-colors group">
+<td class="px-4 py-3 text-center">
+<input class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3 h-3" type="checkbox"/>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-text-muted">TS</div>
+<div>
+<div class="font-medium text-white">Tom Smith</div>
+<div class="text-[11px] text-text-muted">tom.s@fleet.com</div>
+</div>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">smartphone</span>
+<div class="flex flex-col">
+<span class="text-white text-xs">Samsung S23</span>
+<span class="text-[10px] text-text-muted">Android 14 • Chrome</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 font-mono text-xs text-text-muted">203.0.113.5</td>
+<td class="px-4 py-3 text-text-muted flex items-center gap-1.5">
+<img alt="CA" class="w-4 rounded-sm opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBec7Jh3u16dwGG7egWWt_vP1Bz48oyI2AeGQgFWdyvpx9p8efqge4u3HFv46GIYTg8okZ-dz7bq2D6TQCP7vUtY-ioOroe_ipTJwiOQpiy_P7vH3wXdrv2EGJVUsAI3Yh9PVSoqXeKhjEsXRzKXQh8YP-J3U0f4Fw9Z7Cr3QXF1dyepuYPnJNCJaYE7d_qtX39x_l3g5ojsu9_0Qx4QLIe-MGgx0YxA3E7b0IlqHmS3uyRxCgQsCY6yYjOPG8HsFkiXA6zrQHRR8"/>
+                                    Toronto, CA
+                                </td>
+<td class="px-4 py-3">
+<div class="flex flex-col">
+<span class="text-white text-xs">1 hour ago</span>
+<span class="text-[10px] text-text-muted">Started 1h 5m ago</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="px-3 py-1.5 bg-surface-darker border border-border-color hover:border-danger hover:text-danger hover:bg-danger/5 text-text-muted text-xs font-medium rounded transition-all">
+                                        Force Logout
+                                    </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
+<div class="text-[11px] text-text-muted">
+                        Showing <span class="text-white font-medium">1-6</span> of <span class="text-white font-medium">2,845</span> active sessions
+                    </div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded hover:bg-surface-dark text-text-muted disabled:opacity-50">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<button class="p-1.5 rounded hover:bg-surface-dark text-text-muted">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Security Module V1.2</span>
+<div class="flex items-center gap-4">
+<span>Encryption: <span class="text-success">AES-256</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

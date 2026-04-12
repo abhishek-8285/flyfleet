@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bulk Job Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">garage_home</span>
+<span class="text-sm font-medium">Inventory</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Data Management</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">upload_file</span>
+<span class="text-sm font-medium">Bulk Uploads</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium">Job History</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2 text-[11px] text-text-muted">
+<span class="hover:text-white cursor-pointer">Bulk Uploads</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white font-medium">Job 84920-XE</span>
+</div>
+<h2 class="text-white text-lg font-bold flex items-center gap-2">
+                    Bulk Vehicle Import
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                        Completed
+                    </span>
+</h2>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-2 bg-surface-dark border border-border-color hover:bg-surface-darker text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                    Download Success Log
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+                    Reprocess Failed
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">list_alt</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Records</div>
+<div class="text-2xl font-bold text-white">2,540</div>
+<div class="text-[10px] text-text-muted mt-1">Processed from CSV</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Success Rate</div>
+<div class="text-2xl font-bold text-success">98.2%</div>
+<div class="text-[10px] text-text-muted mt-1">2,494 records created</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-danger">error</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Failed Records</div>
+<div class="text-2xl font-bold text-danger">46</div>
+<div class="text-[10px] text-danger mt-1">Validation errors</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-primary">timer</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Processing Time</div>
+<div class="text-2xl font-bold text-primary">4m 12s</div>
+<div class="text-[10px] text-text-muted mt-1">Avg 0.1s per record</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 h-[calc(100%-140px)] min-h-[500px]">
+<div class="col-span-12 lg:col-span-9 flex flex-col gap-6 h-full">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex justify-between items-end mb-2">
+<div>
+<h3 class="text-white text-sm font-semibold mb-1">Processing Progress</h3>
+<p class="text-xs text-text-muted">Job completed successfully. All batches processed.</p>
+</div>
+<span class="text-sm font-bold text-success">100%</span>
+</div>
+<div class="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+<div class="bg-success h-full relative" style="width: 100%">
+<div class="absolute top-0 left-0 bottom-0 right-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">table_chart</span>
+                                Processed Vehicles
+                            </h3>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="absolute left-2.5 top-1.5 material-symbols-outlined text-text-muted text-[16px]">search</span>
+<input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-8 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none" placeholder="Search by VIN or Reg No..." type="text"/>
+</div>
+<button class="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white" title="Filter">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 z-10">
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker">
+<th class="px-4 py-3 font-semibold">Vehicle No</th>
+<th class="px-4 py-3 font-semibold">Reg No</th>
+<th class="px-4 py-3 font-semibold">VIN</th>
+<th class="px-4 py-3 font-semibold">Make/Model</th>
+<th class="px-4 py-3 font-semibold">Year</th>
+<th class="px-4 py-3 font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10293</td>
+<td class="px-4 py-3 text-text-muted">AB-392-KL</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">1HGCM82633A004352</td>
+<td class="px-4 py-3 text-white">Toyota Camry</td>
+<td class="px-4 py-3 text-text-muted">2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10294</td>
+<td class="px-4 py-3 text-text-muted">XY-921-ZZ</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">JHMZX24323A005621</td>
+<td class="px-4 py-3 text-white">Honda Civic</td>
+<td class="px-4 py-3 text-text-muted">2022</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10295</td>
+<td class="px-4 py-3 text-text-muted">MN-555-OP</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">1G1155SH874102938</td>
+<td class="px-4 py-3 text-white">Ford Transit</td>
+<td class="px-4 py-3 text-text-muted">2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                                FAILED
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10296</td>
+<td class="px-4 py-3 text-text-muted">QR-123-ST</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">KNM53245435002134</td>
+<td class="px-4 py-3 text-white">Hyundai Ioniq 5</td>
+<td class="px-4 py-3 text-text-muted">2024</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10297</td>
+<td class="px-4 py-3 text-text-muted">BB-888-CC</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">WAUZZZ8K0AA054321</td>
+<td class="px-4 py-3 text-white">Audi A4</td>
+<td class="px-4 py-3 text-text-muted">2021</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10298</td>
+<td class="px-4 py-3 text-text-muted">DD-222-EE</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">WBA3A5C54EK293847</td>
+<td class="px-4 py-3 text-white">BMW 3 Series</td>
+<td class="px-4 py-3 text-text-muted">2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                                FAILED
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10299</td>
+<td class="px-4 py-3 text-text-muted">FF-111-GG</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">TRUZZZ8K0AA054321</td>
+<td class="px-4 py-3 text-white">Tesla Model 3</td>
+<td class="px-4 py-3 text-text-muted">2024</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-white font-medium">V-10300</td>
+<td class="px-4 py-3 text-text-muted">HH-333-II</td>
+<td class="px-4 py-3 text-text-muted font-mono text-xs">SALZZZ8K0AA054321</td>
+<td class="px-4 py-3 text-white">Land Rover Defender</td>
+<td class="px-4 py-3 text-text-muted">2023</td>
+<td class="px-4 py-3 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
+                                                SUCCESS
+                                            </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
+<span class="text-xs text-text-muted">Showing 1-8 of 2,494 records</span>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-border-color text-text-muted disabled:opacity-50">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="p-1 rounded hover:bg-border-color text-text-muted">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-3 flex flex-col gap-6 h-full">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full">
+<div class="p-4 border-b border-border-color">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">info</span>
+                                Job Metadata
+                            </h3>
+</div>
+<div class="p-5 flex flex-col gap-6">
+<div>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Job ID</span>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-white font-mono text-sm">84920-XE</span>
+<button class="text-primary hover:text-white" title="Copy ID">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
+</div>
+</div>
+<div>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Created By</span>
+<div class="flex items-center gap-3 mt-2">
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">AM</div>
+<div class="flex flex-col">
+<span class="text-sm text-white font-medium">Alex Morgan</span>
+<span class="text-[10px] text-text-muted">alex.morgan@fleet.com</span>
+</div>
+</div>
+</div>
+<div class="h-px bg-border-color"></div>
+<div class="space-y-4">
+<div>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Source File</span>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-text-muted text-[16px]">description</span>
+<span class="text-sm text-white truncate">vehicle_import_q4_2023.csv</span>
+</div>
+<div class="text-[10px] text-text-muted mt-0.5 ml-6">2.4 MB • CSV</div>
+</div>
+<div>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Started At</span>
+<div class="text-sm text-white mt-1">Oct 24, 2023 14:32:01 UTC</div>
+</div>
+<div>
+<span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Completed At</span>
+<div class="text-sm text-white mt-1">Oct 24, 2023 14:36:13 UTC</div>
+</div>
+</div>
+<div class="h-px bg-border-color"></div>
+<div class="p-3 rounded bg-surface-darker border border-border-color">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-warning text-[16px] mt-0.5">warning</span>
+<div class="flex flex-col gap-1">
+<span class="text-xs font-semibold text-warning">Processing Note</span>
+<span class="text-[10px] text-text-muted leading-relaxed">
+                                            46 records failed validation due to duplicate VINs or missing required fields. Please review the error log before reprocessing.
+                                        </span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 mt-auto">
+<span>© 2023 Enterprise Fleet Manager. Bulk Upload Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>API Status: <span class="text-success">Connected</span></span>
+<span>Latency: <span class="font-mono text-white">42ms</span></span>
+<span>Server Time: <span class="font-mono text-white">14:40 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

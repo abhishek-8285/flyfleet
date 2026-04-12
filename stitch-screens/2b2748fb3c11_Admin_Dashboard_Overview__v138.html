@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Organization Settings View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Main Module</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">domain</span>
+<span class="text-sm font-medium">Organizations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="text-sm font-medium">Fleet</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Configuration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Global Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="text-sm font-medium">Roles &amp; Permissions</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Support</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-sm font-medium">Help Center</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">System Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<button class="text-text-muted hover:text-white">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<nav class="flex text-[11px] text-text-muted mb-0.5">
+<span class="hover:text-white cursor-pointer">Organizations</span>
+<span class="mx-1.5">/</span>
+<span class="hover:text-white cursor-pointer font-medium text-primary">Acme Logistics Corp</span>
+<span class="mx-1.5">/</span>
+<span class="text-white">Settings</span>
+</nav>
+<h2 class="text-white text-lg font-bold">Organization Settings</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-xs text-text-muted bg-surface-dark px-3 py-1.5 rounded border border-border-color">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span>System Online</span>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-5 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<div>
+<h3 class="text-white font-semibold text-sm">General Configuration</h3>
+<p class="text-xs text-text-muted mt-1">Configure the core settings for this organization environment.</p>
+</div>
+<span class="material-symbols-outlined text-text-muted opacity-50">tune</span>
+</div>
+<div class="p-6 space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Organization Name</label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed" disabled="" type="text" value="Acme Logistics Corp"/>
+<span class="absolute right-3 top-2.5 material-symbols-outlined text-text-muted text-[16px]">lock</span>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Organization ID</label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-text-muted font-mono focus:outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed" disabled="" type="text" value="org_8f92a10b-c4d3"/>
+<span class="absolute right-3 top-2.5 material-symbols-outlined text-text-muted text-[16px]">content_copy</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Primary Timezone</label>
+<select class="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+<option selected="">UTC (Coordinated Universal Time)</option>
+<option>America/New_York (EST)</option>
+<option>Europe/London (GMT)</option>
+<option>Asia/Tokyo (JST)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-1.5">Data Retention Period</label>
+<div class="relative">
+<select class="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+<option>1 Year</option>
+<option>3 Years</option>
+<option selected="">5 Years</option>
+<option>7 Years</option>
+<option>Unlimited (Enterprise)</option>
+</select>
+</div>
+<p class="text-[10px] text-text-muted mt-1.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">info</span>
+                                Applies to telemetry and audit logs.
+                            </p>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-text-muted mb-2">Allowed Modules</label>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input checked="" class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Fleet Telematics</span>
+<span class="text-[10px] text-text-muted">Real-time tracking</span>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input checked="" class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Driver Safety</span>
+<span class="text-[10px] text-text-muted">Scorecards &amp; alerts</span>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input checked="" class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Fuel Management</span>
+<span class="text-[10px] text-text-muted">Usage analytics</span>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Video AI</span>
+<span class="text-[10px] text-text-muted">Dashcam integration</span>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Maintenance</span>
+<span class="text-[10px] text-text-muted">Service scheduling</span>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 bg-surface-darker rounded border border-border-color cursor-pointer hover:border-primary/50 transition-colors">
+<input checked="" class="mt-0.5 bg-surface-dark border-border-color text-primary focus:ring-offset-surface-dark focus:ring-primary rounded" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Compliance (ELD)</span>
+<span class="text-[10px] text-text-muted">Hours of Service</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-5 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<div>
+<h3 class="text-white font-semibold text-sm">Status Management</h3>
+<p class="text-xs text-text-muted mt-1">Control the lifecycle state of the organization.</p>
+</div>
+<span class="material-symbols-outlined text-text-muted opacity-50">power_settings_new</span>
+</div>
+<div class="p-6">
+<div class="flex items-center justify-between p-4 bg-surface-darker rounded border border-border-color">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success border border-success/20">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<div>
+<h4 class="text-sm font-medium text-white">Active</h4>
+<p class="text-xs text-text-muted">Organization is fully operational and billing is active.</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-1.5 text-xs font-medium text-text-muted hover:text-white hover:bg-border-color rounded transition-colors">
+                                    Suspend
+                                </button>
+<button class="px-3 py-1.5 text-xs font-medium text-danger bg-danger/10 hover:bg-danger/20 border border-danger/20 rounded transition-colors">
+                                    Deactivate Organization
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full max-h-[800px]">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker/50">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">history</span>
+                        Audit Log Summary
+                    </h3>
+<button class="text-primary text-xs hover:underline flex items-center gap-1">
+                        View Full Log
+                        <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+</button>
+</div>
+<div class="p-4 border-b border-border-color bg-surface-darker/30">
+<div class="flex items-center justify-between mb-2">
+<span class="text-xs text-text-muted">Events (Last 24h)</span>
+<span class="text-xs font-bold text-white">42</span>
+</div>
+<div class="w-full bg-border-color h-1.5 rounded-full overflow-hidden flex">
+<div class="bg-success h-full" style="width: 70%" title="Success"></div>
+<div class="bg-warning h-full" style="width: 20%" title="Warning"></div>
+<div class="bg-danger h-full" style="width: 10%" title="Error"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] text-text-muted">
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-success"></span> Success</span>
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-warning"></span> Warning</span>
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-danger"></span> Error</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+<div class="divide-y divide-border-color">
+<div class="p-3 hover:bg-surface-darker/50 transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-medium text-white">Settings Updated</span>
+<span class="text-[10px] text-text-muted">2m ago</span>
+</div>
+<p class="text-[11px] text-text-muted mb-1.5">User <span class="text-primary">alex.m</span> changed retention policy.</p>
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded text-[9px] bg-primary/10 text-primary border border-primary/20">CONFIG</span>
+<span class="text-[10px] text-text-muted">IP: 192.168.1.1</span>
+</div>
+</div>
+<div class="p-3 hover:bg-surface-darker/50 transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-medium text-white">Module Added</span>
+<span class="text-[10px] text-text-muted">4h ago</span>
+</div>
+<p class="text-[11px] text-text-muted mb-1.5">User <span class="text-primary">system</span> enabled 'Video AI'.</p>
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded text-[9px] bg-success/10 text-success border border-success/20">SYSTEM</span>
+</div>
+</div>
+<div class="p-3 hover:bg-surface-darker/50 transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-medium text-white">API Key Rotated</span>
+<span class="text-[10px] text-text-muted">1d ago</span>
+</div>
+<p class="text-[11px] text-text-muted mb-1.5">Secret key was automatically rotated.</p>
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded text-[9px] bg-warning/10 text-warning border border-warning/20">SECURITY</span>
+</div>
+</div>
+<div class="p-3 hover:bg-surface-darker/50 transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-medium text-white">Failed Login</span>
+<span class="text-[10px] text-text-muted">1d ago</span>
+</div>
+<p class="text-[11px] text-text-muted mb-1.5">Multiple failed attempts detected.</p>
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded text-[9px] bg-danger/10 text-danger border border-danger/20">ALERT</span>
+<span class="text-[10px] text-text-muted">IP: 45.12.x.x</span>
+</div>
+</div>
+<div class="p-3 hover:bg-surface-darker/50 transition-colors">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-medium text-white">Org Profile Updated</span>
+<span class="text-[10px] text-text-muted">2d ago</span>
+</div>
+<p class="text-[11px] text-text-muted mb-1.5">Billing address modification.</p>
+<div class="flex items-center gap-2">
+<span class="px-1.5 py-0.5 rounded text-[9px] bg-primary/10 text-primary border border-primary/20">UPDATE</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker/30">
+<button class="w-full py-1.5 text-xs text-text-muted hover:text-white bg-surface-dark hover:bg-border-color border border-border-color rounded transition-colors">
+                        Export Audit Logs (CSV)
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Organization Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Region: <span class="text-white">US-East-1</span></span>
+<span>API Status: <span class="text-success">Connected</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

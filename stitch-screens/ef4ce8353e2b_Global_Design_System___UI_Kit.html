@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Design System &amp; UI Kit - FleetOps</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-light": "#60a5fa",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                        "surface-dark": "#1e293b",
+                        "surface-light": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom Scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden antialiased selection:bg-primary/30">
+<div class="flex h-screen flex-col">
+<!-- Top Navigation -->
+<header class="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#111a22] px-6">
+<div class="flex items-center gap-4">
+<div class="flex h-8 w-8 items-center justify-center rounded bg-primary text-white">
+<span class="material-symbols-outlined">dataset</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-sm font-bold leading-none dark:text-white text-slate-900">FleetOps Design System</h1>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400">v2.4.0 • Enterprise Edition</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden w-64 md:block">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" style="font-size: 20px;">search</span>
+<input class="h-9 w-full rounded-lg border-none bg-slate-100 dark:bg-[#233648] py-2 pl-9 pr-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 focus:ring-2 focus:ring-primary" placeholder="Search components..." type="text"/>
+</div>
+<div class="flex items-center gap-3 border-l border-slate-200 dark:border-slate-700 pl-6">
+<button class="flex h-9 items-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/20">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                        Export Kit
+                    </button>
+<div class="h-8 w-8 rounded-full bg-cover bg-center ring-2 ring-white dark:ring-slate-700" data-alt="User avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuADbueFfvWuT1Z8KTu-T_Isd9sndNHlyzOnbjimwdhzPsm589KDH7GMQqMZqck1f_JdS3h-1sgLyQg3eP84d-p_JIDkoYwtR5qPE1DTpSjHfXcLq07_ccLYwKfO5QLxkde-9BF4sr8Dx_itMsx5A7ZS7gKjB5aUm1l6a7YzLHc7HKIw2RYXM3PTSBrZv9G08wY0ADnppzRqy8t1DWC0j9wMdS5Df5qaOIoOP10mS6HN5gxTF_uqXJJRmMUb-Yimsbty95vHpzmWoHw");'></div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Side Navigation -->
+<aside class="w-64 shrink-0 overflow-y-auto border-r border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#111a22] py-6 hidden lg:block">
+<div class="px-4 mb-6">
+<h3 class="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Foundations</h3>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">palette</span>
+                            Colors
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">text_fields</span>
+                            Typography
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_4x4</span>
+                            Layout &amp; Grid
+                        </a>
+</nav>
+</div>
+<div class="px-4 mb-6">
+<h3 class="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Components</h3>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg bg-primary/10 px-2 py-2 text-sm font-medium text-primary" href="#">
+<span class="material-symbols-outlined text-[20px]">smart_button</span>
+                            Buttons &amp; Inputs
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">table_chart</span>
+                            Data Tables
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">chrome_reader_mode</span>
+                            Cards
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+                            Alerts &amp; Badges
+                        </a>
+</nav>
+</div>
+<div class="px-4">
+<h3 class="mb-2 px-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Patterns</h3>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                            Dashboards
+                        </a>
+<a class="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                            Settings Pages
+                        </a>
+</nav>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-8 md:p-12">
+<div class="mx-auto max-w-[1200px] space-y-16">
+<!-- Intro -->
+<div class="space-y-4">
+<div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            System Status: Stable
+                        </div>
+<h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white md:text-5xl">Component Library</h1>
+<p class="max-w-2xl text-lg text-slate-600 dark:text-slate-400">
+                            The centralized collection of reusable UI elements for FleetOps applications. Designed for data density, clarity, and performance.
+                        </p>
+</div>
+<hr class="border-slate-200 dark:border-slate-800"/>
+<!-- Section: Colors -->
+<section>
+<div class="mb-8 flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">palette</span>
+                                Color Palette
+                            </h2>
+<span class="text-sm font-mono text-slate-500">design-tokens.css</span>
+</div>
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+<!-- Primary -->
+<div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b]">
+<div class="h-32 bg-primary w-full"></div>
+<div class="p-4">
+<p class="font-bold text-slate-900 dark:text-white">Primary Blue</p>
+<p class="text-sm text-slate-500">Action, Active States</p>
+<div class="mt-3 flex items-center justify-between rounded bg-slate-100 dark:bg-[#111a22] px-2 py-1 font-mono text-xs text-slate-600 dark:text-slate-400">
+<span>#137FEC</span>
+<span class="cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 material-symbols-outlined text-[14px]">content_copy</span>
+</div>
+</div>
+</div>
+<!-- Success -->
+<div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b]">
+<div class="h-32 bg-emerald-500 w-full"></div>
+<div class="p-4">
+<p class="font-bold text-slate-900 dark:text-white">Success Green</p>
+<p class="text-sm text-slate-500">Completed, Online</p>
+<div class="mt-3 flex items-center justify-between rounded bg-slate-100 dark:bg-[#111a22] px-2 py-1 font-mono text-xs text-slate-600 dark:text-slate-400">
+<span>#10B981</span>
+<span class="cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 material-symbols-outlined text-[14px]">content_copy</span>
+</div>
+</div>
+</div>
+<!-- Warning -->
+<div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b]">
+<div class="h-32 bg-amber-500 w-full"></div>
+<div class="p-4">
+<p class="font-bold text-slate-900 dark:text-white">Warning Amber</p>
+<p class="text-sm text-slate-500">Maintenance, Alert</p>
+<div class="mt-3 flex items-center justify-between rounded bg-slate-100 dark:bg-[#111a22] px-2 py-1 font-mono text-xs text-slate-600 dark:text-slate-400">
+<span>#F59E0B</span>
+<span class="cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 material-symbols-outlined text-[14px]">content_copy</span>
+</div>
+</div>
+</div>
+<!-- Danger -->
+<div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b]">
+<div class="h-32 bg-rose-500 w-full"></div>
+<div class="p-4">
+<p class="font-bold text-slate-900 dark:text-white">Danger Rose</p>
+<p class="text-sm text-slate-500">Error, Delete, Offline</p>
+<div class="mt-3 flex items-center justify-between rounded bg-slate-100 dark:bg-[#111a22] px-2 py-1 font-mono text-xs text-slate-600 dark:text-slate-400">
+<span>#F43F5E</span>
+<span class="cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 material-symbols-outlined text-[14px]">content_copy</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Typography -->
+<section>
+<div class="mb-8 flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">text_fields</span>
+                                Typography Scale
+                            </h2>
+</div>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b] p-8">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+<div class="space-y-6">
+<div class="border-b border-slate-200 dark:border-slate-700 pb-2">
+<span class="text-xs uppercase tracking-wider text-slate-500">Headings</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-baseline gap-4">
+<span class="w-12 text-xs text-slate-500">H1</span>
+<h1 class="text-4xl font-bold text-slate-900 dark:text-white">Fleet Management</h1>
+</div>
+<div class="flex items-baseline gap-4">
+<span class="w-12 text-xs text-slate-500">H2</span>
+<h2 class="text-3xl font-bold text-slate-900 dark:text-white">Vehicle Tracking</h2>
+</div>
+<div class="flex items-baseline gap-4">
+<span class="w-12 text-xs text-slate-500">H3</span>
+<h3 class="text-2xl font-semibold text-slate-900 dark:text-white">Driver Analytics</h3>
+</div>
+<div class="flex items-baseline gap-4">
+<span class="w-12 text-xs text-slate-500">H4</span>
+<h4 class="text-xl font-semibold text-slate-900 dark:text-white">Maintenance Logs</h4>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="border-b border-slate-200 dark:border-slate-700 pb-2">
+<span class="text-xs uppercase tracking-wider text-slate-500">Body &amp; Utility</span>
+</div>
+<div class="space-y-6">
+<div class="flex items-start gap-4">
+<span class="w-12 shrink-0 text-xs text-slate-500 pt-1">Body Lg</span>
+<p class="text-lg text-slate-700 dark:text-slate-300">Efficiently manage your entire fleet operations from a single dashboard. Track vehicles in real-time.</p>
+</div>
+<div class="flex items-start gap-4">
+<span class="w-12 shrink-0 text-xs text-slate-500 pt-1">Body</span>
+<p class="text-base text-slate-700 dark:text-slate-300">The system automatically alerts administrators when vehicles require maintenance based on mileage or engine hours.</p>
+</div>
+<div class="flex items-start gap-4">
+<span class="w-12 shrink-0 text-xs text-slate-500 pt-1">Small</span>
+<p class="text-sm text-slate-500 dark:text-slate-400">Last updated: 2 hours ago via API v2.4</p>
+</div>
+<div class="flex items-start gap-4">
+<span class="w-12 shrink-0 text-xs text-slate-500 pt-1">Mono</span>
+<p class="font-mono text-sm text-primary">VIN: 1HGCM82633A004352</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Interactive Elements -->
+<section>
+<div class="mb-8 flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">smart_button</span>
+                                Buttons &amp; Forms
+                            </h2>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+<!-- Buttons Card -->
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b] p-6">
+<h3 class="mb-6 text-sm font-bold uppercase tracking-wider text-slate-500">Button Variants</h3>
+<div class="flex flex-wrap gap-4 items-center mb-8">
+<button class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-slate-900">Primary Action</button>
+<button class="rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent px-5 py-2.5 text-sm font-semibold text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Secondary</button>
+<button class="rounded-lg px-5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10">Ghost Button</button>
+<button class="rounded-lg bg-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-600">Danger</button>
+</div>
+<div class="flex flex-wrap gap-4 items-center">
+<button class="cursor-not-allowed rounded-lg bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-400 dark:text-slate-600" disabled="">Disabled</button>
+<button class="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-600">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                        With Icon
+                                    </button>
+<button class="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[20px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Forms Card -->
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b] p-6">
+<h3 class="mb-6 text-sm font-bold uppercase tracking-wider text-slate-500">Input Fields</h3>
+<div class="space-y-4">
+<!-- Input Regular -->
+<div>
+<label class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Vehicle Identifier</label>
+<input class="w-full rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-[#111a22] px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary" placeholder="e.g. TRK-4092" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Select -->
+<div>
+<label class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Fleet Status</label>
+<div class="relative">
+<select class="w-full appearance-none rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-[#111a22] px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary">
+<option>Active</option>
+<option>Maintenance</option>
+<option>Decommissioned</option>
+</select>
+<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">expand_more</span>
+</div>
+</div>
+<!-- Error State -->
+<div>
+<label class="mb-1.5 block text-sm font-medium text-rose-500">Odometer Reading</label>
+<input class="w-full rounded-lg border-rose-500 bg-white dark:bg-[#111a22] px-3 py-2 text-sm text-rose-500 placeholder:text-rose-300 focus:border-rose-500 focus:ring-1 focus:ring-rose-500" type="text" value="Invalid Input"/>
+</div>
+</div>
+<!-- Toggles & Checks -->
+<div class="flex items-center gap-6 pt-2">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary bg-slate-100 dark:bg-[#111a22] dark:border-slate-600" type="checkbox"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Enable GPS</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="h-4 w-4 border-slate-300 text-primary focus:ring-primary bg-slate-100 dark:bg-[#111a22] dark:border-slate-600" name="radio-demo" type="radio"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Imperial</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="h-4 w-4 border-slate-300 text-primary focus:ring-primary bg-slate-100 dark:bg-[#111a22] dark:border-slate-600" name="radio-demo" type="radio"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Metric</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Complex Components -->
+<section>
+<div class="mb-8 flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">view_quilt</span>
+                                Complex Components
+                            </h2>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Card Component -->
+<div class="lg:col-span-1 space-y-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Data Card</h3>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b] p-5 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<div>
+<p class="font-bold text-slate-900 dark:text-white">Truck #4092</p>
+<p class="text-xs text-slate-500">Ford F-150 Lightning</p>
+</div>
+</div>
+<span class="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-500 ring-1 ring-inset ring-emerald-500/20">In Transit</span>
+</div>
+<div class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-700 pt-4">
+<div>
+<p class="text-xs text-slate-500">Fuel Level</p>
+<p class="font-mono text-sm font-medium text-slate-900 dark:text-white">76%</p>
+</div>
+<div>
+<p class="text-xs text-slate-500">Next Stop</p>
+<p class="text-sm font-medium text-slate-900 dark:text-white truncate">Seattle, WA</p>
+</div>
+</div>
+<div class="mt-4">
+<div class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+<div class="h-1.5 rounded-full bg-primary" style="width: 76%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="lg:col-span-2 space-y-4">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500">Data Table</h3>
+<div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-[#1e293b] shadow-sm">
+<div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+<h3 class="font-semibold text-slate-900 dark:text-white">Active Deployments</h3>
+<button class="text-sm font-medium text-primary hover:text-blue-400">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm text-slate-500 dark:text-slate-400">
+<thead class="bg-slate-50 dark:bg-[#111a22] text-xs uppercase text-slate-700 dark:text-slate-400">
+<tr>
+<th class="px-6 py-3" scope="col">Vehicle</th>
+<th class="px-6 py-3" scope="col">Driver</th>
+<th class="px-6 py-3" scope="col">Status</th>
+<th class="px-6 py-3 text-right" scope="col">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-white">TRK-8821</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" data-alt="Driver avatar 1" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBdZ7JfRfJtU_OOQp-nhTlIEmzxIvteKg4NhaWGY-Nz3JrVOlJXs5btVnUDfoFU2xYNZsxrnhEniBY4uRwO2O4MszsevD8wen6t9ujeWrmwStnr3ki0R2_T1jCAXhhp4op7gdY8G007M7A3cy7VP53doiybyWdFICBMq21FwxU04XNyrRCKvzFVY3U3HCEjCqwO-XQ6Tf2C-8yV0OUnr3n50CQrc-VzXvb88gZEGJnK0ob6j-ISRvs-uXEl3sOD4aVlAQhU6NhSIp0");'></div>
+<span>Alex M.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-emerald-500/10 px-2 py-1 text-xs font-medium text-emerald-500 ring-1 ring-inset ring-emerald-500/20">Active</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-white">VAN-1092</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-cover bg-center" data-alt="Driver avatar 2" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB08yriTyb6cOl0HWL_j833EEQZWibJRSJcOvfZrGYVyB_85Ja3Me0hZklhyBAsXvnxPyiLm6MYe8EudacNVUK8x6uuH1hsodxOIZOWhGrfi1brXEJEhtYh4s1ePzzfj5NLBZbcg2klwDTvjwNZ-W9HDuY0nvUrkBkqjLlMdZcPxTCTz5sC4hw4xlAt8Ficr5FR25JGX1fsAg1njnFTf0t2Y4S5xD9TvuCCKfo5rZ8EcmWCpK-SYg6IEU4XrKSXjDKDb08FxEmKV_E");'></div>
+<span>Sarah J.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-500 ring-1 ring-inset ring-amber-500/20">Check Engine</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+<td class="px-6 py-4 font-medium text-slate-900 dark:text-white">TRK-5502</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-bold">JD</div>
+<span>John D.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center rounded-md bg-slate-500/10 px-2 py-1 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-500/20">Offline</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Modal Demo -->
+<section class="pb-20">
+<div class="mb-8 flex items-baseline justify-between">
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">web_asset</span>
+                                Modal Dialog
+                            </h2>
+</div>
+<div class="relative flex h-96 w-full items-center justify-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#111a22] p-8">
+<!-- Modal Mockup -->
+<div class="relative w-full max-w-md overflow-hidden rounded-xl bg-white dark:bg-[#1e293b] shadow-2xl ring-1 ring-slate-900/5">
+<div class="px-6 py-6">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+<span class="material-symbols-outlined">warning</span>
+</div>
+<div>
+<h3 class="text-lg font-semibold text-slate-900 dark:text-white">Decommission Vehicle</h3>
+<p class="text-sm text-slate-500">Are you sure you want to remove TRK-4092? This action cannot be undone.</p>
+</div>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-[#182333] px-6 py-4 flex flex-row-reverse gap-3">
+<button class="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600">Decommission</button>
+<button class="rounded-lg bg-white dark:bg-[#1e293b] px-4 py-2 text-sm font-semibold text-slate-900 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800">Cancel</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+</div>
+</body></html>

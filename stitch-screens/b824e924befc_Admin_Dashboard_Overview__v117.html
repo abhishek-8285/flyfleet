@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fuel Log Detail View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_gas_station</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetFuel</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Fuel Management</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Fuel Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">credit_card</span>
+<span class="text-sm font-medium">Fuel Cards</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Analysis</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-sm font-medium">Consumption</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">eco</span>
+<span class="text-sm font-medium">Efficiency Reports</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Settings</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configuration</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<nav class="flex text-sm text-text-muted items-center gap-2">
+<a class="hover:text-white transition-colors" href="#">Fuel Logs</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-white font-semibold">FL-2023-8942</span>
+</nav>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30">
+                        Verified
+                    </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-3 py-2 bg-surface-dark border border-border-color hover:bg-surface-darker text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                        Export CSV
+                    </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+                        Edit Fuel Log
+                    </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">attach_money</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Cost</div>
+<div class="text-2xl font-bold text-white">$142.50</div>
+<div class="text-[10px] text-text-muted mt-1">
+                            Included Tax: $12.40
+                        </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-primary">local_gas_station</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Quantity</div>
+<div class="text-2xl font-bold text-primary">95.0 L</div>
+<div class="text-[10px] text-text-muted mt-1">Full Tank Fill</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">sell</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Unit Price</div>
+<div class="text-2xl font-bold text-warning">$1.50 <span class="text-sm font-normal text-text-muted">/ L</span></div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">trending_down</span>
+                            -2% vs market avg
+                        </div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">speed</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Efficiency</div>
+<div class="text-2xl font-bold text-success">12.4 <span class="text-sm font-normal text-text-muted">KM/L</span></div>
+<div class="text-[10px] text-success flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[12px]">thumb_up</span>
+                            Optimal range
+                        </div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex justify-between items-center mb-6 pb-4 border-b border-border-color">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">description</span>
+                                    Log Details
+                                </h3>
+<span class="text-xs text-text-muted">Logged on Oct 24, 2023 at 14:35</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Transaction Date</label>
+<div class="text-sm text-white font-medium">Oct 24, 2023</div>
+<div class="text-xs text-text-muted">14:15 PM</div>
+</div>
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Odometer Reading</label>
+<div class="text-sm text-white font-medium">45,231 km</div>
+<div class="text-xs text-text-muted">+650 km since last fill</div>
+</div>
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Fuel Type</label>
+<div class="text-sm text-white font-medium">Diesel (B7)</div>
+<div class="text-xs text-text-muted">Premium Grade</div>
+</div>
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Station / Vendor</label>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-white flex items-center justify-center">
+<span class="text-[10px] font-bold text-black">S</span>
+</div>
+<div class="text-sm text-white font-medium">Shell Station #402</div>
+</div>
+<div class="text-xs text-text-muted mt-0.5">123 Highway Rd, District 4</div>
+</div>
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Payment Method</label>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[16px]">credit_card</span>
+<span class="text-sm text-white font-medium">Fleet Card **** 4211</span>
+</div>
+</div>
+<div>
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-1">Invoice Reference</label>
+<div class="text-sm text-primary font-medium hover:underline cursor-pointer">INV-99231-A</div>
+</div>
+</div>
+<div class="mt-6 pt-4 border-t border-border-color">
+<label class="text-[10px] uppercase text-text-muted font-bold block mb-2">Notes</label>
+<p class="text-sm text-white bg-surface-darker p-3 rounded border border-border-color">
+                                    Regular refueling during the weekly route. Checked tire pressure as well. No issues reported with the pump.
+                                </p>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">history</span>
+                                    Previous Fuel Logs for this Vehicle
+                                </h3>
+<button class="text-primary text-xs hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Date</th>
+<th class="px-4 py-3 font-semibold">Odometer</th>
+<th class="px-4 py-3 font-semibold">Volume</th>
+<th class="px-4 py-3 font-semibold">Cost</th>
+<th class="px-4 py-3 font-semibold text-right">Efficiency</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 17, 2023</td>
+<td class="px-4 py-3 font-medium text-white">44,581 km</td>
+<td class="px-4 py-3 text-white">92.4 L</td>
+<td class="px-4 py-3 text-white">$138.60</td>
+<td class="px-4 py-3 text-right text-success font-medium">12.1 KM/L</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 10, 2023</td>
+<td class="px-4 py-3 font-medium text-white">43,950 km</td>
+<td class="px-4 py-3 text-white">88.0 L</td>
+<td class="px-4 py-3 text-white">$132.00</td>
+<td class="px-4 py-3 text-right text-warning font-medium">11.8 KM/L</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 03, 2023</td>
+<td class="px-4 py-3 font-medium text-white">43,310 km</td>
+<td class="px-4 py-3 text-white">94.5 L</td>
+<td class="px-4 py-3 text-white">$141.75</td>
+<td class="px-4 py-3 text-right text-success font-medium">12.3 KM/L</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white text-sm font-semibold">Vehicle Information</h3>
+<span class="material-symbols-outlined text-text-muted text-[18px]">local_shipping</span>
+</div>
+<div class="p-5">
+<div class="flex items-start gap-4 mb-4">
+<div class="w-16 h-16 rounded bg-surface-darker border border-border-color flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-4xl text-text-muted">airport_shuttle</span>
+</div>
+<div>
+<h4 class="text-white font-bold text-lg">Ford Transit</h4>
+<p class="text-text-muted text-xs">Van • 2021 Model</p>
+<span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary border border-primary/30">
+                                            Active
+                                        </span>
+</div>
+</div>
+<div class="space-y-3 pt-2">
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">License Plate</span>
+<span class="text-white font-mono">XYZ-8821</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">VIN</span>
+<span class="text-white font-mono truncate max-w-[120px]">1FTYR12...9921</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Fuel Capacity</span>
+<span class="text-white">100 Liters</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Primary Fuel</span>
+<span class="text-white">Diesel</span>
+</div>
+<div class="flex justify-between text-xs">
+<span class="text-text-muted">Assigned Group</span>
+<span class="text-primary hover:underline cursor-pointer">Logistics North</span>
+</div>
+</div>
+</div>
+<div class="p-3 bg-surface-darker border-t border-border-color flex justify-center">
+<button class="text-xs text-primary hover:text-white transition-colors">View Vehicle Profile</button>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white text-sm font-semibold">Driver Profile</h3>
+<span class="material-symbols-outlined text-text-muted text-[18px]">person</span>
+</div>
+<div class="p-5">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold">
+                                        JD
+                                    </div>
+<div>
+<div class="text-sm font-bold text-white">John Doe</div>
+<div class="text-xs text-text-muted">ID: DRV-4421</div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="p-2 bg-surface-darker border border-border-color rounded flex items-center justify-between">
+<span class="text-[10px] uppercase text-text-muted font-bold">Compliance</span>
+<span class="text-xs font-bold text-success flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                            Valid
+                                        </span>
+</div>
+<div class="p-2 bg-surface-darker border border-border-color rounded flex items-center justify-between">
+<span class="text-[10px] uppercase text-text-muted font-bold">Avg Efficiency</span>
+<span class="text-xs font-bold text-white">11.9 KM/L</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="text-[10px] uppercase text-text-muted font-bold mb-1">Recent Activity</div>
+<div class="flex items-center gap-2 text-xs text-text-muted">
+<span class="w-2 h-2 rounded-full bg-success"></span>
+<span>On Shift - Route 42B</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden h-40 relative">
+<div class="absolute inset-0 bg-surface-darker flex items-center justify-center">
+<svg class="w-full h-full opacity-30" preserveAspectRatio="none" viewBox="0 0 100 100">
+<path d="M0,0 L100,0 L100,100 L0,100 Z" fill="#16202a"></path>
+<path d="M10,20 L40,25 L60,10 L90,30" fill="none" stroke="#233648" stroke-width="1"></path>
+<path d="M5,50 L30,60 L70,55 L95,80" fill="none" stroke="#233648" stroke-width="1"></path>
+<path d="M20,90 L40,70 L60,80 L80,60" fill="none" stroke="#233648" stroke-width="1"></path>
+</svg>
+<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+<span class="material-symbols-outlined text-primary text-3xl drop-shadow-md">location_on</span>
+<span class="text-[10px] font-bold text-white bg-surface-darker/80 px-2 py-0.5 rounded mt-1 border border-border-color">Shell Station #402</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Fuel Module V2.4</span>
+<div class="flex items-center gap-4">
+<span>Data Source: <span class="text-white">API Gateway</span></span>
+<span>Last Sync: <span class="font-mono text-white">Oct 24, 14:36:01</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

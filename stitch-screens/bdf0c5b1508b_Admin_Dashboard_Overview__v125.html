@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CISO Executive Security Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-dark": "#070c11",
+                        "surface-dark": "#111a22",
+                        "surface-darker": "#0d141b",
+                        "border-color": "#1e2c3a",
+                        "text-muted": "#8ea6be",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 6px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: #0d141b; 
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #1e2c3a; 
+                border-radius: 4px;
+            }
+            .glossy-card {
+                background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%);
+                backdrop-filter: blur(10px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-200 font-display overflow-hidden selection:bg-primary/30">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-20 hover:w-64 transition-all duration-300 h-full bg-surface-darker border-r border-border-color flex-shrink-0 z-40 group">
+<div class="p-6 flex items-center gap-4">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shrink-0 shadow-[0_0_20px_rgba(19,127,236,0.4)]">
+<span class="material-symbols-outlined text-xl">verified_user</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">CISO Console</h1>
+</div>
+<nav class="flex-1 px-4 space-y-4 mt-4">
+<a class="flex items-center gap-4 p-2 rounded-xl bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Executive Overview</span>
+</a>
+<a class="flex items-center gap-4 p-2 rounded-xl text-text-muted hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">rule</span>
+<span class="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Compliance Benchmarks</span>
+</a>
+<a class="flex items-center gap-4 p-2 rounded-xl text-text-muted hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Security ROI</span>
+</a>
+<div class="pt-4 border-t border-border-color">
+<a class="flex items-center gap-4 p-2 rounded-xl text-text-muted hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Global Policies</span>
+</a>
+</div>
+</nav>
+<div class="p-4 mb-4">
+<div class="flex items-center gap-4 bg-white/5 p-2 rounded-2xl overflow-hidden">
+<div class="bg-center bg-no-repeat bg-cover rounded-xl size-8 shrink-0 border border-white/10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="text-xs font-bold text-white truncate">Alex Morgan</span>
+<span class="text-[10px] text-text-muted truncate uppercase tracking-widest">CISO</span>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-[#132333] via-background-dark to-background-dark">
+<header class="h-24 flex items-center justify-between px-10 border-b border-border-color/50 backdrop-blur-md flex-shrink-0 z-20">
+<div>
+<h2 class="text-white text-2xl font-light tracking-tight">Enterprise <span class="font-bold">MFA Posture</span></h2>
+<p class="text-xs text-text-muted mt-1 tracking-wide uppercase">Real-time Security Health Assessment • Global Infrastructure</p>
+</div>
+<div class="flex items-center gap-6">
+<div class="text-right border-r border-border-color pr-6">
+<div class="text-[10px] text-text-muted uppercase tracking-tighter">Current Risk Level</div>
+<div class="text-sm font-bold text-success flex items-center justify-end gap-1">
+<span class="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                        Nominal
+                    </div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-xs font-semibold rounded-xl transition-all">
+                        Generate PDF Report
+                    </button>
+<button class="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-xl transition-all shadow-[0_4px_15px_rgba(19,127,236,0.3)]">
+                        Policy Review
+                    </button>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-10 custom-scrollbar">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+<div class="col-span-1 bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card relative overflow-hidden flex flex-col items-center justify-center text-center">
+<div class="absolute top-4 left-4 text-[10px] font-bold text-text-muted uppercase tracking-widest">Global Policy Adherence</div>
+<div class="relative flex items-center justify-center my-4">
+<svg class="w-36 h-36 -rotate-90">
+<circle class="text-white/5" cx="72" cy="72" fill="transparent" r="64" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="72" cy="72" fill="transparent" r="64" stroke="currentColor" stroke-dasharray="402" stroke-dashoffset="48" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-4xl font-black text-white">88%</span>
+<span class="text-[10px] text-text-muted font-bold uppercase">Optimal</span>
+</div>
+</div>
+<p class="text-xs text-text-muted mt-2 max-w-[200px]">Up 4.2% from last quarter following the 2FA hardware rollout.</p>
+</div>
+<div class="col-span-1 bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-6">
+<span class="p-2 bg-success/10 text-success rounded-xl">
+<span class="material-symbols-outlined">security</span>
+</span>
+<span class="text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-lg">+12% YoY</span>
+</div>
+<h3 class="text-text-muted text-xs font-bold uppercase tracking-widest mb-2">Aggregate MFA Coverage</h3>
+<div class="text-5xl font-light text-white leading-none">99.4<span class="text-2xl font-bold">%</span></div>
+</div>
+<div class="mt-6">
+<div class="flex justify-between text-[10px] text-text-muted font-bold mb-2">
+<span>PROTECTED ASSETS</span>
+<span>12,382 / 12,458</span>
+</div>
+<div class="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-success w-[99.4%]"></div>
+</div>
+</div>
+</div>
+<div class="col-span-1 bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card flex flex-col justify-between">
+<div>
+<div class="flex justify-between items-start mb-6">
+<span class="p-2 bg-warning/10 text-warning rounded-xl">
+<span class="material-symbols-outlined">trending_down</span>
+</span>
+<span class="text-xs font-bold text-success bg-success/10 px-2 py-1 rounded-lg">-32% Risk</span>
+</div>
+<h3 class="text-text-muted text-xs font-bold uppercase tracking-widest mb-2">Security Investment ROI</h3>
+<div class="text-5xl font-light text-white leading-none">$1.2<span class="text-2xl font-bold">M</span></div>
+</div>
+<p class="text-xs text-text-muted mt-6">Estimated cost avoidance from 24 thwarted credential harvesting attempts this month.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+<div class="bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card">
+<div class="flex justify-between items-center mb-10">
+<div>
+<h3 class="text-white text-lg font-bold">Compliance Trend</h3>
+<p class="text-xs text-text-muted">6-month policy alignment trajectory</p>
+</div>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-text-muted">WEEKLY</span>
+<span class="px-3 py-1 bg-primary/20 border border-primary/40 rounded-lg text-[10px] font-bold text-primary">MONTHLY</span>
+</div>
+</div>
+<div class="h-48 relative">
+<svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 200">
+<path d="M0,160 Q100,150 200,130 T400,100 T600,60 T800,20" fill="none" stroke="#137fec" stroke-linecap="round" stroke-width="4"></path>
+<path d="M0,160 Q100,150 200,130 T400,100 T600,60 T800,20 V200 H0 Z" fill="url(#trendGrad)"></path>
+<defs>
+<linearGradient id="trendGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#137fec" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#137fec" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+</svg>
+<div class="flex justify-between text-[10px] text-text-muted font-bold mt-4 uppercase">
+<span>May</span>
+<span>Jun</span>
+<span>Jul</span>
+<span>Aug</span>
+<span>Sep</span>
+<span>Oct</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card">
+<h3 class="text-white text-lg font-bold mb-1">Compliance Gap Analysis</h3>
+<p class="text-xs text-text-muted mb-8">Identification of top high-risk exceptions</p>
+<div class="space-y-6">
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 bg-danger/10 text-danger rounded-2xl flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">person_off</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between text-sm mb-1">
+<span class="text-white font-medium">Legacy Service Accounts</span>
+<span class="text-danger font-bold">142 Critical</span>
+</div>
+<div class="h-1.5 bg-white/5 rounded-full">
+<div class="h-full bg-danger w-3/4 rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 bg-warning/10 text-warning rounded-2xl flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">travel_explore</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between text-sm mb-1">
+<span class="text-white font-medium">Remote Contractors (Unmanned)</span>
+<span class="text-warning font-bold">64 Pending</span>
+</div>
+<div class="h-1.5 bg-white/5 rounded-full">
+<div class="h-full bg-warning w-1/3 rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">smartphone</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between text-sm mb-1">
+<span class="text-white font-medium">Insecure SMS Failover Enabled</span>
+<span class="text-primary font-bold">2.1% of Fleet</span>
+</div>
+<div class="h-1.5 bg-white/5 rounded-full">
+<div class="h-full bg-primary w-[15%] rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+<div class="md:col-span-3 bg-surface-dark border border-border-color rounded-3xl p-8 glossy-card">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-white text-sm font-bold uppercase tracking-widest">Regional Compliance Map</h3>
+<button class="text-primary text-xs font-bold hover:underline">Download Dataset</button>
+</div>
+<div class="grid grid-cols-4 gap-4">
+<div class="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+<div class="text-text-muted text-[10px] font-bold uppercase mb-1">North America</div>
+<div class="text-xl font-bold text-white">99.8%</div>
+<div class="text-[10px] text-success mt-1">● Target Met</div>
+</div>
+<div class="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+<div class="text-text-muted text-[10px] font-bold uppercase mb-1">Europe</div>
+<div class="text-xl font-bold text-white">98.2%</div>
+<div class="text-[10px] text-success mt-1">● Target Met</div>
+</div>
+<div class="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+<div class="text-text-muted text-[10px] font-bold uppercase mb-1">APAC</div>
+<div class="text-xl font-bold text-white">92.4%</div>
+<div class="text-[10px] text-warning mt-1">● Review Req.</div>
+</div>
+<div class="p-4 bg-white/5 rounded-2xl border border-white/5 text-center">
+<div class="text-text-muted text-[10px] font-bold uppercase mb-1">LATAM</div>
+<div class="text-xl font-bold text-white">88.5%</div>
+<div class="text-[10px] text-danger mt-1">● Below Baseline</div>
+</div>
+</div>
+</div>
+<div class="md:col-span-1 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 rounded-3xl p-6 flex flex-col justify-center gap-4 text-center">
+<span class="material-symbols-outlined text-4xl text-primary mx-auto">verified</span>
+<h4 class="text-white font-bold">Annual Security Audit</h4>
+<p class="text-xs text-text-muted">Last audit completed on Oct 12. System compliant with SOC2 &amp; ISO 27001 MFA standards.</p>
+<button class="mt-2 py-2 w-full bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest rounded-xl border border-primary/30 transition-all">View Certificate</button>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker/80 backdrop-blur-md border-t border-border-color px-10 py-3 flex items-center justify-between text-[10px] text-text-muted uppercase tracking-widest z-20">
+<div class="flex gap-6">
+<span>© 2024 SecureFleet Systems</span>
+<span>Data Integrity: <span class="text-success font-bold">Verified</span></span>
+</div>
+<div class="flex items-center gap-6">
+<span>Encryption Standard: <span class="text-white">FIPS 140-2</span></span>
+<span>Last Snapshot: <span class="text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

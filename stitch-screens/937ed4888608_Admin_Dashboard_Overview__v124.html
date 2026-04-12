@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Work Order Form</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">local_shipping</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">directions_car</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm font-medium">Maintenance</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Logistics</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="text-sm font-medium">Route Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">schedule</span>
+<span class="text-sm font-medium">Scheduling</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Admin</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex flex-col">
+<nav aria-label="Breadcrumb" class="flex text-xs text-text-muted mb-1">
+<ol class="inline-flex items-center space-x-1 md:space-x-2">
+<li class="inline-flex items-center">
+<a class="hover:text-white transition-colors" href="#">Maintenance</a>
+</li>
+<li>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[12px] mx-1">chevron_right</span>
+<span class="text-white font-medium">New Order</span>
+</div>
+</li>
+</ol>
+</nav>
+<h2 class="text-white text-lg font-bold">Add Work Order</h2>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-sm font-medium rounded transition-colors">
+                    Cancel
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">add_task</span>
+                    Create Work Order
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="max-w-4xl mx-auto space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker/50 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">build_circle</span>
+<h3 class="text-white text-sm font-bold uppercase tracking-wider">Service Basics</h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Vehicle ID <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">directions_car</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-gray-600 outline-none transition-all" placeholder="e.g. V-2023-001" type="text"/>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Maintenance Type <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">category</span>
+</span>
+<select class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 outline-none appearance-none cursor-pointer transition-all">
+<option disabled="" selected="" value="">Select Type</option>
+<option value="preventive">Preventive Maintenance</option>
+<option value="corrective">Corrective Repair</option>
+<option value="inspection">Safety Inspection</option>
+<option value="breakdown">Breakdown Service</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Priority Level <span class="text-danger">*</span></label>
+<div class="grid grid-cols-3 gap-3">
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="priority" type="radio"/>
+<div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-success/10 peer-checked:text-success peer-checked:border-success hover:bg-surface-darker/80">
+                                        Low
+                                    </div>
+</label>
+<label class="cursor-pointer relative">
+<input checked="" class="peer sr-only" name="priority" type="radio"/>
+<div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-primary/10 peer-checked:text-primary peer-checked:border-primary hover:bg-surface-darker/80">
+                                        Medium
+                                    </div>
+</label>
+<label class="cursor-pointer relative">
+<input class="peer sr-only" name="priority" type="radio"/>
+<div class="rounded-lg border border-border-color bg-surface-darker p-2.5 text-center text-sm font-medium text-text-muted transition-all peer-checked:bg-danger/10 peer-checked:text-danger peer-checked:border-danger hover:bg-surface-darker/80">
+                                        High
+                                    </div>
+</label>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Assigned Technician</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">person</span>
+</span>
+<select class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 outline-none appearance-none cursor-pointer transition-all">
+<option disabled="" selected="" value="">Unassigned</option>
+<option value="tech1">Mike Ross</option>
+<option value="tech2">Sarah Connor</option>
+<option value="tech3">John Doe</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker/50 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">event_note</span>
+<h3 class="text-white text-sm font-bold uppercase tracking-wider">Schedule &amp; Cost</h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Scheduled Date <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-gray-600 outline-none transition-all [color-scheme:dark]" type="date"/>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Estimated Cost</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">attach_money</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-gray-600 outline-none transition-all" min="0" placeholder="0.00" step="0.01" type="number"/>
+<span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-text-muted text-xs font-mono">
+                                    USD
+                                </span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker/50 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">description</span>
+<h3 class="text-white text-sm font-bold uppercase tracking-wider">Description</h3>
+</div>
+<div class="p-6 space-y-6">
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Issue Description <span class="text-danger">*</span></label>
+<textarea class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5 placeholder-gray-600 outline-none transition-all resize-none" placeholder="Detailed description of the maintenance issue..." rows="4"></textarea>
+<p class="text-[10px] text-text-muted text-right">0/500 characters</p>
+</div>
+<div class="space-y-1.5">
+<label class="block text-xs font-medium text-text-muted uppercase">Internal Remarks</label>
+<div class="relative">
+<span class="absolute top-3 left-0 pl-3 flex items-start pointer-events-none text-text-muted">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span>
+</span>
+<input class="bg-surface-darker border border-border-color text-white text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2.5 placeholder-gray-600 outline-none transition-all" placeholder="Add optional internal notes" type="text"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 mt-auto">
+<span>© 2023 Enterprise Fleet Manager. Maintenance Module V2.0</span>
+<div class="flex items-center gap-4">
+<span>Connection: <span class="text-success">Secure</span></span>
+<span>API Status: <span class="text-success">Online</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

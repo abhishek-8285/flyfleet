@@ -43,6 +43,7 @@ type TripRepository interface {
 	// Analytics
 	GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error)
 	GetStats(ctx context.Context) (*models.TripStats, error)
+	GetTripCustomers(ctx context.Context, orgID string) ([]string, error)
 	GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error)
 	GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error)
 
@@ -192,7 +193,7 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripListFilter) ([]*models.Trip, int, error) {
 	baseQuery := `
 		SELECT
-			id, org_id, vehicle_id, driver_id, status, title, description,
+			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
 			estimated_distance_km, actual_distance_km, estimated_duration_min, actual_duration_min,
 			scheduled_start, started_at, ended_at,
 			customer_name, created_at, updated_at
@@ -208,6 +209,18 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	if filter.Status != "" {
 		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
 		args = append(args, filter.Status)
+		argIndex++
+	}
+
+	if filter.TripType != "" {
+		conditions = append(conditions, fmt.Sprintf("trip_type = $%d", argIndex))
+		args = append(args, filter.TripType)
+		argIndex++
+	}
+
+	if filter.CustomerName != "" {
+		conditions = append(conditions, fmt.Sprintf("customer_name = $%d", argIndex))
+		args = append(args, filter.CustomerName)
 		argIndex++
 	}
 
@@ -304,9 +317,9 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		var startedAt sql.NullTime
 		var endedAt sql.NullTime
 		var custName sql.NullString
-		
+
 		err := rows.Scan(
-			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
+			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType,
 			&trip.Title, &trip.Description,
 			&estDist, &actDist, &estDur, &actDur,
 			&schedStart, &startedAt, &endedAt,
@@ -736,6 +749,29 @@ func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStat
 	return &models.TripStats{ActiveTrips: count}, nil
 }
 
+// GetTripCustomers returns distinct customer names for the filter dropdown
+func (r *PostgresTripRepository) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
+	query := `SELECT DISTINCT customer_name FROM trips WHERE org_id = $1 AND customer_name != '' AND is_deleted = FALSE ORDER BY customer_name ASC`
+
+	start := time.Now()
+	rows, err := r.db.Query(ctx, query, orgID)
+	metrics.RecordDBQuery(query, time.Since(start))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var customers []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		customers = append(customers, name)
+	}
+	return customers, nil
+}
+
 // GetDriverStats aggregates metrics for all drivers in a tenant
 func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
 	query := `
@@ -940,6 +976,10 @@ func (r *txRepository) GetTripSummary(ctx context.Context, orgID string, startDa
 
 func (r *txRepository) GetStats(ctx context.Context) (*models.TripStats, error) {
 	return r.base.GetStats(ctx)
+}
+
+func (r *txRepository) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
+	return r.base.GetTripCustomers(ctx, orgID)
 }
 
 func (r *txRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {

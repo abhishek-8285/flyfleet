@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Vehicle Document Settings View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Core Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Compliance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Documents</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">verified</span>
+<span class="text-sm font-medium">Inspections</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+<span class="text-xs text-text-muted truncate">Fleet Admin</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-[11px] text-text-muted mb-0.5">
+<span>Documents</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white font-medium">Settings</span>
+</div>
+<h2 class="text-white text-lg font-bold">Vehicle Document Configuration</h2>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-3 py-1.5 bg-surface-dark border border-border-color hover:bg-border-color text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">history</span>
+                    View Audit Log
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Changes
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-white">folder_open</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Total Documents</div>
+<div class="text-2xl font-bold text-white">8,492</div>
+<div class="text-[10px] text-text-muted mt-1">Across 1,204 vehicles</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-warning">warning</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Expiring Soon</div>
+<div class="text-2xl font-bold text-warning">142</div>
+<div class="text-[10px] text-text-muted mt-1">Next 30 days</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-danger">gpp_bad</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Non-Compliant</div>
+<div class="text-2xl font-bold text-danger">28</div>
+<div class="text-[10px] text-danger mt-1">Missing mandatory docs</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+<div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-4xl text-success">task</span>
+</div>
+<div class="text-text-muted text-xs font-medium uppercase mb-1">Verification Rate</div>
+<div class="text-2xl font-bold text-success">98.2%</div>
+<div class="text-[10px] text-text-muted mt-1">Last 7 days avg</div>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 mb-6">
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex items-center gap-3 mb-6">
+<span class="p-2 rounded bg-surface-darker border border-border-color text-primary">
+<span class="material-symbols-outlined">notifications_active</span>
+</span>
+<div>
+<h3 class="text-white text-sm font-bold">Expiry Alerts Configuration</h3>
+<p class="text-xs text-text-muted">Define when stakeholders should be notified about expiring documents.</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<label class="text-xs font-medium text-text-muted mb-2 block uppercase tracking-wide">Notification Thresholds (Days Before Expiry)</label>
+<div class="grid grid-cols-3 gap-4">
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<div class="flex justify-between mb-1">
+<span class="text-xs text-text-muted">First Alert</span>
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" value="60"/>
+<span class="text-xs text-text-muted">days</span>
+</div>
+</div>
+<div class="bg-surface-darker p-3 rounded border border-border-color">
+<div class="flex justify-between mb-1">
+<span class="text-xs text-warning">Urgent Alert</span>
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" value="30"/>
+<span class="text-xs text-text-muted">days</span>
+</div>
+</div>
+<div class="bg-surface-darker p-3 rounded border border-border-color border-l-4 border-l-danger">
+<div class="flex justify-between mb-1">
+<span class="text-xs text-danger font-bold">Critical Alert</span>
+<div class="flex items-center gap-2">
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0 w-3.5 h-3.5" type="checkbox"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<input class="w-16 bg-surface-dark border border-border-color text-white text-sm rounded px-2 py-1 focus:border-primary outline-none" type="number" value="7"/>
+<span class="text-xs text-text-muted">days</span>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-4 border-t border-border-color">
+<label class="text-xs font-medium text-text-muted mb-3 block uppercase tracking-wide">Recipient Settings</label>
+<div class="space-y-3">
+<label class="flex items-center justify-between p-3 rounded bg-surface-darker hover:bg-surface-darker/80 transition cursor-pointer border border-transparent hover:border-border-color">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted">person</span>
+<div class="text-sm text-white">Notify Driver Assigned</div>
+</div>
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0" type="checkbox"/>
+</label>
+<label class="flex items-center justify-between p-3 rounded bg-surface-darker hover:bg-surface-darker/80 transition cursor-pointer border border-transparent hover:border-border-color">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-muted">admin_panel_settings</span>
+<div class="text-sm text-white">Notify Fleet Manager</div>
+</div>
+<input checked="" class="rounded border-border-color bg-surface-dark text-primary focus:ring-0" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color p-5">
+<div class="flex items-center gap-3 mb-6">
+<span class="p-2 rounded bg-surface-darker border border-border-color text-success">
+<span class="material-symbols-outlined">fact_check</span>
+</span>
+<div>
+<h3 class="text-white text-sm font-bold">Verification Workflow</h3>
+<p class="text-xs text-text-muted">Set rules for how new documents are validated and approved.</p>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+<div class="mt-1">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div>
+<h4 class="text-sm font-semibold text-white">Require Manual Approval</h4>
+<p class="text-xs text-text-muted mt-1">All uploaded documents must be manually reviewed by an admin before status changes to 'Valid'.</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+<div class="mt-1">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div>
+<h4 class="text-sm font-semibold text-white">AI Optical Character Recognition (OCR)</h4>
+<p class="text-xs text-text-muted mt-1">Automatically extract dates and numbers. Auto-approve if confidence score &gt; 90%.</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 rounded bg-surface-darker border border-border-color">
+<div class="mt-1">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+</label>
+</div>
+<div>
+<h4 class="text-sm font-semibold text-white">Block Vehicle Assignment on Expiry</h4>
+<p class="text-xs text-text-muted mt-1">Prevent dispatch of vehicles with critical documents that are expired or missing.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-6">
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full">
+<div class="p-5 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-xl">
+<h3 class="text-white text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">category</span>
+                                Document Categories
+                            </h3>
+<button class="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded transition-colors font-semibold border border-primary/20">
+                                + Add New
+                            </button>
+</div>
+<div class="p-4 flex items-center gap-2 border-b border-border-color bg-surface-darker/50">
+<span class="material-symbols-outlined text-text-muted text-[18px]">search</span>
+<input class="bg-transparent border-none text-xs text-white focus:ring-0 w-full placeholder-text-muted/50 p-0" placeholder="Filter categories..." type="text"/>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-0">
+<div class="divide-y divide-border-color">
+<div class="p-4 hover:bg-surface-darker transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-sm font-medium text-white">Vehicle Registration</h4>
+<p class="text-[10px] text-text-muted mt-0.5">Government issued registration proofs</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-sm font-medium text-white">Insurance Policy</h4>
+<p class="text-[10px] text-text-muted mt-0.5">Commercial liability coverage</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-sm font-medium text-white">Emissions Certificate</h4>
+<p class="text-[10px] text-text-muted mt-0.5">Environmental compliance docs</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">Active</span>
+<span class="px-2 py-0.5 rounded text-[10px] bg-border-color text-text-muted">Regional</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-sm font-medium text-white">Service Contract</h4>
+<p class="text-[10px] text-text-muted mt-0.5">Extended warranty or maintenance plans</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<div class="p-4 hover:bg-surface-darker transition-colors group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="text-sm font-medium text-white">Fuel Card Agreement</h4>
+<p class="text-[10px] text-text-muted mt-0.5">Corporate fleet card issuance</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1 text-text-muted hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between mt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] bg-border-color text-text-muted">Draft</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Mandatory</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox" value=""/>
+<div class="w-7 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-border-color bg-surface-darker rounded-b-xl flex justify-center">
+<button class="text-xs text-primary hover:underline">View All Categories</button>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden">
+<div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+<h3 class="text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">restore</span>
+                        Recent Configuration Changes
+                    </h3>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker/50">
+<th class="px-4 py-3 font-semibold">Timestamp</th>
+<th class="px-4 py-3 font-semibold">Admin</th>
+<th class="px-4 py-3 font-semibold">Action</th>
+<th class="px-4 py-3 font-semibold">Details</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 24, 14:32:01</td>
+<td class="px-4 py-3 font-medium text-white">alex.morgan@fleet.com</td>
+<td class="px-4 py-3 text-white">Update Threshold</td>
+<td class="px-4 py-3 text-text-muted">Changed 'Urgent Alert' from 45 to 30 days</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 23, 09:15:22</td>
+<td class="px-4 py-3 font-medium text-white">sarah.k@fleet.com</td>
+<td class="px-4 py-3 text-white">Create Category</td>
+<td class="px-4 py-3 text-text-muted">Added 'Emissions Certificate' category</td>
+</tr>
+<tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+<td class="px-4 py-3 text-text-muted text-xs whitespace-nowrap">Oct 22, 11:05:40</td>
+<td class="px-4 py-3 font-medium text-white">system</td>
+<td class="px-4 py-3 text-white">Policy Sync</td>
+<td class="px-4 py-3 text-text-muted">Synced mandatory fields from HQ policy</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20">
+<span>© 2023 Enterprise Fleet Manager. Documents Module V2.1</span>
+<div class="flex items-center gap-4">
+<span>Storage: <span class="text-success">Encrypted</span></span>
+<span>System Status: <span class="text-success">Operational</span></span>
+<span>Server Time: <span class="font-mono text-white">14:35 UTC</span></span>
+</div>
+</footer>
+</main>
+</div>
+
+</body></html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Add Vehicle Document</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+<div class="flex h-screen w-full">
+<aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+<span class="material-symbols-outlined">directions_car</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white">FleetManager</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+<div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Operations</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">local_shipping</span>
+<span class="text-sm font-medium">Vehicles</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined">folder_shared</span>
+<span class="text-sm font-medium">Documents</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Compliance</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">verified</span>
+<span class="text-sm font-medium">Permits</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-sm font-medium">Expirations</span>
+</a>
+<div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Settings</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Configuration</span>
+</a>
+</nav>
+<div class="p-4 border-t border-border-color">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4");'></div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-sm font-medium text-white truncate">Sarah Jenkins</span>
+<span class="text-xs text-text-muted truncate">Fleet Manager</span>
+</div>
+<button class="ml-auto text-text-muted hover:text-white">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+</button>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+<header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+<div class="flex items-center gap-4">
+<div>
+<div class="flex items-center gap-2 text-xs text-text-muted mb-1">
+<span class="hover:text-white cursor-pointer transition-colors">Documents</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-white">Add</span>
+</div>
+<h2 class="text-white text-lg font-bold">Add Vehicle Document</h2>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-text-muted hover:text-white text-sm font-medium transition-colors">
+                    Cancel
+                </button>
+<button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+                    Upload Document
+                </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="max-w-4xl mx-auto space-y-6">
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">description</span>
+                            Document Information
+                        </h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Vehicle ID <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">directions_car</span>
+</span>
+<select class="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none">
+<option disabled="" selected="" value="">Select vehicle...</option>
+<option value="v001">VH-8293 (Ford Transit)</option>
+<option value="v002">VH-9921 (Mercedes Sprinter)</option>
+<option value="v003">VH-1022 (Toyota Hilux)</option>
+</select>
+<span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">arrow_drop_down</span>
+</span>
+</div>
+</div>
+<div class="col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Document Type <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">category</span>
+</span>
+<select class="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none">
+<option disabled="" selected="" value="">Select type...</option>
+<option value="insurance">Insurance Certificate</option>
+<option value="registration">Vehicle Registration</option>
+<option value="maintenance">Maintenance Log</option>
+<option value="permit">Transport Permit</option>
+</select>
+<span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">arrow_drop_down</span>
+</span>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Document Number <span class="text-danger">*</span></label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">tag</span>
+</span>
+<input class="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="e.g. INS-2023-882910" type="text"/>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">date_range</span>
+                            Validity &amp; Authority
+                        </h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Issue Date <span class="text-danger">*</span></label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date"/>
+</div>
+</div>
+<div class="col-span-1">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Expiry Date <span class="text-danger">*</span></label>
+<div class="relative">
+<input class="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none" type="date"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Issuing Authority</label>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-muted text-[18px]">account_balance</span>
+</span>
+<input class="w-full bg-surface-darker border border-border-color text-white text-sm rounded pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50" placeholder="e.g. Department of Motor Vehicles" type="text"/>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+<div class="px-6 py-4 border-b border-border-color bg-surface-darker">
+<h3 class="text-white text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">upload_file</span>
+                            File Upload
+                        </h3>
+</div>
+<div class="p-6 space-y-6">
+<div class="col-span-1 md:col-span-2">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Attachment <span class="text-danger">*</span></label>
+<div class="w-full h-48 rounded-lg border-2 border-dashed border-border-color bg-surface-darker hover:bg-border-color/20 transition-colors flex flex-col items-center justify-center cursor-pointer group relative">
+<input accept=".pdf,.jpg,.png,.doc,.docx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" type="file"/>
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-[24px]">cloud_upload</span>
+</div>
+<p class="text-sm font-medium text-white mb-1">Click to upload or drag and drop</p>
+<p class="text-xs text-text-muted">PDF, JPG, PNG or DOC (max 10MB)</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-2">
+<label class="block text-xs font-medium text-text-muted mb-1.5">Remarks</label>
+<textarea class="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 h-24 resize-none" placeholder="Add any additional notes about this document..."></textarea>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-10 border-t border-border-color pt-6 pb-2 text-center text-[10px] text-text-muted">
+<span>© 2023 Enterprise Fleet Manager. Documents Module V2.1</span>
+</footer>
+</div>
+</main>
+</div>
+
+</body></html>

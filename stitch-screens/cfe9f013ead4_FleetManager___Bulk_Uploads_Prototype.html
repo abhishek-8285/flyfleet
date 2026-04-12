@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>FleetManager - Bulk Uploads Prototype</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "primary-dark": "#0f6bd0",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0b1219",
+                        "surface-dark": "#16202a",
+                        "surface-darker": "#111a22",
+                        "surface-light": "#ffffff",
+                        "border-color": "#233648",
+                        "text-muted": "#92adc9",
+                        "success": "#10b981",
+                        "warning": "#f59e0b",
+                        "danger": "#ef4444",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111a22; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #233648; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334d66; 
+        }
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+        /* Animation for progress bar shimmer */
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // Shared Components
+        const Sidebar = () => {
+            const navigate = useNavigate();
+            const location = useLocation();
+
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside class="flex flex-col w-64 h-full bg-[#111a22] border-r border-border-color flex-shrink-0 z-30">
+                    <div class="p-6 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-white shadow-[0_0_15px_rgba(19,127,236,0.3)]">
+                            <span class="material-symbols-outlined">shield_lock</span>
+                        </div>
+                        <h1 class="text-lg font-bold tracking-tight text-white cursor-pointer" onClick={() => navigate('/')}>FleetManager</h1>
+                    </div>
+                    <nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                        <div class="px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Core Operations</div>
+                        <Link to="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">dashboard</span>
+                            <span class="text-sm font-medium">Dashboard</span>
+                        </Link>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">directions_car</span>
+                            <span class="text-sm font-medium">Vehicles</span>
+                        </a>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">person</span>
+                            <span class="text-sm font-medium">Drivers</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">Data Management</div>
+                        <Link to="/" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/') || isActive('/new') || isActive('/detail') || isActive('/error') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span class="material-symbols-outlined">cloud_upload</span>
+                            <span class="text-sm font-medium">Bulk Uploads</span>
+                        </Link>
+                        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:bg-border-color hover:text-white transition-colors">
+                            <span class="material-symbols-outlined">integration_instructions</span>
+                            <span class="text-sm font-medium">Integrations</span>
+                        </a>
+                        <div class="px-3 mt-6 mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">System</div>
+                        <Link to="/settings" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive('/settings') ? 'bg-primary/10 text-primary border-l-4 border-primary' : 'text-text-muted hover:bg-border-color hover:text-white'}`}>
+                            <span class="material-symbols-outlined">settings</span>
+                            <span class="text-sm font-medium">Settings</span>
+                        </Link>
+                    </nav>
+                    <div class="p-4 border-t border-border-color">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-border-color" style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB4VhzOFW3Dq3K6lVra-IfzYBB25STyIEccTv5dhkHOP-UG8PC324sKwt0X1gtpfVRy_03a0VGH-UM_jfzD8OF3GLXMtXl60OV-x50rfLua-I3ee-Nk_-1tnyB5ojs_4_Rf4e7prPUNNcbTTTaOdgf-iF7L4WRC12e2czLr8OoPSWOUU72a9RqffeHmgMAAjNmh6zath8vPdZFF2cTHTDZsV0HhJd5EvSuqdR--8rd_9Jhb4JpqD_gbm_xI5Hha6JYZPAXuKlTUBm4")'}}></div>
+                            <div class="flex flex-col overflow-hidden">
+                                <span class="text-sm font-medium text-white truncate">Alex Morgan</span>
+                                <span class="text-xs text-text-muted truncate">Fleet Admin</span>
+                            </div>
+                            <button class="ml-auto text-text-muted hover:text-white">
+                                <span class="material-symbols-outlined text-[20px]">logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+            );
+        };
+
+        // Screen 1: Jobs List
+        const JobsListScreen = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col justify-center">
+                                <nav class="flex items-center text-[11px] text-text-muted mb-0.5">
+                                    <span class="hover:text-white cursor-pointer transition-colors">Fleet Management</span>
+                                    <span class="material-symbols-outlined text-[10px] mx-1">chevron_right</span>
+                                    <span class="text-white font-medium">Bulk Uploads</span>
+                                </nav>
+                                <h2 class="text-white text-lg font-bold">Bulk Upload Jobs</h2>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                                    <input class="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-2 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-gray-600" placeholder="Global Search..." type="text"/>
+                                </div>
+                                <button class="px-3 py-2 bg-surface-dark border border-border-color hover:bg-border-color text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">download</span>
+                                    Download Template
+                                </button>
+                                <button onClick={() => navigate('/new')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">add</span>
+                                    New Upload
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 flex overflow-hidden">
+                            <aside class="w-64 border-r border-border-color bg-surface-dark flex flex-col flex-shrink-0 overflow-y-auto custom-scrollbar p-5">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Filters</h3>
+                                    <button class="text-[10px] text-primary hover:text-primary-dark font-medium">Reset All</button>
+                                </div>
+                                <div class="mb-6">
+                                    <label class="text-xs font-semibold text-text-muted mb-3 block uppercase">Job Status</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary w-4 h-4" type="checkbox"/>
+                                            <span class="text-sm text-white group-hover:text-primary transition-colors">Processing</span>
+                                            <span class="ml-auto text-[10px] text-text-muted bg-surface-darker px-1.5 py-0.5 rounded border border-border-color">2</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary w-4 h-4" type="checkbox"/>
+                                            <span class="text-sm text-white group-hover:text-primary transition-colors">Completed</span>
+                                            <span class="ml-auto text-[10px] text-text-muted bg-surface-darker px-1.5 py-0.5 rounded border border-border-color">84</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary w-4 h-4" type="checkbox"/>
+                                            <span class="text-sm text-white group-hover:text-primary transition-colors">Failed</span>
+                                            <span class="ml-auto text-[10px] text-text-muted bg-surface-darker px-1.5 py-0.5 rounded border border-border-color">5</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <input class="rounded border-border-color bg-surface-darker text-primary focus:ring-offset-0 focus:ring-1 focus:ring-primary w-4 h-4" type="checkbox"/>
+                                            <span class="text-sm text-white group-hover:text-primary transition-colors">Partial Success</span>
+                                            <span class="ml-auto text-[10px] text-text-muted bg-surface-darker px-1.5 py-0.5 rounded border border-border-color">12</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </aside>
+                            <div class="flex-1 overflow-hidden flex flex-col">
+                                <div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-full">
+                                        <div class="overflow-x-auto h-full">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead class="sticky top-0 z-10 bg-surface-darker border-b border-border-color">
+                                                    <tr class="text-xs text-text-muted uppercase tracking-wider">
+                                                        <th class="px-4 py-3 font-semibold">Job ID</th>
+                                                        <th class="px-4 py-3 font-semibold">File Name</th>
+                                                        <th class="px-4 py-3 font-semibold text-center">Total Records</th>
+                                                        <th class="px-4 py-3 font-semibold">Success / Failed</th>
+                                                        <th class="px-4 py-3 font-semibold">Status</th>
+                                                        <th class="px-4 py-3 font-semibold">Created At</th>
+                                                        <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-sm divide-y divide-border-color">
+                                                    <tr onClick={() => navigate('/detail')} class="cursor-pointer hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-white font-mono text-xs">#JOB-8821</td>
+                                                        <td class="px-4 py-3 text-white font-medium flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                                            fleet_update_q4_v2.csv
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white text-center">450</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="bg-surface-darker border border-border-color text-text-muted px-2 py-0.5 rounded text-[10px] font-mono">--</span>
+                                                                <span class="text-text-muted text-[10px]">/</span>
+                                                                <span class="bg-surface-darker border border-border-color text-text-muted px-2 py-0.5 rounded text-[10px] font-mono">--</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                                PROCESSING
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted text-xs">Just now</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="p-1.5 text-text-muted hover:text-white rounded hover:bg-border-color transition-colors">
+                                                                <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr onClick={() => navigate('/detail')} class="cursor-pointer hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-white font-mono text-xs">#JOB-8820</td>
+                                                        <td class="px-4 py-3 text-white font-medium flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                                            new_vehicles_batch_05.xlsx
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white text-center">1,240</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="bg-success/10 border border-success/20 text-success px-2 py-0.5 rounded text-[10px] font-mono font-bold">1,240</span>
+                                                                <span class="text-text-muted text-[10px]">/</span>
+                                                                <span class="bg-surface-darker border border-border-color text-text-muted px-2 py-0.5 rounded text-[10px] font-mono">0</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                                COMPLETED
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted text-xs">Oct 24, 10:15 AM</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="p-1.5 text-text-muted hover:text-white rounded hover:bg-border-color transition-colors">
+                                                                <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr onClick={() => navigate('/error')} class="cursor-pointer hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-white font-mono text-xs">#JOB-8819</td>
+                                                        <td class="px-4 py-3 text-white font-medium flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                                            driver_assignments_v1.csv
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white text-center">85</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="bg-success/10 border border-success/20 text-success px-2 py-0.5 rounded text-[10px] font-mono font-bold">82</span>
+                                                                <span class="text-text-muted text-[10px]">/</span>
+                                                                <span class="bg-danger/10 border border-danger/20 text-danger px-2 py-0.5 rounded text-[10px] font-mono font-bold">3</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20">
+                                                                PARTIAL
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted text-xs">Oct 23, 16:45 PM</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="p-1.5 text-text-muted hover:text-white rounded hover:bg-border-color transition-colors">
+                                                                <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    <tr onClick={() => navigate('/error')} class="cursor-pointer hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-white font-mono text-xs">#JOB-8815</td>
+                                                        <td class="px-4 py-3 text-white font-medium flex items-center gap-2">
+                                                            <span class="material-symbols-outlined text-text-muted text-[18px]">description</span>
+                                                            invalid_format_test.txt
+                                                        </td>
+                                                        <td class="px-4 py-3 text-white text-center">0</td>
+                                                        <td class="px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <span class="bg-surface-darker border border-border-color text-text-muted px-2 py-0.5 rounded text-[10px] font-mono">0</span>
+                                                                <span class="text-text-muted text-[10px]">/</span>
+                                                                <span class="bg-danger/10 border border-danger/20 text-danger px-2 py-0.5 rounded text-[10px] font-mono font-bold">All</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-4 py-3">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">
+                                                                FAILED
+                                                            </span>
+                                                        </td>
+                                                        <td class="px-4 py-3 text-text-muted text-xs">Oct 23, 09:20 AM</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <button class="p-1.5 text-text-muted hover:text-white rounded hover:bg-border-color transition-colors">
+                                                                <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="bg-surface-dark border-t border-border-color px-6 py-3 flex items-center justify-between text-xs text-text-muted z-10">
+                                        <div class="flex items-center gap-2">
+                                            <span>Rows per page:</span>
+                                            <select class="bg-surface-darker border border-border-color text-white rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary">
+                                                <option>25</option>
+                                                <option>50</option>
+                                                <option>100</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span>1-25 of 120</span>
+                                            <div class="flex gap-1">
+                                                <button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white disabled:opacity-50" disabled="">
+                                                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                                                </button>
+                                                <button class="p-1 hover:bg-border-color rounded text-text-muted hover:text-white">
+                                                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <footer class="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
+                            <span>© 2023 Enterprise Fleet Manager.</span>
+                            <div class="flex items-center gap-4">
+                                <span>API Status: <span class="text-success">Connected</span></span>
+                                <span>Server Time: <span class="font-mono text-white">15:42 UTC</span></span>
+                            </div>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 2: New Upload
+        const NewUploadScreen = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <nav aria-label="Breadcrumb" class="flex text-xs text-text-muted mb-1">
+                                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                                            <li class="inline-flex items-center">
+                                                <Link to="/" class="inline-flex items-center hover:text-white">
+                                                    Bulk Uploads
+                                                </Link>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-center">
+                                                    <span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+                                                    <span class="text-white font-medium">New Upload</span>
+                                                </div>
+                                            </li>
+                                        </ol>
+                                    </nav>
+                                    <h2 class="text-white text-lg font-bold">Upload New Vehicle File</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button onClick={() => navigate('/')} class="px-4 py-2 text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
+                                    Cancel
+                                </button>
+                                <button onClick={() => navigate('/detail')} class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+                                    Start Upload
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="max-w-4xl mx-auto space-y-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-6">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <h3 class="text-white text-sm font-semibold mb-1">1. Template Selection</h3>
+                                            <p class="text-xs text-text-muted">Download the standard CSV template to ensure your data is formatted correctly before uploading.</p>
+                                        </div>
+                                        <button class="px-3 py-2 bg-surface-darker hover:bg-border-color border border-border-color text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                            <span class="material-symbols-outlined text-[16px]">download</span>
+                                            Download CSV Template
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-6">
+                                    <h3 class="text-white text-sm font-semibold mb-4">2. File Upload</h3>
+                                    <div class="w-full">
+                                        <label class="flex flex-col items-center justify-center w-full h-64 border-2 border-border-color border-dashed rounded-lg cursor-pointer bg-surface-darker hover:bg-[#1a2632] transition-colors group">
+                                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <div class="p-4 rounded-full bg-surface-dark mb-4 group-hover:scale-110 transition-transform duration-200">
+                                                    <span class="material-symbols-outlined text-4xl text-text-muted group-hover:text-primary">upload_file</span>
+                                                </div>
+                                                <p class="mb-2 text-sm text-white font-medium">Click to upload or drag and drop</p>
+                                                <p class="text-xs text-text-muted">CSV or Excel files (MAX. 50MB)</p>
+                                            </div>
+                                            <input accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" id="dropzone-file" type="file"/>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-6">
+                                    <h3 class="text-white text-sm font-semibold mb-4">3. Job Configuration</h3>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div class="space-y-2">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider" for="org-id">Organization ID <span class="text-danger">*</span></label>
+                                            <div class="relative">
+                                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span class="material-symbols-outlined text-text-muted text-[18px]">domain</span>
+                                                </div>
+                                                <input class="bg-surface-darker border border-border-color text-white text-sm rounded block w-full pl-10 p-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/50 outline-none transition-all" id="org-id" placeholder="e.g. ORG-8821" type="text"/>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label class="text-xs font-medium text-text-muted uppercase tracking-wider" for="remarks">Remarks</label>
+                                            <div class="relative">
+                                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span class="material-symbols-outlined text-text-muted text-[18px]">notes</span>
+                                                </div>
+                                                <input class="bg-surface-darker border border-border-color text-white text-sm rounded block w-full pl-10 p-2.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/50 outline-none transition-all" id="remarks" placeholder="Optional notes for this upload job" type="text"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 3: Job Detail
+        const JobDetailScreen = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2 text-[11px] text-text-muted">
+                                    <Link to="/" class="hover:text-white cursor-pointer">Bulk Uploads</Link>
+                                    <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                    <span class="text-white font-medium">Job 84920-XE</span>
+                                </div>
+                                <h2 class="text-white text-lg font-bold flex items-center gap-2">
+                                    Bulk Vehicle Import
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+                                        Completed
+                                    </span>
+                                </h2>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <button class="px-3 py-2 bg-surface-dark border border-border-color hover:bg-surface-darker text-text-muted hover:text-white text-xs font-medium rounded flex items-center gap-2 transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">download</span>
+                                    Download Success Log
+                                </button>
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">refresh</span>
+                                    Reprocess Failed
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-white">list_alt</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Total Records</div>
+                                    <div class="text-2xl font-bold text-white">2,540</div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-success">check_circle</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Success Rate</div>
+                                    <div class="text-2xl font-bold text-success">98.2%</div>
+                                </div>
+                                <div onClick={() => navigate('/error')} class="cursor-pointer bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group hover:border-danger/50 transition-colors">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-danger">error</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Failed Records</div>
+                                    <div class="text-2xl font-bold text-danger">46</div>
+                                    <div class="text-[10px] text-danger mt-1">Click to view details</div>
+                                </div>
+                                <div class="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
+                                    <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <span class="material-symbols-outlined text-4xl text-primary">timer</span>
+                                    </div>
+                                    <div class="text-text-muted text-xs font-medium uppercase mb-1">Processing Time</div>
+                                    <div class="text-2xl font-bold text-primary">4m 12s</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-6 h-[calc(100%-140px)] min-h-[500px]">
+                                <div class="col-span-12 lg:col-span-9 flex flex-col gap-6 h-full">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color p-5">
+                                        <div class="flex justify-between items-end mb-2">
+                                            <div>
+                                                <h3 class="text-white text-sm font-semibold mb-1">Processing Progress</h3>
+                                                <p class="text-xs text-text-muted">Job completed successfully. All batches processed.</p>
+                                            </div>
+                                            <span class="text-sm font-bold text-success">100%</span>
+                                        </div>
+                                        <div class="w-full bg-surface-darker h-2 rounded-full overflow-hidden">
+                                            <div class="bg-success h-full relative" style={{width: '100%'}}>
+                                                <div class="absolute top-0 left-0 bottom-0 right-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col flex-1 overflow-hidden">
+                                        <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">table_chart</span>
+                                                Processed Vehicles
+                                            </h3>
+                                        </div>
+                                        <div class="flex-1 overflow-auto custom-scrollbar">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead class="sticky top-0 z-10">
+                                                    <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker">
+                                                        <th class="px-4 py-3 font-semibold">Vehicle No</th>
+                                                        <th class="px-4 py-3 font-semibold">Reg No</th>
+                                                        <th class="px-4 py-3 font-semibold">VIN</th>
+                                                        <th class="px-4 py-3 font-semibold">Make/Model</th>
+                                                        <th class="px-4 py-3 font-semibold">Year</th>
+                                                        <th class="px-4 py-3 font-semibold text-right">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-sm">
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td class="px-4 py-3 text-white font-medium">V-10293</td>
+                                                        <td class="px-4 py-3 text-text-muted">AB-392-KL</td>
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">1HGCM82633A004352</td>
+                                                        <td class="px-4 py-3 text-white">Toyota Camry</td>
+                                                        <td class="px-4 py-3 text-text-muted">2023</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">SUCCESS</span>
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors">
+                                                        <td class="px-4 py-3 text-white font-medium">V-10298</td>
+                                                        <td class="px-4 py-3 text-text-muted">DD-222-EE</td>
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">WBA3A5C54EK293847</td>
+                                                        <td class="px-4 py-3 text-white">BMW 3 Series</td>
+                                                        <td class="px-4 py-3 text-text-muted">2023</td>
+                                                        <td class="px-4 py-3 text-right">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20">FAILED</span>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-12 lg:col-span-3 flex flex-col gap-6 h-full">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col h-full">
+                                        <div class="p-4 border-b border-border-color">
+                                            <h3 class="text-white text-sm font-semibold flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted text-[18px]">info</span>
+                                                Job Metadata
+                                            </h3>
+                                        </div>
+                                        <div class="p-5 flex flex-col gap-6">
+                                            <div>
+                                                <span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Job ID</span>
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    <span class="text-white font-mono text-sm">84920-XE</span>
+                                                </div>
+                                            </div>
+                                            <div class="h-px bg-border-color"></div>
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <span class="text-[10px] uppercase text-text-muted font-bold tracking-wider">Source File</span>
+                                                    <div class="flex items-center gap-2 mt-1">
+                                                        <span class="material-symbols-outlined text-text-muted text-[16px]">description</span>
+                                                        <span class="text-sm text-white truncate">vehicle_import_q4_2023.csv</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 4: Errors
+        const ErrorDetailScreen = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <nav aria-label="Breadcrumb" class="flex text-xs text-text-muted mb-1">
+                                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                                            <li class="inline-flex items-center">
+                                                <Link to="/" class="inline-flex items-center hover:text-white">Bulk Uploads</Link>
+                                            </li>
+                                            <li>
+                                                <div class="flex items-center">
+                                                    <span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+                                                    <Link to="/detail" class="hover:text-white">Job #8492</Link>
+                                                </div>
+                                            </li>
+                                            <li aria-current="page">
+                                                <div class="flex items-center">
+                                                    <span class="material-symbols-outlined text-[14px] mx-1">chevron_right</span>
+                                                    <span class="text-white font-medium">Errors</span>
+                                                </div>
+                                            </li>
+                                        </ol>
+                                    </nav>
+                                    <h2 class="text-white text-lg font-bold">Upload Job Error Detail</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-dark border border-border-color text-xs text-text-muted">
+                                    <span class="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
+                                    Status: Failed
+                                </span>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-12 gap-6 mb-6">
+                                <div class="col-span-12">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div class="flex items-start gap-4">
+                                            <div class="p-3 rounded-lg bg-danger/10 border border-danger/20 text-danger">
+                                                <span class="material-symbols-outlined text-3xl">report_problem</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-white text-lg font-bold mb-1">23 Errors Found</h3>
+                                                <p class="text-text-muted text-sm">
+                                                    The bulk upload for "Q4_Fleet_Addition.csv" encountered errors. 
+                                                    <br/>142 records processed successfully, 23 failed.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col sm:flex-row gap-3">
+                                            <button onClick={() => navigate('/detail')} class="px-4 py-2 bg-surface-darker hover:bg-border-color border border-border-color text-text-muted hover:text-white text-sm font-medium rounded flex items-center gap-2 transition-colors">
+                                                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                                                Back to Job
+                                            </button>
+                                            <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                                <span class="material-symbols-outlined text-[18px]">download</span>
+                                                Download Error File
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-span-12">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color flex flex-col overflow-hidden h-[calc(100vh-320px)] min-h-[400px]">
+                                        <div class="p-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-danger text-[18px]">error_outline</span>
+                                                Specific Row Errors
+                                            </h3>
+                                        </div>
+                                        <div class="flex-1 overflow-auto custom-scrollbar">
+                                            <table class="w-full text-left border-collapse">
+                                                <thead class="sticky top-0 z-10">
+                                                    <tr class="border-b border-border-color text-xs text-text-muted uppercase tracking-wider bg-surface-darker">
+                                                        <th class="px-4 py-3 font-semibold w-24">Row #</th>
+                                                        <th class="px-4 py-3 font-semibold w-48">Vehicle Number</th>
+                                                        <th class="px-4 py-3 font-semibold w-40">Error Type</th>
+                                                        <th class="px-4 py-3 font-semibold">Error Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="text-sm">
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">4</td>
+                                                        <td class="px-4 py-3 font-medium text-white">V-8921-X</td>
+                                                        <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase">Duplicate</span></td>
+                                                        <td class="px-4 py-3 text-text-muted">Vehicle ID "V-8921-X" already exists in the system database.</td>
+                                                    </tr>
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">12</td>
+                                                        <td class="px-4 py-3 font-medium text-white">Pending Reg</td>
+                                                        <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-danger/10 text-danger border border-danger/20 uppercase">Mandatory</span></td>
+                                                        <td class="px-4 py-3 text-text-muted">Field "VIN" is required but was empty in the source file.</td>
+                                                    </tr>
+                                                    <tr class="border-b border-border-color hover:bg-surface-darker/50 transition-colors group">
+                                                        <td class="px-4 py-3 text-text-muted font-mono text-xs">15</td>
+                                                        <td class="px-4 py-3 font-medium text-white">TX-9912-KL</td>
+                                                        <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase">Format</span></td>
+                                                        <td class="px-4 py-3 text-text-muted">Invalid date format for "Purchase Date". Expected YYYY-MM-DD, received MM/DD/YYYY.</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // Screen 5: Settings
+        const SettingsScreen = () => {
+            const navigate = useNavigate();
+            return (
+                <div class="flex h-screen w-full">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
+                        <header class="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
+                            <div class="flex items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-2 text-xs text-text-muted mb-0.5">
+                                        <span>Bulk Uploads</span>
+                                        <span class="material-symbols-outlined text-[10px]">chevron_right</span>
+                                        <span class="text-white">Settings</span>
+                                    </div>
+                                    <h2 class="text-white text-lg font-bold">Bulk Processing Configuration</h2>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <button class="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                    <span class="material-symbols-outlined text-[16px]">save</span>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                            <div class="grid grid-cols-12 gap-6">
+                                <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted">tune</span>
+                                                Upload Parameters
+                                            </h3>
+                                        </div>
+                                        <div class="p-6 space-y-6">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5">Max Records Per File</label>
+                                                    <div class="relative">
+                                                        <input class="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder-text-muted/50" type="number" defaultValue="5000"/>
+                                                        <span class="absolute right-3 top-2 text-xs text-text-muted">rows</span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5">Concurrent Processing Threads</label>
+                                                    <select class="w-full bg-surface-darker border border-border-color text-white text-sm rounded px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all">
+                                                        <option>2 Threads</option>
+                                                        <option selected>4 Threads</option>
+                                                        <option>8 Threads (High Load)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-text-muted mb-2">Mandatory Upload Fields</label>
+                                                <div class="p-3 bg-surface-darker rounded border border-border-color min-h-[100px]">
+                                                    <div class="flex flex-wrap gap-2">
+                                                        {['VIN Number', 'Registration No', 'Make', 'Model Year'].map(field => (
+                                                            <span key={field} class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/20 text-primary text-xs border border-primary/30">
+                                                                {field}
+                                                                <button class="hover:text-white transition-colors"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                                                            </span>
+                                                        ))}
+                                                        <button class="inline-flex items-center gap-1 px-2 py-1 rounded border border-dashed border-text-muted text-text-muted hover:text-white hover:border-white text-xs transition-colors">
+                                                            <span class="material-symbols-outlined text-[14px]">add</span>
+                                                            Add Field
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker/50 flex justify-between items-center">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-text-muted">auto_delete</span>
+                                                Data Retention Policy
+                                            </h3>
+                                        </div>
+                                        <div class="p-6">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                                                <div>
+                                                    <label class="block text-xs font-medium text-text-muted mb-1.5">Auto-Cleanup Job Logs (Months)</label>
+                                                    <div class="flex items-center gap-3">
+                                                        <input class="w-full h-2 bg-surface-darker rounded-lg appearance-none cursor-pointer accent-primary" max="24" min="1" type="range" defaultValue="6"/>
+                                                        <span class="w-12 text-center py-1 bg-surface-darker border border-border-color rounded text-white text-sm font-mono">6</span>
+                                                    </div>
+                                                </div>
+                                                <div class="bg-surface-darker p-4 rounded border border-border-color">
+                                                    <h4 class="text-xs font-bold text-white mb-2 uppercase tracking-wide">Retention Summary</h4>
+                                                    <ul class="space-y-2 text-xs text-text-muted">
+                                                        <li class="flex justify-between">
+                                                            <span>Current Storage Usage:</span>
+                                                            <span class="text-white">4.2 GB</span>
+                                                        </li>
+                                                        <li class="flex justify-between">
+                                                            <span>Estimated Yearly Growth:</span>
+                                                            <span class="text-white">+1.8 GB</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+                                    <div class="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+                                        <div class="p-4 border-b border-border-color bg-surface-darker/50">
+                                            <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                                                <span class="material-symbols-outlined text-success">pulse_alert</span>
+                                                Bulk System Health
+                                            </h3>
+                                        </div>
+                                        <div class="p-4 space-y-4">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs text-text-muted">API Status</span>
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="relative flex h-2 w-2">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                                                    </span>
+                                                    <span class="text-xs text-white font-medium">Online (99.9%)</span>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-text-muted">Worker Node 1</span>
+                                                    <span class="text-white">Idle</span>
+                                                </div>
+                                                <div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+                                                    <div class="bg-success h-full" style={{width: '12%'}}></div>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-2">
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-text-muted">Worker Node 2</span>
+                                                    <span class="text-warning">Busy</span>
+                                                </div>
+                                                <div class="w-full bg-surface-darker h-1.5 rounded-full overflow-hidden">
+                                                    <div class="bg-warning h-full" style={{width: '78%'}}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<JobsListScreen />} />
+                        <Route path="/new" element={<NewUploadScreen />} />
+                        <Route path="/detail" element={<JobDetailScreen />} />
+                        <Route path="/error" element={<ErrorDetailScreen />} />
+                        <Route path="/settings" element={<SettingsScreen />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
