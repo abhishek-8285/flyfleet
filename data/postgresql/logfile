@@ -2020,3 +2020,47 @@
 			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
 			                         ip_address, user_agent, expires_at, last_active_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 11:21:09.044 IST [10614] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 11:21:09.044 IST [10614] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 11:21:09.052 IST [10614] ERROR:  column "resource" does not exist at character 15
+2026-04-13 11:21:09.052 IST [10614] STATEMENT:  
+			SELECT id, resource, action, description, bit_position
+			FROM permissions ORDER BY bit_position
+2026-04-13 11:25:08.623 IST [20380] LOG:  checkpoint starting: time
+2026-04-13 11:25:08.855 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.134 s, sync=0.005 s, total=0.235 s; sync files=2, longest=0.004 s, average=0.003 s; distance=5 kB, estimate=2697 kB; lsn=0/28C4BF0, redo lsn=0/28C4B98
+2026-04-13 18:22:57.742 IST [23421] LOG:  invalid length of startup packet
+2026-04-13 20:44:46.183 IST [7519] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 20:44:46.183 IST [7519] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 20:45:18.005 IST [20380] LOG:  checkpoint starting: time
+2026-04-13 20:45:18.244 IST [20380] LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.132 s, sync=0.005 s, total=0.245 s; sync files=1, longest=0.005 s, average=0.005 s; distance=5 kB, estimate=2428 kB; lsn=0/28C63C8, redo lsn=0/28C6370
+2026-04-13 21:19:47.569 IST [13654] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 21:19:47.569 IST [13654] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-13 23:20:46.648 IST [10291] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-13 23:20:46.648 IST [10291] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-14 00:04:42.887 IST [15939] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-14 00:04:42.887 IST [15939] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-14 00:04:55.929 IST [15939] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-14 00:04:55.929 IST [15939] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+2026-04-14 01:10:56.916 IST [32256] ERROR:  column "user_id" of relation "auth_tokens" does not exist at character 29
+2026-04-14 01:10:56.916 IST [32256] STATEMENT:  
+			INSERT INTO auth_tokens (user_id, org_id, token_hash, token_type, device_id, device_info,
+			                         ip_address, user_agent, expires_at, last_active_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
