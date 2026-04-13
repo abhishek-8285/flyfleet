@@ -20,7 +20,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/iam"
 	iamcfg "github.com/flyfleet/fleet-core/internal/domains/iam/config"
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
-	vr "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
+	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
@@ -60,7 +60,8 @@ func main() {
 	telemRepo := tr.NewTelemetryRepository(pool, logger)
 	liveCache := tr.NewLiveCacheRepository(rdb)
 	geoRepo := tr.NewGeofenceRepository(pool)
-	vehicleRepo := vr.NewVehicleRepository(pool)
+	vehicleRepo := tr.NewVehicleRepository(pool)               // tracking layer
+	vehicleDomainRepo := vrepo.NewVehicleRepository(pool, logger) // vehicle domain (CRUD)
 
 	// --- Services ---
 	tenantChecker := &pgTenantChecker{pool: pool}
@@ -105,7 +106,7 @@ func main() {
 	geofenceHandler := th.NewGeofenceHandler(geoRepo, logger)
 
 	// --- Vehicle Domain ---
-	vehicleService := vs.NewVehicleService(vehicleRepo, logger)
+	vehicleService := vs.NewVehicleService(vehicleDomainRepo, logger)
 	vehicleHandlers := vh.NewVehicleHandlers(vehicleService, logger)
 
 	// --- Geofence Worker (conditional) ---

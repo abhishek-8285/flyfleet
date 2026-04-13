@@ -24,7 +24,7 @@ func NewVehicleRepository(db *pgxpool.Pool, logger *zap.Logger) *VehicleReposito
 func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle) error {
 	query := `
 		INSERT INTO vehicles (
-			id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
+			id, tenant_id, registration, chassis_number, engine_number, vin_number,
 			vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 			parent_vehicle_id, branch_id, cost_center_id, status,
 			gps_device_id, immobilizer_enabled, ais140_compliant,
@@ -55,7 +55,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
@@ -94,7 +94,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 
 	query := `
-		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
@@ -133,7 +133,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle) error {
 	query := `
 		UPDATE vehicles SET
-			registration_number  = COALESCE($1, registration_number),
+			registration  = COALESCE($1, registration),
 			chassis_number       = COALESCE($2, chassis_number),
 			engine_number        = COALESCE($3, engine_number),
 			vin_number           = COALESCE($4, vin_number),
@@ -250,11 +250,11 @@ func (r *VehicleRepository) GetByRegistrationNumber(ctx context.Context, tenantI
 	v := &models.Vehicle{}
 	start := time.Now()
 	err := r.db.QueryRow(ctx,
-		`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at
-		 FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`,
+		`SELECT id, tenant_id, registration, status, version, created_at, updated_at
+		 FROM vehicles WHERE tenant_id = $1 AND registration = $2 AND deleted_at IS NULL`,
 		tenantID, regNo,
 	).Scan(&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Status, &v.Version, &v.CreatedAt, &v.UpdatedAt)
-	metrics.RecordDBQuery(`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`, time.Since(start))
+	metrics.RecordDBQuery(`SELECT id, tenant_id, registration, status, version, created_at, updated_at FROM vehicles WHERE tenant_id = $1 AND registration = $2 AND deleted_at IS NULL`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil // not found (nil, nil) = caller checks
@@ -295,7 +295,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 		argN++
 	}
 	if params.Query != "" {
-		where += fmt.Sprintf(" AND (registration_number ILIKE $%d OR vin_number ILIKE $%d)", argN, argN)
+		where += fmt.Sprintf(" AND (registration ILIKE $%d OR vin_number ILIKE $%d)", argN, argN)
 		args = append(args, "%"+params.Query+"%")
 		argN++
 	}
@@ -311,7 +311,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	offset := (params.Page - 1) * params.Limit
 	args = append(args, params.Limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
