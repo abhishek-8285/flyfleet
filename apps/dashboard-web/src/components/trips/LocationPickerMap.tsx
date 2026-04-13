@@ -40,14 +40,28 @@ interface LocationPickerMapProps {
 
 function ClickHandler({
   onChange,
+  draggableMarker,
+  markerPosition,
 }: {
   onChange: (lat: number, lng: number) => void;
+  draggableMarker?: boolean;
+  markerPosition?: [number, number] | null;
 }) {
+  const map = useMap();
+
   useMapEvents({
     click(e) {
       onChange(e.latlng.lat, e.latlng.lng);
     },
   });
+
+  // Fit bounds when marker position changes
+  useEffect(() => {
+    if (markerPosition) {
+      map.setView(markerPosition, Math.max(map.getZoom(), 13));
+    }
+  }, [markerPosition, map]);
+
   return null;
 }
 

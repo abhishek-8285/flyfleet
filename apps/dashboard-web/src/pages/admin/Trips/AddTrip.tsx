@@ -9,7 +9,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DocumentUploader from "../../../components/trips/DocumentUploader";
-import LocationPickerMap, { MapLocation } from "../../../components/trips/LocationPickerMap";
+import AddressInput from "../../../components/trips/AddressInput";
+import RouteMap, { RouteMapPoint } from "../../../components/trips/RouteMap";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import api from "../../../services/api";
 
@@ -26,7 +27,7 @@ interface DriverOption {
   license_number?: string;
 }
 
-function calculateDistance(a: MapLocation, b: MapLocation): number {
+function calculateDistance(a: RouteMapPoint, b: RouteMapPoint): number {
   const R = 6371;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLon = ((b.lng - a.lng) * Math.PI) / 180;
@@ -58,18 +59,28 @@ export default function AddTrip() {
     driver_id: "",
     org_id: "",
     trip_type: "delivery",
+    title: "",
     start_location: "",
     end_location: "",
     scheduled_start: "",
     planned_eta: "",
     description: "",
+    customer_name: "",
+    customer_phone: "",
+    customer_email: "",
+    cargo_type: "general",
+    cargo_weight: "",
+    cargo_value: "",
+    cargo_description: "",
+    planned_distance: "",
+    estimated_duration_min: "",
   });
 
   const [timeError, setTimeError] = useState("");
 
   // Map locations
-  const [startLoc, setStartLoc] = useState<MapLocation | null>(null);
-  const [endLoc, setEndLoc] = useState<MapLocation | null>(null);
+  const [pickup, setPickup] = useState<RouteMapPoint | null>(null);
+  const [drop, setDrop] = useState<RouteMapPoint | null>(null);
 
   // Documents
   const [uploadedDocs, setUploadedDocs] = useState<
@@ -141,19 +152,19 @@ export default function AddTrip() {
     v.registration_number || v.plate_number || v.name || v.id.slice(0, 8);
 
   // Sync map location to text input
-  const handleStartLocChange = (loc: MapLocation) => {
-    setStartLoc(loc);
+  const handlePickupChange = (pt: RouteMapPoint) => {
+    setPickup(pt);
     setFormData((p) => ({
       ...p,
-      start_location: loc.address || `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`,
+      start_location: pt.address || `${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`,
     }));
   };
 
-  const handleEndLocChange = (loc: MapLocation) => {
-    setEndLoc(loc);
+  const handleDropChange = (pt: RouteMapPoint) => {
+    setDrop(pt);
     setFormData((p) => ({
       ...p,
-      end_location: loc.address || `${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`,
+      end_location: pt.address || `${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`,
     }));
   };
 
@@ -177,12 +188,24 @@ export default function AddTrip() {
       setError("Vehicle is required");
       return;
     }
+    if (!formData.title) {
+      setError("Trip title is required");
+      return;
+    }
     if (!formData.start_location || !formData.end_location) {
       setError("Start and end locations are required");
       return;
     }
     if (!formData.scheduled_start) {
       setError("Start time is required");
+      return;
+    }
+    if (!formData.customer_name) {
+      setError("Customer name is required");
+      return;
+    }
+    if (!formData.customer_phone) {
+      setError("Customer phone is required");
       return;
     }
     if (formData.planned_eta && !validateTimes(formData.scheduled_start, formData.planned_eta)) {
@@ -193,21 +216,77 @@ export default function AddTrip() {
     setLoading(true);
 
     try {
-      const payload: Record<string, unknown> = {
+      // Calculate distance from map if available, else estimate
+      const distance = pickup && drop
+        ? calculateDistance(pickup, drop)
+        : (parseFloat(formData.planned_distance) || 100);
+
+      // Calculate duration in minutes from times if available
+      let durationMin = parseInt(formData.estimated_duration_min) || 0;
+      if (!durationMin && formData.scheduled_start && formData.planned_eta) {
+        const startMs = new Date(formData.scheduled_start).getTime();
+        const endMs = new Date(formData.planned_eta).getTime();
+        durationMin = Math.round((endMs - startMs) / 60000);
+      }
+      if (!durationMin) {
+        // Default: assume 60 km/h average speed
+        durationMin = Math.round((distance / 60) * 60);
+      }
+
+      // Build waypoints from map locations or text inputs
+      const waypoints = [
+        {
+          name: "Origin",
+          type: "pickup",
+          address: formData.start_location,
+          sequence: 1,
+          location: pickup && pickup.lat !== 0
+            ? { latitude: pickup.lat, longitude: pickup.lng, address: pickup.address || "" }
+            : { latitude: 0, longitude: 0, address: formData.start_location },
+        },
+        {
+          name: "Destination",
+          type: "dropoff",
+          address: formData.end_location,
+          sequence: 2,
+          location: drop && drop.lat !== 0
+            ? { latitude: drop.lat, longitude: drop.lng, address: drop.address || "" }
+            : { latitude: 0, longitude: 0, address: formData.end_location },
+        },
+      ];
+
+      const payload = {
         vehicle_id: formData.vehicle_id,
         driver_id: formData.driver_id || undefined,
-        start_location: formData.start_location,
-        end_location: formData.end_location,
+        title: formData.title,
+        description: formData.description || "",
+        planned_route: waypoints,
+        waypoints: waypoints,
+        planned_distance: distance,
+        estimated_duration_min: durationMin,
+        cargo_details: {
+          type: formData.cargo_type || "general",
+          weight_kg: parseFloat(formData.cargo_weight) || 0,
+          volume_m3: 0,
+          value_inr: parseFloat(formData.cargo_value) || 0,
+          description: formData.cargo_description || "",
+          fragile: formData.cargo_type === "fragile",
+          temperature: formData.cargo_type === "perishable" ? "cold" : "ambient",
+        },
         scheduled_start: new Date(formData.scheduled_start).toISOString(),
-        description: formData.description || undefined,
+        customer_name: formData.customer_name,
+        customer_phone: formData.customer_phone,
+        customer_email: formData.customer_email || undefined,
         planned_eta: formData.planned_eta
           ? new Date(formData.planned_eta).toISOString()
           : undefined,
+        pickup_geo: pickup && pickup.lat !== 0
+          ? { latitude: pickup.lat, longitude: pickup.lng, address: pickup.address || "" }
+          : undefined,
+        drop_geo: drop && drop.lat !== 0
+          ? { latitude: drop.lat, longitude: drop.lng, address: drop.address || "" }
+          : undefined,
       };
-
-      if (formData.trip_type) {
-        payload.trip_type = formData.trip_type;
-      }
 
       await api.createTrip(payload);
       navigate("/admin/trips");
@@ -376,6 +455,28 @@ export default function AddTrip() {
               </div>
             </div>
 
+            {/* Trip Title */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Trip Title <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">edit_note</span>
+                </span>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  maxLength={100}
+                  placeholder="e.g. Delhi → Mumbai Freight Run"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
+              </div>
+            </div>
+
             {/* Trip Type */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
@@ -429,61 +530,78 @@ export default function AddTrip() {
         <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
           <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center text-warning border border-warning/20">
-              <span className="material-symbols-outlined text-sm">map</span>
+              <span className="material-symbols-outlined text-sm">route</span>
             </div>
             <div>
               <h3 className="text-white text-sm font-semibold">Route & Schedule</h3>
               <p className="text-xs text-text-muted mt-0.5">
-                Locations and timing constraints
+                Search addresses or pin them on the map
               </p>
             </div>
           </div>
           <div className="p-6">
-            {/* Locations */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  Start Location <span className="text-danger">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                    <span className="material-symbols-outlined text-[18px]">trip_origin</span>
-                  </span>
-                  <input
-                    type="text"
-                    name="start_location"
-                    value={formData.start_location}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter origin address"
-                    className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  End Location <span className="text-danger">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                    <span className="material-symbols-outlined text-[18px]">location_on</span>
-                  </span>
-                  <input
-                    type="text"
-                    name="end_location"
-                    value={formData.end_location}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter destination address"
-                    className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                  />
-                </div>
-              </div>
+            {/* Address Search Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <AddressInput
+                label="Pickup Address"
+                type="pickup"
+                value={formData.start_location}
+                onLocationSelected={(lat, lng, addr) => {
+                  setPickup({ lat, lng, address: addr });
+                  setFormData((p) => ({ ...p, start_location: addr }));
+                }}
+              />
+              <AddressInput
+                label="Drop Address"
+                type="drop"
+                value={formData.end_location}
+                onLocationSelected={(lat, lng, addr) => {
+                  setDrop({ lat, lng, address: addr });
+                  setFormData((p) => ({ ...p, end_location: addr }));
+                }}
+              />
             </div>
 
+            {/* Route Map */}
+            <RouteMap
+              pickup={pickup}
+              drop={drop}
+              onPickupChange={handlePickupChange}
+              onDropChange={handleDropChange}
+              height="h-72"
+            />
+
+            {/* Route Summary */}
+            {pickup && pickup.lat !== 0 && drop && drop.lat !== 0 && (
+              <div className="mt-4 bg-surface-darker border border-border-color rounded-xl p-4">
+                <div className="flex items-center gap-4">
+                  {/* Route visual */}
+                  <div className="flex flex-col items-center">
+                    <span className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
+                    <div className="w-0.5 h-8 bg-gradient-to-b from-emerald-500 to-amber-500" />
+                    <span className="w-3 h-3 rounded-full bg-amber-500 ring-4 ring-amber-500/20" />
+                  </div>
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white truncate font-medium">{pickup.address || `${pickup.lat.toFixed(4)}, ${pickup.lng.toFixed(4)}`}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-text-muted font-mono">
+                        📏 {calculateDistance(pickup, drop).toFixed(1)} km
+                      </span>
+                      {formData.scheduled_start && formData.planned_eta && (
+                        <span className="text-xs text-text-muted">
+                          ⏱ {Math.round((new Date(formData.planned_eta).getTime() - new Date(formData.scheduled_start).getTime()) / 60000)} min
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-white truncate font-medium mt-1">{drop.address || `${drop.lat.toFixed(4)}, ${drop.lng.toFixed(4)}`}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Times */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-              <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px border-l border-dashed border-border-color -translate-x-1/2" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
                   Start Time <span className="text-danger">*</span>
@@ -524,81 +642,230 @@ export default function AddTrip() {
                     {timeError}
                   </p>
                 )}
-                {!timeError && (
-                  <p className="text-[10px] text-text-muted flex items-center gap-1 mt-1">
-                    <span className="material-symbols-outlined text-[12px] text-warning">info</span>
-                    End time must be after start time.
-                  </p>
-                )}
+              </div>
+            </div>
+
+            {/* Planned Distance & Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-border-color">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                  Planned Distance (km)
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                    <span className="material-symbols-outlined text-[18px]">straighten</span>
+                  </span>
+                  <input
+                    type="number"
+                    name="planned_distance"
+                    value={formData.planned_distance}
+                    onChange={handleChange}
+                    placeholder={pickup && drop && pickup.lat !== 0 && drop.lat !== 0
+                      ? `Auto: ${calculateDistance(pickup, drop).toFixed(1)} km`
+                      : "e.g. 450"}
+                    min="0"
+                    step="0.1"
+                    className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                  />
+                  {pickup && drop && pickup.lat !== 0 && drop.lat !== 0 && (
+                    <span className="absolute right-2 top-2 text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      Auto
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                  Est. Duration (minutes)
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                    <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+                  </span>
+                  <input
+                    type="number"
+                    name="estimated_duration_min"
+                    value={formData.estimated_duration_min}
+                    onChange={handleChange}
+                    placeholder="e.g. 360"
+                    min="1"
+                    className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Route on Map ── */}
+        {/* ── Customer / Party ── */}
         <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
           <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-              <span className="material-symbols-outlined text-sm">map</span>
+            <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
+              <span className="material-symbols-outlined text-sm">group</span>
             </div>
             <div>
-              <h3 className="text-white text-sm font-semibold">Route on Map</h3>
+              <h3 className="text-white text-sm font-semibold">Customer / Party</h3>
               <p className="text-xs text-text-muted mt-0.5">
-                Click the map to pin start and end locations
+                The organization or party giving this job
               </p>
             </div>
           </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-primary" />
-                  <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    Start Location
-                  </span>
-                </div>
-                <LocationPickerMap
-                  label="Pick Start"
-                  color="primary"
-                  value={startLoc}
-                  onChange={handleStartLocChange}
-                  height="h-56"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-warning" />
-                  <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    End Location
-                  </span>
-                </div>
-                <LocationPickerMap
-                  label="Pick End"
-                  color="warning"
-                  value={endLoc}
-                  onChange={handleEndLocChange}
-                  height="h-56"
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Customer Name <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                </span>
+                <input
+                  type="text"
+                  name="customer_name"
+                  value={formData.customer_name}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g. Acme Logistics Pvt Ltd"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
                 />
               </div>
             </div>
-
-            {/* Route Preview */}
-            {startLoc && endLoc && (
-              <div className="mt-4 bg-surface-darker border border-border-color rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col items-center">
-                    <span className="w-3 h-3 rounded-full bg-primary" />
-                    <div className="w-px h-6 bg-border-color" />
-                    <span className="w-3 h-3 rounded-full bg-warning" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white truncate">{startLoc.address || `${startLoc.lat.toFixed(4)}, ${startLoc.lng.toFixed(4)}`}</p>
-                    <p className="text-[10px] text-text-muted mt-1">↓ {calculateDistance(startLoc, endLoc).toFixed(1)} km (straight line)</p>
-                    <p className="text-xs text-white truncate mt-1">{endLoc.address || `${endLoc.lat.toFixed(4)}, ${endLoc.lng.toFixed(4)}`}</p>
-                  </div>
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Customer Phone <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">phone</span>
+                </span>
+                <input
+                  type="tel"
+                  name="customer_phone"
+                  value={formData.customer_phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="+91 98765 43210"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
               </div>
-            )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Customer Email
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">mail</span>
+                </span>
+                <input
+                  type="email"
+                  name="customer_email"
+                  value={formData.customer_email}
+                  onChange={handleChange}
+                  placeholder="dispatch@acme.com"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Cargo Details ── */}
+        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
+              <span className="material-symbols-outlined text-sm">inventory_2</span>
+            </div>
+            <div>
+              <h3 className="text-white text-sm font-semibold">Cargo Details</h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Shipment information and handling requirements
+              </p>
+            </div>
+          </div>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Cargo Type <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">category</span>
+                </span>
+                <select
+                  name="cargo_type"
+                  value={formData.cargo_type}
+                  onChange={handleChange}
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+                >
+                  <option value="general">General Cargo</option>
+                  <option value="fragile">Fragile</option>
+                  <option value="hazardous">Hazardous</option>
+                  <option value="perishable">Perishable / Cold Chain</option>
+                  <option value="oversized">Oversized</option>
+                  <option value="liquid">Liquid / Bulk</option>
+                </select>
+                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Weight (kg)
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">scale</span>
+                </span>
+                <input
+                  type="number"
+                  name="cargo_weight"
+                  value={formData.cargo_weight}
+                  onChange={handleChange}
+                  placeholder="e.g. 2500"
+                  min="0"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Value (₹)
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">payments</span>
+                </span>
+                <input
+                  type="number"
+                  name="cargo_value"
+                  value={formData.cargo_value}
+                  onChange={handleChange}
+                  placeholder="e.g. 50000"
+                  min="0"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                Cargo Description
+              </label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+                  <span className="material-symbols-outlined text-[18px]">description</span>
+                </span>
+                <input
+                  type="text"
+                  name="cargo_description"
+                  value={formData.cargo_description}
+                  onChange={handleChange}
+                  placeholder="e.g. Electronic components, palletized"
+                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
