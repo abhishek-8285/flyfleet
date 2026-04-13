@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
+	"github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -432,12 +433,21 @@ func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode i
 }
 
 func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+	// Try CtxOrgID (set by fleet-core JWKS middleware) as UUID
+	if val := r.Context().Value(middleware.CtxOrgID); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v
 		case string:
 			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback: ctxkeys.OrgIDKey (set as string by JWKS)
+	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
+		if s, ok := val.(string); ok {
+			if id, err := uuid.Parse(s); err == nil {
 				return id
 			}
 		}
