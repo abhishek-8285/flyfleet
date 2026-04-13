@@ -33,7 +33,7 @@ import { EditOrganization } from "./pages/admin/EditOrganization";
 import { AddVehicle as FleetAddVehicle } from "./pages/admin/FleetCommand/AddVehicle";
 import { EditVehicle as FleetEditVehicle } from "./pages/admin/FleetCommand/EditVehicle";
 import { VehicleDetail as FleetVehicleDetail } from "./pages/admin/FleetCommand/VehicleDetail";
-import { VehicleList as FleetVehicleList } from "./pages/admin/FleetCommand/VehicleList";
+import { VehicleList as FleetVehicleList } from "./pages/admin/VehicleList";
 import { GlobalAdminDashboard } from "./pages/admin/GlobalAdminDashboard";
 import GlobalNotificationSettings from "./pages/admin/notifications/GlobalNotificationSettings";
 import NotificationDetail from "./pages/admin/notifications/NotificationDetail";
