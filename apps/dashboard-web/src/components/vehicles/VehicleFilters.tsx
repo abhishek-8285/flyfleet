@@ -103,15 +103,12 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
 
   const loadFilterOptions = async () => {
     try {
-      const [driversRes, orgsRes] = await Promise.all([
-        apiClient.get("/admin/drivers?limit=500"),
-        apiClient.get("/admin/organizations?limit=500"),
-      ]);
+      // Load drivers (orgs endpoint doesn't exist yet, skip it)
+      const driversRes = await apiClient.get("/admin/drivers?limit=500").catch(() => ({ data: [] }));
       setDrivers(driversRes.data?.drivers || driversRes.data || []);
-      setOrganizations(orgsRes.data?.organizations || orgsRes.data || []);
 
       // Extract makes from vehicles
-      const vehiclesRes = await apiClient.get("/admin/vehicles?limit=1000");
+      const vehiclesRes = await apiClient.get("/admin/vehicles?limit=1000").catch(() => ({ data: [] }));
       const allVehicles = vehiclesRes.data?.vehicles || vehiclesRes.data || [];
       const uniqueMakes = Array.from(
         new Set(
@@ -122,7 +119,7 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
       ).sort();
       setMakes(uniqueMakes as string[]);
     } catch (error) {
-      console.error("Failed to load filter options:", error);
+      // Silently fail — filters will show empty dropdowns
     }
   };
 
