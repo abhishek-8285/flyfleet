@@ -35,19 +35,44 @@ export const VehicleDetail: React.FC = () => {
   const [vehicle, setVehicle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "route">("overview");
+  const [systemStatus, setSystemStatus] = useState<"ok" | "error">("ok");
+  const [currentDriver, setCurrentDriver] = useState<any>(null);
 
   useEffect(() => {
     fetchVehicle();
+    checkSystemHealth();
   }, [id]);
 
   const fetchVehicle = async () => {
     try {
       const res = await apiClient.get(`/admin/vehicles/${id}`);
       setVehicle(res.data);
+      
+      // Fetch current driver info if assigned
+      if (res.data?.current_driver_id) {
+        try {
+          const driversRes = await apiClient.get("/admin/drivers?limit=500");
+          const allDrivers = driversRes?.data || [];
+          const driver = allDrivers.find((d: any) => d.id === res.data.current_driver_id);
+          setCurrentDriver(driver || null);
+        } catch {
+          setCurrentDriver(null);
+        }
+      }
     } catch (error) {
       console.error("Failed to fetch vehicle:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkSystemHealth = async () => {
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      setSystemStatus(data.status === "ok" ? "ok" : "error");
+    } catch {
+      setSystemStatus("error");
     }
   };
 
@@ -170,18 +195,25 @@ export const VehicleDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Type */}
+          {/* Current Driver */}
           <div className="bg-surface-dark rounded-xl border border-border-color p-4 relative overflow-hidden group">
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined text-4xl text-primary">{vehicleIcon}</span>
+              <span className="material-symbols-outlined text-4xl text-primary">person</span>
             </div>
-            <div className="text-text-muted text-xs font-medium uppercase mb-1">Vehicle Type</div>
-            <div className="text-2xl font-bold text-white">
-              {vehicle.vehicle_type ? vehicle.vehicle_type.charAt(0) + vehicle.vehicle_type.slice(1).toLowerCase() : "Other"}
-            </div>
-            <div className="text-[10px] text-text-muted mt-1">
-              {vehicle.capacity_tonnage ? `${vehicle.capacity_tonnage} tonne capacity` : "Capacity N/A"}
-            </div>
+            <div className="text-text-muted text-xs font-medium uppercase mb-1">Current Driver</div>
+            {currentDriver ? (
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-8 h-8 rounded-full bg-surface-darker border border-border-color flex items-center justify-center text-xs font-bold text-white">
+                  {currentDriver.name?.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)}
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white">{currentDriver.name}</div>
+                  <div className="text-[10px] text-text-muted">{currentDriver.status === "active" ? "On duty" : currentDriver.status}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-text-muted mt-1">—</div>
+            )}
           </div>
         </div>
 
@@ -411,8 +443,8 @@ export const VehicleDetail: React.FC = () => {
       <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
         <span>© {new Date().getFullYear()} Enterprise Fleet Manager. Vehicle Module V2.4</span>
         <div className="flex items-center gap-4">
-          <span>Last Sync: <span className="font-mono text-white">{new Date().toLocaleTimeString()}</span></span>
-          <span>System Status: <span className="text-success">Connected</span></span>
+          <span>Last Sync: <span className="font-mono text-white">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : new Date().toLocaleTimeString()}</span></span>
+          <span>System Status: <span className={systemStatus === "ok" ? "text-success" : "text-danger"}>{systemStatus === "ok" ? "Connected" : "Disconnected"}</span></span>
         </div>
       </footer>
     </div>
