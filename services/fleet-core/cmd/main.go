@@ -19,10 +19,13 @@ import (
 	"github.com/flyfleet/fleet-core/internal/database"
 	"github.com/flyfleet/fleet-core/internal/domains/iam"
 	iamcfg "github.com/flyfleet/fleet-core/internal/domains/iam/config"
+	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
+	vr "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
+	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/flyfleet/fleet-core/internal/middleware"
-	"github.com/flyfleet/fleet-core/internal/tracking/handlers"
-	"github.com/flyfleet/fleet-core/internal/tracking/repository"
-	"github.com/flyfleet/fleet-core/internal/tracking/service"
+	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
+	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
+	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
 	"github.com/flyfleet/fleet-core/internal/tracking/worker"
 )
 
@@ -54,16 +57,16 @@ func main() {
 	defer rdb.Close()
 
 	// --- Repositories ---
-	telemRepo := repository.NewTelemetryRepository(pool, logger)
-	liveCache := repository.NewLiveCacheRepository(rdb)
-	geoRepo := repository.NewGeofenceRepository(pool)
-	vehicleRepo := repository.NewVehicleRepository(pool)
+	telemRepo := tr.NewTelemetryRepository(pool, logger)
+	liveCache := tr.NewLiveCacheRepository(rdb)
+	geoRepo := tr.NewGeofenceRepository(pool)
+	vehicleRepo := vr.NewVehicleRepository(pool)
 
 	// --- Services ---
 	tenantChecker := &pgTenantChecker{pool: pool}
-	ingestionSvc := service.NewIngestionService(telemRepo, liveCache, rdb, logger)
-	querySvc := service.NewTelemetryQueryService(telemRepo, liveCache, tenantChecker, logger)
-	batchSvc := service.NewBatchLocationService(vehicleRepo, liveCache, telemRepo, logger, cfg.Flags.MaxVehiclesOnMap)
+	ingestionSvc := ts.NewIngestionService(telemRepo, liveCache, rdb, logger)
+	querySvc := ts.NewTelemetryQueryService(telemRepo, liveCache, tenantChecker, logger)
+	batchSvc := ts.NewBatchLocationService(vehicleRepo, liveCache, telemRepo, logger, cfg.Flags.MaxVehiclesOnMap)
 
 	// --- IAM Domain (conditional) ---
 	var iamModule *iam.Module
@@ -95,11 +98,15 @@ func main() {
 	}
 
 	// --- Handlers ---
-	ingestHandler := handlers.NewIngestHandler(ingestionSvc, logger)
-	locationsHandler := handlers.NewLocationsHandler(batchSvc, logger)
-	historyHandler := handlers.NewHistoryHandler(querySvc, logger)
-	wsHandler := handlers.NewWebSocketHandler(rdb, cfg.JWTSecret, vehicleRepo, liveCache, logger)
-	geofenceHandler := handlers.NewGeofenceHandler(geoRepo, logger)
+	ingestHandler := th.NewIngestHandler(ingestionSvc, logger)
+	locationsHandler := th.NewLocationsHandler(batchSvc, logger)
+	historyHandler := th.NewHistoryHandler(querySvc, logger)
+	wsHandler := th.NewWebSocketHandler(rdb, cfg.JWTSecret, vehicleRepo, liveCache, logger)
+	geofenceHandler := th.NewGeofenceHandler(geoRepo, logger)
+
+	// --- Vehicle Domain ---
+	vehicleService := vs.NewVehicleService(vehicleRepo, logger)
+	vehicleHandlers := vh.NewVehicleHandlers(vehicleService, logger)
 
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
@@ -142,24 +149,23 @@ func main() {
 	}
 
 	// Menu endpoints (static, no auth needed for sidebar)
-	menuHandler := handlers.NewMenuHandler()
+	menuHandler := th.NewMenuHandler()
 	r.Get("/api/v1/ui/menus/*", menuHandler.ServeHTTP)
 
 	// UI config / strings stubs (frontend falls back to defaults)
-	uiConfigHandler := handlers.NewUIConfigHandler()
-	uiStringsHandler := handlers.NewUIStringsHandler()
+	uiConfigHandler := th.NewUIConfigHandler()
+	uiStringsHandler := th.NewUIStringsHandler()
 	r.Get("/api/v1/ui/global_config", uiConfigHandler.ServeHTTP)
 	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
 	r.Get("/api/v1/ui/misc/legal_docs", uiConfigHandler.GetLegalDocs)
 
-	// Admin stub endpoints (drivers, vehicles, columns)
-	adminHandler := handlers.NewAdminHandler()
+	// Admin stub endpoints (drivers, columns — vehicles moved to real CRUD)
+	adminHandler := th.NewAdminHandler()
 	r.Get("/api/v1/admin/drivers", adminHandler.ServeHTTP)
-	r.Get("/api/v1/admin/vehicles", adminHandler.ServeHTTP)
 	r.Get("/api/v1/ui/settings/columns", adminHandler.ServeHTTP)
 
 	// Dashboard stub endpoints
-	dashboardHandler := handlers.NewDashboardHandler()
+	dashboardHandler := th.NewDashboardHandler()
 	r.Get("/api/v1/dashboard/overview", dashboardHandler.ServeHTTP)
 	r.Get("/api/v1/dashboard/data", dashboardHandler.ServeHTTP)
 
@@ -196,6 +202,11 @@ func main() {
 			r.Get("/api/v1/geofences", geofenceHandler.ServeHTTP)
 			r.Post("/api/v1/geofences", geofenceHandler.ServeHTTP)
 		}
+
+		// Vehicle CRUD (always available)
+		r.Route("/api/v1/admin/vehicles", func(r chi.Router) {
+			vehicleHandlers.RegisterRoutes(r)
+		})
 	})
 
 	// --- Start HTTP Server ---

@@ -147,10 +147,13 @@ dump.rdb
 nats-data/
 
 # --- Build Binaries (root level) ---
-cmd
-create_admin
-fleet-core
-fleet-ml
+/cmd
+/create_admin
+/fleet-ml
+
+# Fleet-core source is tracked
+!services/fleet-core/
+services/fleet-core/vendor/
 
 # --- Extra/Backup Files ---
 *.backup
