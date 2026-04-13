@@ -475,14 +475,16 @@ export const AddVehicle: React.FC = () => {
       navigate("/admin/vehicles");
     } catch (err: any) {
       console.error("Failed to create vehicle:", err);
-      const msg = err.response?.data?.error || err.message;
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message;
 
       // Check for duplicate registration number
-      if (msg?.toLowerCase().includes("duplicate") || msg?.toLowerCase().includes("unique") || msg?.toLowerCase().includes("already")) {
+      if (err.response?.status === 409 || msg?.toLowerCase().includes("already exists") || msg?.toLowerCase().includes("duplicate") || msg?.toLowerCase().includes("unique")) {
         setErrors({ registration_number: "This registration number already exists in your organization" });
         setSubmitError("A vehicle with this registration number already exists");
+      } else if (msg) {
+        setSubmitError(msg);
       } else {
-        setSubmitError(msg || "Failed to create vehicle. Please try again.");
+        setSubmitError("Failed to create vehicle. Please try again.");
       }
     } finally {
       setLoading(false);

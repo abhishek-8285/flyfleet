@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -139,6 +140,10 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 
 	vehicle, err := h.service.CreateVehicle(r.Context(), req, orgID)
 	if err != nil {
+		if errors.Is(err, service.ErrVehicleAlreadyExists) {
+			h.writeErrorResponse(w, http.StatusConflict, "Vehicle with this registration number already exists", nil)
+			return
+		}
 		h.logger.Error("failed to create vehicle", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create vehicle", err)
 		return
