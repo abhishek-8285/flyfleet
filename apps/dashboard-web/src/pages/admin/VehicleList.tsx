@@ -232,33 +232,43 @@ export const VehicleList: React.FC = () => {
               Page {pagination.page} of {pagination.totalPages || 1}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <button
-              onClick={fetchVehicles}
-              className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
-              title="Refresh"
+              onClick={() => navigate("/admin/vehicles/new")}
+              className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                refresh
-              </span>
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              Add Vehicle
             </button>
-            <button
-              className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
-              title="Export"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                download
-              </span>
-            </button>
-            <div className="h-4 w-px bg-border-color mx-1" />
-            <button
-              className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
-              title="Columns"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                view_column
-              </span>
-            </button>
+            <div className="h-4 w-px bg-border-color" />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchVehicles}
+                className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
+                title="Refresh"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  refresh
+                </span>
+              </button>
+              <button
+                className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
+                title="Export"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  download
+                </span>
+              </button>
+              <div className="h-4 w-px bg-border-color mx-1" />
+              <button
+                className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
+                title="Columns"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  view_column
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
