@@ -27,7 +27,7 @@ export const VehicleDetail: React.FC = () => {
 
   const fetchVehicle = async () => {
     try {
-      const res = (await apiClient.get(`/admin/vehicles?id=${id}`)) as any;
+      const res = (await apiClient.get(`/admin/vehicles/${id}`)) as any;
       setVehicle(res.data);
     } catch (error) {
       console.error("Failed to fetch vehicle:", error);
