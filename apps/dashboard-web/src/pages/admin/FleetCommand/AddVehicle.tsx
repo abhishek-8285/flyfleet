@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
 
+// ── Constants ──
 const FUEL_TYPES = [
   { value: "DIESEL", label: "Diesel" },
   { value: "PETROL", label: "Petrol" },
@@ -30,6 +31,7 @@ const OWNERSHIP_TYPES = [
   { value: "VENDOR", label: "Vendor" },
 ];
 
+// ── Types ──
 interface FormState {
   registration_number: string;
   vehicle_type: string;
@@ -45,9 +47,140 @@ interface FormState {
   fuel_tank_capacity: string;
   gps_device_id: string;
   color: string;
-  branch_id: string;
 }
 
+type FieldName = keyof FormState;
+
+interface FieldValidation {
+  required?: boolean;
+  maxLength?: number;
+  minLength?: number;
+  pattern?: RegExp;
+  min?: number;
+  max?: number;
+  custom?: (value: string) => string | null;
+}
+
+interface ValidationRule {
+  [key: string]: {
+    label: string;
+    rules: FieldValidation[];
+  };
+}
+
+// ── Validation Rules ──
+const VALIDATION_RULES: ValidationRule = {
+  registration_number: {
+    label: "Registration Number",
+    rules: [
+      { required: true },
+      { minLength: 6 },
+      { maxLength: 20 },
+      {
+        pattern: /^[A-Z0-9\s\-\/]+$/i,
+      },
+    ],
+  },
+  vehicle_type: {
+    label: "Vehicle Type",
+    rules: [{ required: true }],
+  },
+  fuel_type: {
+    label: "Fuel Type",
+    rules: [{ required: true }],
+  },
+  ownership_type: {
+    label: "Ownership Type",
+    rules: [{ required: true }],
+  },
+  make: {
+    label: "Make",
+    rules: [{ maxLength: 100 }],
+  },
+  model: {
+    label: "Model",
+    rules: [{ maxLength: 100 }],
+  },
+  year: {
+    label: "Year",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null; // optional
+          const year = parseInt(v);
+          const currentYear = new Date().getFullYear();
+          if (isNaN(year)) return "Must be a valid year";
+          if (year < 1900 || year > currentYear + 1)
+            return `Year must be between 1900 and ${currentYear + 1}`;
+          return null;
+        },
+      },
+    ],
+  },
+  vin_number: {
+    label: "VIN Number",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null; // optional
+          const cleaned = v.trim();
+          if (cleaned.length !== 17) return "VIN must be exactly 17 characters";
+          if (!/^[A-HJ-NPR-Z0-9]{17}$/i.test(cleaned))
+            return "VIN contains invalid characters (no I, O, Q)";
+          return null;
+        },
+      },
+    ],
+  },
+  chassis_number: {
+    label: "Chassis Number",
+    rules: [{ maxLength: 50 }],
+  },
+  engine_number: {
+    label: "Engine Number",
+    rules: [{ maxLength: 50 }],
+  },
+  capacity_tonnage: {
+    label: "Capacity",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null;
+          const num = parseFloat(v);
+          if (isNaN(num)) return "Must be a valid number";
+          if (num <= 0) return "Must be greater than 0";
+          if (num > 1000) return "Must be less than 1000 tonnes";
+          return null;
+        },
+      },
+    ],
+  },
+  fuel_tank_capacity: {
+    label: "Fuel Tank Capacity",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null;
+          const num = parseFloat(v);
+          if (isNaN(num)) return "Must be a valid number";
+          if (num <= 0) return "Must be greater than 0";
+          if (num > 5000) return "Must be less than 5000 litres";
+          return null;
+        },
+      },
+    ],
+  },
+  gps_device_id: {
+    label: "GPS Device ID",
+    rules: [{ maxLength: 100 }],
+  },
+  color: {
+    label: "Color",
+    rules: [{ maxLength: 50 }],
+  },
+};
+
+// ── Helpers ──
 const initialForm: FormState = {
   registration_number: "",
   vehicle_type: "",
@@ -63,63 +196,298 @@ const initialForm: FormState = {
   fuel_tank_capacity: "",
   gps_device_id: "",
   color: "",
-  branch_id: "",
 };
 
+function validateField(name: FieldName, value: string): string | null {
+  const config = VALIDATION_RULES[name];
+  if (!config) return null;
+
+  for (const rule of config.rules) {
+    if (rule.required && !value.trim()) {
+      return `${config.label} is required`;
+    }
+    if (value.trim() && rule.minLength && value.trim().length < rule.minLength) {
+      return `${config.label} must be at least ${rule.minLength} characters`;
+    }
+    if (value.trim() && rule.maxLength && value.trim().length > rule.maxLength) {
+      return `${config.label} must be less than ${rule.maxLength} characters`;
+    }
+    if (value.trim() && rule.pattern && !rule.pattern.test(value)) {
+      return `${config.label} contains invalid characters`;
+    }
+    if (value.trim() && rule.custom) {
+      const error = rule.custom(value);
+      if (error) return error;
+    }
+  }
+  return null;
+}
+
+function validateStep(step: number, form: FormState): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  const stepFields: Record<number, FieldName[]> = {
+    1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
+    2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity"],
+    3: ["gps_device_id", "color"],
+  };
+
+  for (const field of stepFields[step] || []) {
+    const error = validateField(field, form[field]);
+    if (error) errors[field] = error;
+  }
+
+  return errors;
+}
+
+// ── Input Component ──
+interface InputProps {
+  name: FieldName;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
+  label: string;
+  placeholder?: string;
+  type?: string;
+  icon?: string;
+  error?: string;
+  required?: boolean;
+  hint?: string;
+  className?: string;
+  maxLength?: number;
+}
+
+const TextInput: React.FC<InputProps> = ({
+  name, value, onChange, onBlur, label, placeholder, type = "text",
+  icon, error, required, hint, className, maxLength,
+}) => (
+  <div className={`space-y-1.5 ${className || ""}`}>
+    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+      {label} {required && <span className="text-danger">*</span>}
+    </label>
+    <div className="relative">
+      {icon && (
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+          <span className="material-symbols-outlined text-[18px]">{icon}</span>
+        </span>
+      )}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className={`w-full bg-surface-darker border rounded-lg py-2.5 ${
+          icon ? "pl-10" : "px-4"
+        } pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 ${
+          error
+            ? "border-danger/50 focus:ring-danger focus:border-danger"
+            : "border-border-color"
+        }`}
+      />
+    </div>
+    {error ? (
+      <p className="text-[10px] text-danger flex items-center gap-1">
+        <span className="material-symbols-outlined text-[12px]">error</span>
+        {error}
+      </p>
+    ) : hint ? (
+      <p className="text-[10px] text-text-muted">{hint}</p>
+    ) : null}
+  </div>
+);
+
+// ── Select Component ──
+interface SelectProps {
+  name: FieldName;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onBlur?: () => void;
+  label: string;
+  options: { value: string; label: string }[];
+  icon?: string;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+}
+
+const SelectInput: React.FC<SelectProps> = ({
+  name, value, onChange, onBlur, label, options, icon, error, required, placeholder,
+}) => (
+  <div className="space-y-1.5">
+    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+      {label} {required && <span className="text-danger">*</span>}
+    </label>
+    <div className="relative">
+      {icon && (
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
+          <span className="material-symbols-outlined text-[18px]">{icon}</span>
+        </span>
+      )}
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        className={`w-full bg-surface-darker border rounded-lg py-2.5 ${
+          icon ? "pl-10" : "pl-4"
+        } pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none ${
+          error
+            ? "border-danger/50 focus:ring-danger focus:border-danger"
+            : "border-border-color"
+        } ${!value ? "text-text-muted/50" : ""}`}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
+        <span className="material-symbols-outlined text-[18px]">expand_more</span>
+      </span>
+    </div>
+    {error && (
+      <p className="text-[10px] text-danger flex items-center gap-1">
+        <span className="material-symbols-outlined text-[12px]">error</span>
+        {error}
+      </p>
+    )}
+  </div>
+);
+
+// ── Main Component ──
 export const AddVehicle: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(initialForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      const { name, value } = e.target;
+      setForm((prev) => ({ ...prev, [name]: value }));
+      // Clear error on change if field is touched
+      if (touched[name]) {
+        const error = validateField(name as FieldName, value);
+        setErrors((prev) => {
+          const next = { ...prev };
+          if (error) next[name] = error;
+          else delete next[name];
+          return next;
+        });
+      }
+    },
+    [touched]
+  );
+
+  const handleBlur = useCallback(
+    (fieldName: FieldName) => {
+      setTouched((prev) => ({ ...prev, [fieldName]: true }));
+      const error = validateField(fieldName, form[fieldName]);
+      setErrors((prev) => {
+        const next = { ...prev };
+        if (error) next[fieldName] = error;
+        else delete next[fieldName];
+        return next;
+      });
+    },
+    [form]
+  );
+
+  const canProceed = useCallback((): boolean => {
+    const stepErrors = validateStep(step, form);
+    return Object.keys(stepErrors).length === 0;
+  }, [step, form]);
+
+  const handleNext = useCallback(() => {
+    // Validate current step
+    const stepErrors = validateStep(step, form);
+    setErrors((prev) => ({ ...prev, ...stepErrors }));
+
+    // Mark all step fields as touched
+    const stepFields: Record<number, FieldName[]> = {
+      1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
+      2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity"],
+      3: ["gps_device_id", "color"],
+    };
+    const touchedMap: Record<string, boolean> = {};
+    for (const f of stepFields[step] || []) touchedMap[f] = true;
+    setTouched((prev) => ({ ...prev, ...touchedMap }));
+
+    if (Object.keys(stepErrors).length === 0) {
+      setStep((s) => (s + 1) as 1 | 2 | 3);
+    }
+  }, [step, form]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    setSubmitError("");
 
+    // Validate ALL steps before submit
+    const allErrors: Record<string, string> = {};
+    for (const s of [1, 2, 3]) {
+      Object.assign(allErrors, validateStep(s, form));
+    }
+
+    // Mark all fields as touched
+    const allTouched: Record<string, boolean> = {};
+    for (const field of Object.keys(VALIDATION_RULES)) allTouched[field] = true;
+    setTouched(allTouched);
+    setErrors(allErrors);
+
+    if (Object.keys(allErrors).length > 0) {
+      setSubmitError("Please fix the errors below before submitting");
+      // Go to the first step with errors
+      if (allErrors.registration_number || allErrors.vehicle_type ||
+          allErrors.fuel_type || allErrors.ownership_type) setStep(1);
+      else if (allErrors.make || allErrors.model || allErrors.year ||
+               allErrors.vin_number || allErrors.capacity_tonnage) setStep(2);
+      else setStep(3);
+      return;
+    }
+
+    setLoading(true);
     try {
       const payload: any = {
-        registration_number: form.registration_number.trim().toUpperCase(),
+        registration_number: form.registration_number.trim().toUpperCase().replace(/\s+/g, ""),
         vehicle_type: form.vehicle_type,
         fuel_type: form.fuel_type,
         ownership_type: form.ownership_type,
       };
 
-      if (form.make) payload.make = form.make;
-      if (form.model) payload.model = form.model;
+      if (form.make) payload.make = form.make.trim();
+      if (form.model) payload.model = form.model.trim();
       if (form.year) payload.year = parseInt(form.year);
       if (form.vin_number) payload.vin_number = form.vin_number.trim().toUpperCase();
-      if (form.chassis_number) payload.chassis_number = form.chassis_number;
-      if (form.engine_number) payload.engine_number = form.engine_number;
+      if (form.chassis_number) payload.chassis_number = form.chassis_number.trim();
+      if (form.engine_number) payload.engine_number = form.engine_number.trim();
       if (form.capacity_tonnage) payload.capacity_tonnage = parseFloat(form.capacity_tonnage);
       if (form.fuel_tank_capacity) payload.fuel_tank_capacity = parseFloat(form.fuel_tank_capacity);
-      if (form.gps_device_id) payload.gps_device_id = form.gps_device_id;
-      if (form.color) payload.color = form.color;
+      if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
+      if (form.color) payload.color = form.color.trim();
 
       await apiClient.post("/admin/vehicles", payload);
       navigate("/admin/vehicles");
     } catch (err: any) {
       console.error("Failed to create vehicle:", err);
-      setError(
-        err.response?.data?.error ||
-        err.message ||
-        "Failed to create vehicle. Please try again."
-      );
+      const msg = err.response?.data?.error || err.message;
+
+      // Check for duplicate registration number
+      if (msg?.toLowerCase().includes("duplicate") || msg?.toLowerCase().includes("unique") || msg?.toLowerCase().includes("already")) {
+        setErrors({ registration_number: "This registration number already exists in your organization" });
+        setSubmitError("A vehicle with this registration number already exists");
+      } else {
+        setSubmitError(msg || "Failed to create vehicle. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const isValidStep1 = form.registration_number && form.vehicle_type;
-  const isComplete = isValidStep1;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-background-dark">
@@ -139,25 +507,11 @@ export const AddVehicle: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-xs px-2 py-1 rounded-full ${
-            step === 1 ? "bg-primary/10 text-primary" : "bg-success/10 text-success"
-          }`}>
-            Step {step} of 3
-          </span>
-        </div>
       </header>
 
       {/* Form */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto w-full p-6 space-y-6">
-          {error && (
-            <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">error</span>
-              {error}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto w-full p-6 space-y-6" noValidate>
           {/* Step Indicator */}
           <div className="flex items-center gap-2">
             {[
@@ -195,7 +549,15 @@ export const AddVehicle: React.FC = () => {
             ))}
           </div>
 
-          {/* ── Step 1: Registration (Required) ── */}
+          {/* Submit Error */}
+          {submitError && (
+            <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">error</span>
+              {submitError}
+            </div>
+          )}
+
+          {/* ── Step 1: Registration ── */}
           {step === 1 && (
             <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
               <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
@@ -210,114 +572,63 @@ export const AddVehicle: React.FC = () => {
                 </div>
               </div>
               <div className="p-6 space-y-6">
-                {/* Registration Number */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    Registration Number <span className="text-danger">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                      <span className="material-symbols-outlined text-[18px]">confirmation_number</span>
-                    </span>
-                    <input
-                      type="text"
-                      name="registration_number"
-                      value={form.registration_number}
-                      onChange={handleChange}
-                      required
-                      placeholder="e.g. MH01AB1234"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white uppercase focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 font-mono"
-                    />
-                  </div>
-                  <p className="text-[10px] text-text-muted">
-                    As per RC — unique per organization
-                  </p>
-                </div>
+                <TextInput
+                  name="registration_number"
+                  value={form.registration_number}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("registration_number")}
+                  label="Registration Number"
+                  placeholder="e.g. MH01AB1234"
+                  icon="confirmation_number"
+                  error={errors.registration_number}
+                  required
+                  maxLength={20}
+                  hint="As per RC — unique per organization"
+                />
 
-                {/* Vehicle Type */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    Vehicle Type <span className="text-danger">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                      <span className="material-symbols-outlined text-[18px]">category</span>
-                    </span>
-                    <select
-                      name="vehicle_type"
-                      value={form.vehicle_type}
-                      onChange={handleChange}
-                      required
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-                    >
-                      <option value="">Select Type</option>
-                      {VEHICLE_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                      <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                    </span>
-                  </div>
-                </div>
+                <SelectInput
+                  name="vehicle_type"
+                  value={form.vehicle_type}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("vehicle_type")}
+                  label="Vehicle Type"
+                  options={VEHICLE_TYPES}
+                  icon="category"
+                  error={errors.vehicle_type}
+                  required
+                  placeholder="Select Type"
+                />
 
-                {/* Fuel Type & Ownership - Side by side */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Fuel Type <span className="text-danger">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                        <span className="material-symbols-outlined text-[18px]">local_gas_station</span>
-                      </span>
-                      <select
-                        name="fuel_type"
-                        value={form.fuel_type}
-                        onChange={handleChange}
-                        required
-                        className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-                      >
-                        {FUEL_TYPES.map((f) => (
-                          <option key={f.value} value={f.value}>{f.label}</option>
-                        ))}
-                      </select>
-                      <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                        <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                      </span>
-                    </div>
-                  </div>
+                  <SelectInput
+                    name="fuel_type"
+                    value={form.fuel_type}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("fuel_type")}
+                    label="Fuel Type"
+                    options={FUEL_TYPES}
+                    icon="local_gas_station"
+                    error={errors.fuel_type}
+                    required
+                  />
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Ownership Type <span className="text-danger">*</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                        <span className="material-symbols-outlined text-[18px]">home_work</span>
-                      </span>
-                      <select
-                        name="ownership_type"
-                        value={form.ownership_type}
-                        onChange={handleChange}
-                        required
-                        className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-                      >
-                        {OWNERSHIP_TYPES.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
-                      <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                        <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                      </span>
-                    </div>
-                  </div>
+                  <SelectInput
+                    name="ownership_type"
+                    value={form.ownership_type}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("ownership_type")}
+                    label="Ownership Type"
+                    options={OWNERSHIP_TYPES}
+                    icon="home_work"
+                    error={errors.ownership_type}
+                    required
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Step 2: Specifications (Optional) ── */}
+          {/* ── Step 2: Specifications ── */}
           {step === 2 && (
             <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
               <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
@@ -332,133 +643,102 @@ export const AddVehicle: React.FC = () => {
                 </div>
               </div>
               <div className="p-6 space-y-6">
-                {/* Make, Model, Year */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Make
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                        <span className="material-symbols-outlined text-[18px]">business</span>
-                      </span>
-                      <input
-                        type="text"
-                        name="make"
-                        value={form.make}
-                        onChange={handleChange}
-                        placeholder="e.g. Tata, Ashok Leyland"
-                        className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Model
-                    </label>
-                    <input
-                      type="text"
-                      name="model"
-                      value={form.model}
-                      onChange={handleChange}
-                      placeholder="e.g. 407, Eicher Pro"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Year
-                    </label>
-                    <input
-                      type="number"
-                      name="year"
-                      value={form.year}
-                      onChange={handleChange}
-                      placeholder="e.g. 2023"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
+                  <TextInput
+                    name="make"
+                    value={form.make}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("make")}
+                    label="Make"
+                    placeholder="e.g. Tata, Ashok Leyland"
+                    icon="business"
+                    error={errors.make}
+                    maxLength={100}
+                  />
+                  <TextInput
+                    name="model"
+                    value={form.model}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("model")}
+                    label="Model"
+                    placeholder="e.g. 407, Eicher Pro"
+                    error={errors.model}
+                    maxLength={100}
+                  />
+                  <TextInput
+                    name="year"
+                    value={form.year}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("year")}
+                    label="Year"
+                    placeholder="e.g. 2023"
+                    type="number"
+                    error={errors.year}
+                  />
                 </div>
 
-                {/* VIN, Chassis, Engine */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      VIN Number
-                    </label>
-                    <input
-                      type="text"
-                      name="vin_number"
-                      value={form.vin_number}
-                      onChange={handleChange}
-                      placeholder="17-character VIN"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white uppercase font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Chassis Number
-                    </label>
-                    <input
-                      type="text"
-                      name="chassis_number"
-                      value={form.chassis_number}
-                      onChange={handleChange}
-                      placeholder="Chassis number"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Engine Number
-                    </label>
-                    <input
-                      type="text"
-                      name="engine_number"
-                      value={form.engine_number}
-                      onChange={handleChange}
-                      placeholder="Engine number"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
+                  <TextInput
+                    name="vin_number"
+                    value={form.vin_number}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("vin_number")}
+                    label="VIN Number"
+                    placeholder="17-character VIN"
+                    error={errors.vin_number}
+                    maxLength={17}
+                    hint="Must be exactly 17 characters"
+                  />
+                  <TextInput
+                    name="chassis_number"
+                    value={form.chassis_number}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("chassis_number")}
+                    label="Chassis Number"
+                    placeholder="Chassis number"
+                    error={errors.chassis_number}
+                    maxLength={50}
+                  />
+                  <TextInput
+                    name="engine_number"
+                    value={form.engine_number}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("engine_number")}
+                    label="Engine Number"
+                    placeholder="Engine number"
+                    error={errors.engine_number}
+                    maxLength={50}
+                  />
                 </div>
 
-                {/* Capacity & Fuel Tank */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Capacity (Tonnes)
-                    </label>
-                    <input
-                      type="number"
-                      name="capacity_tonnage"
-                      value={form.capacity_tonnage}
-                      onChange={handleChange}
-                      placeholder="e.g. 10"
-                      step="0.1"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                      Fuel Tank Capacity (Litres)
-                    </label>
-                    <input
-                      type="number"
-                      name="fuel_tank_capacity"
-                      value={form.fuel_tank_capacity}
-                      onChange={handleChange}
-                      placeholder="e.g. 200"
-                      step="0.1"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
+                  <TextInput
+                    name="capacity_tonnage"
+                    value={form.capacity_tonnage}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("capacity_tonnage")}
+                    label="Capacity (Tonnes)"
+                    placeholder="e.g. 10"
+                    type="number"
+                    error={errors.capacity_tonnage}
+                    hint="Payload capacity in metric tonnes"
+                  />
+                  <TextInput
+                    name="fuel_tank_capacity"
+                    value={form.fuel_tank_capacity}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("fuel_tank_capacity")}
+                    label="Fuel Tank Capacity (Litres)"
+                    placeholder="e.g. 200"
+                    type="number"
+                    error={errors.fuel_tank_capacity}
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Step 3: Additional (Optional) ── */}
+          {/* ── Step 3: Additional ── */}
           {step === 3 && (
             <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
               <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
@@ -473,43 +753,29 @@ export const AddVehicle: React.FC = () => {
                 </div>
               </div>
               <div className="p-6 space-y-6">
-                {/* GPS Device */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    GPS Device ID
-                  </label>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                      <span className="material-symbols-outlined text-[18px]">gps_fixed</span>
-                    </span>
-                    <input
-                      type="text"
-                      name="gps_device_id"
-                      value={form.gps_device_id}
-                      onChange={handleChange}
-                      placeholder="e.g. GPS-IMEI-12345678"
-                      className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white font-mono focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                    />
-                  </div>
-                  <p className="text-[10px] text-text-muted">
-                    AIS-140 compliant GPS tracker IMEI or serial number
-                  </p>
-                </div>
+                <TextInput
+                  name="gps_device_id"
+                  value={form.gps_device_id}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("gps_device_id")}
+                  label="GPS Device ID"
+                  placeholder="e.g. GPS-IMEI-12345678"
+                  icon="gps_fixed"
+                  error={errors.gps_device_id}
+                  maxLength={100}
+                  hint="AIS-140 compliant GPS tracker IMEI or serial number"
+                />
 
-                {/* Color */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                    Color
-                  </label>
-                  <input
-                    type="text"
-                    name="color"
-                    value={form.color}
-                    onChange={handleChange}
-                    placeholder="e.g. White, Blue"
-                    className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                  />
-                </div>
+                <TextInput
+                  name="color"
+                  value={form.color}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("color")}
+                  label="Color"
+                  placeholder="e.g. White, Blue"
+                  error={errors.color}
+                  maxLength={50}
+                />
               </div>
             </div>
           )}
@@ -540,7 +806,7 @@ export const AddVehicle: React.FC = () => {
               {step < 3 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3)}
+                  onClick={handleNext}
                   className="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20"
                 >
                   <span className="flex items-center gap-2">
@@ -551,7 +817,7 @@ export const AddVehicle: React.FC = () => {
               ) : (
                 <button
                   type="submit"
-                  disabled={loading || !isComplete}
+                  disabled={loading}
                   className="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {loading ? (
