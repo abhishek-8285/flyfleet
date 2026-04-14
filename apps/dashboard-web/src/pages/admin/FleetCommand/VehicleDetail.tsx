@@ -37,6 +37,21 @@ export const VehicleDetail: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "documents" | "route">("overview");
   const [systemStatus, setSystemStatus] = useState<"ok" | "error">("ok");
   const [currentDriver, setCurrentDriver] = useState<any>(null);
+  const [displayUnits, setDisplayUnits] = useState({
+    odometer: "km",
+    capacity: "tonnes",
+    fuel: "litres",
+  });
+
+  // Conversion from metric (backend) to display units
+  const fromKm = (val: number, unit: string) => unit === "mi" ? (val / 1.60934).toFixed(1) : val.toLocaleString();
+  const fromTonnes = (val: number, unit: string) => unit === "lbs" ? (val * 2204.62).toFixed(0) : unit === "kg" ? (val * 1000).toFixed(0) : val.toString();
+  const fromLitres = (val: number, unit: string) => unit === "gallons" ? (val / 3.78541).toFixed(1) : val.toString();
+  const unitLabel = (type: string) => {
+    if (type === "odometer") return displayUnits.odometer === "mi" ? "mi" : "km";
+    if (type === "capacity") return displayUnits.capacity === "lbs" ? "lbs" : displayUnits.capacity === "kg" ? "kg" : "tonnes";
+    return displayUnits.fuel === "gallons" ? "gal" : "L";
+  };
 
   useEffect(() => {
     fetchVehicle();
@@ -160,10 +175,20 @@ export const VehicleDetail: React.FC = () => {
             <div className="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
               <span className="material-symbols-outlined text-4xl text-white">speed</span>
             </div>
-            <div className="text-text-muted text-xs font-medium uppercase mb-1">Odometer</div>
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-text-muted text-xs font-medium uppercase">Odometer</div>
+              <select
+                value={displayUnits.odometer}
+                onChange={(e) => setDisplayUnits((prev) => ({ ...prev, odometer: e.target.value }))}
+                className="text-[10px] bg-transparent text-text-muted border border-border-color rounded px-1 py-0.5 outline-none"
+              >
+                <option value="km">km</option>
+                <option value="mi">mi</option>
+              </select>
+            </div>
             <div className="text-2xl font-bold text-white">
-              {vehicle.odometer ? vehicle.odometer.toLocaleString() : "0"}{" "}
-              <span className="text-sm font-normal text-text-muted">km</span>
+              {vehicle.odometer ? fromKm(vehicle.odometer, displayUnits.odometer) : "0"}{" "}
+              <span className="text-sm font-normal text-text-muted">{unitLabel("odometer")}</span>
             </div>
             <div className="text-[10px] text-text-muted flex items-center gap-1 mt-1">
               <span className="material-symbols-outlined text-[12px]">schedule</span>
@@ -298,15 +323,36 @@ export const VehicleDetail: React.FC = () => {
                   </h3>
                   <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Capacity</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Capacity</label>
+                        <select
+                          value={displayUnits.capacity}
+                          onChange={(e) => setDisplayUnits((prev) => ({ ...prev, capacity: e.target.value }))}
+                          className="text-[10px] bg-transparent text-text-muted border border-border-color rounded px-1 py-0.5 outline-none"
+                        >
+                          <option value="tonnes">tonnes</option>
+                          <option value="kg">kg</option>
+                          <option value="lbs">lbs</option>
+                        </select>
+                      </div>
                       <div className="text-white text-sm border-b border-border-color pb-1">
-                        {vehicle.capacity_tonnage ? `${vehicle.capacity_tonnage} tonnes` : "—"}
+                        {vehicle.capacity_tonnage ? `${fromTonnes(vehicle.capacity_tonnage, displayUnits.capacity)} ${unitLabel("capacity")}` : "—"}
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Fuel Tank</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Fuel Tank</label>
+                        <select
+                          value={displayUnits.fuel}
+                          onChange={(e) => setDisplayUnits((prev) => ({ ...prev, fuel: e.target.value }))}
+                          className="text-[10px] bg-transparent text-text-muted border border-border-color rounded px-1 py-0.5 outline-none"
+                        >
+                          <option value="litres">litres</option>
+                          <option value="gallons">gallons</option>
+                        </select>
+                      </div>
                       <div className="text-white text-sm border-b border-border-color pb-1">
-                        {vehicle.fuel_tank_capacity ? `${vehicle.fuel_tank_capacity} litres` : "—"}
+                        {vehicle.fuel_tank_capacity ? `${fromLitres(vehicle.fuel_tank_capacity, displayUnits.fuel)} ${unitLabel("fuel")}` : "—"}
                       </div>
                     </div>
                     <div className="space-y-1">

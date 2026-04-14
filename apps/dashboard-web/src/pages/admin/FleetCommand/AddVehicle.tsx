@@ -31,6 +31,28 @@ const OWNERSHIP_TYPES = [
   { value: "VENDOR", label: "Vendor" },
 ];
 
+// ── Unit Constants ──
+const ODOMETER_UNITS = [
+  { value: "km", label: "Kilometers (km)" },
+  { value: "mi", label: "Miles (mi)" },
+];
+
+const WEIGHT_UNITS = [
+  { value: "tonnes", label: "Tonnes (metric)" },
+  { value: "kg", label: "Kilograms (kg)" },
+  { value: "lbs", label: "Pounds (lbs)" },
+];
+
+const FUEL_UNITS = [
+  { value: "litres", label: "Litres (L)" },
+  { value: "gallons", label: "Gallons (US)" },
+];
+
+// Conversion to metric (what backend stores)
+const toKm = (val: number, unit: string) => unit === "mi" ? val * 1.60934 : val;
+const toTonnes = (val: number, unit: string) => unit === "lbs" ? val / 2204.62 : unit === "kg" ? val / 1000 : val;
+const toLitres = (val: number, unit: string) => unit === "gallons" ? val * 3.78541 : val;
+
 // ── Types ──
 interface FormState {
   registration_number: string;
@@ -371,6 +393,11 @@ const SelectInput: React.FC<SelectProps> = ({
 export const AddVehicle: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(initialForm);
+  const [units, setUnits] = useState({
+    odometer: "km",
+    capacity: "tonnes",
+    fuel: "litres",
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -476,8 +503,8 @@ export const AddVehicle: React.FC = () => {
       if (form.vin_number) payload.vin_number = form.vin_number.trim().toUpperCase();
       if (form.chassis_number) payload.chassis_number = form.chassis_number.trim();
       if (form.engine_number) payload.engine_number = form.engine_number.trim();
-      if (form.capacity_tonnage) payload.capacity_tonnage = parseFloat(form.capacity_tonnage);
-      if (form.fuel_tank_capacity) payload.fuel_tank_capacity = parseFloat(form.fuel_tank_capacity);
+      if (form.capacity_tonnage) payload.capacity_tonnage = toTonnes(parseFloat(form.capacity_tonnage), units.capacity);
+      if (form.fuel_tank_capacity) payload.fuel_tank_capacity = toLitres(parseFloat(form.fuel_tank_capacity), units.fuel);
       if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
       if (form.color) payload.color = form.color.trim();
       if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
@@ -729,27 +756,68 @@ export const AddVehicle: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <TextInput
-                    name="capacity_tonnage"
-                    value={form.capacity_tonnage}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur("capacity_tonnage")}
-                    label="Capacity (Tonnes)"
-                    placeholder="e.g. 10"
-                    type="number"
-                    error={errors.capacity_tonnage}
-                    hint="Payload capacity in metric tonnes"
-                  />
-                  <TextInput
-                    name="fuel_tank_capacity"
-                    value={form.fuel_tank_capacity}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur("fuel_tank_capacity")}
-                    label="Fuel Tank Capacity (Litres)"
-                    placeholder="e.g. 200"
-                    type="number"
-                    error={errors.fuel_tank_capacity}
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                      Capacity
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        name="capacity_tonnage"
+                        value={form.capacity_tonnage}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("capacity_tonnage")}
+                        placeholder="e.g. 10"
+                        className="flex-1 bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                      />
+                      <select
+                        value={units.capacity}
+                        onChange={(e) => setUnits((prev) => ({ ...prev, capacity: e.target.value }))}
+                        className="bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                      >
+                        {WEIGHT_UNITS.map((u) => (
+                          <option key={u.value} value={u.value}>{u.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {errors.capacity_tonnage && (
+                      <p className="text-[10px] text-danger flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">error</span>
+                        {errors.capacity_tonnage}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                      Fuel Tank Capacity
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        name="fuel_tank_capacity"
+                        value={form.fuel_tank_capacity}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("fuel_tank_capacity")}
+                        placeholder="e.g. 200"
+                        className="flex-1 bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                      />
+                      <select
+                        value={units.fuel}
+                        onChange={(e) => setUnits((prev) => ({ ...prev, fuel: e.target.value }))}
+                        className="bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                      >
+                        {FUEL_UNITS.map((u) => (
+                          <option key={u.value} value={u.value}>{u.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {errors.fuel_tank_capacity && (
+                      <p className="text-[10px] text-danger flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">error</span>
+                        {errors.fuel_tank_capacity}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
