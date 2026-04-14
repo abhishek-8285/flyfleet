@@ -47,6 +47,11 @@ interface FormState {
   fuel_tank_capacity: string;
   gps_device_id: string;
   color: string;
+  parent_vehicle_id: string;
+  branch_id: string;
+  cost_center_id: string;
+  immobilizer_enabled: boolean;
+  ais140_compliant: boolean;
 }
 
 type FieldName = keyof FormState;
@@ -196,6 +201,11 @@ const initialForm: FormState = {
   fuel_tank_capacity: "",
   gps_device_id: "",
   color: "",
+  parent_vehicle_id: "",
+  branch_id: "",
+  cost_center_id: "",
+  immobilizer_enabled: false,
+  ais140_compliant: false,
 };
 
 function validateField(name: FieldName, value: string): string | null {
@@ -470,6 +480,11 @@ export const AddVehicle: React.FC = () => {
       if (form.fuel_tank_capacity) payload.fuel_tank_capacity = parseFloat(form.fuel_tank_capacity);
       if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
       if (form.color) payload.color = form.color.trim();
+      if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
+      if (form.branch_id) payload.branch_id = form.branch_id.trim();
+      if (form.cost_center_id) payload.cost_center_id = form.cost_center_id.trim();
+      payload.immobilizer_enabled = form.immobilizer_enabled;
+      payload.ais140_compliant = form.ais140_compliant;
 
       await apiClient.post("/admin/vehicles", payload);
       navigate("/admin/vehicles");
@@ -750,34 +765,111 @@ export const AddVehicle: React.FC = () => {
                 <div>
                   <h3 className="text-white text-sm font-semibold">Additional Details</h3>
                   <p className="text-xs text-text-muted mt-0.5">
-                    GPS device, color, and branch assignment
+                    GPS device, color, hierarchy, and compliance
                   </p>
                 </div>
               </div>
               <div className="p-6 space-y-6">
-                <TextInput
-                  name="gps_device_id"
-                  value={form.gps_device_id}
-                  onChange={handleChange}
-                  onBlur={() => handleBlur("gps_device_id")}
-                  label="GPS Device ID"
-                  placeholder="e.g. GPS-IMEI-12345678"
-                  icon="gps_fixed"
-                  error={errors.gps_device_id}
-                  maxLength={100}
-                  hint="AIS-140 compliant GPS tracker IMEI or serial number"
-                />
+                {/* GPS Device & Color */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <TextInput
+                    name="gps_device_id"
+                    value={form.gps_device_id}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("gps_device_id")}
+                    label="GPS Device ID"
+                    placeholder="e.g. GPS-IMEI-12345678"
+                    icon="gps_fixed"
+                    error={errors.gps_device_id}
+                    maxLength={100}
+                    hint="AIS-140 compliant GPS tracker IMEI or serial number"
+                  />
+                  <TextInput
+                    name="color"
+                    value={form.color}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("color")}
+                    label="Color"
+                    placeholder="e.g. White, Blue"
+                    error={errors.color}
+                    maxLength={50}
+                  />
+                </div>
 
-                <TextInput
-                  name="color"
-                  value={form.color}
-                  onChange={handleChange}
-                  onBlur={() => handleBlur("color")}
-                  label="Color"
-                  placeholder="e.g. White, Blue"
-                  error={errors.color}
-                  maxLength={50}
-                />
+                {/* Parent Vehicle & Branch */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <TextInput
+                    name="parent_vehicle_id"
+                    value={form.parent_vehicle_id}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("parent_vehicle_id")}
+                    label="Parent Vehicle ID"
+                    placeholder="UUID of parent vehicle"
+                    icon="account_tree"
+                    error={errors.parent_vehicle_id}
+                    hint="For hierarchical vehicle grouping (e.g., trailer to truck)"
+                  />
+                  <TextInput
+                    name="branch_id"
+                    value={form.branch_id}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("branch_id")}
+                    label="Branch ID"
+                    placeholder="UUID of branch"
+                    icon="account_balance"
+                    error={errors.branch_id}
+                    hint="Branch or depot this vehicle is assigned to"
+                  />
+                </div>
+
+                {/* Cost Center */}
+                <div className="space-y-1.5">
+                  <TextInput
+                    name="cost_center_id"
+                    value={form.cost_center_id}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("cost_center_id")}
+                    label="Cost Center ID"
+                    placeholder="UUID of cost center"
+                    icon="account_balance_wallet"
+                    error={errors.cost_center_id}
+                    hint="For financial tracking and cost allocation"
+                  />
+                </div>
+
+                {/* Toggles: Immobilizer & AIS-140 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
+                    <div>
+                      <div className="text-sm font-medium text-white">Immobilizer</div>
+                      <div className="text-[10px] text-text-muted mt-0.5">Remote engine immobilization capability</div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.immobilizer_enabled}
+                        onChange={(e) => setForm((prev) => ({ ...prev, immobilizer_enabled: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-border-color peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
+                    <div>
+                      <div className="text-sm font-medium text-white">AIS-140 Compliant</div>
+                      <div className="text-[10px] text-text-muted mt-0.5">Indian government telematics standard</div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.ais140_compliant}
+                        onChange={(e) => setForm((prev) => ({ ...prev, ais140_compliant: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-border-color peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
