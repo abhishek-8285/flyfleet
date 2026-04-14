@@ -48,6 +48,12 @@ const FUEL_UNITS = [
   { value: "gallons", label: "Gallons (US)" },
 ];
 
+// Get fuel units based on fuel type (CNG uses kg, not litres)
+const getFuelUnits = (fuelType: string) => {
+  if (fuelType === "CNG") return [{ value: "kg", label: "Kilograms (kg)" }];
+  return FUEL_UNITS;
+};
+
 // Conversion to metric (what backend stores)
 const toKm = (val: number, unit: string) => unit === "mi" ? val * 1.60934 : val;
 const toTonnes = (val: number, unit: string) => unit === "lbs" ? val / 2204.62 : unit === "kg" ? val / 1000 : val;
@@ -504,7 +510,14 @@ export const AddVehicle: React.FC = () => {
       if (form.chassis_number) payload.chassis_number = form.chassis_number.trim();
       if (form.engine_number) payload.engine_number = form.engine_number.trim();
       if (form.capacity_tonnage) payload.capacity_tonnage = toTonnes(parseFloat(form.capacity_tonnage), units.capacity);
-      if (form.fuel_tank_capacity) payload.fuel_tank_capacity = toLitres(parseFloat(form.fuel_tank_capacity), units.fuel);
+      if (form.fuel_tank_capacity) {
+        if (form.fuel_type === "CNG") {
+          // CNG: kg stays as-is (fuel_tank_capacity stores kg for CNG)
+          payload.fuel_tank_capacity = parseFloat(form.fuel_tank_capacity);
+        } else {
+          payload.fuel_tank_capacity = toLitres(parseFloat(form.fuel_tank_capacity), units.fuel);
+        }
+      }
       if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
       if (form.color) payload.color = form.color.trim();
       if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
@@ -806,7 +819,7 @@ export const AddVehicle: React.FC = () => {
                         onChange={(e) => setUnits((prev) => ({ ...prev, fuel: e.target.value }))}
                         className="bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
                       >
-                        {FUEL_UNITS.map((u) => (
+                        {getFuelUnits(form.fuel_type).map((u) => (
                           <option key={u.value} value={u.value}>{u.label}</option>
                         ))}
                       </select>
