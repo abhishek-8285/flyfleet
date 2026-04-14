@@ -53,6 +53,13 @@ export const VehicleDetail: React.FC = () => {
     return displayUnits.fuel === "gallons" ? "gal" : "L";
   };
 
+  // CNG uses kg, not litres
+  const isCNG = vehicle?.fuel_type === "CNG";
+  const fuelUnitLabel = isCNG ? "kg" : unitLabel("fuel");
+  const displayFuel = isCNG
+    ? (vehicle?.fuel_tank_capacity || "—").toString()
+    : (vehicle?.fuel_tank_capacity ? fromLitres(vehicle.fuel_tank_capacity, displayUnits.fuel) : "—");
+
   useEffect(() => {
     fetchVehicle();
     checkSystemHealth();
@@ -204,7 +211,10 @@ export const VehicleDetail: React.FC = () => {
             <div className="text-text-muted text-xs font-medium uppercase mb-1">Fuel Type</div>
             <div className="text-2xl font-bold text-white">{fuelLabel}</div>
             <div className="text-[10px] text-text-muted mt-1">
-              {vehicle.fuel_tank_capacity ? `${vehicle.fuel_tank_capacity}L tank` : "Tank size unknown"}
+              {isCNG
+                ? (vehicle.fuel_tank_capacity ? `${vehicle.fuel_tank_capacity} kg cylinder` : "Cylinder size unknown")
+                : (vehicle.fuel_tank_capacity ? `${vehicle.fuel_tank_capacity}L tank` : "Tank size unknown")
+              }
             </div>
           </div>
 
@@ -341,18 +351,22 @@ export const VehicleDetail: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Fuel Tank</label>
-                        <select
-                          value={displayUnits.fuel}
-                          onChange={(e) => setDisplayUnits((prev) => ({ ...prev, fuel: e.target.value }))}
-                          className="text-[10px] bg-transparent text-text-muted border border-border-color rounded px-1 py-0.5 outline-none"
-                        >
-                          <option value="litres">litres</option>
-                          <option value="gallons">gallons</option>
-                        </select>
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">
+                          {isCNG ? "CNG Cylinder" : "Fuel Tank"}
+                        </label>
+                        {!isCNG && (
+                          <select
+                            value={displayUnits.fuel}
+                            onChange={(e) => setDisplayUnits((prev) => ({ ...prev, fuel: e.target.value }))}
+                            className="text-[10px] bg-transparent text-text-muted border border-border-color rounded px-1 py-0.5 outline-none"
+                          >
+                            <option value="litres">litres</option>
+                            <option value="gallons">gallons</option>
+                          </select>
+                        )}
                       </div>
                       <div className="text-white text-sm border-b border-border-color pb-1">
-                        {vehicle.fuel_tank_capacity ? `${fromLitres(vehicle.fuel_tank_capacity, displayUnits.fuel)} ${unitLabel("fuel")}` : "—"}
+                        {vehicle.fuel_tank_capacity ? `${displayFuel} ${fuelUnitLabel}` : "—"}
                       </div>
                     </div>
                     <div className="space-y-1">
