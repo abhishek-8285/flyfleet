@@ -134,7 +134,6 @@ func TestMultiTenant_SuggestionEngineReturnsOnlyOwnOrgVehicles(t *testing.T) {
 
 func TestMultiTenant_ShardedNATSEvents(t *testing.T) {
 	orgA := uuid.New()
-	orgB := uuid.New()
 
 	// NATS events must include org_id for proper routing
 	eventA := struct {

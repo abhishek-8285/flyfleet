@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"sync"
 	"testing"
 	"time"
@@ -237,11 +236,6 @@ func TestCheckOverlappingTrips_Signature(t *testing.T) {
 
 func TestDoubleBooking_ConcurrentDispatchRace(t *testing.T) {
 	// Simulates two dispatchers trying to assign the same vehicle simultaneously.
-	// The database transaction + overlap check must prevent double-booking.
-
-	vehicleID := uuid.New().String()
-	driverID := uuid.New().String()
-	now := time.Date(2026, 4, 8, 9, 0, 0, 0, time.UTC)
 
 	// Shared state (simulates DB)
 	var assigned bool

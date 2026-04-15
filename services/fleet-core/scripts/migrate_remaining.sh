@@ -8,7 +8,7 @@ echo "=== MIGRATING FINANCE DOMAIN ==="
 # Add response import
 for f in internal/domains/finance/handlers/*.go; do
   if [ -f "$f" ] && ! grep -q "platform/response" "$f"; then
-    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core-service/internal/platform/response"' "$f"
+    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core/internal/platform/response"' "$f"
   fi
 done
 
@@ -42,7 +42,7 @@ echo "=== MIGRATING MAINTENANCE DOMAIN ==="
 # Add response import
 for f in internal/domains/maintenance/handlers/*.go; do
   if [ -f "$f" ] && ! grep -q "platform/response" "$f"; then
-    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core-service/internal/platform/response"' "$f"
+    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core/internal/platform/response"' "$f"
   fi
 done
 

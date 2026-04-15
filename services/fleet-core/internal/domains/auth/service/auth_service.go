@@ -414,7 +414,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 		//
 		// Look up the revoked token record to check if this is the same session.
 		existingToken, lookupErr := s.repo.GetRefreshToken(ctx, refreshTokenStr)
-		if lookupErr != nil {
+		if lookupErr != nil || existingToken == nil {
 			// Token doesn't exist at all — likely expired or invalid
 			return nil, errors.New("invalid or expired refresh token")
 		}
@@ -427,8 +427,10 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 			originalIP = *existingToken.IPAddress
 		}
 
-		if originalIP != "" && originalIP != ipAddress {
-			// SECURITY ALERT: Token used from different IP — likely theft
+		// SECURITY ENFORCEMENT: If we can't verify the location (both IPs empty), 
+		// or if they don't match, we must treat it as a potential theft for safety.
+		if originalIP == "" || ipAddress == "" || originalIP != ipAddress {
+			// SECURITY ALERT: Token used from different IP or unverified location — likely theft
 			_ = s.repo.RevokeAllUserTokens(ctx, existingToken.UserID)
 			_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
 				UserID:    existingToken.UserID,

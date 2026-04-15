@@ -717,7 +717,7 @@ rows, _ := db.Query(`
 - Deployed to staging 2026-03-28 14:30 UTC
 - Monitoring: Grafana dashboard shows P95 dropped from 2.1s → 120ms
 - No alerts triggered during canary (5% → 25% → 100%)
-- PR: https://github.com/flyfleet/fleet-core-service/pull/1234
+- PR: https://github.com/flyfleet/fleet-core/pull/1234
 ```
 
 ---

@@ -486,7 +486,7 @@ import (
     "fmt"
     "time"
     
-    "github.com/flyfleet/fleet-core-service/internal/domains/diagnostics_v2/repository"
+    "github.com/flyfleet/fleet-core/internal/domains/diagnostics_v2/repository"
     "github.com/google/uuid"
     "go.uber.org/zap"
 )

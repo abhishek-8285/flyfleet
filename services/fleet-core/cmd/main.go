@@ -221,7 +221,8 @@ func main() {
 
 	// 2. All authenticated API routes
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.JWKSAuthGate(cfg.JWTSecret, logger))
+		authGate := middleware.NewJWKSAuthGate("FlyFleet", "fleet-dashboard", cfg.JWTSecret, logger)
+		r.Use(authGate.Handler)
 		r.Use(middleware.TenantMiddleware(logger))
 
 		// Authenticated IAM routes (profile, logout, etc.)

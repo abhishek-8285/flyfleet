@@ -13,6 +13,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	sharedmw "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -438,7 +439,7 @@ func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode i
 }
 
 func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
-	// Try CtxOrgID (set by fleet-core JWKS middleware) as UUID
+	// 1. Try CtxOrgID (set by fleet-core JWKS middleware) as UUID or string
 	if val := r.Context().Value(middleware.CtxOrgID); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
@@ -449,12 +450,37 @@ func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
-	// Fallback: ctxkeys.OrgIDKey (set as string by JWKS)
+	// 2. Try ctxkeys.OrgIDKey (standard local key)
 	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
-		if s, ok := val.(string); ok {
-			if id, err := uuid.Parse(s); err == nil {
+		switch v := val.(type) {
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
 				return id
 			}
+		case uuid.UUID:
+			return v
+		}
+	}
+	// 3. Try sharedmw.OrgIDKey (from shared pkg, used in legacy tests)
+	if val := r.Context().Value(sharedmw.OrgIDKey); val != nil {
+		switch v := val.(type) {
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		case uuid.UUID:
+			return v
+		}
+	}
+	// 4. Final fallback: raw string "org_id"
+	if val := r.Context().Value("org_id"); val != nil {
+		switch v := val.(type) {
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		case uuid.UUID:
+			return v
 		}
 	}
 	return uuid.Nil

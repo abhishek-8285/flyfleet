@@ -9,7 +9,7 @@ echo "=== MIGRATING VEHICLE DOMAIN TO RESPONSE PACKAGE ==="
 for f in internal/domains/vehicle/handlers/*.go; do
   if [ -f "$f" ] && ! grep -q "platform/response" "$f"; then
     # Add import after chi import
-    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core-service/internal/platform/response"' "$f"
+    sed -i '/"github.com\/go-chi\/chi\/v5"/i\	"github.com/flyfleet/fleet-core/internal/platform/response"' "$f"
     echo "✅ Added import: $f"
   fi
 done

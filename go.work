@@ -3,9 +3,11 @@ go 1.26.1
 use (
 	.
 	./packages/common/go
-	./services/auth-service
+	./proto
 	./services/fleet-core
+	./services/microservices/admin-support-service
+	./services/microservices/fleet-ml-service
+	./services/monolith
 	./test-tool
+	./tests/infrastructure
 )
-
-replace github.com/flyfleet/proto => ./proto

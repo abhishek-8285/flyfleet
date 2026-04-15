@@ -80,7 +80,7 @@ func TestIsAtDropLocation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.distKm < tt.thresholdKm
+			result := tt.distKm <= tt.thresholdKm
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -118,9 +118,9 @@ func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
 	const R = 6371.0
 	dLat := (lat2 - lat1) * 0.01745329252
 	dLng := (lng2 - lng1) * 0.01745329252
-	a := 0.5 - 0.5*cos(lat2*0.01745329252-lat1*0.01745329252) +
+	a := 0.5 - 0.5*cos(dLat) +
 		cos(lat1*0.01745329252)*cos(lat2*0.01745329252)*
-			(0.5 - 0.5*cos(lng2*0.01745329252-lng1*0.01745329252))
+			(0.5 - 0.5*cos(dLng))
 	if a < 0 {
 		a = 0
 	}
@@ -131,6 +131,9 @@ func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
 }
 
 func sqrt(x float64) float64 {
+	if x <= 0 {
+		return 0
+	}
 	r := x
 	for i := 0; i < 10; i++ {
 		r = (r + x/r) / 2

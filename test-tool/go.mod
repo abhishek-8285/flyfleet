@@ -7,4 +7,4 @@ require (
 	github.com/google/uuid v1.6.0
 )
 
-replace github.com/flyfleet/proto => ../../proto
+replace github.com/flyfleet/proto => ../proto

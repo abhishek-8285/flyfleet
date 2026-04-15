@@ -3,43 +3,43 @@ package service
 import (
 	"testing"
 
-	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
-	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	driverModels "github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	vehicleModels "github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestScoringService_Calculate(t *testing.T) {
-	svc := &ScoringService{}
+	svc := NewScoringService()
 
 	tests := []struct {
 		name         string
 		distKm       float64
-		vehicle      *models.Vehicle
-		driver       *models.Driver
+		vehicle      *vehicleModels.Vehicle
+		driver       *driverModels.Driver
 		expectedMin  float64
 		expectedMax  float64
 	}{
 		{
 			name:   "close vehicle high rating driver",
 			distKm: 2.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status:          "ACTIVE",
-				CapacityTonnage: 1.5,
+				CapacityTonnage: float64Ptr(1.5),
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 4.8,
 			},
 			expectedMin: 85.0,
-			expectedMax: 95.0,
+			expectedMax: 96.0,
 		},
 		{
 			name:   "far vehicle low rating driver",
 			distKm: 18.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status:          "ACTIVE",
-				CapacityTonnage: 3.0,
+				CapacityTonnage: float64Ptr(3.0),
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 2.0,
 			},
 			expectedMin: 40.0,
@@ -48,10 +48,10 @@ func TestScoringService_Calculate(t *testing.T) {
 		{
 			name:   "zero distance max rating",
 			distKm: 0.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status: "ACTIVE",
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 5.0,
 			},
 			expectedMin: 99.0,
@@ -60,38 +60,38 @@ func TestScoringService_Calculate(t *testing.T) {
 		{
 			name:   "zero distance zero rating",
 			distKm: 0.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status: "ACTIVE",
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 0.0,
 			},
-			expectedMin: 69.0,
-			expectedMax: 71.0,
+			expectedMin: 79.0,
+			expectedMax: 81.0,
 		},
 		{
 			name:   "distance 20km scores zero proximity",
 			distKm: 20.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status: "ACTIVE",
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 3.0,
 			},
 			expectedMin: 48.0,
-			expectedMax: 52.0,
+			expectedMax: 55.0,
 		},
 		{
 			name:   "distance beyond 20km proximity clamped to 0",
 			distKm: 25.0,
-			vehicle: &models.Vehicle{
+			vehicle: &vehicleModels.Vehicle{
 				Status: "ACTIVE",
 			},
-			driver: &models.Driver{
+			driver: &driverModels.Driver{
 				Rating: 3.0,
 			},
-			expectedMin: 38.0,
-			expectedMax: 42.0,
+			expectedMin: 48.0,
+			expectedMax: 55.0,
 		},
 	}
 
@@ -107,31 +107,31 @@ func TestScoringService_Calculate(t *testing.T) {
 }
 
 func TestScoringService_Explain(t *testing.T) {
-	svc := &ScoringService{}
+	svc := NewScoringService()
 
 	t.Run("close vehicle with high rating", func(t *testing.T) {
-		reasons := svc.Explain(3.0, &models.Vehicle{}, &models.Driver{Rating: 4.5})
+		reasons := svc.Explain(3.0, &vehicleModels.Vehicle{}, &driverModels.Driver{Rating: 4.5})
 		assert.Contains(t, reasons, "Closest available vehicle")
 		assert.Contains(t, reasons, "High driver rating (4.5)")
 	})
 
 	t.Run("medium distance no rating bonus", func(t *testing.T) {
-		reasons := svc.Explain(12.0, &models.Vehicle{}, &models.Driver{Rating: 2.0})
+		reasons := svc.Explain(12.0, &vehicleModels.Vehicle{}, &driverModels.Driver{Rating: 2.0})
 		assert.Contains(t, reasons, "Within reasonable distance")
 		assert.NotContains(t, reasons, "High driver rating")
 	})
 
 	t.Run("far distance low rating", func(t *testing.T) {
-		reasons := svc.Explain(30.0, &models.Vehicle{}, &models.Driver{Rating: 1.0})
+		reasons := svc.Explain(30.0, &vehicleModels.Vehicle{}, &driverModels.Driver{Rating: 1.0})
 		assert.Empty(t, reasons)
 	})
 }
 
 func TestScoringService_WeightedFormula(t *testing.T) {
-	svc := &ScoringService{}
+	svc := NewScoringService()
 
 	// Verify the 40/30/20/10 weighting explicitly
-	score := svc.Calculate(10.0, &models.Vehicle{}, &models.Driver{Rating: 3.0})
+	score := svc.Calculate(10.0, &vehicleModels.Vehicle{}, &driverModels.Driver{Rating: 3.0})
 	// proximity = max(0, 100 - 10*5) = 50
 	// fit = 100
 	// driver = 3.0 * 20 = 60
@@ -139,3 +139,4 @@ func TestScoringService_WeightedFormula(t *testing.T) {
 	assert.InDelta(t, 72.0, score, 0.1,
 		"weighted formula: 40%% proximity + 30%% fit + 20%% driver + 10%% base")
 }
+

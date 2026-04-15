@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -202,8 +201,3 @@ func TestSuggestionEngine_EmptyOrgReturnsEmpty(t *testing.T) {
 	assert.Equal(t, int64(0), count)
 }
 
-// Suggestion type for tests (mirrors engine.Suggestion)
-type Suggestion struct {
-	Rank  int
-	Score float64
-}

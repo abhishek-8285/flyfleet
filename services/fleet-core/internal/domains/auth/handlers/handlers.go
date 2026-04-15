@@ -40,9 +40,23 @@ func NewHandlers(svc *authservice.AuthService, logger *zap.Logger, redis *redis.
 }
 
 func (h *Handlers) RegisterRoutes(r chi.Router) {
-	// Standard limits
-	loginLimit := h.rateLimiter.Handler("login", 1000, time.Minute)
-	registerLimit := h.rateLimiter.Handler("register", 3, time.Minute)
+	// Rate limits (configurable for tests)
+	loginLimitRPM := 1000
+	if envLimit := os.Getenv("LOGIN_RATE_LIMIT_RPM"); envLimit != "" {
+		if l, err := strconv.Atoi(envLimit); err == nil {
+			loginLimitRPM = l
+		}
+	}
+	
+	registerLimitRPM := 3
+	if envLimit := os.Getenv("REGISTER_RATE_LIMIT_RPM"); envLimit != "" {
+		if l, err := strconv.Atoi(envLimit); err == nil {
+			registerLimitRPM = l
+		}
+	}
+
+	loginLimit := h.rateLimiter.Handler("login", loginLimitRPM, time.Minute)
+	registerLimit := h.rateLimiter.Handler("register", registerLimitRPM, time.Minute)
 	inviteLimit := h.rateLimiter.Handler("invite_check", 5, 15*time.Minute)
 
 	r.Route("/auth", func(r chi.Router) {
@@ -154,7 +168,13 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	// We pass empty string for IP and UA as they are captured by middleware now
 	// Or we can extract them if needed by the service, but let's keep it simple.
-	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.OrgID, "", "")
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx]
+	}
+	ua := r.UserAgent()
+
+	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.OrgID, ip, ua)
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
 		// Increment failed login attempts metric
@@ -256,7 +276,13 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		orgID = r.Header.Get("X-Organization-ID")
 	}
 
-	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, orgID, "", "")
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx]
+	}
+	ua := r.UserAgent()
+
+	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, orgID, ip, ua)
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
 		// Clear invalid refresh cookie

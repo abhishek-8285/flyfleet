@@ -32,7 +32,7 @@ for f in "${files[@]}"; do
     
     # Add response import if not present
     if ! grep -q "platform/response" "$f"; then
-      sed -i '/"github.com\/go-chi\/chi\/v5"/a\	"github.com/flyfleet/fleet-core-service/internal/platform/response"' "$f"
+      sed -i '/"github.com\/go-chi\/chi\/v5"/a\	"github.com/flyfleet/fleet-core/internal/platform/response"' "$f"
     fi
     
     # Replace common patterns

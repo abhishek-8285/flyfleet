@@ -89,8 +89,11 @@ func TestDispatchHandler_Assign_InvalidBody(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/assign",
 		bytes.NewReader([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
-	rr := httptest.NewRecorder()
 
+	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	req = req.WithContext(ctx)
+
+	rr := httptest.NewRecorder()
 	handler.Assign(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -150,6 +153,9 @@ func TestDispatchHandler_Suggest_InvalidShipmentID(t *testing.T) {
 	bodyBytes, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/suggest", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+
+	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
 	handler.GetSuggestions(rr, req)

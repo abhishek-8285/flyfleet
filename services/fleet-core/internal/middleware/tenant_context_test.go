@@ -15,7 +15,7 @@ import (
 
 func TestTenantContextMiddleware(t *testing.T) {
 	logger := zap.NewNop()
-	handler := TenantContextMiddleware(logger)
+	middleware := TenantContextMiddleware(logger)
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -26,20 +26,20 @@ func TestTenantContextMiddleware(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	ctx := context.WithValue(req.Context(), iamCtx.OrgIDKey, orgID)
 	rr := httptest.NewRecorder()
-	handler(next).ServeHTTP(rr, req.WithContext(ctx))
+	middleware(next).ServeHTTP(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Case: Missing Org ID
 	req = httptest.NewRequest("GET", "/", nil)
 	rr = httptest.NewRecorder()
-	handler(next).ServeHTTP(rr, req)
+	middleware(next).ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 
 	// Case: Super Admin without org_id - bypass, should pass
 	req = httptest.NewRequest("GET", "/", nil)
 	ctx = context.WithValue(req.Context(), ctxkeys.RoleKey, "super_admin")
 	rr = httptest.NewRecorder()
-	handler(next).ServeHTTP(rr, req.WithContext(ctx))
+	middleware(next).ServeHTTP(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	// Case: Super Admin with org_id - should pass and org_id remains set
@@ -47,6 +47,6 @@ func TestTenantContextMiddleware(t *testing.T) {
 	ctx = context.WithValue(req.Context(), iamCtx.OrgIDKey, orgID)
 	ctx = context.WithValue(ctx, ctxkeys.RoleKey, "super_admin")
 	rr = httptest.NewRecorder()
-	handler(next).ServeHTTP(rr, req.WithContext(ctx))
+	middleware(next).ServeHTTP(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusOK, rr.Code)
 }

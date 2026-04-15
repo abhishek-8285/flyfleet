@@ -5,7 +5,7 @@ import (
     "fmt"
     "os"
     
-    "github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+    "github.com/flyfleet/fleet-core/internal/domains/auth/service"
     "github.com/jackc/pgx/v5/pgxpool"
 )
 

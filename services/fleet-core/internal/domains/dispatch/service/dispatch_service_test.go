@@ -94,8 +94,6 @@ func (m *mockTripService) Create(ctx context.Context, orgID string, req interfac
 
 func TestDispatchService_Assign_HappyPath(t *testing.T) {
 	shipmentID := uuid.New()
-	vehicleID := uuid.New()
-	driverID := uuid.New()
 	orgID := uuid.New()
 
 	customerRepo := &mockCustomerRepo{

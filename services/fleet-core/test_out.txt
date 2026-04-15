@@ -1,0 +1,287 @@
+?   	github.com/flyfleet/fleet-core	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/diagnostic_login	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/gen_customer_key	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/gen_invoice	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/gen_invoice_pdf	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/gen_multi_industry	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/migrate	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/org-id-enforcer	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/seed_signing_key	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/test_config_render	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/test_render	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/test_tax_engine	[no test files]
+?   	github.com/flyfleet/fleet-core/cmd/test_vector_engine	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/config	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/control	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/database	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/docs	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/dto	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/dr/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/emergency/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/emergency/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/emergency/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/support/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/rule_engine	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/dto	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/domains/notifications/service/mocks	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alert/providers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/alert_router	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/dto	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/notification_worker	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/preference_engine	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/provider_clients	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/alerts/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/alerts/template_engine	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/cache	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/queue	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/analytics/utils	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/auth	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/auth/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/auth/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/auth/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/auth/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/accounting	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/cache	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/domain	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/domain/invoice	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/domain/payment	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/email	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/events	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/billing/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/handlers/invoice	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/payments	[no test files]
+--- FAIL: TestPDFGenerator_BinaryValidation (0.00s)
+    binary_validation_test.go:30: 
+        	Error Trace:	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/billing/pdf/binary_validation_test.go:30
+        	Error:      	Received unexpected error:
+        	            	chromedp failed: fork/exec /usr/bin/chromium: no such file or directory
+        	Test:       	TestPDFGenerator_BinaryValidation
+        	Messages:   	Should generate PDF from HTML without error
+FAIL
+FAIL	github.com/flyfleet/fleet-core/internal/domains/billing/pdf	0.006s
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/queue	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/repository/postgres	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/billing/service	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/billing/storage	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/billing/testutil	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/compliance	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/compliance/events	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/compliance/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/compliance/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/compliance/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/compliance/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/customer	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/cache	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/events	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/customer/validation	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/cache	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/events	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/metrics	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/security	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/service	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/diagnostics/tests/api	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/diagnostics/tests/unit	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/tools/device_simulator	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/tools/latency_profile	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/tools/soak_test	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/workers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/diagnostics/workflows	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/driver	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/driver/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/driver/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/driver/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/driver/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/driver/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/driver/workers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/emergency	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/emergency/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/emergency/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/emergency/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/emergency/service	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/emergency/worker	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/emergency/workers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/finance/handlers	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/finance/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/finance/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/finance/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/finance/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/finance/tracing	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/finance/workers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/fuel	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/fuel/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/fuel/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/fuel/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/fuel/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/fuel/workers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/geofencing	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/geofencing/engine	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/geofencing/handlers	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/geofencing/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/geofencing/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/geofencing/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/geofencing/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/governance/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/governance/metrics	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/governance/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/governance/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/governance/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/governance/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/governance/utils	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/governance/workers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/india	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/india/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/india/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/india/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/india/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/india/utils	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/india/workers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/config	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/connectors	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/database	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/integrations/sync	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/maintenance	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/maintenance/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/maintenance/models	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/maintenance/repository	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/maintenance/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/monitoring	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/monitoring/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/monitoring/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/monitoring/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/monitoring/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/platform_compat	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/platform_compat/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/platform_compat/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/platform_compat/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/client	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/grpc	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/queue	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/reports/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/route	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/route/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/route/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/route/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/route/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/settings	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/settings/config	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/settings/database	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/settings/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/settings/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/settings/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/settings/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/settings/service	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/settings/utils	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking/analytics	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/tracking/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking/models	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/tracking/processor	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/tracking/worker	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/trip	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/trip/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/trip/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/trip/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/trip/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/vehicle	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/vehicle/crypto	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/vehicle/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/vehicle/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/vehicle/processor	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/vehicle/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/domains/vehicle/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/domains/video	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/video/handlers	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/video/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/video/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/domains/video/service	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/gateway	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/handlers	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/logadapter	(cached)
+?   	github.com/flyfleet/fleet-core/internal/messaging	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/middleware	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/ctxkeys	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/images	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/pdfoptimizer	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/permissions	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/qrcode	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/secrets	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/pkg/vectorengine	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/platform/billing/handlers	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/billing/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/billing/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/platform/billing/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/billing/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/cost	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/events	(cached)
+ok  	github.com/flyfleet/fleet-core/internal/platform/gateway	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/health	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/platform/iam/handlers	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/iam/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/iam/models	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/platform/iam/repository	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/iam/service	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/instrumentedpgx	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/platform/metrics	[no test files]
+ok  	github.com/flyfleet/fleet-core/internal/platform/middleware	(cached)
+?   	github.com/flyfleet/fleet-core/internal/platform/observability	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/repository	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/security	[no test files]
+?   	github.com/flyfleet/fleet-core/internal/tools/analysis/org_id_enforcer	[no test files]
+ok  	github.com/flyfleet/fleet-core/tests	(cached)
+ok  	github.com/flyfleet/fleet-core/tests/load	(cached) [no tests to run]
+FAIL

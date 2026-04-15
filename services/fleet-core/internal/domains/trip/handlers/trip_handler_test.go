@@ -194,6 +194,14 @@ func (m *MockTripService) OptimizeRoute(ctx context.Context, tripID string) (*mo
 	return args.Get(0).(*models.RouteOptimization), args.Error(1)
 }
 
+func (m *MockTripService) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
+	args := m.Called(ctx, orgID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
 func setupHandlerTest(t *testing.T) (*TripHandler, *MockTripService) {
 	logger := zap.NewNop()
 	mockService := &MockTripService{}

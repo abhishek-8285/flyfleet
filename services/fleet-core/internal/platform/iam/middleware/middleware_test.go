@@ -39,6 +39,11 @@ func (m *MockIAMService) CheckPermission(ctx context.Context, userID uuid.UUID, 
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockIAMService) IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error) {
+	args := m.Called(ctx, userID, orgID, jti)
+	return args.Bool(0), args.Error(1)
+}
+
 func TestAuthMiddleware(t *testing.T) {
 	mockSvc := new(MockIAMService)
 	handler := AuthMiddleware(mockSvc)

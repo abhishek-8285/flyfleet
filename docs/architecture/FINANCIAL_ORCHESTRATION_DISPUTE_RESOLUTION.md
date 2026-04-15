@@ -630,8 +630,8 @@ import (
     "fmt"
     "time"
     
-    "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/models"
-    "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/repository"
+    "github.com/flyfleet/fleet-core/internal/domains/billing_v2/models"
+    "github.com/flyfleet/fleet-core/internal/domains/billing_v2/repository"
     "github.com/google/uuid"
     "go.uber.org/zap"
 )
@@ -1062,8 +1062,8 @@ import (
     "context"
     "fmt"
     
-    "github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
-    "github.com/flyfleet/fleet-core-service/internal/domains/finance/repository"
+    "github.com/flyfleet/fleet-core/internal/domains/finance/models"
+    "github.com/flyfleet/fleet-core/internal/domains/finance/repository"
     "github.com/google/uuid"
     "go.uber.org/zap"
 )

@@ -12,7 +12,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:        getEnv("PORT", "8088"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "super-secret-key"),
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 	}

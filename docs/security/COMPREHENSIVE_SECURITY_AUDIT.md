@@ -183,12 +183,12 @@ These require manual testing and should be scheduled quarterly.
 ### Go Tests
 ```bash
 $ go test ./services/fleet-core/... -short -count=1
-ok   github.com/flyfleet/fleet-core-service/internal/platform/billing/middleware
-ok   github.com/flyfleet/fleet-core-service/internal/platform/billing/service
-ok   github.com/flyfleet/fleet-core-service/internal/platform/events
-ok   github.com/flyfleet/fleet-core-service/internal/platform/iam/middleware
-ok   github.com/flyfleet/fleet-core-service/internal/platform/iam/service
-ok   github.com/flyfleet/fleet-core-service/internal/platform/middleware
+ok   github.com/flyfleet/fleet-core/internal/platform/billing/middleware
+ok   github.com/flyfleet/fleet-core/internal/platform/billing/service
+ok   github.com/flyfleet/fleet-core/internal/platform/events
+ok   github.com/flyfleet/fleet-core/internal/platform/iam/middleware
+ok   github.com/flyfleet/fleet-core/internal/platform/iam/service
+ok   github.com/flyfleet/fleet-core/internal/platform/middleware
 ...
 ```
 ✅ All unit tests passing (excluding DB integration tests)

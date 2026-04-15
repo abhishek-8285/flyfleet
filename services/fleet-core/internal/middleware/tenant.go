@@ -32,19 +32,18 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			// Extract OrgID from JWT via auth middleware (IAM or legacy)
 			var orgID uuid.UUID
 			var ok bool
-...
+
 			// Try IAM context first (UUID)
-			if orgID, ok = ctx.Value(iamCtx.OrgIDKey).(uuid.UUID); ok {
-				logger.Debug("tenant context found via iamCtx.OrgIDKey", zap.String("org_id", orgID.String()))
-			} else if orgIDStr, okStr := ctx.Value(ctxkeys.OrgIDKey).(string); okStr {
-				// Fallback to legacy string from auth middleware
-				if id, err := uuid.Parse(orgIDStr); err == nil {
-					orgID = id
-					ok = true
-					logger.Debug("tenant context found via fallback ctxkeys.OrgIDKey string", zap.String("org_id", orgID.String()))
-				} else {
-					logger.Warn("tenant context fallback found invalid org_id string", zap.String("value", orgIDStr))
+			if orgID, ok = ctx.Value(iamCtx.OrgIDKey).(uuid.UUID); !ok {
+				// Try string context fallback
+				if orgIDStr, okStr := ctx.Value(ctxkeys.OrgIDKey).(string); okStr {
+					if id, err := uuid.Parse(orgIDStr); err == nil {
+						orgID = id
+						ok = true
+					}
 				}
+			} else {
+				ok = true
 			}
 
 			if !ok {

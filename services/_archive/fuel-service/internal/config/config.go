@@ -20,7 +20,7 @@ func Load() *Config {
 
 	return &Config{
 		ServerPort:     getEnv("SERVER_PORT", "8082"),
-		DatabaseURL:    getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable"),
+		DatabaseURL:    getEnv("DATABASE_URL", "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"),
 		LogLevel:       getEnv("LOG_LEVEL", "info"),
 		RequestTimeout: time.Duration(timeout) * time.Second,
 		VehicleService: getEnv("VEHICLE_SERVICE_URL", "http://localhost:8080"),

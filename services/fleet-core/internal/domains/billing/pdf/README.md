@@ -64,7 +64,7 @@ export PDF_TIMEOUT=30s
 ### Code Usage
 
 ```go
-import "github.com/flyfleet/fleet-core-service/internal/domains/billing_v2/pdf"
+import "github.com/flyfleet/fleet-core/internal/domains/billing_v2/pdf"
 
 // Create PDF generator
 generator := pdf.NewPDFGenerator("", 30*time.Second)

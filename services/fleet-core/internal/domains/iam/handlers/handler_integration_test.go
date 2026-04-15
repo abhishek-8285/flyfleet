@@ -100,7 +100,7 @@ type mockSessionService struct {
 func (m *mockSessionService) ListSessions(ctx context.Context, userID, orgID uuid.UUID) ([]models.Session, error) {
 	return m.sessions, m.sessErr
 }
-func (m *mockSessionService) RevokeSession(ctx context.Context, sessionID string) error {
+func (m *mockSessionService) RevokeSession(ctx context.Context, userID, orgID uuid.UUID, sessionID string) error {
 	return m.revokeErr
 }
 func (m *mockSessionService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
@@ -126,6 +126,9 @@ func (m *mockUserService) GetUser(ctx context.Context, id uuid.UUID) (*models.Us
 }
 func (m *mockUserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string, actorID uuid.UUID) error {
 	return m.statusErr
+}
+func (m *mockUserService) UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
+	return nil
 }
 func (m *mockUserService) DeleteUser(ctx context.Context, userID uuid.UUID, actorID uuid.UUID) error {
 	return m.deleteErr
@@ -194,14 +197,14 @@ func (m *mockRBACService) GetRole(ctx context.Context, id uuid.UUID) (*models.Ro
 func (m *mockRBACService) CreateRole(ctx context.Context, orgID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error) {
 	return m.createResp, m.createErr
 }
-func (m *mockRBACService) UpdateRole(ctx context.Context, id uuid.UUID, name, description string) error {
+func (m *mockRBACService) UpdateRole(ctx context.Context, id, orgID uuid.UUID, name, description string) error {
 	return m.updateErr
 }
-func (m *mockRBACService) UpdateRolePermissions(ctx context.Context, id uuid.UUID, perms []string) error { return nil }
-func (m *mockRBACService) CloneRole(ctx context.Context, sourceID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
+func (m *mockRBACService) UpdateRolePermissions(ctx context.Context, id, orgID uuid.UUID, perms []string) error { return nil }
+func (m *mockRBACService) CloneRole(ctx context.Context, sourceID, orgID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
 	return m.cloneResp, m.cloneErr
 }
-func (m *mockRBACService) DeleteRole(ctx context.Context, id uuid.UUID) error {
+func (m *mockRBACService) DeleteRole(ctx context.Context, id, orgID uuid.UUID) error {
 	return m.deleteErr
 }
 func (m *mockRBACService) GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) ([]models.RolePermissionMatrixEntry, error) {
@@ -258,6 +261,12 @@ func (m *mockUserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User,
 }
 func (m *mockUserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error {
 	return m.updateErr
+}
+func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error {
+	return nil
+}
+func (m *mockUserRepo) GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error) {
+	return nil, nil
 }
 
 // ─── Helpers ───

@@ -252,7 +252,7 @@ All dependencies use permissive licenses suitable for commercial distribution. N
 
 **Main Go modules:**
 1. `github.com/flyfleet/flyfleet` (root)
-2. `github.com/flyfleet/fleet-core-service`
+2. `github.com/flyfleet/fleet-core`
 3. `github.com/flyfleet/auth-service`
 4. `github.com/fleet-platform/shared` (internal)
 5. `github.com/flyfleet/proto` (internal)
