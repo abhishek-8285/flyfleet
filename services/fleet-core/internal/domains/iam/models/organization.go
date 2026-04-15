@@ -25,8 +25,8 @@ type UserOrganization struct {
 }
 
 type OrgInfo struct {
-	ID            uuid.UUID `json:"id"`
-	Name          string    `json:"name"`
+	ID            uuid.UUID `json:"org_id"`
+	Name          string    `json:"org_name"`
 	Role          string    `json:"role"`
 	VehicleCount  int       `json:"vehicle_count"`
 	ThemeColor    string    `json:"theme_color"`

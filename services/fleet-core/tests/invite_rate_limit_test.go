@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/handlers"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/handlers"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/models"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"

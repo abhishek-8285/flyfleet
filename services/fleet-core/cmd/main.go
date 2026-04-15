@@ -19,6 +19,10 @@ import (
 	"github.com/flyfleet/fleet-core/internal/database"
 	"github.com/flyfleet/fleet-core/internal/domains/iam"
 	iamcfg "github.com/flyfleet/fleet-core/internal/domains/iam/config"
+	driverMiddleware "github.com/flyfleet/fleet-core/internal/domains/driver/middleware"
+	drvRepo "github.com/flyfleet/fleet-core/internal/domains/driver/repository"
+	driverService "github.com/flyfleet/fleet-core/internal/domains/driver/service"
+	driverHandlers "github.com/flyfleet/fleet-core/internal/domains/driver/handlers"
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
 	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
@@ -109,6 +113,39 @@ func main() {
 	vehicleService := vs.NewVehicleService(vehicleDomainRepo, logger)
 	vehicleHandlers := vh.NewVehicleHandlers(vehicleService, logger)
 
+	// --- Driver Domain ---
+	driverRepo := drvRepo.NewDriverRepository(pool)
+	driverOnboardingRepo := drvRepo.NewOnboardingRepository(pool)
+	driverShiftRepo := drvRepo.NewShiftRepository(pool)
+	driverTrainingRepo := drvRepo.NewTrainingRepository(pool)
+	driverPayrollRepo := drvRepo.NewPayrollRepository(pool)
+	driverRatingRepo := drvRepo.NewRatingRepository(pool)
+	driverSafetyRepo := drvRepo.NewSafetyRepository(pool)
+	driverMobileSyncRepo := drvRepo.NewMobileSyncRepository(pool)
+
+	driverSvc := driverService.NewDriverService(driverRepo, logger)
+	driverOnboardingSvc := driverService.NewOnboardingService(driverOnboardingRepo, logger)
+	driverShiftSvc := driverService.NewShiftService(driverShiftRepo, logger)
+	driverTrainingSvc := driverService.NewTrainingService(driverTrainingRepo, logger)
+	driverPayrollSvc := driverService.NewPayrollService(driverPayrollRepo, logger)
+	driverRatingSvc := driverService.NewRatingService(driverRatingRepo, logger)
+	driverSafetySvc := driverService.NewSafetyEventService(driverSafetyRepo, logger)
+	driverMobileSyncSvc := driverService.NewMobileSyncService(driverMobileSyncRepo, logger)
+	driverSecurity := driverMiddleware.NewDriverSecurityMiddleware(logger)
+
+	driverHandler := driverHandlers.NewDriverHandler(
+		driverSvc,
+		driverOnboardingSvc,
+		driverShiftSvc,
+		driverTrainingSvc,
+		driverPayrollSvc,
+		driverRatingSvc,
+		driverSafetySvc,
+		driverMobileSyncSvc,
+		driverSecurity,
+		logger,
+	)
+
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
 	if cfg.Flags.GeofenceAlerts {
@@ -123,9 +160,9 @@ func main() {
 
 	// CORS
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Org-ID"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8081", "https://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Org-ID", "X-CSRF-Token", "X-Trace-ID", "X-Request-ID"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -160,9 +197,8 @@ func main() {
 	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
 	r.Get("/api/v1/ui/misc/legal_docs", uiConfigHandler.GetLegalDocs)
 
-	// Admin stub endpoints (drivers, columns — vehicles moved to real CRUD)
+	// Admin stub endpoints (columns — drivers moved to real CRUD)
 	adminHandler := th.NewAdminHandler()
-	r.Get("/api/v1/admin/drivers", adminHandler.ServeHTTP)
 	r.Get("/api/v1/ui/settings/columns", adminHandler.ServeHTTP)
 
 	// Dashboard stub endpoints
@@ -207,6 +243,11 @@ func main() {
 		// Vehicle CRUD (always available)
 		r.Route("/api/v1/admin/vehicles", func(r chi.Router) {
 			vehicleHandlers.RegisterRoutes(r)
+		})
+
+		// Driver CRUD + extended endpoints
+		r.Route("/api/v1/admin/drivers", func(r chi.Router) {
+			driverHandler.RegisterRoutes(r)
 		})
 	})
 

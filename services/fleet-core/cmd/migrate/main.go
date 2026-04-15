@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/flyfleet/fleet-core-service/internal/config"
+	"github.com/flyfleet/fleet-core/internal/config"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 

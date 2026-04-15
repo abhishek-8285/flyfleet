@@ -28,6 +28,10 @@ import DRTestListView from "./pages/admin/dr/DRTestListView";
 import DRTestSettingsView from "./pages/admin/dr/DRTestSettingsView";
 import InitiateRestorePage from "./pages/admin/dr/InitiateRestorePage";
 import RestorePointsPage from "./pages/admin/dr/RestorePointsPage";
+import { DriverList } from "./pages/admin/DriverList";
+import { DriverDetail } from "./pages/admin/DriverDetail";
+import { AddDriver } from "./pages/admin/AddDriver";
+import { EditDriver } from "./pages/admin/EditDriver";
 import { Drivers as AdminDrivers } from "./pages/admin/Drivers";
 import { EditOrganization } from "./pages/admin/EditOrganization";
 import { AddVehicle as FleetAddVehicle } from "./pages/admin/FleetCommand/AddVehicle";
@@ -136,6 +140,7 @@ import TrustedDevices from "./pages/TrustedDevices";
 import VehicleDetails from "./pages/VehicleDetails";
 import VerifyEmail from "./pages/VerifyEmail";
 import { store } from "./store";
+import { setToken, setUser as setReduxUser } from "./store/authSlice";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
 import { useSelector } from "react-redux";
 import type { RootState } from "./store";
@@ -486,7 +491,10 @@ function App() {
                   path="vehicles/:id/edit"
                   element={<FleetEditVehicle />}
                 />
-                <Route path="drivers" element={<AdminDrivers />} />
+                <Route path="drivers" element={<DriverList />} />
+                <Route path="drivers/new" element={<AddDriver />} />
+                <Route path="drivers/:id" element={<DriverDetail />} />
+                <Route path="drivers/:id/edit" element={<EditDriver />} />
                 <Route path="devices" element={<Devices />} />
                 <Route path="devices/:id" element={<DeviceDetail />} />
                 <Route path="bulk-uploads" element={<JobsList />} />

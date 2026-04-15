@@ -17,11 +17,11 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 
-	finService "github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/fuel/models"
-	fuelRepo "github.com/flyfleet/fleet-core-service/internal/domains/fuel/repository"
-	fuelService "github.com/flyfleet/fleet-core-service/internal/domains/fuel/service"
-	"github.com/flyfleet/fleet-core-service/internal/domains/integrations"
+	finService "github.com/flyfleet/fleet-core/internal/domains/finance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
+	fuelRepo "github.com/flyfleet/fleet-core/internal/domains/fuel/repository"
+	fuelService "github.com/flyfleet/fleet-core/internal/domains/fuel/service"
+	"github.com/flyfleet/fleet-core/internal/domains/integrations"
 )
 
 func TestFuelModuleIntegrationFlow(t *testing.T) {

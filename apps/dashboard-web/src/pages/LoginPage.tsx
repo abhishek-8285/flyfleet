@@ -49,6 +49,7 @@ interface LoginContextType {
   uiStrings: any;
   navigate: any;
   login: any;
+  performLogin: (orgId: string) => Promise<void>;
 }
 
 const LoginContext = createContext<LoginContextType | undefined>(undefined);
@@ -67,7 +68,7 @@ const slideVariants = {
 
 
 const OrgSelectStep: React.FC = () => {
-  const { organizations, setSelectedOrgId, setState } = useLoginStore();
+  const { organizations, setSelectedOrgId, performLogin } = useLoginStore();
   
   return (
     <motion.div variants={slideVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
@@ -76,7 +77,7 @@ const OrgSelectStep: React.FC = () => {
         {organizations.map(org => (
           <button
             key={org.org_id}
-            onClick={() => { setSelectedOrgId(org.org_id); setState(LoginState.AUTHENTICATE); }}
+            onClick={() => { setSelectedOrgId(org.org_id); performLogin(org.org_id); }}
             className="p-4 bg-slate-800/30 border border-white/5 rounded-2xl hover:border-primary/50 hover:bg-slate-800/50 transition-all text-left flex items-center gap-3 group"
           >
             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -141,6 +142,8 @@ const AuthenticateStep: React.FC = () => {
   };
 
   const performLogin = async (orgId: string) => {
+    setLoading(true);
+    setGlobalError(null);
     try {
       const data = await api.post("/auth/login", {
         email: emailOrPhone,
@@ -444,7 +447,7 @@ const Login: React.FC = () => {
       globalError, setGlobalError, loading, setLoading,
       tempToken, setTempToken, partialUser, setPartialUser,
       rememberMe, setRememberMe, password, setPassword, 
-      uiStrings, navigate, login
+      uiStrings, navigate, login, performLogin
     }}>
       <EnterpriseAuthLayout
         title={uiStrings?.login_title || "Sign In"}

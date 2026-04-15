@@ -4,7 +4,10 @@ import { store } from '../store';
 import { setToken, setUser } from '../store/authSlice';
 
 // Environment-aware base URL
-const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+let API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+if (/^https?:\/\/[^\/]+\/?$/.test(API_URL)) {
+  API_URL = API_URL.replace(/\/$/, '') + '/api/v1';
+}
 
 const apiClient = axios.create({
   baseURL: API_URL,

@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/fleet-platform/shared/pkg/logger"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/repository"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/repository"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

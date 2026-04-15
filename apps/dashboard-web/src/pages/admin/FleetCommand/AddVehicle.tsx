@@ -236,7 +236,10 @@ const initialForm: FormState = {
   ais140_compliant: false,
 };
 
-function validateField(name: FieldName, value: string): string | null {
+function validateField(name: FieldName, value: string | boolean): string | null {
+  // Skip validation for boolean fields
+  if (typeof value === 'boolean') return null;
+  
   const config = VALIDATION_RULES[name];
   if (!config) return null;
 

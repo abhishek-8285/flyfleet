@@ -1,0 +1,436 @@
+package handlers
+
+import (
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/flyfleet/fleet-core/internal/domains/driver/service"
+	"github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+type DriverHandlers struct {
+	service  service.DriverServiceInterface
+	logger   *zap.Logger
+	validate *validator.Validate
+}
+
+func NewDriverHandlers(svc service.DriverServiceInterface, logger *zap.Logger) *DriverHandlers {
+	return &DriverHandlers{
+		service:  svc,
+		logger:   logger,
+		validate: validator.New(),
+	}
+}
+
+func (h *DriverHandlers) RegisterRoutes(r chi.Router) {
+	r.Post("/", h.CreateDriver)
+	r.Get("/", h.ListDrivers)
+	r.Get("/search", h.SearchDrivers)
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.GetDriver)
+		r.Put("/", h.UpdateDriver)
+		r.Delete("/", h.DeleteDriver)
+		r.Post("/assign-vehicle", h.AssignVehicle)
+		r.Post("/unassign-vehicle", h.UnassignVehicle)
+	})
+}
+
+type createDriverDTO struct {
+	FullName           string     `json:"full_name"            validate:"required"`
+	Phone              string     `json:"phone"                validate:"required"`
+	Email              *string    `json:"email"`
+	DateOfBirth        *string    `json:"date_of_birth"`
+	Gender             *string    `json:"gender"`
+	AddressLine1       *string    `json:"address_line_1"`
+	AddressLine2       *string    `json:"address_line_2"`
+	City               *string    `json:"city"`
+	State              *string    `json:"state"`
+	Pincode            *string    `json:"pincode"`
+	EmergencyName      *string    `json:"emergency_name"`
+	EmergencyPhone     *string    `json:"emergency_phone"`
+	BloodGroup         *string    `json:"blood_group"`
+	JoinDate           *string    `json:"join_date"`
+	LicenseNumber      string     `json:"license_number"       validate:"required"`
+	LicenseType        string     `json:"license_type"         validate:"required,oneof=LMV HMV PSV MCWG"`
+	LicenseIssueDate   *string    `json:"license_issue_date"`
+	LicenseExpiryDate  *string    `json:"license_expiry_date"  validate:"required"`
+	LicenseIssuingAuth *string    `json:"license_issuing_auth"`
+	PUCNumber          *string    `json:"puc_number"`
+	PUCExpiryDate      *string    `json:"puc_expiry_date"`
+	MedicalCertFile    *string    `json:"medical_cert_file"`
+	MedicalExpiryDate  *string    `json:"medical_expiry_date"`
+	AssignedVehicleID  *string    `json:"assigned_vehicle_id"`
+	BranchID           *string    `json:"branch_id"`
+	ShiftType          string     `json:"shift_type"           validate:"omitempty,oneof=MORNING AFTERNOON NIGHT ROTATING"`
+	BehaviorMonitoring *bool      `json:"behavior_monitoring"`
+	SpeedLimitOverride *int       `json:"speed_limit_override"`
+	Notes              *string    `json:"notes"`
+}
+
+func (h *DriverHandlers) decodeAndValidate(body io.ReadCloser, dest interface{}) error {
+	defer body.Close()
+	if err := json.NewDecoder(body).Decode(dest); err != nil {
+		return err
+	}
+	return h.validate.Struct(dest)
+}
+
+func parseTime(s *string) (*time.Time, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	t, err := time.Parse(time.RFC3339, *s)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (h *DriverHandlers) CreateDriver(w http.ResponseWriter, r *http.Request) {
+	var dto createDriverDTO
+	if err := h.decodeAndValidate(r.Body, &dto); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	req := &models.CreateDriverRequest{
+		FullName:           dto.FullName,
+		Phone:              dto.Phone,
+		Email:              dto.Email,
+		Gender:             dto.Gender,
+		AddressLine1:       dto.AddressLine1,
+		AddressLine2:       dto.AddressLine2,
+		City:               dto.City,
+		State:              dto.State,
+		Pincode:            dto.Pincode,
+		EmergencyName:      dto.EmergencyName,
+		EmergencyPhone:     dto.EmergencyPhone,
+		BloodGroup:         dto.BloodGroup,
+		LicenseNumber:      dto.LicenseNumber,
+		LicenseType:        dto.LicenseType,
+		LicenseIssuingAuth: dto.LicenseIssuingAuth,
+		PUCNumber:          dto.PUCNumber,
+		MedicalCertFile:    dto.MedicalCertFile,
+		ShiftType:          dto.ShiftType,
+		BehaviorMonitoring: dto.BehaviorMonitoring,
+		SpeedLimitOverride: dto.SpeedLimitOverride,
+		Notes:              dto.Notes,
+	}
+
+	// Parse dates
+	if d, _ := parseTime(dto.DateOfBirth); d != nil {
+		req.DateOfBirth = d
+	}
+	if d, _ := parseTime(dto.JoinDate); d != nil {
+		req.JoinDate = d
+	}
+	if d, _ := parseTime(dto.LicenseIssueDate); d != nil {
+		req.LicenseIssueDate = d
+	}
+	if d, _ := parseTime(dto.LicenseExpiryDate); d != nil {
+		req.LicenseExpiryDate = d
+	}
+	if d, _ := parseTime(dto.PUCExpiryDate); d != nil {
+		req.PUCExpiryDate = d
+	}
+	if d, _ := parseTime(dto.MedicalExpiryDate); d != nil {
+		req.MedicalExpiryDate = d
+	}
+	if dto.AssignedVehicleID != nil && *dto.AssignedVehicleID != "" {
+		if vid, err := uuid.Parse(*dto.AssignedVehicleID); err == nil {
+			req.AssignedVehicleID = &vid
+		}
+	}
+	if dto.BranchID != nil && *dto.BranchID != "" {
+		if bid, err := uuid.Parse(*dto.BranchID); err == nil {
+			req.BranchID = &bid
+		}
+	}
+
+	driver, err := h.service.CreateDriver(r.Context(), req, orgID)
+	if err != nil {
+		if errors.Is(err, service.ErrDriverAlreadyExists) {
+			h.writeErrorResponse(w, http.StatusConflict, "Driver with this license number already exists", nil)
+			return
+		}
+		h.logger.Error("failed to create driver", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create driver", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{"data": driver})
+}
+
+func (h *DriverHandlers) GetDriver(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	driver, err := h.service.GetDriver(r.Context(), orgID, id)
+	if err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			h.writeErrorResponse(w, http.StatusNotFound, "Driver not found", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get driver", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": driver})
+}
+
+func (h *DriverHandlers) ListDrivers(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+
+	drivers, total, err := h.service.ListDrivers(r.Context(), orgID, page, limit)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list drivers", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"drivers": drivers,
+		"total":   total,
+		"page":    page,
+		"limit":   limit,
+	})
+}
+
+func (h *DriverHandlers) SearchDrivers(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	q := r.URL.Query()
+	params := models.DriverSearchParams{
+		TenantID:      orgID,
+		Query:         q.Get("q"),
+		Status:        q.Get("status"),
+		LicenseStatus: q.Get("license_status"),
+		Page:          1,
+		Limit:         20,
+	}
+
+	if p, _ := strconv.Atoi(q.Get("page")); p > 0 {
+		params.Page = p
+	}
+	if l, _ := strconv.Atoi(q.Get("limit")); l > 0 {
+		params.Limit = l
+	}
+
+	hasVehicle := q.Get("has_vehicle")
+	if hasVehicle == "true" {
+		v := true
+		params.HasVehicle = &v
+	} else if hasVehicle == "false" {
+		v := false
+		params.HasVehicle = &v
+	}
+
+	drivers, total, err := h.service.SearchDrivers(r.Context(), params)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to search drivers", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"drivers": drivers,
+		"total":   total,
+		"page":    params.Page,
+		"limit":   params.Limit,
+	})
+}
+
+func (h *DriverHandlers) UpdateDriver(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	var req models.UpdateDriverRequest
+	if err := h.decodeAndValidate(r.Body, &req); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	driver, err := h.service.UpdateDriver(r.Context(), id, &req, orgID)
+	if err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			h.writeErrorResponse(w, http.StatusNotFound, "Driver not found", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to update driver", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": driver})
+}
+
+func (h *DriverHandlers) DeleteDriver(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	if err := h.service.DeleteDriver(r.Context(), orgID, id); err != nil {
+		if errors.Is(err, service.ErrDriverNotFound) {
+			h.writeErrorResponse(w, http.StatusNotFound, "Driver not found", nil)
+			return
+		}
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete driver", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Driver deleted"})
+}
+
+type assignVehicleDTO struct {
+	VehicleID string `json:"vehicle_id" validate:"required"`
+}
+
+func (h *DriverHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := chi.URLParam(r, "id")
+	driverID, err := uuid.Parse(driverIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	var dto assignVehicleDTO
+	if err := h.decodeAndValidate(r.Body, &dto); err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
+		return
+	}
+
+	vehicleID, err := uuid.Parse(dto.VehicleID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
+		return
+	}
+
+	if err := h.service.AssignVehicle(r.Context(), orgID, driverID, vehicleID); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to assign vehicle", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Vehicle assigned"})
+}
+
+func (h *DriverHandlers) UnassignVehicle(w http.ResponseWriter, r *http.Request) {
+	driverIDStr := chi.URLParam(r, "id")
+	driverID, err := uuid.Parse(driverIDStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
+		return
+	}
+
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		return
+	}
+
+	if err := h.service.UnassignVehicle(r.Context(), orgID, driverID); err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to unassign vehicle", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]string{"message": "Vehicle unassigned"})
+}
+
+func (h *DriverHandlers) getOrgID(r *http.Request) uuid.UUID {
+	// Try CtxOrgID (set by fleet-core JWKS middleware)
+	if val := r.Context().Value(middleware.CtxOrgID); val != nil {
+		switch v := val.(type) {
+		case uuid.UUID:
+			return v
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		}
+	}
+	// Fallback: ctxkeys.OrgIDKey
+	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
+		if s, ok := val.(string); ok {
+			if id, err := uuid.Parse(s); err == nil {
+				return id
+			}
+		}
+	}
+	return uuid.Nil
+}
+
+func (h *DriverHandlers) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
+
+func (h *DriverHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]interface{}{"error": message})
+}

@@ -23,8 +23,8 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
-		       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -47,8 +47,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, name, phone, avatar_url, mfa_enabled, mfa_secret,
-		       COALESCE(mfa_backup_codes, '{}'), status, email_verified,
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -154,8 +154,8 @@ func (r *UserRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status 
 
 func (r *UserRepository) CreateUser(ctx context.Context, u *models.User) error {
 	return r.pool.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified, role_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, (SELECT id FROM roles WHERE name = 'super_admin' LIMIT 1))
 		RETURNING id, created_at, updated_at`,
 		u.Email, u.PasswordHash, u.Name, u.Phone, u.AvatarURL, u.Status, u.EmailVerified,
 	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)

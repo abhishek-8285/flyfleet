@@ -135,7 +135,7 @@ const ControlTower: React.FC = () => {
         }
       }
       if (!clusterLayerRef.current) {
-        const clusterLayer = new ClusterLayer("cluster-layer");
+        const clusterLayer = new ClusterLayer();
         clusterLayerRef.current = clusterLayer;
         clusterLayerRef.current.onAdd(mapRef.current);
       }
@@ -288,7 +288,7 @@ const ControlTower: React.FC = () => {
       map.addLayer(instancedLayerRef.current);
     }
     
-    clusterLayerRef.current = new ClusterLayer("cluster-layer");
+    clusterLayerRef.current = new ClusterLayer();
     clusterLayerRef.current.onAdd(map);
 
     map.on('remove', () => {

@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/billing/pdf"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/pdf"
 	"github.com/google/uuid"
 )
 

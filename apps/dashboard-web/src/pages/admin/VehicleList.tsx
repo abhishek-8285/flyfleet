@@ -81,11 +81,12 @@ export const VehicleList: React.FC = () => {
       if (filters.make) params.append("make", filters.make);
 
       const res = await apiClient.get(`/admin/vehicles?${params.toString()}`);
-      setVehicles(res?.vehicles || []);
+      const data = res.data;
+      setVehicles(data?.vehicles || []);
       setPagination((prev) => ({
         ...prev,
-        total: res?.total || res?.vehicles?.length || 0,
-        totalPages: res?.total_pages || Math.ceil((res?.total || res?.vehicles?.length || 0) / prev.size),
+        total: data?.total || data?.vehicles?.length || 0,
+        totalPages: data?.total_pages || Math.ceil((data?.total || data?.vehicles?.length || 0) / prev.size),
       }));
     } catch (error) {
       console.error("Failed to fetch vehicles:", error);

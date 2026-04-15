@@ -3,7 +3,10 @@ import maplibregl from "maplibre-gl";
 import { useMapStore } from "./store";
 import MapEngine from "./MapEngine";
 
-const API_BASE_WS = import.meta.env.VITE_API_URL?.replace("http", "ws") || "ws://localhost:8084/api/v1";
+let API_BASE_WS = import.meta.env.VITE_API_URL?.replace("http", "ws") || "ws://localhost:8084/api/v1";
+if (/^wss?:\/\/[^\/]+\/?$/.test(API_BASE_WS)) {
+  API_BASE_WS = API_BASE_WS.replace(/\/$/, '') + '/api/v1';
+}
 
 const LiveMap: React.FC = () => {
   const mapRef = useRef<maplibregl.Map | null>(null);

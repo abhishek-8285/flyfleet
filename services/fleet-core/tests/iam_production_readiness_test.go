@@ -40,9 +40,9 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/fleet-platform/shared/pkg/logger"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/handlers"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/service"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/handlers"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/models"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

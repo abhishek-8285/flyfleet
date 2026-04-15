@@ -327,7 +327,7 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
 	if err != nil {
 		s.log.Error("failed to compute permissions", zap.Error(err))
-		mask = 0
+		mask = user.PermissionMask
 	}
 
 	// Cache permissions
@@ -801,6 +801,9 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 
 // resolvePermissions returns the list of resource:action strings for a given permission mask
 func (s *AuthService) resolvePermissions(ctx context.Context, mask int64) []string {
+	if mask == 9223372036854775807 {
+		return []string{"*:*"}
+	}
 	perms, err := s.roleRepo.GetAllPermissions(ctx)
 	if err != nil {
 		s.log.Error("failed to resolve permissions", zap.Error(err))

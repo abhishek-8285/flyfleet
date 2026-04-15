@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/models"
-	"github.com/flyfleet/fleet-core-service/internal/domains/finance/service"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/models"
+	"github.com/flyfleet/fleet-core/internal/domains/finance/service"
 )
 
 // RunFinanceLoadTest simulates high volume of fuel transaction ingestions

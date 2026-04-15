@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/vectorengine"
+	"github.com/flyfleet/fleet-core/internal/pkg/vectorengine"
 	"os"
 )
 

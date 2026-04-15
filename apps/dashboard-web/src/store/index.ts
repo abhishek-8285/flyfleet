@@ -7,6 +7,7 @@ import dashboardReducer from "./dashboardSlice";
 import geofencesReducer from "./geofencesSlice";
 import telemetryReducer from "./telemetrySlice";
 import timelineReducer from "./timelineSlice";
+import trackingReducer from "../features/tracking/store/trackingSlice";
 import tripsReducer from "./tripsSlice";
 import vehiclesReducer from "./vehiclesSlice";
 
@@ -22,6 +23,7 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     analytics: analyticsReducer,
     timeline: timelineReducer,
+    tracking: trackingReducer,
   },
 });
 

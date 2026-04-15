@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core-service/internal/domains/auth/models"
+	"github.com/flyfleet/fleet-core/internal/domains/auth/models"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )

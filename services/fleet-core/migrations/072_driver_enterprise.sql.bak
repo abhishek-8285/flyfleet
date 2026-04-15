@@ -1,0 +1,84 @@
+-- Migration: 072_driver_enterprise
+-- Description: Enterprise-grade Driver domain schema
+-- Note: Run with psql or your migration tool
+
+-- 1. Create drivers table
+CREATE TABLE IF NOT EXISTS drivers (
+    -- Identity
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id           UUID NOT NULL,
+
+    -- Personal Information
+    full_name           VARCHAR(100)    NOT NULL,
+    phone               VARCHAR(20)     NOT NULL,
+    email               VARCHAR(255),
+    date_of_birth       DATE,
+    gender              VARCHAR(10),
+    address_line_1      TEXT,
+    address_line_2      TEXT,
+    city                VARCHAR(100),
+    state               VARCHAR(50),
+    pincode             VARCHAR(10),
+
+    -- Emergency Contact
+    emergency_name      VARCHAR(100),
+    emergency_phone     VARCHAR(20),
+    blood_group         VARCHAR(5),
+
+    -- Employment
+    join_date           DATE NOT NULL DEFAULT CURRENT_DATE,
+
+    -- License Information
+    license_number      VARCHAR(50)     NOT NULL,
+    license_type        VARCHAR(10)     NOT NULL DEFAULT 'LMV'
+                            CHECK (license_type IN ('LMV','HMV','PSV','MCWG')),
+    license_issue_date  DATE NOT NULL DEFAULT CURRENT_DATE,
+    license_expiry_date DATE NOT NULL,
+    license_issuing_auth VARCHAR(200),
+
+    -- Compliance Documents
+    puc_number          VARCHAR(50),
+    puc_expiry_date     DATE,
+    medical_cert_file   TEXT,
+    medical_expiry_date DATE,
+
+    -- Assignment
+    assigned_vehicle_id UUID,
+    branch_id           UUID,
+    shift_type          VARCHAR(20)     NOT NULL DEFAULT 'MORNING'
+                            CHECK (shift_type IN ('MORNING','AFTERNOON','NIGHT','ROTATING')),
+
+    -- Settings
+    behavior_monitoring BOOLEAN NOT NULL DEFAULT TRUE,
+    speed_limit_override INTEGER,
+    notes               TEXT,
+
+    -- Lifecycle
+    status              VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE'
+                            CHECK (status IN ('ACTIVE','ON_TRIP','OFF_DUTY','SUSPENDED')),
+
+    -- Audit
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at          TIMESTAMPTZ,
+    version             INTEGER NOT NULL DEFAULT 1,
+
+    -- Constraints
+    CONSTRAINT uq_drivers_tenant_license UNIQUE (tenant_id, license_number)
+);
+
+-- 2. Indexes
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_tenant ON drivers(tenant_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_tenant_status ON drivers(tenant_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_tenant_license ON drivers(tenant_id, license_number);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_license_expiry ON drivers(license_expiry_date) WHERE deleted_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_assigned_vehicle ON drivers(assigned_vehicle_id) WHERE assigned_vehicle_id IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_created ON drivers(created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_drivers_deleted ON drivers(deleted_at) WHERE deleted_at IS NULL;
+
+-- 3. Comments
+COMMENT ON TABLE drivers IS 'Driver aggregate root — enterprise master';
+COMMENT ON COLUMN drivers.license_number IS 'Unique per tenant';
+COMMENT ON COLUMN drivers.license_type IS 'LMV, HMV, PSV, MCWG (Indian license types)';
+COMMENT ON COLUMN drivers.shift_type IS 'MORNING, AFTERNOON, NIGHT, ROTATING';
+COMMENT ON COLUMN drivers.status IS 'ACTIVE, ON_TRIP, OFF_DUTY, SUSPENDED';

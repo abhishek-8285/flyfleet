@@ -8,7 +8,10 @@ import {
 // Get store from global reference (set in store/index.ts after creation) to avoid circular dependency
 const getStore = () => (window as any).__REDUX_STORE__;
 
-const API_URL = import.meta.env.VITE_API_URL || "/api/v1";
+let API_URL = import.meta.env.VITE_API_URL || "/api/v1";
+if (/^https?:\/\/[^\/]+\/?$/.test(API_URL)) {
+  API_URL = API_URL.replace(/\/$/, '') + '/api/v1';
+}
 const BFF_URL = import.meta.env.VITE_BFF_URL || "/";
 
 class ApiService {
@@ -312,11 +315,55 @@ class ApiService {
 
   // Drivers
   async getDrivers(params?: any): Promise<any> {
-    return this.client.get("/drivers", { params });
+    return this.client.get("/admin/drivers", { params });
   }
 
   async getDriver(id: string): Promise<any> {
     return this.client.get(`/admin/drivers/${id}`);
+  }
+
+  async createDriver(data: any): Promise<any> {
+    return this.client.post("/admin/drivers", data);
+  }
+
+  async updateDriver(id: string, data: any): Promise<any> {
+    return this.client.put(`/admin/drivers/${id}`, data);
+  }
+
+  async deleteDriver(id: string): Promise<any> {
+    return this.client.delete(`/admin/drivers/${id}`);
+  }
+
+  async updateDriverStatus(id: string, status: string): Promise<any> {
+    return this.client.post(`/admin/drivers/${id}/update-status`, { status });
+  }
+
+  async assignVehicle(driverId: string, vehicleId: string): Promise<any> {
+    return this.client.post(`/admin/drivers/${driverId}/assign-vehicle`, { vehicle_id: vehicleId });
+  }
+
+  async unassignVehicle(driverId: string): Promise<any> {
+    return this.client.post(`/admin/drivers/${driverId}/unassign-vehicle`);
+  }
+
+  async getDriverAnalytics(id: string): Promise<any> {
+    return this.client.get(`/admin/drivers/${id}/analytics`);
+  }
+
+  async getDriverBehaviorScore(id: string): Promise<any> {
+    return this.client.get(`/admin/drivers/${id}/behavior-score`);
+  }
+
+  async getDriverDocuments(id: string): Promise<any> {
+    return this.client.get(`/admin/drivers/${id}/documents`);
+  }
+
+  async uploadDriverDocument(id: string, data: any): Promise<any> {
+    return this.client.post(`/admin/drivers/${id}/documents`, data);
+  }
+
+  async deleteDriverDocument(id: string, docId: string): Promise<any> {
+    return this.client.delete(`/admin/drivers/${id}/documents/${docId}`);
   }
 
   // Alerts

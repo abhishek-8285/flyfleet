@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/flyfleet/fleet-core-service/internal/database"
-	"github.com/flyfleet/fleet-core-service/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/database"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
