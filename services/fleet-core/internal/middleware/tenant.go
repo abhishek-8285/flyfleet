@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
@@ -18,10 +19,20 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 
+			// Skip tenant check for global admin or identity endpoints
+			path := r.URL.Path
+			if strings.HasPrefix(path, "/api/v1/admin/organizations") ||
+				strings.HasPrefix(path, "/api/v1/auth/profile") ||
+				strings.HasPrefix(path, "/api/v1/auth/orgs") ||
+				strings.HasPrefix(path, "/api/v1/dashboard/stats") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			// Extract OrgID from JWT via auth middleware (IAM or legacy)
 			var orgID uuid.UUID
 			var ok bool
-
+...
 			// Try IAM context first (UUID)
 			if orgID, ok = ctx.Value(iamCtx.OrgIDKey).(uuid.UUID); ok {
 				logger.Debug("tenant context found via iamCtx.OrgIDKey", zap.String("org_id", orgID.String()))

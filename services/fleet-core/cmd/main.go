@@ -26,6 +26,9 @@ import (
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
 	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
+	orgHandlers "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/handlers"
+	orgRepo "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository"
+	orgSvc "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
@@ -146,6 +149,11 @@ func main() {
 		logger,
 	)
 
+	// --- Organization Domain ---
+	organizationRepo := orgRepo.NewOrganizationRepository(pool, logger)
+	organizationService := orgSvc.NewOrganizationService(organizationRepo, logger)
+	organizationHandler := orgHandlers.NewOrganizationHandlers(organizationService, logger)
+
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
 	if cfg.Flags.GeofenceAlerts {
@@ -218,9 +226,7 @@ func main() {
 
 		// Authenticated IAM routes (profile, logout, etc.)
 		if iamModule != nil {
-			r.Get("/api/v1/auth/profile", iamModule.ProfileHandler.GetProfile)
-			r.Put("/api/v1/auth/profile", iamModule.ProfileHandler.UpdateProfile)
-			r.Post("/api/v1/auth/logout", iamModule.AuthHandler.Logout)
+			iamModule.RegisterAuthRoutes(r, logger)
 		}
 
 		// Tracking endpoints
@@ -248,6 +254,11 @@ func main() {
 		// Driver CRUD + extended endpoints
 		r.Route("/api/v1/admin/drivers", func(r chi.Router) {
 			driverHandler.RegisterRoutes(r)
+		})
+
+		// Organization CRUD
+		r.Route("/api/v1/admin", func(r chi.Router) {
+			organizationHandler.RegisterRoutes(r)
 		})
 	})
 

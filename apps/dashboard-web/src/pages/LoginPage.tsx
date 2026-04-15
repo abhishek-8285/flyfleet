@@ -68,7 +68,7 @@ const slideVariants = {
 
 
 const OrgSelectStep: React.FC = () => {
-  const { organizations, setSelectedOrgId, performLogin } = useLoginStore();
+  const { organizations, setSelectedOrgId, performLogin, setState } = useLoginStore();
   
   return (
     <motion.div variants={slideVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
@@ -90,8 +90,7 @@ const OrgSelectStep: React.FC = () => {
           </button>
         ))}
       </div>
-      {/* Fix 9: Back should return to the email-identification step, not the password step */}
-      <button onClick={() => setState(LoginState.IDENTIFY)} className="text-[10px] text-slate-500 hover:text-primary transition-colors block text-center w-full uppercase tracking-widest pt-2">
+      <button onClick={() => setState(LoginState.AUTHENTICATE)} className="text-[10px] text-slate-500 hover:text-primary transition-colors block text-center w-full uppercase tracking-widest pt-2">
         Back
       </button>
     </motion.div>
@@ -104,13 +103,11 @@ const AuthenticateStep: React.FC = () => {
     password, setPassword,
     setSelectedOrgId, setOrganizations, 
     setState, setGlobalError, setLoading, 
-    setTempToken, setPartialUser, 
-    rememberMe, setRememberMe, uiStrings 
+    rememberMe, setRememberMe, uiStrings,
+    performLogin
   } = useLoginStore();
   
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,57 +134,6 @@ const AuthenticateStep: React.FC = () => {
       await performLogin(targetOrgId);
     } catch (err: any) {
       setGlobalError({ message: err.message || "Authentication failed" });
-      setLoading(false);
-    }
-  };
-
-  const performLogin = async (orgId: string) => {
-    setLoading(true);
-    setGlobalError(null);
-    try {
-      const data = await api.post("/auth/login", {
-        email: emailOrPhone,
-        password,
-        org_id: orgId
-      }) as any;
-
-      if (data.mfa_required) {
-        setTempToken(data.temp_token);
-        setPartialUser(data.user);
-        setState(LoginState.MFA);
-        return;
-      }
-
-      const userData = {
-        ...data.user,
-        permissions: data.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
-      };
-
-      // CRITICAL: Store org_id BEFORE calling login()
-      const responseOrgId = data.user?.org_id || orgId;
-      console.log('[LoginPage] Login response org_id:', responseOrgId);
-      if (responseOrgId) {
-        localStorage.setItem('org_id', responseOrgId);
-        console.log('[LoginPage] Stored org_id:', responseOrgId);
-      }
-
-      login(data.token || data.access_token, data.refresh_token || "", userData);
-
-      if (rememberMe) {
-        localStorage.setItem("remembered_email", emailOrPhone);
-      }
-
-      const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
-      let targetPath = "/dashboard";
-      if (role.includes("customer") || role.includes("portal") || role === "user") {
-        targetPath = "/portal";
-      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
-        targetPath = "/admin";
-      }
-      navigate(targetPath);
-    } catch (err: any) {
-      setGlobalError({ message: err.message || "Invalid credentials" });
-    } finally {
       setLoading(false);
     }
   };
@@ -261,13 +207,11 @@ const AuthenticateStep: React.FC = () => {
 };
 
 const MFAStep: React.FC = () => {
-  const { tempToken, partialUser, setGlobalError, setLoading, uiStrings } = useLoginStore();
+  const { tempToken, setGlobalError, setLoading, uiStrings, login, navigate } = useLoginStore();
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { login } = useAuth();
-  const navigate = useNavigate();
   
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -425,6 +369,57 @@ const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const performLogin = async (orgId: string) => {
+    setLoading(true);
+    setGlobalError(null);
+    try {
+      const data = await api.post("/auth/login", {
+        email: emailOrPhone,
+        password,
+        org_id: orgId
+      }) as any;
+
+      if (data.mfa_required) {
+        setTempToken(data.temp_token);
+        setPartialUser(data.user);
+        setState(LoginState.MFA);
+        return;
+      }
+
+      const userData = {
+        ...data.user,
+        permissions: data.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
+      };
+
+      // CRITICAL: Store org_id BEFORE calling login()
+      const responseOrgId = data.user?.org_id || orgId;
+      console.log('[LoginPage] Login response org_id:', responseOrgId);
+      if (responseOrgId) {
+        localStorage.setItem('org_id', responseOrgId);
+        console.log('[LoginPage] Stored org_id:', responseOrgId);
+      }
+
+      login(data.token || data.access_token, data.refresh_token || "", userData);
+
+      if (rememberMe) {
+        localStorage.setItem("remembered_email", emailOrPhone);
+      }
+
+      const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
+      let targetPath = "/dashboard";
+      if (role.includes("customer") || role.includes("portal") || role === "user") {
+        targetPath = "/portal";
+      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
+        targetPath = "/admin";
+      }
+      navigate(targetPath);
+    } catch (err: any) {
+      setGlobalError({ message: err.message || "Invalid credentials" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle global rate limit countdown
   useEffect(() => {
     let timer: any;
@@ -479,7 +474,6 @@ const Login: React.FC = () => {
 
         {state !== LoginState.MFA && (
           <>
-            {/* Fix 2: SSO buttons — wire to /auth/sso?provider=<name> when SSO is enabled in backend */}
             <div className="mt-8 flex justify-center gap-4">
               <button
                 onClick={() => { window.location.href = `/api/v1/auth/sso?provider=google`; }}

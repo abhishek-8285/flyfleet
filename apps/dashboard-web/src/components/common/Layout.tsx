@@ -252,7 +252,11 @@ const Layout: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      navigate("/admin/organizations");
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left w-full"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       settings_suggest

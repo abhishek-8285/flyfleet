@@ -54,6 +54,7 @@ func JWKSAuthGate(jwtSecret string, logger *zap.Logger) func(http.Handler) http.
 			ctx = context.WithValue(ctx, CtxOrgID, claims.OrgID)
 			ctx = context.WithValue(ctx, CtxUserRoles, claims.Roles)
 			// Set tenant context keys for TenantMiddleware compatibility
+			ctx = context.WithValue(ctx, ctxkeys.UserIDKey, claims.UserID.String())
 			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, claims.OrgID.String())
 			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, claims.OrgID.String())
 			// Set IAM handler string keys (profile handler reads "user_id" string key)

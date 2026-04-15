@@ -57,7 +57,10 @@ class ApiService {
       instance.interceptors.response.use(
         (response) => response.data,
         (error: AxiosError) => {
-          if (error.response?.status === 401) {
+          const config = error.config;
+          const isAuthEndpoint = config?.url?.includes("/auth/") || config?.url?.includes("/login");
+
+          if (error.response?.status === 401 && !isAuthEndpoint) {
             // Token invalid, clear state and redirect
             getStore().dispatch({ type: 'auth/setToken', payload: null });
             getStore().dispatch({ type: 'auth/setUser', payload: null });
