@@ -222,6 +222,8 @@ func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
 	}
 	if pageSizeStr := query.Get("page_size"); pageSizeStr != "" {
 		filter.PageSize, _ = strconv.Atoi(pageSizeStr)
+	} else if limitStr := query.Get("limit"); limitStr != "" {
+		filter.PageSize, _ = strconv.Atoi(limitStr)
 	}
 
 	if filter.PageSize < 1 {

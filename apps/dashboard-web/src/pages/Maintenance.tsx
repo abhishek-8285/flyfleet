@@ -7,44 +7,46 @@ import { useUIStrings } from "../hooks/useUIStrings";
 const Maintenance: React.FC = () => {
   const { uiStrings } = useUIStrings("maintenance_page");
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden h-full">
-      <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 flex-shrink-0 z-10">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <select className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
-              <option>{uiStrings?.filter_this_week || "This Week"}</option>
-              <option>{uiStrings?.filter_next_7 || "Next 7 Days"}</option>
-              <option>{uiStrings?.filter_next_30 || "Next 30 Days"}</option>
-              <option>{uiStrings?.filter_overdue || "Overdue"}</option>
+    <div className="flex-1 flex flex-col min-w-0 bg-surface-dim overflow-hidden h-full font-sans antialiased">
+      {/* Fleet Readiness Control Center */}
+      <div className="w-full bg-surface-container/60 backdrop-blur-3xl border-b border-outline px-10 py-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 flex-shrink-0 z-20 shadow-2xl">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="relative group">
+            <select className="appearance-none bg-surface-dim border border-outline text-white text-[10px] font-black uppercase tracking-widest rounded-xl pl-4 pr-12 py-2.5 focus:border-primary cursor-pointer hover:bg-surface-container-highest/20 transition-all outline-none shadow-lg">
+              <option>{uiStrings?.filter_this_week || "Current Cycle"}</option>
+              <option>{uiStrings?.filter_next_7 || "Next 7 Cycles"}</option>
+              <option>{uiStrings?.filter_next_30 || "Strategic: 30D"}</option>
+              <option className="text-rose-500">{uiStrings?.filter_overdue || "CRITICAL OVERDUE"}</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">
+            <span className="material-symbols-outlined absolute right-4 top-2.5 pointer-events-none text-on-surface-variant text-base opacity-40 group-hover:opacity-100 transition-opacity">
               calendar_month
             </span>
           </div>
-          <div className="relative">
-            <select className="appearance-none bg-surface-dark border border-border-color text-white text-xs rounded pl-3 pr-8 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer hover:bg-border-color transition-colors">
+          <div className="relative group">
+            <select className="appearance-none bg-surface-dim border border-outline text-white text-[10px] font-black uppercase tracking-widest rounded-xl pl-4 pr-12 py-2.5 focus:border-primary cursor-pointer hover:bg-surface-container-highest/20 transition-all outline-none shadow-lg">
               <option>
-                {uiStrings?.filter_all_divisions || "All Divisions"}
+                {uiStrings?.filter_all_divisions || "Global Assets"}
               </option>
-              <option>North America</option>
-              <option>Europe</option>
+              <option>Division: NA</option>
+              <option>Division: EU</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-text-muted text-sm">
+            <span className="material-symbols-outlined absolute right-4 top-2.5 pointer-events-none text-on-surface-variant text-base opacity-40 group-hover:opacity-100 transition-opacity">
               domain
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3 ml-auto">
-          <div className="text-xs text-text-muted">
-            {uiStrings?.label_last_sync || "Last sync: "}{" "}
-            <span className="text-white">
-              {uiStrings?.label_just_now || "Just now"}
+        <div className="flex items-center gap-6 ml-auto">
+          <div className="text-[9px] font-black uppercase tracking-[0.2em] text-on-surface-variant flex items-center gap-3">
+            <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+            {uiStrings?.label_last_sync || "Health Sync: "}{" "}
+            <span className="text-white opacity-40">
+              {uiStrings?.label_just_now || "Live"}
             </span>
           </div>
-          <div className="h-4 w-px bg-border-color"></div>
-          <button className="bg-primary hover:bg-primary/90 text-white text-xs font-medium py-1.5 px-3 rounded flex items-center gap-2 shadow-[0_0_10px_rgba(19,127,236,0.3)] transition-all">
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            {uiStrings?.btn_log_service || "Log New Service"}
+          <div className="h-6 w-[1px] bg-outline opacity-30"></div>
+          <button className="h-12 px-8 bg-primary hover:bg-primary-dark text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center gap-3">
+            <span className="material-symbols-outlined text-lg">engineering</span>
+            {uiStrings?.btn_log_service || "Log Maintenance"}
           </button>
         </div>
       </div>

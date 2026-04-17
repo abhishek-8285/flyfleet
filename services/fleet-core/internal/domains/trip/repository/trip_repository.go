@@ -75,17 +75,16 @@ func NewTripRepository(db *pgxpool.Pool) *PostgresTripRepository {
 func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	query := `
 		INSERT INTO trips (
-			id, org_id, vehicle_id, driver_id, status, title, description,
-			pickup_geo, drop_geo,
+			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
+			pickup_lat, pickup_lng, drop_lat, drop_lng,
 			planned_route, waypoints, planned_distance, estimated_duration_min,
 			cargo_details, scheduled_start, start_odometer, fuel_level_snapshot,
 			eway_bill_no, gst_classification, customer_name, customer_phone,
 			customer_email, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7,
-			CASE WHEN $8::text IS NOT NULL THEN ST_GeomFromText($8) ELSE NULL END,
-			CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9) ELSE NULL END,
-			$10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+			$1, $2, $3, $4, $5, $6, $7, $8,
+			$9, $10, $11, $12,
+			$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
 		)
 		RETURNING id, created_at, updated_at`
 
@@ -97,20 +96,20 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 	waypointsJSON, _ := json.Marshal(trip.Waypoints)
 	cargoDetailsJSON, _ := json.Marshal(trip.CargoDetails)
 
-	var pickupWKT, dropWKT *string
+	var pLat, pLng, dLat, dLng *float64
 	if trip.PickupGeo != nil {
-		s := fmt.Sprintf("POINT(%f %f)", trip.PickupGeo.Longitude, trip.PickupGeo.Latitude)
-		pickupWKT = &s
+		pLat = &trip.PickupGeo.Latitude
+		pLng = &trip.PickupGeo.Longitude
 	}
 	if trip.DropGeo != nil {
-		s := fmt.Sprintf("POINT(%f %f)", trip.DropGeo.Longitude, trip.DropGeo.Latitude)
-		dropWKT = &s
+		dLat = &trip.DropGeo.Latitude
+		dLng = &trip.DropGeo.Longitude
 	}
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		id, trip.OrgID, trip.VehicleID, trip.DriverID, trip.Status, trip.Title, trip.Description,
-		pickupWKT, dropWKT,
+		id, trip.OrgID, trip.VehicleID, trip.DriverID, trip.Status, trip.TripType, trip.Title, trip.Description,
+		pLat, pLng, dLat, dLng,
 		plannedRouteJSON, waypointsJSON, trip.PlannedDistance, trip.EstimatedDurationMin,
 		cargoDetailsJSON, trip.ScheduledStart, trip.StartOdometer, trip.FuelLevelSnapshot,
 		trip.EWayBillNo, trip.GSTClassification, trip.CustomerName, trip.CustomerPhone,
@@ -125,8 +124,8 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*models.Trip, error) {
 	query := `
 		SELECT
-			id, org_id, vehicle_id, driver_id, status, title, description,
-			ST_AsText(pickup_geo), ST_AsText(drop_geo),
+			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
+			pickup_lat, pickup_lng, drop_lat, drop_lng,
 			planned_route, actual_route, waypoints,
 			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
 			cargo_details, scheduled_start, start_time, end_time,
@@ -138,7 +137,7 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 		WHERE id = $1 AND is_deleted = FALSE`
 
 	var trip models.Trip
-	var pickupWKT, dropWKT sql.NullString
+	var pLat, pLng, dLat, dLng sql.NullFloat64
 	var plannedRouteJSON, actualRouteJSON, waypointsJSON, cargoDetailsJSON []byte
 	var cancellationReason sql.NullString
 	var totalDistance sql.NullFloat64
@@ -148,8 +147,8 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.Description,
-		&pickupWKT, &dropWKT,
+		&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType, &trip.Title, &trip.Description,
+		&pLat, &pLng, &dLat, &dLng,
 		&plannedRouteJSON, &actualRouteJSON, &waypointsJSON,
 		&trip.PlannedDistance, &totalDistance, &trip.EstimatedDurationMin, &actualDurationMin,
 		&cargoDetailsJSON, &trip.ScheduledStart, &trip.StartTime, &trip.EndTime,
@@ -174,16 +173,12 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	json.Unmarshal(waypointsJSON, &trip.Waypoints)
 	json.Unmarshal(cargoDetailsJSON, &trip.CargoDetails)
 
-	// Parse Geo fields
-	if pickupWKT.Valid {
-		var lat, lng float64
-		fmt.Sscanf(pickupWKT.String, "POINT(%f %f)", &lng, &lat)
-		trip.PickupGeo = &models.Location{Latitude: lat, Longitude: lng}
+	// Populate Geo fields from numeric columns
+	if pLat.Valid && pLng.Valid {
+		trip.PickupGeo = &models.Location{Latitude: pLat.Float64, Longitude: pLng.Float64}
 	}
-	if dropWKT.Valid {
-		var lat, lng float64
-		fmt.Sscanf(dropWKT.String, "POINT(%f %f)", &lng, &lat)
-		trip.DropGeo = &models.Location{Latitude: lat, Longitude: lng}
+	if dLat.Valid && dLng.Valid {
+		trip.DropGeo = &models.Location{Latitude: dLat.Float64, Longitude: dLng.Float64}
 	}
 
 	return &trip, nil
@@ -194,8 +189,8 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	baseQuery := `
 		SELECT
 			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
-			estimated_distance_km, actual_distance_km, estimated_duration_min, actual_duration_min,
-			scheduled_start, started_at, ended_at,
+			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
+			scheduled_start, start_time, end_time,
 			customer_name, created_at, updated_at
 		FROM trips
 		WHERE org_id = $1 AND is_deleted = FALSE`
@@ -236,18 +231,6 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		argIndex++
 	}
 
-	if filter.From != "" {
-		conditions = append(conditions, fmt.Sprintf("scheduled_start >= $%d", argIndex))
-		args = append(args, filter.From)
-		argIndex++
-	}
-
-	if filter.To != "" {
-		conditions = append(conditions, fmt.Sprintf("scheduled_start <= $%d", argIndex))
-		args = append(args, filter.To)
-		argIndex++
-	}
-
 	// Build WHERE clause
 	whereClause := ""
 	if len(conditions) > 0 {
@@ -282,20 +265,6 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	args = append(args, pageSize, offset)
 
 	orderBy := "created_at DESC"
-	if filter.OrderBy != "" {
-		allowedColumns := map[string]bool{
-			"created_at": true, "scheduled_start": true, "status": true,
-			"vehicle_id": true, "driver_id": true,
-		}
-		if allowedColumns[filter.OrderBy] {
-			direction := "ASC"
-			if strings.ToUpper(filter.OrderDir) == "DESC" {
-				direction = "DESC"
-			}
-			orderBy = fmt.Sprintf("%s %s", filter.OrderBy, direction)
-		}
-	}
-
 	listSQL := baseQuery + whereClause + " ORDER BY " + orderBy + limitClause
 
 	start = time.Now()
@@ -309,11 +278,11 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
-		var estDist sql.NullFloat64
-		var actDist sql.NullFloat64
-		var estDur sql.NullInt32
+		var plannedDist float64
+		var totalDist sql.NullFloat64
+		var estDur int
 		var actDur sql.NullInt32
-		var schedStart sql.NullTime
+		var schedStart time.Time
 		var startedAt sql.NullTime
 		var endedAt sql.NullTime
 		var custName sql.NullString
@@ -321,7 +290,7 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		err := rows.Scan(
 			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType,
 			&trip.Title, &trip.Description,
-			&estDist, &actDist, &estDur, &actDur,
+			&plannedDist, &totalDist, &estDur, &actDur,
 			&schedStart, &startedAt, &endedAt,
 			&custName, &trip.CreatedAt, &trip.UpdatedAt,
 		)
@@ -329,22 +298,16 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 			return nil, 0, err
 		}
 		
-		if estDist.Valid {
-			trip.PlannedDistance = estDist.Float64
+		trip.PlannedDistance = plannedDist
+		if totalDist.Valid {
+			trip.TotalDistance = &totalDist.Float64
 		}
-		if actDist.Valid {
-			trip.TotalDistance = &actDist.Float64
-		}
-		if estDur.Valid {
-			trip.EstimatedDurationMin = int(estDur.Int32)
-		}
+		trip.EstimatedDurationMin = estDur
 		if actDur.Valid {
 			v := int(actDur.Int32)
 			trip.ActualDurationMin = &v
 		}
-		if schedStart.Valid {
-			trip.ScheduledStart = schedStart.Time
-		}
+		trip.ScheduledStart = schedStart
 		if startedAt.Valid {
 			t := startedAt.Time
 			trip.StartTime = &t
@@ -384,8 +347,8 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 		"CargoDetails":         "cargo_details",
 		"StartLocation":        "start_location",
 		"EndLocation":          "end_location",
-		"PickupGeo":            "pickup_geo",
-		"DropGeo":              "drop_geo",
+		"PickupGeo":            "pickup", // Use prefix for numeric columns
+		"DropGeo":              "drop",
 		"ScheduledStart":       "scheduled_start",
 		"StartOdometer":        "start_odometer",
 		"EndOdometer":          "end_odometer",
@@ -402,6 +365,7 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 		"IdlingTimeMinutes":    "idling_time_minutes",
 		"VehicleID":            "vehicle_id",
 		"DriverID":             "driver_id",
+		"TripType":             "trip_type",
 	}
 
 	setParts := make([]string, 0, len(updates))
@@ -413,6 +377,21 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
 			continue
 		}
+		
+		if key == "PickupGeo" || key == "DropGeo" {
+			loc, ok := value.(*models.Location)
+			if ok && loc != nil {
+				prefix := "pickup"
+				if key == "DropGeo" {
+					prefix = "drop"
+				}
+				setParts = append(setParts, fmt.Sprintf("%s_lat = $%d, %s_lng = $%d", prefix, argIndex, prefix, argIndex+1))
+				args = append(args, loc.Latitude, loc.Longitude)
+				argIndex += 2
+			}
+			continue
+		}
+
 		columnName := key
 		if mapped, ok := fieldMap[key]; ok {
 			columnName = mapped
@@ -420,18 +399,11 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 
 		setParts = append(setParts, fmt.Sprintf("%s = $%d", columnName, argIndex))
 
-		// Handle special JSON/Geo fields
+		// Handle special JSON fields
 		switch columnName {
 		case "planned_route", "actual_route", "waypoints", "cargo_details", "start_location", "end_location":
 			jsonData, _ := json.Marshal(value)
 			args = append(args, jsonData)
-		case "pickup_geo", "drop_geo":
-			if loc, ok := value.(*models.Location); ok && loc != nil {
-				wkt := fmt.Sprintf("POINT(%f %f)", loc.Longitude, loc.Latitude)
-				args = append(args, wkt)
-			} else {
-				args = append(args, nil) // Set to NULL if location is nil
-			}
 		default:
 			args = append(args, value)
 		}
@@ -698,8 +670,8 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 	query := `
 		SELECT 
 			COUNT(*) as total_trips,
-			COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_trips,
-			COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_trips,
+			COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_trips,
+			COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_trips,
 			COALESCE(SUM(total_distance), 0) as total_distance_km,
 			COALESCE(SUM(actual_duration_min), 0) as total_duration_minutes,
 			COALESCE(AVG(total_distance / NULLIF(fuel_used, 0)), 0) as avg_fuel_efficiency,
@@ -738,7 +710,7 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 	return &summary, nil
 }
 func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStats, error) {
-	query := `SELECT COUNT(*) FROM trips WHERE status IN ('in_progress', 'paused') AND is_deleted = FALSE`
+	query := `SELECT COUNT(*) FROM trips WHERE status IN ('STARTED', 'PAUSED', 'RESUMED') AND is_deleted = FALSE`
 	var count int
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query).Scan(&count)
@@ -778,7 +750,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID strin
 		SELECT
 			driver_id,
 			COALESCE(SUM(total_distance), 0) as total_distance,
-			COUNT(CASE WHEN status = 'completed' THEN 1 END) as trips_completed,
+			COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as trips_completed,
 			COUNT(*) as total_trips,
 			AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END) as on_time_rate -- Simplified for demo
 		FROM trips

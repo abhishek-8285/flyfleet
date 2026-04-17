@@ -32,9 +32,17 @@ export const ConnectionIndicator: React.FC = () => {
     }
 
     return (
-        <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-full shadow-sm">
-            <span className={`w-2 h-2 rounded-full ${color} ${status === 'connected' ? 'animate-pulse' : ''}`} />
-            <span className="text-xs text-gray-600">{label}</span>
+        <div className="flex items-center gap-3 px-4 py-2 bg-surface-dim border border-outline rounded-2xl shadow-lg">
+            <div className="relative">
+                <span className={`w-2 h-2 rounded-full block ${color} ${status === 'connected' ? 'animate-pulse' : ''}`} />
+                {status === 'connected' && (
+                    <span className={`absolute inset-0 w-2 h-2 rounded-full ${color} animate-ping opacity-50`} />
+                )}
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white leading-none">{label}</span>
+            <span className="material-symbols-outlined text-on-surface-variant text-[12px] opacity-40">
+                {status === 'connected' ? 'wifi' : status === 'polling' ? 'sync' : 'wifi_off'}
+            </span>
         </div>
     );
 };

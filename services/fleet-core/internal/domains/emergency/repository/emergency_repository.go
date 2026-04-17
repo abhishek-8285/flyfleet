@@ -683,7 +683,7 @@ func (r *emergencyRepository) GetVehicleSafetyScores(ctx context.Context, orgID 
 			   GREATEST(0, (100 - COUNT(i.id) * 5)::NUMERIC) as safety_score
 		FROM vehicles v
 		LEFT JOIN sos_incidents i ON v.id = i.vehicle_id
-		WHERE v.org_id = $1
+		WHERE v.tenant_id = $1
 		GROUP BY v.id, v.registration_number
 		ORDER BY safety_score ASC
 		LIMIT 10`

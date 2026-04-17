@@ -208,12 +208,12 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 		body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3436; font-size: 10px; line-height: 1.3; margin: 0; padding: 0; }
 		.container { width: 100%%; margin: 0 auto; padding: 12px; }
 
-		header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+		header { display: flex; justify-content: space-between; border-bottom: 2px solid %s; padding-bottom: 10px; margin-bottom: 12px; }
 		.header-block { flex: 1; }
 		.header-block.right { text-align: right; }
-		.company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+		.company-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; color: %s; }
 		.company-addr { font-size: 9px; margin-bottom: 2px; }
-		.invoice-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 4px; }
+		.invoice-title { font-size: 18px; font-weight: bold; text-decoration: underline; margin-bottom: 4px; color: %s; }
 		.invoice-meta { font-size: 9px; }
 		.meta-line { margin: 2px 0; }
 
@@ -237,7 +237,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 
 		table { width: 100%%; border-collapse: collapse; margin-bottom: 12px; font-size: 9px; }
 		thead { display: table-header-group; }
-		th { border: 1px solid #000; padding: 6px; text-transform: uppercase; background: #eee; text-align: center; font-weight: bold; }
+		th { border: 1px solid #000; padding: 6px; text-transform: uppercase; background: %s; color: #fff; text-align: center; font-weight: bold; }
 		td { border: 1px solid #000; padding: 6px; }
 		.text-right { text-align: right; }
 		.text-center { text-align: center; }
@@ -246,7 +246,7 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 		.footer-left { font-size: 9px; }
 		.total-section { border: 1px solid #000; padding: 8px; }
 		.total-row { display: flex; justify-content: space-between; padding: 2px 0; }
-		.grand-total { border-top: 1px solid #000; margin-top: 6px; padding-top: 6px; font-weight: bold; font-size: 12px; }
+		.grand-total { border-top: 2px solid %s; margin-top: 6px; padding-top: 6px; font-weight: bold; font-size: 14px; color: %s; }
 		.signatory { margin-top: 30px; text-align: right; border-top: 1px solid #000; display: inline-block; padding-top: 4px; width: 140px; font-weight: bold; }
 
 		.qr-box { text-align: center; margin-top: 8px; }
@@ -363,6 +363,8 @@ func GenerateProfessionalInvoiceHTML(invoice *models.Invoice, items []models.Inv
 </html>`,
 		// 1  Watermark
 		html.EscapeString(data.CopyType),
+		// CSS Primary Color Colors
+		data.PrimaryColor, data.PrimaryColor, data.PrimaryColor, data.PrimaryColor, data.PrimaryColor, data.PrimaryColor,
 		// 2-8  company block
 		html.EscapeString(data.Company_name),
 		html.EscapeString(data.CompanyAddress),

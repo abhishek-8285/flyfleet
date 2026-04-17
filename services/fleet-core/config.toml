@@ -4,7 +4,7 @@ log_level = "info"
 environment = "development"
 
 [database]
-url = "postgres://fleet_user:fleet_pass@localhost:5432/fleet_db?sslmode=disable"
+url = "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"
 
 [redis]
 url = "redis://localhost:6379/0"

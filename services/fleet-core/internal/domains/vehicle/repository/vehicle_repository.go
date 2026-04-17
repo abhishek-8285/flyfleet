@@ -24,18 +24,18 @@ func NewVehicleRepository(db *pgxpool.Pool, logger *zap.Logger) *VehicleReposito
 func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle) error {
 	query := `
 		INSERT INTO vehicles (
-			id, tenant_id, registration, chassis_number, engine_number, vin_number,
+			id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
 			vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 			parent_vehicle_id, branch_id, cost_center_id, status,
 			gps_device_id, immobilizer_enabled, ais140_compliant,
-			make, model, year, color,
+			make, model, year, color, odometer, current_driver_id, speed_limit,
 			created_at, updated_at, version
 		) VALUES (
 			$1, $2, $3, $4, $5, $6,
 			$7, $8, $9, $10, $11,
 			$12, $13, $14, $15,
 			$16, $17, $18,
-			$19, $20, $21, $22,
+			$19, $20, $21, $22, $23, $24, $25,
 			NOW(), NOW(), 1
 		) RETURNING id, created_at, updated_at, version`
 
@@ -47,7 +47,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.FuelTankCapacity, vehicle.OwnershipType,
 		vehicle.ParentVehicleID, vehicle.BranchID, vehicle.CostCenterID, vehicle.Status,
 		vehicle.GPSDeviceID, vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant,
-		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color,
+		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID, vehicle.SpeedLimit,
 	).Scan(&vehicle.ID, &vehicle.CreatedAt, &vehicle.UpdatedAt, &vehicle.Version)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
@@ -55,11 +55,11 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color,
+		       make, model, year, color, odometer, current_driver_id, speed_limit,
 		       created_at, updated_at, deleted_at, version
 		FROM vehicles WHERE id = $1 AND deleted_at IS NULL`
 
@@ -70,7 +70,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
 		&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 		&v.GPSDeviceID, &v.ImmobilizerEnabled, &v.AIS140Compliant,
-		&v.Make, &v.Model, &v.Year, &v.Color,
+		&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 		&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -94,11 +94,11 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 
 	query := `
-		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color,
+		       make, model, year, color, odometer, current_driver_id, speed_limit,
 		       created_at, updated_at, deleted_at, version
 		FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
@@ -119,7 +119,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 			&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
 			&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 			&v.GPSDeviceID, &v.ImmobilizerEnabled, &v.AIS140Compliant,
-			&v.Make, &v.Model, &v.Year, &v.Color,
+			&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan error: %w", err)
@@ -133,7 +133,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle) error {
 	query := `
 		UPDATE vehicles SET
-			registration  = COALESCE($1, registration),
+			registration_number  = COALESCE($1, registration_number),
 			chassis_number       = COALESCE($2, chassis_number),
 			engine_number        = COALESCE($3, engine_number),
 			vin_number           = COALESCE($4, vin_number),
@@ -153,9 +153,12 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 			model                = COALESCE($18, model),
 			year                 = COALESCE($19, year),
 			color                = COALESCE($20, color),
+			odometer             = COALESCE($21, odometer),
+			current_driver_id    = COALESCE($22, current_driver_id),
+			speed_limit          = $23,
 			updated_at           = NOW(),
 			version              = version + 1
-		WHERE id = $21 AND deleted_at IS NULL AND version = $22
+		WHERE id = $24 AND deleted_at IS NULL AND version = $25
 		RETURNING updated_at, version`
 
 	start := time.Now()
@@ -164,7 +167,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.VehicleType, vehicle.CapacityTonnage, vehicle.FuelType, vehicle.FuelTankCapacity,
 		vehicle.OwnershipType, vehicle.ParentVehicleID, vehicle.BranchID, vehicle.CostCenterID,
 		vehicle.Status, vehicle.GPSDeviceID, vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant,
-		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color,
+		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID, vehicle.SpeedLimit,
 		vehicle.ID, vehicle.Version,
 	).Scan(&vehicle.UpdatedAt, &vehicle.Version)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -250,11 +253,11 @@ func (r *VehicleRepository) GetByRegistrationNumber(ctx context.Context, tenantI
 	v := &models.Vehicle{}
 	start := time.Now()
 	err := r.db.QueryRow(ctx,
-		`SELECT id, tenant_id, registration, status, version, created_at, updated_at
-		 FROM vehicles WHERE tenant_id = $1 AND registration = $2 AND deleted_at IS NULL`,
+		`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at
+		 FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`,
 		tenantID, regNo,
 	).Scan(&v.ID, &v.TenantID, &v.RegistrationNumber, &v.Status, &v.Version, &v.CreatedAt, &v.UpdatedAt)
-	metrics.RecordDBQuery(`SELECT id, tenant_id, registration, status, version, created_at, updated_at FROM vehicles WHERE tenant_id = $1 AND registration = $2 AND deleted_at IS NULL`, time.Since(start))
+	metrics.RecordDBQuery(`SELECT id, tenant_id, registration_number, status, version, created_at, updated_at FROM vehicles WHERE tenant_id = $1 AND registration_number = $2 AND deleted_at IS NULL`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil // not found (nil, nil) = caller checks
@@ -295,7 +298,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 		argN++
 	}
 	if params.Query != "" {
-		where += fmt.Sprintf(" AND (registration ILIKE $%d OR vin_number ILIKE $%d)", argN, argN)
+		where += fmt.Sprintf(" AND (registration_number ILIKE $%d OR vin_number ILIKE $%d)", argN, argN)
 		args = append(args, "%"+params.Query+"%")
 		argN++
 	}
@@ -311,11 +314,11 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	offset := (params.Page - 1) * params.Limit
 	args = append(args, params.Limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, tenant_id, registration, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color, created_at, updated_at, deleted_at, version
+		       make, model, year, color, odometer, current_driver_id, speed_limit, created_at, updated_at, deleted_at, version
 		FROM vehicles WHERE %s
 		ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, where, argN, argN+1)
 
@@ -335,7 +338,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 			&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
 			&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 			&v.GPSDeviceID, &v.ImmobilizerEnabled, &v.AIS140Compliant,
-			&v.Make, &v.Model, &v.Year, &v.Color,
+			&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan error: %w", err)

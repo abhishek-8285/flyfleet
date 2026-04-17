@@ -89,20 +89,22 @@ export class InstancedVehicleLayer implements CustomLayerInterface {
         
         gl_Position = u_matrix * vec4(merchantPos + rotated * scale, 0.0, 1.0);
 
-        // Pass focus and speed to fragment shader
-        v_focused = float(a_picking_id == u_focused_id);
-        v_speed = a_speed;
+        // Calculate focus state with epsilon to avoid floating point precision issues
+        float isFocused = abs(a_picking_id - u_focused_id) < 0.1 ? 1.0 : 0.0;
 
         if (u_picking) {
-          // Encode ID into RGBA
+          // Encode ID into RGBA for GPU picking buffer
           float r = floor(a_picking_id / 65536.0) / 255.0;
           float g = floor(mod(a_picking_id, 65536.0) / 256.0) / 255.0;
           float b = mod(a_picking_id, 256.0) / 255.0;
           v_color = vec4(r, g, b, 1.0);
         } else {
-          // This v_color is only used if u_picking is true.
-          // The actual display color is determined by the fragment shader using v_focused and v_speed.
-          v_color = vec4(0.14, 0.38, 0.92, 1.0); 
+          // Dynamic display color: focused vehicles are highlighted orange
+          if (isFocused > 0.5) {
+            v_color = vec4(1.0, 0.5, 0.0, 1.0); // FF_ORANGE
+          } else {
+            v_color = vec4(0.0, 0.62, 1.0, 0.8); // FF_BLUE
+          }
         }
       }
     `;
@@ -120,6 +122,7 @@ export class InstancedVehicleLayer implements CustomLayerInterface {
     this.timeLoc = gl.getUniformLocation(this.program!, "u_time");
     this.zoomLoc = gl.getUniformLocation(this.program!, "u_zoom");
     this.pickingLoc = gl.getUniformLocation(this.program!, "u_picking");
+    this.focusUniformLoc = gl.getUniformLocation(this.program!, "u_focused_id");
 
     this.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);

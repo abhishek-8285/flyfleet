@@ -3,7 +3,7 @@
  * Automatically triggers recovery if a worker becomes non-responsive.
  */
 
-export type WorkerType = "telemetry" | "operational" | "collaboration";
+export type WorkerType = "telemetry" | "operational" | "ingestion" | "spatial" | "collaboration";
 
 interface WorkerHealth {
   lastHeartbeat: number;
@@ -13,8 +13,8 @@ interface WorkerHealth {
 
 export class WorkerMonitor {
   private healthState: Map<WorkerType, WorkerHealth> = new Map();
-  private maxLatency: number = 3000; // 3 seconds before marking unhealthy
-  private checkInterval: number = 1000;
+  private maxLatency: number = 10000; // 10 seconds before marking unhealthy
+  private checkInterval: number = 2000;
   private intervalId: any = null;
   private onFailure?: (type: WorkerType) => void;
 

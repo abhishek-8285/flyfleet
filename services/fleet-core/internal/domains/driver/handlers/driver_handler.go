@@ -14,6 +14,7 @@ import (
 	driverMiddleware "github.com/flyfleet/fleet-core/internal/domains/driver/middleware"
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
 	"github.com/flyfleet/fleet-core/internal/domains/driver/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)
@@ -302,6 +303,9 @@ func (h *DriverHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
 	filter.PageSize = p.Limit
 	filter.OrderBy = query.Get("order_by")
 	filter.OrderDir = query.Get("order_dir")
+
+	orgID := h.getOrgID(r)
+	filter.OrgID = orgID.String()
 
 	drivers, totalCount, err := h.service.List(r.Context(), filter)
 	if err != nil {
@@ -1199,7 +1203,10 @@ func (h *DriverHandler) writeErrorResponse(w http.ResponseWriter, statusCode int
 }
 
 func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value("orgID"); val != nil {
+	ctx := r.Context()
+	
+	// Check standardized OrgIDKey first
+	if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v
@@ -1209,14 +1216,50 @@ func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
 			}
 		}
 	}
+
+	// Check legacy/string literal fallbacks
+	for _, key := range []interface{}{"orgID", "org_id", ctxkeys.TenantIDKey} {
+		if val := ctx.Value(key); val != nil {
+			switch v := val.(type) {
+			case uuid.UUID:
+				return v
+			case string:
+				if id, err := uuid.Parse(v); err == nil {
+					return id
+				}
+			}
+		}
+	}
+
 	return uuid.Nil
 }
 
-func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID string) (uuid.UUID, bool) {
+func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID string) (*models.Driver, bool) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
-		return uuid.Nil, false
+		return nil, false
 	}
-	return orgID, true
+
+	driver, err := h.service.GetByID(r.Context(), driverID)
+	if err != nil {
+		h.logger.Error("failed to get driver for ownership check", zap.String("driver_id", driverID), zap.Error(err))
+		statusCode := http.StatusInternalServerError
+		if err.Error() == "driver not found: no rows in result set" {
+			statusCode = http.StatusNotFound
+		}
+		h.writeErrorResponse(w, statusCode, "Driver not found", err)
+		return nil, false
+	}
+
+	if driver.OrgID != orgID.String() {
+		h.logger.Warn("unauthorized access attempt to driver",
+			zap.String("driver_id", driverID),
+			zap.String("requester_org_id", orgID.String()),
+			zap.String("driver_org_id", driver.OrgID))
+		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
+		return nil, false
+	}
+
+	return driver, true
 }

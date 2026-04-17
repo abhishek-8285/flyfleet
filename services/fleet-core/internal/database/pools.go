@@ -93,20 +93,36 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 			}
 		}()
 
-		// Try to extract Context claims
-		orgIDStr, ok := ctx.Value(ctxkeys.OrgIDKey).(string)
-		if !ok {
-			orgIDStr = ""
+		// Try to extract Context claims robustly
+		var orgIDStr string
+		if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
+			switch v := val.(type) {
+			case string:
+				orgIDStr = v
+			case fmt.Stringer:
+				orgIDStr = v.String()
+			}
+		} else if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
+			if s, ok := val.(string); ok {
+				orgIDStr = s
+			}
 		}
 
-		userIDStr, ok := ctx.Value(ctxkeys.UserIDKey).(string)
-		if !ok {
-			userIDStr = ""
+		var userIDStr string
+		if val := ctx.Value(ctxkeys.UserIDKey); val != nil {
+			switch v := val.(type) {
+			case string:
+				userIDStr = v
+			case fmt.Stringer:
+				userIDStr = v.String()
+			}
 		}
 
-		roleStr, ok := ctx.Value(ctxkeys.RoleKey).(string)
-		if !ok {
-			roleStr = ""
+		var roleStr string
+		if val := ctx.Value(ctxkeys.RoleKey); val != nil {
+			if s, ok := val.(string); ok {
+				roleStr = s
+			}
 		}
 
 		// SECURITY: Never bypass RLS setup - always enforce session variables

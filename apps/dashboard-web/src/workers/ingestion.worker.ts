@@ -11,6 +11,7 @@ let dropCount = 0;
 let activeH3Subscriptions = new Set<string>();
 
 let pressureArray: Int32Array | null = null;
+let isPressureShared = false;
 
 self.onmessage = (event: MessageEvent) => {
   const { type, payload } = event.data;
@@ -20,6 +21,7 @@ self.onmessage = (event: MessageEvent) => {
     ringBuffer = new RingBuffer(sharedBuffer, offset, size);
     if (pressureSab) {
       pressureArray = new Int32Array(pressureSab);
+      isPressureShared = typeof SharedArrayBuffer !== "undefined" && pressureSab instanceof SharedArrayBuffer;
     }
     console.log(
       "[IngestionWorker] Initialized SharedArrayBuffer + Pressure Hub",
@@ -98,7 +100,8 @@ function connect(url: string) {
     if (!ringBuffer) return;
 
     // Check Pressure Signal from Telemetry Processor
-    if (pressureArray && Atomics.load(pressureArray, 0) > 0) {
+    const pressure = pressureArray ? (isPressureShared ? Atomics.load(pressureArray, 0) : pressureArray[0]) : 0;
+    if (pressure > 0) {
       // 50% probability of dropping if pressure is high
       if (Math.random() > 0.5) {
         dropCount++;

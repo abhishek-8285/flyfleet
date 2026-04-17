@@ -59,94 +59,96 @@ const CustomerLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background-dark flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Elements */}
+    <div className="min-h-screen bg-surface-dim flex items-center justify-center p-8 relative overflow-hidden font-sans">
+      {/* Dynamic Command Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px]" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[150px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
+        
+        {/* Grid Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       </div>
 
-      <div className="max-w-md w-full bg-surface-darker/60 backdrop-blur-xl border border-border-color rounded-2xl p-8 shadow-2xl z-10 relative">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center mx-auto mb-4 text-primary">
-            <span className="material-symbols-outlined text-[28px]">
-              local_shipping
+      <div className="max-w-[480px] w-full bg-surface-container border border-outline rounded-[2.5rem] p-12 shadow-2xl z-10 relative backdrop-blur-3xl">
+        <div className="text-center mb-12">
+          <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8 text-primary border border-primary/20 shadow-lg shadow-primary/10">
+            <span className="material-symbols-outlined text-[40px] font-bold">
+              hub
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            {uiStrings?.portal_title || "Customer Portal"}
+          <h1 className="text-4xl font-black text-white mb-3 tracking-tighter uppercase">
+            {uiStrings?.portal_title || "Client Command"}
           </h1>
-          <p className="text-text-muted text-sm">
-            {uiStrings?.portal_subtitle ||
-              "Access your shipments, invoices, and bookings"}
+          <p className="text-[11px] font-black text-on-surface-variant uppercase tracking-[0.25em] opacity-60">
+            {uiStrings?.portal_subtitle || "Secure Logistic Intelligence Access"}
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm mb-6 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">error</span>
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-2xl text-[11px] font-bold uppercase tracking-wider mb-8 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <span className="material-symbols-outlined text-[18px]">gpp_maybe</span>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-8">
           <div>
-            <label className="block text-xs font-medium text-text-muted uppercase tracking-wider mb-1.5">
-              {uiStrings?.api_key_label || "API Access Key"}
+            <label className="block text-[9px] font-black text-on-surface-variant uppercase tracking-[0.3em] mb-3 ml-2">
+              {uiStrings?.api_key_label || "Secure Access Token (API)"}
             </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-2.5 text-text-muted text-[20px]">
-                key
+            <div className="relative group">
+              <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] transition-all group-focus-within:text-primary">
+                vpn_key
               </span>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                className="w-full bg-surface-dark border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-text-muted/30"
+                className="w-full bg-surface-dim border border-outline rounded-[1.25rem] py-5 pl-14 pr-6 text-white text-sm font-bold focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-on-surface-variant/20 uppercase tracking-tighter"
                 placeholder={
-                  uiStrings?.api_key_placeholder || "Enter your API Key"
+                  uiStrings?.api_key_placeholder || "Enter Deployment Key"
                 }
                 required
               />
             </div>
-            <p className="text-[10px] text-text-muted mt-1.5">
+            <p className="text-[9px] text-on-surface-variant mt-3 ml-2 font-bold uppercase tracking-widest opacity-40">
               {uiStrings?.api_key_hint ||
-                "Please use the API Key provided by your account manager."}
+                "Credentials issued by Fleet Command HQ."}
             </p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary-dark text-white font-medium py-2.5 rounded-lg transition-all duration-200 shadow-[0_0_20px_rgba(19,127,236,0.2)] hover:shadow-[0_0_25px_rgba(19,127,236,0.4)] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-primary hover:bg-primary-dark text-white text-[11px] font-black uppercase tracking-[0.2em] py-5 rounded-[1.25rem] transition-all duration-300 shadow-xl shadow-primary/20 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-[0.98]"
           >
             {loading ? (
               <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span>
-                  {uiStrings?.authenticating_label || "Authenticating..."}
+                  {uiStrings?.authenticating_label || "Establishing Secure Link..."}
                 </span>
               </>
             ) : (
               <>
-                <span>{uiStrings?.sign_in_btn || "Sign In"}</span>
-                <span className="material-symbols-outlined text-[18px]">
-                  arrow_forward
+                <span>{uiStrings?.sign_in_btn || "Initialize Session"}</span>
+                <span className="material-symbols-outlined text-base">
+                  login
                 </span>
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-border-color text-center">
-          <p className="text-xs text-text-muted">
-            {uiStrings?.need_access_label || "Need access?"}{" "}
+        <div className="mt-12 pt-8 border-t border-outline text-center">
+          <p className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">
+            {uiStrings?.need_access_label || "Deauthorized?"}{" "}
             <button
               type="button"
               onClick={() => navigate("/support")}
-              className="text-primary hover:underline"
+              className="text-primary hover:text-white transition-colors"
             >
-              {uiStrings?.contact_support_btn || "Contact Support"}
+              {uiStrings?.contact_support_btn || "Contact Support Core"}
             </button>
           </p>
         </div>

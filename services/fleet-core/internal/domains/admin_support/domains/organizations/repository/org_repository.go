@@ -183,7 +183,7 @@ func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid
 	// Check for dependent records before deleting
 	var userCount, vehicleCount int
 
-	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM users WHERE org_id = $1 AND is_deleted = false", id).Scan(&userCount)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM user_organizations WHERE org_id = $1 AND status = 'active'", id).Scan(&userCount)
 	if err != nil {
 		r.logger.Error("Failed to count users", zap.String("org_id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to check dependencies: %w", err)
@@ -193,7 +193,7 @@ func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid
 		return fmt.Errorf("cannot delete organization with %d active users", userCount)
 	}
 
-	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE org_id = $1 AND deleted_at IS NULL", id).Scan(&vehicleCount)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", id).Scan(&vehicleCount)
 	if err != nil {
 		r.logger.Error("Failed to count vehicles", zap.String("org_id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to check dependencies: %w", err)
@@ -210,4 +210,56 @@ func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid
 		return err
 	}
 	return nil
+}
+
+func (r *OrganizationRepository) ListBranches(ctx context.Context, tenantID uuid.UUID) ([]models.Branch, error) {
+	query := `
+		SELECT id, name, code, location
+		FROM branches
+		WHERE tenant_id = $1 AND deleted_at IS NULL
+		ORDER BY name ASC
+	`
+	rows, err := r.db.Query(ctx, query, tenantID)
+	if err != nil {
+		r.logger.Error("Failed to list branches", zap.String("tenant_id", tenantID.String()), zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var branches []models.Branch
+	for rows.Next() {
+		var b models.Branch
+		if err := rows.Scan(&b.ID, &b.Name, &b.Code, &b.Location); err != nil {
+			return nil, err
+		}
+		branches = append(branches, b)
+	}
+
+	return branches, nil
+}
+
+func (r *OrganizationRepository) ListCostCenters(ctx context.Context, tenantID uuid.UUID) ([]models.CostCenter, error) {
+	query := `
+		SELECT id, name, code, description
+		FROM cost_centers
+		WHERE tenant_id = $1 AND deleted_at IS NULL
+		ORDER BY name ASC
+	`
+	rows, err := r.db.Query(ctx, query, tenantID)
+	if err != nil {
+		r.logger.Error("Failed to list cost centers", zap.String("tenant_id", tenantID.String()), zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var costCenters []models.CostCenter
+	for rows.Next() {
+		var c models.CostCenter
+		if err := rows.Scan(&c.ID, &c.Name, &c.Code, &c.Description); err != nil {
+			return nil, err
+		}
+		costCenters = append(costCenters, c)
+	}
+
+	return costCenters, nil
 }

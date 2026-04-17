@@ -10,6 +10,29 @@ let activeH3Cells = new Map<string, number>(); // cell -> lastSeenTimestamp
 const H3_RESOLUTION = 7;
 const EVICTION_TIMEOUT_MS = 60000; // 60s
 
+// Global Error Handler for diagnostics
+self.onerror = (message, source, lineno, colno, error) => {
+  self.postMessage({
+    type: "WORKER_CRASH_DIAGNOSTIC",
+    payload: {
+      message: typeof message === 'string' ? message : (message as any).message,
+      lineno,
+      colno,
+      stack: error?.stack,
+    },
+  });
+};
+
+self.onunhandledrejection = (e) => {
+  self.postMessage({
+    type: "WORKER_CRASH_DIAGNOSTIC",
+    payload: {
+      message: `Unhandled Rejection: ${e.reason}`,
+      stack: e.reason?.stack,
+    },
+  });
+};
+
 // GC Loop
 setInterval(() => {
   const now = Date.now();
@@ -40,6 +63,7 @@ self.onmessage = (event: MessageEvent) => {
     const { minLng, maxLng, minLat, maxLat } = payload;
     updateSubscriptions(minLng, maxLng, minLat, maxLat);
   } else if (type === "PING") {
+    // console.log("[SpatialWorker] Received PING, responding with PONG");
     self.postMessage({ type: "PONG" });
   }
 };

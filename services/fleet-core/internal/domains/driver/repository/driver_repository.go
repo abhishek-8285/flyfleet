@@ -421,6 +421,12 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	var args []interface{}
 	argIndex := 1
 
+	if filter.OrgID != "" {
+		conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIndex))
+		args = append(args, filter.OrgID)
+		argIndex++
+	}
+
 	if filter.Status != "" {
 		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
 		args = append(args, filter.Status)
@@ -848,7 +854,7 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 		FROM drivers d
 		LEFT JOIN trips t ON d.id = t.driver_id AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
 		WHERE d.id = $1 AND d.deleted_at IS NULL
-		GROUP BY d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score`
+		GROUP BY d.id, d.total_trips, d.total_distance_km, d.total_hours_driven, d.rating, d.behavior_score`
 
 	var analytics models.DriverAnalytics
 	start := time.Now()

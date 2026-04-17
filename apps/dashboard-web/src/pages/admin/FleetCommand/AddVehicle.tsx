@@ -1,63 +1,12 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
-
-// ── Constants ──
-const FUEL_TYPES = [
-  { value: "DIESEL", label: "Diesel" },
-  { value: "PETROL", label: "Petrol" },
-  { value: "CNG", label: "CNG" },
-  { value: "ELECTRIC", label: "Electric" },
-  { value: "HYBRID", label: "Hybrid" },
-  { value: "LPG", label: "LPG" },
-];
-
-const VEHICLE_TYPES = [
-  { value: "TRUCK", label: "Truck" },
-  { value: "BUS", label: "Bus" },
-  { value: "VAN", label: "Van" },
-  { value: "CAR", label: "Car" },
-  { value: "TRAILER", label: "Trailer" },
-  { value: "TANKER", label: "Tanker" },
-  { value: "TIPPER", label: "Tipper" },
-  { value: "CRANE", label: "Crane" },
-  { value: "OTHER", label: "Other" },
-];
-
-const OWNERSHIP_TYPES = [
-  { value: "OWNED", label: "Owned" },
-  { value: "LEASED", label: "Leased" },
-  { value: "FINANCED", label: "Financed" },
-  { value: "VENDOR", label: "Vendor" },
-];
-
-// ── Unit Constants ──
-const ODOMETER_UNITS = [
-  { value: "km", label: "Kilometers (km)" },
-  { value: "mi", label: "Miles (mi)" },
-];
-
-const WEIGHT_UNITS = [
-  { value: "tonnes", label: "Tonnes (metric)" },
-  { value: "kg", label: "Kilograms (kg)" },
-  { value: "lbs", label: "Pounds (lbs)" },
-];
-
-const FUEL_UNITS = [
-  { value: "litres", label: "Litres (L)" },
-  { value: "gallons", label: "Gallons (US)" },
-];
-
-// Get fuel units based on fuel type (CNG uses kg, not litres)
-const getFuelUnits = (fuelType: string) => {
-  if (fuelType === "CNG") return [{ value: "kg", label: "Kilograms (kg)" }];
-  return FUEL_UNITS;
-};
-
-// Conversion to metric (what backend stores)
-const toKm = (val: number, unit: string) => unit === "mi" ? val * 1.60934 : val;
-const toTonnes = (val: number, unit: string) => unit === "lbs" ? val / 2204.62 : unit === "kg" ? val / 1000 : val;
-const toLitres = (val: number, unit: string) => unit === "gallons" ? val * 3.78541 : val;
+import { 
+  FUEL_TYPES, VEHICLE_TYPES, OWNERSHIP_TYPES, 
+  ODOMETER_UNITS, WEIGHT_UNITS, getFuelUnits 
+} from "./constants";
+import { toKm, toTonnes, toLitres } from "./utils";
+import { TextInput, SelectInput, ToggleInput } from "../../../components/common/FormFields";
 
 // ── Types ──
 interface FormState {
@@ -75,11 +24,15 @@ interface FormState {
   fuel_tank_capacity: string;
   gps_device_id: string;
   color: string;
+  odometer: string;
+  odometer_unit: string;
   parent_vehicle_id: string;
   branch_id: string;
   cost_center_id: string;
+  current_driver_id: string;
   immobilizer_enabled: boolean;
   ais140_compliant: boolean;
+  speed_limit: string;
 }
 
 type FieldName = keyof FormState;
@@ -211,6 +164,35 @@ const VALIDATION_RULES: ValidationRule = {
     label: "Color",
     rules: [{ maxLength: 50 }],
   },
+  odometer: {
+    label: "Odometer Reading",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null;
+          const num = parseFloat(v);
+          if (isNaN(num)) return "Must be a valid number";
+          if (num < 0) return "Odometer cannot be negative";
+          return null;
+        },
+      },
+    ],
+  },
+  speed_limit: {
+    label: "Speed Limit",
+    rules: [
+      {
+        custom: (v) => {
+          if (!v) return null;
+          const num = parseFloat(v);
+          if (isNaN(num)) return "Must be a valid number";
+          if (num < 0) return "Speed limit cannot be negative";
+          if (num > 250) return "Speed limit seems unusually high";
+          return null;
+        },
+      },
+    ],
+  },
 };
 
 // ── Helpers ──
@@ -229,11 +211,15 @@ const initialForm: FormState = {
   fuel_tank_capacity: "",
   gps_device_id: "",
   color: "",
+  odometer: "",
+  odometer_unit: "km",
   parent_vehicle_id: "",
   branch_id: "",
   cost_center_id: "",
+  current_driver_id: "",
   immobilizer_enabled: false,
   ais140_compliant: false,
+  speed_limit: "0",
 };
 
 function validateField(name: FieldName, value: string | boolean): string | null {
@@ -269,8 +255,8 @@ function validateStep(step: number, form: FormState): Record<string, string> {
 
   const stepFields: Record<number, FieldName[]> = {
     1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
-    2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity"],
-    3: ["gps_device_id", "color"],
+    2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity", "odometer", "speed_limit"],
+    3: ["gps_device_id", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
   };
 
   for (const field of stepFields[step] || []) {
@@ -281,122 +267,6 @@ function validateStep(step: number, form: FormState): Record<string, string> {
   return errors;
 }
 
-// ── Input Component ──
-interface InputProps {
-  name: FieldName;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: () => void;
-  label: string;
-  placeholder?: string;
-  type?: string;
-  icon?: string;
-  error?: string;
-  required?: boolean;
-  hint?: string;
-  className?: string;
-  maxLength?: number;
-}
-
-const TextInput: React.FC<InputProps> = ({
-  name, value, onChange, onBlur, label, placeholder, type = "text",
-  icon, error, required, hint, className, maxLength,
-}) => (
-  <div className={`space-y-1.5 ${className || ""}`}>
-    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-      {label} {required && <span className="text-danger">*</span>}
-    </label>
-    <div className="relative">
-      {icon && (
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-          <span className="material-symbols-outlined text-[18px]">{icon}</span>
-        </span>
-      )}
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        className={`w-full bg-surface-darker border rounded-lg py-2.5 ${
-          icon ? "pl-10" : "px-4"
-        } pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 ${
-          error
-            ? "border-danger/50 focus:ring-danger focus:border-danger"
-            : "border-border-color"
-        }`}
-      />
-    </div>
-    {error ? (
-      <p className="text-[10px] text-danger flex items-center gap-1">
-        <span className="material-symbols-outlined text-[12px]">error</span>
-        {error}
-      </p>
-    ) : hint ? (
-      <p className="text-[10px] text-text-muted">{hint}</p>
-    ) : null}
-  </div>
-);
-
-// ── Select Component ──
-interface SelectProps {
-  name: FieldName;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  onBlur?: () => void;
-  label: string;
-  options: { value: string; label: string }[];
-  icon?: string;
-  error?: string;
-  required?: boolean;
-  placeholder?: string;
-}
-
-const SelectInput: React.FC<SelectProps> = ({
-  name, value, onChange, onBlur, label, options, icon, error, required, placeholder,
-}) => (
-  <div className="space-y-1.5">
-    <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-      {label} {required && <span className="text-danger">*</span>}
-    </label>
-    <div className="relative">
-      {icon && (
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-          <span className="material-symbols-outlined text-[18px]">{icon}</span>
-        </span>
-      )}
-      <select
-        name={name}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        className={`w-full bg-surface-darker border rounded-lg py-2.5 ${
-          icon ? "pl-10" : "pl-4"
-        } pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none ${
-          error
-            ? "border-danger/50 focus:ring-danger focus:border-danger"
-            : "border-border-color"
-        } ${!value ? "text-text-muted/50" : ""}`}
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-        <span className="material-symbols-outlined text-[18px]">expand_more</span>
-      </span>
-    </div>
-    {error && (
-      <p className="text-[10px] text-danger flex items-center gap-1">
-        <span className="material-symbols-outlined text-[12px]">error</span>
-        {error}
-      </p>
-    )}
-  </div>
-);
 
 // ── Main Component ──
 export const AddVehicle: React.FC = () => {
@@ -412,6 +282,61 @@ export const AddVehicle: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const lastStepChange = React.useRef(0);
+
+  const [dropdowns, setDropdowns] = useState({
+    vehicles: [] as { value: string; label: string }[],
+    drivers: [] as { value: string; label: string }[],
+    branches: [] as { value: string; label: string }[],
+    costCenters: [] as { value: string; label: string }[],
+  });
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [vResp, dResp, bResp, cResp] = await Promise.all([
+          apiClient.get("/admin/vehicles"),
+          apiClient.get("/admin/drivers"),
+          apiClient.get("/admin/branches"),
+          apiClient.get("/admin/cost-centers")
+        ]);
+        
+        // Handle vehicles (api response format might vary, check VehicleListResponse)
+        const vehicles = vResp.data?.vehicles || vResp.data || [];
+        const vehicleOptions = vehicles.map((v: any) => ({
+          value: v.id,
+          label: `${v.registration_number || v.license_plate} (${v.make} ${v.model})`
+        }));
+
+        // Handle drivers
+        const drivers = dResp.data?.drivers || dResp.data || [];
+        const driverOptions = drivers.map((d: any) => ({
+          value: d.id,
+          label: `${d.first_name} ${d.last_name} (${d.employee_id})`
+        }));
+
+        setDropdowns(prev => ({
+          ...prev,
+          vehicles: vehicleOptions,
+          drivers: driverOptions,
+          branches: bResp.data?.data || bResp.data || [],
+          costCenters: cResp.data?.data || cResp.data || []
+        }));
+      } catch (err) {
+        console.error("Failed to fetch dropdown data:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleStepChange = useCallback((newStep: 1|2|3 | ((s: 1|2|3) => 1|2|3)) => {
+    lastStepChange.current = Date.now();
+    if (typeof newStep === 'function') {
+      setStep(newStep);
+    } else {
+      setStep(newStep);
+    }
+  }, []);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -458,23 +383,36 @@ export const AddVehicle: React.FC = () => {
     // Mark all step fields as touched
     const stepFields: Record<number, FieldName[]> = {
       1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
-      2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity"],
-      3: ["gps_device_id", "color"],
+      2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity", "odometer"],
+      3: ["gps_device_id", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
     };
     const touchedMap: Record<string, boolean> = {};
     for (const f of stepFields[step] || []) touchedMap[f] = true;
     setTouched((prev) => ({ ...prev, ...touchedMap }));
 
     if (Object.keys(stepErrors).length === 0) {
-      setStep((s) => (s + 1) as 1 | 2 | 3);
+      handleStepChange((s) => (s + 1) as 1 | 2 | 3);
     }
-  }, [step, form]);
+  }, [step, form, handleStepChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // STRICT GUARD 1: Only proceed with network operations if we are actually on the final step.
+    if (step < 3) {
+      handleNext();
+      return;
+    }
+
+    // STRICT GUARD 2: Prevent accidental submissions triggered by double-clicks or Enter key
+    // immediately following a step transition. (400ms debounce)
+    if (Date.now() - lastStepChange.current < 400) {
+      return;
+    }
+
     setSubmitError("");
 
-    // Validate ALL steps before submit
+    // Validate ALL steps before finish
     const allErrors: Record<string, string> = {};
     for (const s of [1, 2, 3]) {
       Object.assign(allErrors, validateStep(s, form));
@@ -490,10 +428,18 @@ export const AddVehicle: React.FC = () => {
       setSubmitError("Please fix the errors below before submitting");
       // Go to the first step with errors
       if (allErrors.registration_number || allErrors.vehicle_type ||
-          allErrors.fuel_type || allErrors.ownership_type) setStep(1);
-      else if (allErrors.make || allErrors.model || allErrors.year ||
-               allErrors.vin_number || allErrors.capacity_tonnage) setStep(2);
-      else setStep(3);
+          allErrors.fuel_type || allErrors.ownership_type) {
+        setStep(1);
+      } else if (
+        allErrors.make || allErrors.model || allErrors.year ||
+        allErrors.vin_number || allErrors.chassis_number ||
+        allErrors.engine_number || allErrors.capacity_tonnage ||
+        allErrors.fuel_tank_capacity
+      ) {
+        setStep(2);
+      } else {
+        setStep(3);
+      }
       return;
     }
 
@@ -521,11 +467,14 @@ export const AddVehicle: React.FC = () => {
           payload.fuel_tank_capacity = toLitres(parseFloat(form.fuel_tank_capacity), units.fuel);
         }
       }
-      if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
+      if (form.speed_limit) payload.speed_limit = parseFloat(form.speed_limit);
+    if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
       if (form.color) payload.color = form.color.trim();
       if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
       if (form.branch_id) payload.branch_id = form.branch_id.trim();
       if (form.cost_center_id) payload.cost_center_id = form.cost_center_id.trim();
+      if (form.current_driver_id) payload.current_driver_id = form.current_driver_id.trim();
+      if (form.odometer) payload.odometer = Math.round(toKm(parseFloat(form.odometer), form.odometer_unit) * 1000);
       payload.immobilizer_enabled = form.immobilizer_enabled;
       payload.ais140_compliant = form.ais140_compliant;
 
@@ -585,7 +534,7 @@ export const AddVehicle: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => setStep(s.num as 1 | 2 | 3)}
+                  onClick={() => handleStepChange(s.num as 1 | 2 | 3)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     step === s.num
                       ? "bg-primary/10 text-primary"
@@ -835,6 +784,56 @@ export const AddVehicle: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Odometer */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                    Initial Odometer Reading
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      name="odometer"
+                      value={form.odometer}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("odometer")}
+                      placeholder="e.g. 5000"
+                      className="flex-1 bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
+                    />
+                    <select
+                      name="odometer_unit"
+                      value={form.odometer_unit}
+                      onChange={handleChange}
+                      className="bg-surface-darker border border-border-color rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                    >
+                      {ODOMETER_UNITS.map((u) => (
+                        <option key={u.value} value={u.value}>{u.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {errors.odometer && (
+                    <p className="text-[10px] text-danger flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">error</span>
+                      {errors.odometer}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-text-muted">Starting distance of the vehicle asset</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <TextInput
+                    name="speed_limit"
+                    value={form.speed_limit}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("speed_limit")}
+                    label="Safety Speed Limit (km/h)"
+                    placeholder="e.g. 80"
+                    icon="speed"
+                    error={errors.speed_limit}
+                    type="number"
+                    hint="Max speed threshold for safety alerts (0 = no limit)"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -880,79 +879,72 @@ export const AddVehicle: React.FC = () => {
                   />
                 </div>
 
-                {/* Parent Vehicle & Branch */}
+                {/* Parent Vehicle & Driver Assignment */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <TextInput
+                  <SelectInput
                     name="parent_vehicle_id"
                     value={form.parent_vehicle_id}
                     onChange={handleChange}
                     onBlur={() => handleBlur("parent_vehicle_id")}
-                    label="Parent Vehicle ID"
-                    placeholder="UUID of parent vehicle"
+                    label="Parent Vehicle"
+                    placeholder="Select Parent (Optional)"
+                    options={dropdowns.vehicles}
                     icon="account_tree"
                     error={errors.parent_vehicle_id}
-                    hint="For hierarchical vehicle grouping (e.g., trailer to truck)"
                   />
-                  <TextInput
+                  <SelectInput
+                    name="current_driver_id"
+                    value={form.current_driver_id}
+                    onChange={handleChange}
+                    onBlur={() => handleBlur("current_driver_id")}
+                    label="Initial Driver Assignment"
+                    placeholder="Select Driver (Optional)"
+                    options={dropdowns.drivers}
+                    icon="person"
+                    error={errors.current_driver_id}
+                  />
+                </div>
+
+                {/* Branch & Cost Center */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <SelectInput
                     name="branch_id"
                     value={form.branch_id}
                     onChange={handleChange}
                     onBlur={() => handleBlur("branch_id")}
-                    label="Branch ID"
-                    placeholder="UUID of branch"
+                    label="Branch / Depot"
+                    placeholder="Select Branch"
+                    options={dropdowns.branches}
                     icon="account_balance"
                     error={errors.branch_id}
-                    hint="Branch or depot this vehicle is assigned to"
                   />
-                </div>
-
-                {/* Cost Center */}
-                <div className="space-y-1.5">
-                  <TextInput
+                  <SelectInput
                     name="cost_center_id"
                     value={form.cost_center_id}
                     onChange={handleChange}
                     onBlur={() => handleBlur("cost_center_id")}
-                    label="Cost Center ID"
-                    placeholder="UUID of cost center"
+                    label="Cost Center"
+                    placeholder="Select Cost Center"
+                    options={dropdowns.costCenters}
                     icon="account_balance_wallet"
                     error={errors.cost_center_id}
-                    hint="For financial tracking and cost allocation"
                   />
                 </div>
 
                 {/* Toggles: Immobilizer & AIS-140 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
-                    <div>
-                      <div className="text-sm font-medium text-white">Immobilizer</div>
-                      <div className="text-[10px] text-text-muted mt-0.5">Remote engine immobilization capability</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.immobilizer_enabled}
-                        onChange={(e) => setForm((prev) => ({ ...prev, immobilizer_enabled: e.target.checked }))}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-border-color peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-surface-darker rounded-lg border border-border-color">
-                    <div>
-                      <div className="text-sm font-medium text-white">AIS-140 Compliant</div>
-                      <div className="text-[10px] text-text-muted mt-0.5">Indian government telematics standard</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={form.ais140_compliant}
-                        onChange={(e) => setForm((prev) => ({ ...prev, ais140_compliant: e.target.checked }))}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-border-color peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
+                  <ToggleInput
+                    label="Immobilizer"
+                    description="Remote engine immobilization capability"
+                    checked={form.immobilizer_enabled}
+                    onChange={(checked) => setForm((prev) => ({ ...prev, immobilizer_enabled: checked }))}
+                  />
+                  <ToggleInput
+                    label="AIS-140 Compliant"
+                    description="Indian government telematics standard"
+                    checked={form.ais140_compliant}
+                    onChange={(checked) => setForm((prev) => ({ ...prev, ais140_compliant: checked }))}
+                  />
                 </div>
               </div>
             </div>
@@ -981,33 +973,24 @@ export const AddVehicle: React.FC = () => {
                   </span>
                 </button>
               )}
-              {step < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20"
-                >
-                  <span className="flex items-center gap-2">
-                    Next
-                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+              <button
+                key={step < 3 ? "next-btn" : "submit-btn"}
+                type={step === 3 ? "submit" : "button"}
+                onClick={step === 3 ? undefined : handleNext}
+                disabled={loading}
+                className="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loading ? (
+                  <span className="animate-spin material-symbols-outlined text-sm">
+                    progress_activity
                   </span>
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {loading ? (
-                    <span className="animate-spin material-symbols-outlined text-sm">
-                      progress_activity
-                    </span>
-                  ) : (
-                    <span className="material-symbols-outlined text-sm">check</span>
-                  )}
-                  Create Vehicle
-                </button>
-              )}
+                ) : (
+                  <span className="material-symbols-outlined text-sm">
+                    {step === 3 ? "check" : "chevron_right"}
+                  </span>
+                )}
+                {step === 3 ? "Create Vehicle" : "Next"}
+              </button>
             </div>
           </div>
         </form>

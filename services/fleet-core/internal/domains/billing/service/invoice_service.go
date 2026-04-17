@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"strings"
@@ -189,8 +190,56 @@ func (s *InvoiceService) GetOrGeneratePDF(ctx context.Context, invoice *models.I
 		return nil, fmt.Errorf("legal audit failed: %s", strings.Join(audit.Errors, "; "))
 	}
 
-	// Generate PDF
-	pdfData, err := s.pdf.GeneratePDF(ctx, invoiceWithItems, invoiceWithItems.Items)
+	// Fetch Billing Settings for branding and company info
+	settings, err := s.repo.GetSettings(ctx, invoiceWithItems.OrgID)
+	if err != nil {
+		s.logger.Warn("Failed to fetch billing settings, using defaults", zap.Error(err))
+	}
+
+	// Generate PDF with settings if available
+	var pdfData []byte
+	if settings != nil {
+		// Map Settings to BillingConfiguration for the PDF generator
+		config := &models.BillingConfiguration{
+			CompanyName:       settings.CompanyName,
+			CompanyAddress:    settings.CompanyAddress,
+			CompanyGSTIN:      settings.CompanyGSTIN,
+			CompanyPAN:        settings.CompanyPAN,
+			BankName:          settings.BankName,
+			BankAccountName:   settings.AccountName,
+			BankAccountNumber: settings.AccountNumber,
+			BankIFSC:          settings.BankIFSC,
+			PrimaryColor:      "#3b82f6", // Default
+			ShowHSN:           true,
+			ShowQRCode:        true,
+			ShowPaymentInfo:   true,
+		}
+
+		// EXTRACT BRANDING FROM DESIGNER CONFIG
+		if len(settings.RenderConfig) > 0 {
+			var renderCfg struct {
+				PrimaryColor string `json:"primary_color"`
+			}
+			// RenderConfig might be double-stringified in some JS implementations, 
+			// let's handle the direct map as well
+			if err := json.Unmarshal(settings.RenderConfig, &renderCfg); err == nil && renderCfg.PrimaryColor != "" {
+				config.PrimaryColor = renderCfg.PrimaryColor
+			} else {
+				// Handle case where it's a JSON string of a JSON string
+				var outer string
+				if err := json.Unmarshal(settings.RenderConfig, &outer); err == nil {
+					if err := json.Unmarshal([]byte(outer), &renderCfg); err == nil && renderCfg.PrimaryColor != "" {
+						config.PrimaryColor = renderCfg.PrimaryColor
+					}
+				}
+			}
+		}
+
+		pdfData, err = s.pdf.GeneratePDFWithConfig(ctx, invoiceWithItems, invoiceWithItems.Items, config)
+	} else {
+		pdfData, err = s.pdf.GeneratePDF(ctx, invoiceWithItems, invoiceWithItems.Items)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}

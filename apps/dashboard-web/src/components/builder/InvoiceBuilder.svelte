@@ -95,7 +95,7 @@
     };
 
     try {
-      const response = await fetch("/api/v1/billing/settings", {
+      const response = await fetch("/api/v1/admin/billing/settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

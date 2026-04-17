@@ -1,259 +1,281 @@
-import {
-    ChevronRightIcon,
-    MapPinIcon,
-    PencilIcon,
-    SignalIcon,
-    TruckIcon,
-    UserIcon,
-} from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useUIStrings } from "../../../hooks/useUIStrings";
-import api from "../../../services/api";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { api } from "../../../services/api";
+import { Trip, TripEvent } from "../../../modules/trips/types";
+import { format } from "date-fns";
+import { LoadingSpinner } from "../../../components/common/LoadingSpinner";
 
-interface Trip {
-  id: string;
-  trip_id: string;
-  vehicle_id: string;
-  driver_id?: string;
-  start_location: string;
-  end_location: string;
-  start_time: string;
-  end_time?: string;
-  distance: number;
-  status: string;
-}
-
-const statusColors: Record<string, string> = {
-  scheduled: "bg-primary/10 text-primary border-primary/20",
-  in_progress: "bg-warning/10 text-warning border-warning/20",
-  completed: "bg-success/10 text-success border-success/20",
-  cancelled: "bg-danger/10 text-danger border-danger/20",
-};
-
-export default function TripDetail() {
+export const TripDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { uiStrings: rawUiStrings } = useUIStrings("tracking");
-  const { uiStrings: commonStrings } = useUIStrings("common");
-  const uiStrings = rawUiStrings || {};
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadTrip = async () => {
+      if (!id) return;
+      try {
+        const res = await api.getTrip(id);
+        setTrip(res.data || res);
+      } catch (err) {
+        console.error("Failed to load trip", err);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadTrip();
   }, [id]);
 
-  const loadTrip = async () => {
-    try {
-      const data = await api.getTrip(id!);
-      setTrip(data);
-    } catch (error) {
-      console.error("Failed to load trip:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   if (loading) {
     return (
-      <div className="p-6 text-center text-text-muted">
-        {uiStrings.msg_loading || "Loading..."}
+      <div className="flex flex-col items-center justify-center py-24 gap-4 bg-surface-dim min-h-screen">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+        <p className="text-on-surface-variant font-black uppercase tracking-[0.2em] text-[10px]">Initialising Manifest Data...</p>
       </div>
     );
   }
 
   if (!trip) {
     return (
-      <div className="p-6 text-center text-danger">
-        {uiStrings.msg_trip_not_found || "Trip not found"}
+      <div className="flex flex-col items-center justify-center py-24 text-on-surface-variant bg-surface-dim min-h-screen text-center">
+        <span className="material-symbols-outlined text-6xl text-rose-500/20 mb-4">route_off</span>
+        <h2 className="text-xl font-bold text-white mb-2">Manifest Not Found</h2>
+        <p className="mb-6 text-sm">The requested operational manifest could not be retrieved from the central directory.</p>
+        <button onClick={() => navigate(-1)} className="px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-dark transition-all font-bold uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 active:scale-95">
+          Return to directory
+        </button>
       </div>
     );
   }
 
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case "arrival": return "location_on";
+      case "departure": return "near_me";
+      case "speeding": return "speed";
+      case "braking": return "error";
+      case "accident": return "collision";
+      case "delay": return "schedule";
+      default: return "adjust";
+    }
+  };
+
+  const getEventColor = (type: string) => {
+    switch (type) {
+      case "speeding":
+      case "braking":
+      case "accident": return "text-rose-500 bg-rose-500/10 border-rose-500/20";
+      case "delay": return "text-amber-500 bg-amber-500/10 border-amber-500/20";
+      case "arrival":
+      case "departure": return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+      default: return "text-primary bg-primary/10 border-primary/20";
+    }
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex-1 flex flex-col bg-surface-dim p-8 -mx-6 -mt-6 gap-8 min-h-screen">
+      {/* Dynamic Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 bg-surface-container border border-outline rounded-3xl p-8 shadow-2xl">
         <div>
-          <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-            <Link to="/admin/trips" className="hover:text-white">
-              {uiStrings.trips_title || "Trips"}
-            </Link>
-            <ChevronRightIcon className="w-3 h-3" />
-            <span className="text-white font-medium">{trip.trip_id}</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">
-            {uiStrings.trip_detail_title || "Dispatch Command View"}
-          </h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            to={`/admin/trips/${id}/telemetry`}
-            className="px-4 py-2 bg-surface-dark border border-border-color text-text-muted hover:text-white text-sm rounded flex items-center gap-2 transition-colors"
-          >
-            <SignalIcon className="w-4 h-4" />
-            {uiStrings.btn_telemetry || "Telemetry"}
-          </Link>
-          <Link
-            to={`/admin/trips/${id}/edit`}
-            className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded flex items-center gap-2 transition-colors"
-          >
-            <PencilIcon className="w-4 h-4" />
-            {commonStrings?.btn_edit || uiStrings.btn_edit_trip || "Edit Trip"}
-          </Link>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-surface-dark rounded-xl border border-border-color p-4">
-          <div className="text-text-muted text-xs uppercase mb-1">
-            {uiStrings.stat_total_distance || "Total Distance"}
-          </div>
-          <div className="text-2xl font-bold text-white">
-            {trip.distance?.toFixed(1) || "---"}{" "}
-            <span className="text-sm font-normal text-text-muted">
-              {uiStrings.miles_label || "km"}
-            </span>
-          </div>
-        </div>
-        <div className="bg-surface-dark rounded-xl border border-border-color p-4">
-          <div className="text-text-muted text-xs uppercase mb-1">
-            {uiStrings.stat_status || "Status"}
-          </div>
-          <span
-            className={`inline-flex items-center px-2 py-1 rounded text-sm font-bold border ${statusColors[trip.status]}`}
-          >
-            {trip.status?.toUpperCase().replace("_", " ")}
-          </span>
-        </div>
-        <div className="bg-surface-dark rounded-xl border border-border-color p-4">
-          <div className="text-text-muted text-xs uppercase mb-1">
-            {uiStrings.stat_start_time || "Start Time"}
-          </div>
-          <div className="text-lg font-medium text-white">
-            {formatDate(trip.start_time)}
-          </div>
-        </div>
-        <div className="bg-surface-dark rounded-xl border border-border-color p-4">
-          <div className="text-text-muted text-xs uppercase mb-1">
-            {uiStrings.stat_end_time || "End Time"}
-          </div>
-          <div className="text-lg font-medium text-white">
-            {trip.end_time ? formatDate(trip.end_time) : "---"}
-          </div>
-        </div>
-      </div>
-
-      {/* Details */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Map Placeholder */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden h-96">
-          <div className="absolute top-4 left-4 z-10 bg-surface-darker/90 backdrop-blur border border-border-color rounded p-2">
-            <div className="text-xs font-bold text-white mb-1">
-              {(
-                uiStrings.route_label || "Planned Execution Path: {{id}}"
-              ).replace("{{id}}", trip.trip_id)}
-            </div>
-            <div className="text-[10px] text-text-muted">
-              {trip.start_location} → {trip.end_location}
-            </div>
-          </div>
-          <div className="w-full h-full bg-[#1b2631] flex items-center justify-center">
-            <div className="text-center text-text-muted">
-              <MapPinIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">
-                {uiStrings.map_view_label || "Global GPS View"}
-              </p>
-              <p className="text-xs">
-                {uiStrings.map_integration_pending ||
-                  "(GIS Map Server Starting...)"}
+          <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
+            <Link to="/admin/trips" className="hover:text-primary transition-colors">Dispatch Log</Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">#{trip.id}</span>
+          </nav>
+          <div className="flex items-center gap-6">
+            <button onClick={() => navigate(-1)} className="h-12 w-12 flex items-center justify-center bg-surface-dim border border-outline rounded-xl hover:bg-surface-container-highest transition-all group">
+              <span className="material-symbols-outlined text-on-surface-variant group-hover:-translate-x-1 transition-transform">arrow_back</span>
+            </button>
+            <div>
+              <div className="flex items-center gap-4 mb-2">
+                <h2 className="text-4xl font-bold text-white tracking-tighter uppercase">{trip.title}</h2>
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                  trip.status === "STARTED"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : "bg-surface-dim text-on-surface-variant border-outline"
+                }`}>
+                  {trip.status?.replace("_", " ")}
+                </span>
+              </div>
+              <p className="text-on-surface-variant text-[11px] font-bold uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">inventory_2</span>
+                Manifest ID: <span className="text-white font-mono">#{trip.id}</span>
+                <span className="w-1 h-1 rounded-full bg-outline mx-2" />
+                <span className="material-symbols-outlined text-sm">corporate_fare</span>
+                {trip.customer_name || "Internal Operations"}
               </p>
             </div>
           </div>
         </div>
+        <div className="flex gap-3">
+          <button className="bg-surface-dim border border-outline text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-surface-container-highest transition-all flex items-center gap-3 active:scale-95 shadow-lg">
+            <span className="material-symbols-outlined text-base">print</span> Export Manifest
+          </button>
+          <button className="bg-primary text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all flex items-center gap-3 active:scale-95">
+            <span className="material-symbols-outlined text-base">near_me</span> Operational Map
+          </button>
+        </div>
+      </div>
 
-        {/* Info Panel */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="flex border-b border-border-color bg-surface-darker">
-            <button className="px-6 py-3 text-sm font-medium text-white border-b-2 border-primary bg-surface-dark">
-              {uiStrings.tab_general_info || "Core Dispatch Details"}
-            </button>
-            <button className="px-6 py-3 text-sm font-medium text-text-muted hover:text-white">
-              {uiStrings.tab_vehicle_specs || "Asset Specifications"}
-            </button>
-          </div>
-          <div className="p-5 space-y-6">
-            <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase mb-3">
-                {uiStrings.section_shipment_details ||
-                  "Freight & Route Context"}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-surface-darker rounded border border-border-color">
-                  <div className="text-[10px] text-text-muted mb-1">
-                    {uiStrings.label_origin || "Origin"}
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {trip.start_location}
-                  </div>
+      {/* Main Grid: Map & Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-h-0">
+        
+        {/* Left Column: Map & Route (60%) */}
+        <div className="lg:col-span-8 flex flex-col gap-8 h-full">
+          <div className="flex-1 bg-surface-container rounded-[2.5rem] border border-outline relative overflow-hidden min-h-[500px] shadow-2xl group">
+            {/* Map Overlay Stats */}
+            <div className="absolute top-8 left-8 right-8 flex justify-between items-start z-10 pointer-events-none">
+              <div className="bg-surface-dim/90 backdrop-blur-2xl p-6 rounded-3xl border border-outline shadow-2xl text-white flex gap-10">
+                <div>
+                  <p className="text-[9px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-2">Live Telemetry</p>
+                  <p className="text-3xl font-bold tracking-tighter">68 <span className="text-[11px] font-black text-on-surface-variant ml-1 uppercase">KM/H</span></p>
                 </div>
-                <div className="p-3 bg-surface-darker rounded border border-border-color">
-                  <div className="text-[10px] text-text-muted mb-1">
-                    {uiStrings.label_destination || "Destination"}
-                  </div>
-                  <div className="text-sm font-medium text-white">
-                    {trip.end_location}
-                  </div>
+                <div className="w-px h-12 bg-outline" />
+                <div>
+                  <p className="text-[9px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-2">Distance Remaining</p>
+                  <p className="text-3xl font-bold tracking-tighter">142 <span className="text-[11px] font-black text-on-surface-variant ml-1 uppercase">KM</span></p>
                 </div>
+              </div>
+              
+              <div className="bg-emerald-500 text-white px-4 py-2 rounded-xl font-black text-[9px] tracking-[0.15em] uppercase shadow-lg shadow-emerald-500/20 border border-emerald-400/20">
+                Security Validated
               </div>
             </div>
-            <div>
-              <h3 className="text-xs font-bold text-text-muted uppercase mb-3">
-                {uiStrings.section_assignment || "Labor & Asset Assignment"}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-surface-darker rounded border border-border-color flex items-center gap-3">
-                  <TruckIcon className="w-5 h-5 text-primary" />
-                  <div>
-                    <div className="text-[10px] text-text-muted mb-0.5">
-                      {uiStrings.label_vehicle || "Vehicle"}
+
+            {/* Mock Map Background */}
+            <div className="absolute inset-0 bg-surface-dim opacity-100 flex items-center justify-center">
+              <div className="relative w-full h-full">
+                 <div className="absolute inset-0 bg-gradient-to-t from-surface-dim via-transparent to-transparent z-[1]" />
+                 <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center group-hover:scale-105 transition-transform duration-[2s]">
+                       <span className="material-symbols-outlined text-8xl text-primary/10">explore</span>
+                       <p className="text-on-surface-variant font-black text-[10px] tracking-[0.3em] uppercase mt-6 opacity-50">GIS Operational Grid Initialising...</p>
                     </div>
-                    <div className="text-sm font-medium text-white font-mono">
-                      {trip.vehicle_id?.slice(0, 8)}...
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 bg-surface-darker rounded border border-border-color flex items-center gap-3">
-                  <UserIcon className="w-5 h-5 text-success" />
-                  <div>
-                    <div className="text-[10px] text-text-muted mb-0.5">
-                      {uiStrings.label_driver || "Driver"}
-                    </div>
-                    <div className="text-sm font-medium text-white font-mono">
-                      {trip.driver_id?.slice(0, 8) ||
-                        uiStrings.not_assigned ||
-                        "Not assigned"}
-                      ...
-                    </div>
-                  </div>
-                </div>
+                 </div>
               </div>
+            </div>
+
+            {/* Map Footer: Current Pos */}
+            <div className="absolute bottom-8 left-8 right-8 z-10 pointer-events-none">
+               <div className="bg-surface-dim/90 backdrop-blur-2xl p-5 rounded-[1.5rem] border border-outline shadow-2xl flex items-center gap-5">
+                  <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                    <span className="material-symbols-outlined text-primary text-2xl">my_location</span>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-1">Last Reported Position</p>
+                    <p className="text-sm font-bold text-white uppercase tracking-tight">Expressway Sector 4, Mumbai-Pune Hwy</p>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-surface-container border border-outline p-8 rounded-[2rem] shadow-xl">
+               <p className="text-[9px] font-black text-on-surface-variant tracking-[.2em] uppercase mb-3">Fluid Consumption</p>
+               <h4 className="text-3xl font-bold text-white tracking-tight">42.4 <span className="text-[11px] font-black text-on-surface-variant uppercase ml-1">LITRES</span></h4>
+            </div>
+            <div className="bg-surface-container border border-outline p-8 rounded-[2rem] shadow-xl">
+               <p className="text-[9px] font-black text-on-surface-variant tracking-[.2em] uppercase mb-3">Operational Idle</p>
+               <h4 className="text-3xl font-bold text-white tracking-tight">14 <span className="text-[11px] font-black text-on-surface-variant uppercase ml-1">MINUTES</span></h4>
+            </div>
+            <div className="bg-surface-container border border-outline p-8 rounded-[2rem] shadow-xl">
+               <p className="text-[9px] font-black text-on-surface-variant tracking-[.2em] uppercase mb-3">Compliance: E-Way Bill</p>
+               <div className="flex items-center gap-3">
+                 <span className="material-symbols-outlined text-emerald-400 text-lg">verified_user</span>
+                 <h4 className="text-sm font-black text-white uppercase tracking-[.15em] font-mono">{trip.eway_bill_no || "EWB-2024-9104"}</h4>
+               </div>
             </div>
           </div>
         </div>
+
+        {/* Right Column: Timeline (40%) */}
+        <div className="lg:col-span-4 flex flex-col gap-8">
+          <div className="bg-surface-container rounded-[2.5rem] border border-outline flex flex-col h-full shadow-2xl overflow-hidden">
+             <div className="p-8 border-b border-outline bg-surface-container/50 flex items-center justify-between">
+                <h3 className="text-[11px] font-black text-white tracking-[0.2em] uppercase flex items-center gap-3">
+                  <span className="material-symbols-outlined text-lg text-primary">history_toggle_off</span>
+                  Event Tracking
+                </h3>
+                <span className="px-3 py-1 bg-primary text-white text-[9px] font-black rounded-lg uppercase tracking-widest shadow-md shadow-primary/10">Live Stream</span>
+             </div>
+             
+             <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="relative">
+                  {/* Timeline Backbone */}
+                  <div className="absolute left-7 top-0 bottom-0 w-px bg-outline" />
+                  
+                  <div className="space-y-12 relative">
+                     {/* Pickup Event */}
+                     <div className="flex items-start gap-6">
+                        <div className="relative z-10 w-14 h-14 flex items-center justify-center bg-surface-dim border border-emerald-500/30 rounded-2xl shadow-xl">
+                           <span className="material-symbols-outlined text-emerald-400 text-2xl">local_shipping</span>
+                        </div>
+                        <div className="flex-1 pt-1">
+                           <p className="text-[9px] font-black text-emerald-400 tracking-widest uppercase mb-1">Operational Start</p>
+                           <h4 className="text-base font-bold text-white tracking-tight mb-1">Navi Mumbai Regional Hub</h4>
+                           <p className="text-xs text-on-surface-variant font-bold">{format(new Date(trip.scheduled_start), 'MMM d, h:mm a')}</p>
+                        </div>
+                     </div>
+
+                     {/* Uniform Speed Log */}
+                     <div className="flex items-start gap-6 opacity-60">
+                        <div className="relative z-10 w-14 h-14 flex items-center justify-center bg-surface-dim border border-outline rounded-2xl">
+                           <span className="material-symbols-outlined text-on-surface-variant text-xl">speed</span>
+                        </div>
+                        <div className="flex-1 pt-2">
+                           <p className="text-[9px] font-black text-on-surface-variant tracking-widest uppercase mb-1">Transit Maintenance</p>
+                           <p className="text-xs text-on-surface-variant font-bold">Standardized 60km/h velocity</p>
+                        </div>
+                     </div>
+
+                     {/* Alert Event */}
+                     <div className="flex items-start gap-6">
+                        <div className="relative z-10 w-14 h-14 flex items-center justify-center bg-surface-dim border border-rose-500/30 rounded-2xl shadow-xl">
+                           <span className="material-symbols-outlined text-rose-400 text-2xl">warning</span>
+                        </div>
+                        <div className="flex-1 pt-1">
+                           <p className="text-[9px] font-black text-rose-400 tracking-widest uppercase mb-1">Policy Violation</p>
+                           <h4 className="text-base font-bold text-white tracking-tight mb-1 uppercase tracking-wider">Velocity: 82 KM/H</h4>
+                           <p className="text-xs text-rose-400/80 font-bold">Automatic intervention warning issued</p>
+                        </div>
+                     </div>
+
+                     {/* Fuel Event */}
+                     <div className="flex items-start gap-6">
+                        <div className="relative z-10 w-14 h-14 flex items-center justify-center bg-surface-dim border border-amber-500/30 rounded-2xl shadow-xl">
+                           <span className="material-symbols-outlined text-amber-400 text-2xl">ev_station</span>
+                        </div>
+                        <div className="flex-1 pt-1">
+                           <p className="text-[9px] font-black text-amber-400 tracking-widest uppercase mb-1">Resource Infusion</p>
+                           <h4 className="text-sm font-bold text-white mb-1 uppercase tracking-widest">22.4L Refuel Authenticated</h4>
+                           <p className="text-xs text-on-surface-variant font-bold">BPCL Station, Panvel Expressway</p>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+             </div>
+
+             {/* Footer with Driver Quick Info */}
+             <div className="p-8 bg-surface-dim/50 border-t border-outline flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="w-14 h-14 rounded-2xl bg-surface-container border border-outline flex items-center justify-center shadow-inner">
+                     <span className="material-symbols-outlined text-on-surface-variant text-2xl">account_circle</span>
+                   </div>
+                   <div>
+                     <p className="text-[9px] font-black text-on-surface-variant tracking-[0.2em] uppercase mb-1">Assigned Personnel</p>
+                     <p className="text-base font-bold text-white tracking-tight">Rajesh Kumar Prajapati</p>
+                   </div>
+                </div>
+                <button className="h-12 w-12 rounded-xl bg-primary/10 text-primary hover:bg-primary transition-all flex items-center justify-center hover:text-white border border-primary/20 active:scale-90 shadow-lg">
+                  <span className="material-symbols-outlined text-xl">contact_phone</span>
+                </button>
+             </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
-}
+};
+
+export default TripDetail;

@@ -96,6 +96,9 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		Model:              req.Model,
 		Year:               req.Year,
 		Color:              req.Color,
+		Odometer:           req.Odometer,
+		CurrentDriverID:    req.CurrentDriverID,
+		SpeedLimit:         req.SpeedLimit,
 		Status:             models.StatusActive,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
@@ -259,6 +262,18 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	}
 	if req.Color != nil {
 		vehicle.Color = req.Color
+	}
+	if (req.Odometer != nil) {
+		vehicle.Odometer = req.Odometer
+	}
+	if (req.CurrentDriverID != nil) {
+		vehicle.CurrentDriverID = req.CurrentDriverID
+	}
+	if (req.ParentVehicleID != nil) {
+		vehicle.ParentVehicleID = req.ParentVehicleID
+	}
+	if (req.SpeedLimit != nil) {
+		vehicle.SpeedLimit = *req.SpeedLimit
 	}
 	// Legacy status update (normalize case)
 	if req.Status != nil {

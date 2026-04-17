@@ -57,3 +57,17 @@ type CreateOrganizationResponse struct {
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+type Branch struct {
+	ID       uuid.UUID `json:"id"   db:"id"`
+	Name     string    `json:"name" db:"name"`
+	Code     string    `json:"code" db:"code"`
+	Location string    `json:"location" db:"location"`
+}
+
+type CostCenter struct {
+	ID          uuid.UUID `json:"id"   db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Code        string    `json:"code" db:"code"`
+	Description string    `json:"description" db:"description"`
+}

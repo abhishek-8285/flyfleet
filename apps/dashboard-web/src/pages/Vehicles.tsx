@@ -102,9 +102,9 @@ const Vehicles: React.FC = () => {
                       {vehicle.current_driver ? (
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] text-primary font-bold">
-                            {vehicle.current_driver.name.charAt(0)}
+                            {(vehicle.current_driver.name || vehicle.current_driver.first_name || "D").charAt(0)}
                           </div>
-                          <span>{vehicle.current_driver.name}</span>
+                          <span>{vehicle.current_driver.name || vehicle.current_driver.first_name || "Driver"}</span>
                         </div>
                       ) : (
                         <span className="text-text-muted/50 italic text-xs">

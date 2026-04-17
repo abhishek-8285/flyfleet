@@ -1,9 +1,3 @@
-import {
-    ArrowLeftIcon,
-    SignalIcon as SignalSolidIcon,
-    TruckIcon,
-    UserCircleIcon,
-} from "@heroicons/react/24/outline";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../../services/apiClient";
@@ -54,123 +48,159 @@ export const VehicleDetail: React.FC = () => {
 
   if (loading)
     return (
-      <div className="p-12 text-center text-slate-400">
-        Loading asset profile...
+      <div className="flex items-center justify-center min-h-screen bg-surface-dim">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+          <p className="text-on-surface-variant font-bold text-xs uppercase tracking-widest">Initialising Asset Profile...</p>
+        </div>
       </div>
     );
   if (!vehicle)
     return (
-      <div className="p-12 text-center text-red-400">Vehicle not found</div>
+      <div className="flex items-center justify-center min-h-screen bg-surface-dim">
+        <div className="text-center">
+          <span className="material-symbols-outlined text-6xl text-rose-500/20 mb-4">error</span>
+          <p className="text-white text-xl font-bold">Vehicle Not Found</p>
+          <button onClick={() => navigate("/admin/vehicles")} className="mt-4 text-primary hover:underline font-bold text-sm">Return to Directory</button>
+        </div>
+      </div>
     );
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-surface-dim min-h-screen">
       <button
         onClick={() => navigate("/admin/vehicles")}
-        className="flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors mb-4 group"
+        className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-all mb-4 group font-bold text-[11px] uppercase tracking-wider"
       >
-        <ArrowLeftIcon className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-        <span>Back to Fleet</span>
+        <span className="material-symbols-outlined text-xs group-hover:-translate-x-1 transition-transform">arrow_back</span>
+        <span>Return to Directory</span>
       </button>
 
-      <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 flex justify-between items-start">
-        <div className="flex space-x-6">
-          <div className="h-24 w-24 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
-            <TruckIcon className="h-10 w-10" />
+      {/* Header Section */}
+      <div className="bg-surface-container border border-outline rounded-3xl p-8 shadow-2xl flex justify-between items-start">
+        <div className="flex gap-8">
+          <div className="h-28 w-28 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20 shadow-inner">
+            <span className="material-symbols-outlined text-5xl">local_shipping</span>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+          <div className="flex flex-col justify-center">
+            <h1 className="text-4xl font-bold text-white tracking-tighter">
               {vehicle.name}
             </h1>
-            <p className="text-slate-500 mt-1 font-mono text-lg">
+            <p className="text-on-surface-variant mt-2 font-mono text-xl font-bold">
               {vehicle.license_plate}
             </p>
-            <div className="flex items-center space-x-3 mt-4">
+            <div className="flex items-center gap-4 mt-6">
               <span
-                className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
                   vehicle.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-slate-100 text-slate-500"
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                    : "bg-surface-container-highest text-on-surface-variant border-outline"
                 }`}
               >
                 {vehicle.status}
               </span>
-              <span className="text-slate-300">|</span>
-              <span className="text-sm text-slate-400">ID: {vehicle.id}</span>
+              <div className="w-1 h-1 rounded-full bg-outline" />
+              <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">System ID: {vehicle.id.slice(0, 8)}...</span>
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <button className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 shadow-sm transition-all">
-            Edit Details
+        <div className="flex gap-3">
+          <button className="bg-surface-container-highest border border-outline text-white px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-white/5 transition-all active:scale-95">
+            Maintenance Log
+          </button>
+          <button className="bg-primary text-white px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95">
+            Edit Asset
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Core Vehicle Stats */}
+        <div className="bg-surface-container border border-outline rounded-3xl p-6 space-y-6">
+          <h3 className="text-white font-bold text-xs uppercase tracking-widest border-b border-outline pb-4">Operational Status</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
+              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Fuel Level</p>
+              <p className="text-white font-bold text-lg">78%</p>
+            </div>
+            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
+              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Odometer</p>
+              <p className="text-white font-bold text-lg">24,521 <span className="text-[10px]">km</span></p>
+            </div>
+            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
+              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Battery</p>
+              <p className="text-emerald-400 font-bold text-lg">Good</p>
+            </div>
+            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
+              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Next Service</p>
+              <p className="text-amber-400 font-bold text-lg">1,200 <span className="text-[10px]">km</span></p>
+            </div>
+          </div>
+        </div>
+
         {/* Driver Assignment Card */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-surface-container border border-outline rounded-3xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800 flex items-center text-lg">
-              <div className="p-2 bg-purple-50 rounded-lg mr-3 text-purple-500">
-                <UserCircleIcon className="h-6 w-6" />
-              </div>
-              Assigned Driver
+            <h3 className="text-white font-bold text-xs uppercase tracking-widest">
+              Current Personnel
             </h3>
             {vehicle.current_driver_id && (
-              <button className="text-sm text-blue-600 font-semibold hover:underline">
-                Change
+              <button className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline">
+                Reassign
               </button>
             )}
           </div>
 
-          {vehicle.current_driver_id ? (
-            <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
-                JD
+          <div className="flex-1 flex flex-col justify-center">
+            {vehicle.current_driver_id ? (
+              <div className="flex items-center gap-4 p-5 bg-surface-dim rounded-2xl border border-outline hover:border-primary/40 transition-all group">
+                <div className="h-14 w-14 bg-primary/20 rounded-full flex items-center justify-center text-primary font-black text-lg border border-primary/20">
+                  {vehicle.current_driver_name?.split(' ').map(n => n[0]).join('') || "JD"}
+                </div>
+                <div>
+                  <p className="font-bold text-white text-lg tracking-tight group-hover:text-primary transition-colors">
+                    {vehicle.current_driver_name || "Unassigned"}
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mt-1">
+                    Active since {vehicle.current_driver_since || "---"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-slate-900">
-                  {vehicle.current_driver_name || "---"}
+            ) : (
+              <div className="text-center py-8 bg-surface-container-highest/20 rounded-2xl border border-dashed border-outline">
+                <span className="material-symbols-outlined text-4xl text-on-surface-variant/20 mb-3">person_add</span>
+                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest mb-4">
+                  No personnel assigned
                 </p>
-                <p className="text-xs text-slate-500">
-                  Active since {vehicle.current_driver_since || "---"}
-                </p>
+                <button className="bg-white/5 border border-outline text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95">
+                  Assign Driver
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-              <p className="text-slate-400 text-sm mb-4">
-                No driver currently assigned
-              </p>
-              <button className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:border-purple-200 hover:text-purple-600 hover:shadow-sm transition-all">
-                Assign Driver
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Device Assignment Card */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        {/* Device Intelligence Card */}
+        <div className="bg-surface-container border border-outline rounded-3xl p-6 flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800 flex items-center text-lg">
-              <div className="p-2 bg-emerald-50 rounded-lg mr-3 text-emerald-500">
-                <SignalSolidIcon className="h-6 w-6" />
-              </div>
-              Connected Device
+            <h3 className="text-white font-bold text-xs uppercase tracking-widest text">
+              Telemetry Status
             </h3>
-            <button className="text-sm text-blue-600 font-semibold hover:underline">
-              Manage
+            <button className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline">
+              Diagnostics
             </button>
           </div>
 
-          <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-            <p className="text-slate-400 text-sm mb-4">
-              No telemetry device linked
-            </p>
-            <button className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl text-sm font-semibold hover:border-emerald-200 hover:text-emerald-600 hover:shadow-sm transition-all">
-              Link Device
-            </button>
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="text-center py-8 bg-surface-container-highest/20 rounded-2xl border border-dashed border-outline">
+              <span className="material-symbols-outlined text-4xl text-on-surface-variant/20 mb-3">sensors_off</span>
+              <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest mb-4">
+                No telemetry link active
+              </p>
+              <button className="bg-white/5 border border-outline text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95">
+                Link Device
+              </button>
+            </div>
           </div>
         </div>
       </div>

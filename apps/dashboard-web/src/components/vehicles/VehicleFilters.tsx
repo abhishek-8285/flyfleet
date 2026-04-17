@@ -150,34 +150,34 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
   return (
     <>
       {/* Primary Filter Bar */}
-      <div className="w-full bg-surface-darker border-b border-border-color px-6 py-3 flex items-center gap-3 flex-shrink-0 z-10">
+      <div className="w-full bg-surface-container/30 border-b border-outline px-6 py-3 flex items-center gap-3 flex-shrink-0 z-10">
         {/* Status */}
         <select
           value={filters.status}
           onChange={(e) => updateFilter("status", e.target.value)}
-          className="bg-surface-dark border border-border-color text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-border-color min-w-[140px]"
+          className="bg-surface-container border border-outline text-white text-[11px] font-bold uppercase tracking-wider rounded-lg px-4 py-2 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-surface-container-high transition-all min-w-[160px]"
         >
-          <option value="">All Statuses</option>
+          <option value="">Operational Status</option>
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {opt.label.toUpperCase()}
             </option>
           ))}
         </select>
 
-        {/* Sort */}
+        {/* Sort Controls */}
         <div ref={sortRef} className="flex items-center gap-1">
           <select
             value={filters.orderBy}
             onChange={(e) => updateFilter("orderBy", e.target.value)}
-            className="bg-surface-dark border border-border-color text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-border-color min-w-[150px]"
+            className="bg-surface-container border border-outline text-white text-[11px] font-bold uppercase tracking-wider rounded-lg px-4 py-2 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-surface-container-high transition-all min-w-[160px]"
           >
-            <option value="">Sort: Newest</option>
-            <option value="created_at">Created Date</option>
-            <option value="registration_number">Registration No</option>
-            <option value="make">Make / Model</option>
-            <option value="status">Status</option>
-            <option value="odometer">Odometer</option>
+            <option value="">Sort: Default</option>
+            <option value="created_at">Join Date</option>
+            <option value="registration_number">Reg Number</option>
+            <option value="make">Manufacturer</option>
+            <option value="status">Current Status</option>
+            <option value="odometer">Odometer Reading</option>
           </select>
 
           {filters.orderBy && (
@@ -185,36 +185,40 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
               onClick={() =>
                 updateFilter("orderDir", filters.orderDir === "ASC" ? "DESC" : "ASC")
               }
-              className="px-2 py-2 bg-surface-dark border border-border-color text-sm text-text-muted hover:text-white hover:bg-border-color rounded-lg"
+              className="px-3 py-2 bg-surface-container border border-outline text-xs text-on-surface-variant hover:text-white hover:bg-surface-container-high rounded-lg transition-all"
               title={filters.orderDir === "ASC" ? "Ascending" : "Descending"}
             >
-              {filters.orderDir === "ASC" ? "↑" : "↓"}
+              {filters.orderDir === "ASC" ? (
+                <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
+              ) : (
+                <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
+              )}
             </button>
           )}
         </div>
 
         <div className="flex-1" />
 
-        {/* Total Count */}
+        {/* Asset Metrics Summary */}
         {totalCount !== undefined && (
-          <span className="text-xs text-text-muted px-2">
-            {totalCount} vehicle{totalCount !== 1 ? "s" : ""}
+          <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider px-3 py-1 bg-surface-container/50 rounded-full border border-outline">
+            {totalCount} Total Assets
           </span>
         )}
 
-        {/* Advanced Filters Button */}
+        {/* Advanced Filter Trigger */}
         <button
           onClick={openDrawer}
-          className={`flex items-center gap-2 px-3 py-2 border text-sm font-medium rounded-lg transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 border text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all ${
             drawerAdvancedCount > 0
-              ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/20"
-              : "bg-surface-dark border-border-color text-text-muted hover:text-white hover:bg-border-color"
+              ? "bg-primary/10 border-primary/40 text-primary hover:bg-primary/20 shadow-lg shadow-primary/10"
+              : "bg-surface-container border-outline text-on-surface-variant hover:text-white hover:bg-surface-container-high"
           }`}
         >
           <span className="material-symbols-outlined text-[18px]">tune</span>
-          Filters
+          Advanced Filters
           {drawerAdvancedCount > 0 && (
-            <span className="bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full font-bold">
+            <span className="ml-1 bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-md font-bold">
               {drawerAdvancedCount}
             </span>
           )}
@@ -243,14 +247,14 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
             ref={drawerRef}
             className="fixed top-0 right-0 h-full w-80 bg-surface-dark border-l border-border-color shadow-2xl z-50 flex flex-col"
           >
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border-color">
-              <h3 className="text-white font-semibold text-base">
-                Vehicle Filters
+            {/* Drawer Header Area */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-outline bg-surface-container/50">
+              <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+                Vehicle Intelligence
               </h3>
               <button
                 onClick={closeDrawer}
-                className="text-text-muted hover:text-white p-1"
+                className="text-on-surface-variant hover:text-white p-1 hover:bg-white/5 rounded-lg transition-all"
               >
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
@@ -407,19 +411,19 @@ export const VehicleFilters: React.FC<VehicleFiltersProps> = ({
               )}
             </div>
 
-            {/* Drawer Footer */}
-            <div className="border-t border-border-color px-5 py-4 flex gap-2">
+            {/* Action Bar Footer */}
+            <div className="border-t border-outline px-6 py-5 flex gap-3 bg-surface-container/50">
               <button
                 onClick={() => {
                   resetDrawerFilters();
                 }}
-                className="flex-1 text-sm text-text-muted hover:text-white py-2.5 border border-border-color rounded-lg transition-colors"
+                className="flex-1 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant hover:text-white py-3 border border-outline rounded-xl transition-all hover:bg-white/5"
               >
-                Reset Filters
+                Reset All
               </button>
               <button
                 onClick={closeDrawer}
-                className="flex-1 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded-lg py-2.5 transition-colors shadow-lg shadow-primary/20"
+                className="flex-1 bg-primary hover:bg-primary-dark text-white text-[11px] font-bold uppercase tracking-wider rounded-xl py-3 transition-all shadow-lg shadow-primary/20 active:scale-95"
               >
                 Apply
               </button>

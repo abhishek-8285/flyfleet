@@ -1,7 +1,7 @@
-import { AnimatePresence, motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
-import api from "../../services/api";
-import AuthButton from "./AuthButton";
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import api from '../../services/api';
+import AuthButton from './AuthButton';
 
 interface SessionTimeoutWarningProps {
   onLogout: () => void;
@@ -52,7 +52,7 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
     const secs = s % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -74,18 +74,16 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-slate-800">
               <motion.div
-                initial={{ width: "100%" }}
-                animate={{ width: "0%" }}
-                transition={{ duration: expiryMinutes * 60, ease: "linear" }}
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: expiryMinutes * 60, ease: 'linear' }}
                 className="h-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.5)]"
               />
             </div>
 
             <div className="p-8 pt-10 text-center space-y-6">
               <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto border border-amber-500/20">
-                <span className="material-symbols-outlined text-amber-500 text-3xl">
-                  timer
-                </span>
+                <span className="material-symbols-outlined text-amber-500 text-3xl">timer</span>
               </div>
 
               <div className="space-y-2">
@@ -93,8 +91,7 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
                   Session Expiring Soon
                 </h3>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  For your security, your platform terminal session will
-                  automatically terminate in:
+                  For your security, your platform terminal session will automatically terminate in:
                 </p>
                 <div className="text-3xl font-mono font-black text-white tracking-widest pt-2">
                   {formatTime(timeLeft)}
@@ -117,9 +114,6 @@ const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
             <div className="bg-slate-800/20 p-4 border-t border-white/5 flex items-center justify-center gap-2">
               <span className="material-symbols-outlined text-slate-500 text-sm">
                 verified_user
-              </span>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
-                Platform Security Protocol 4.0
               </span>
             </div>
           </motion.div>

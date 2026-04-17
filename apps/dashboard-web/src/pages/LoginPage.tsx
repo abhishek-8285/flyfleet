@@ -6,6 +6,7 @@ import EnterpriseAuthLayout from "../components/auth/EnterpriseAuthLayout";
 import { useAuth } from "../context/AuthProvider";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { api } from "../services/api";
+import axios from "axios";
 
 enum LoginState {
   IDENTIFY,
@@ -50,6 +51,10 @@ interface LoginContextType {
   navigate: any;
   login: any;
   performLogin: (orgId: string) => Promise<void>;
+  completeAuthData: any;
+  setCompleteAuthData: (data: any) => void;
+  finishAuth: (authData: any) => void;
+  checkOrgsAndComplete: (data: any) => Promise<void>;
 }
 
 const LoginContext = createContext<LoginContextType | undefined>(undefined);
@@ -68,27 +73,66 @@ const slideVariants = {
 
 
 const OrgSelectStep: React.FC = () => {
-  const { organizations, setSelectedOrgId, performLogin, setState } = useLoginStore();
+  const { organizations, setSelectedOrgId, finishAuth, completeAuthData, setGlobalError, setLoading, setState } = useLoginStore();
   
+  const handleOrgSelect = async (orgId: string) => {
+    setSelectedOrgId(orgId);
+    setLoading(true);
+    setGlobalError(null);
+    try {
+      const token = completeAuthData.token || completeAuthData.access_token;
+      let apiUrl = import.meta.env.VITE_API_URL || "/api/v1";
+      if (/^https?:\/\/[^\/]+\/?$/.test(apiUrl)) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/api/v1';
+      }
+      
+      const switchData = await axios.post(
+        `${apiUrl}/auth/orgs/${orgId}/switch`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+      ).then(res => res.data);
+      
+      const mergedAuthData = {
+        ...completeAuthData,
+        token: switchData.access_token || switchData.token,
+        refresh_token: switchData.refresh_token,
+        organization: switchData.organization,
+        user: {
+           ...completeAuthData.user,
+           org_id: orgId,
+           orgName: switchData.organization?.name,
+        }
+      };
+
+      finishAuth(mergedAuthData);
+    } catch (err: any) {
+      setGlobalError({ message: err.response?.data?.message || err.message || "Failed to switch organization" });
+      setLoading(false);
+    }
+  };
+
   return (
     <motion.div variants={slideVariants} initial="hidden" animate="visible" exit="exit" className="space-y-4">
       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest text-center mb-4">Select Workspace</h3>
       <div className="grid grid-cols-1 gap-3">
-        {organizations.map(org => (
+        {organizations.map((org: any) => {
+          const orgId = org.id || org.org_id;
+          const orgName = org.name || org.org_name;
+          return (
           <button
-            key={org.org_id}
-            onClick={() => { setSelectedOrgId(org.org_id); performLogin(org.org_id); }}
+            key={orgId}
+            onClick={() => handleOrgSelect(orgId)}
             className="p-4 bg-slate-800/30 border border-white/5 rounded-2xl hover:border-primary/50 hover:bg-slate-800/50 transition-all text-left flex items-center gap-3 group"
           >
             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
               <span className="material-symbols-outlined">corporate_fare</span>
             </div>
             <div>
-              <div className="text-sm font-bold text-white">{org.org_name}</div>
-              <div className="text-xs text-slate-500 font-mono mt-0.5">{org.org_id.slice(0, 8)}</div>
+              <div className="text-sm font-bold text-white">{orgName}</div>
+              <div className="text-xs text-slate-500 font-mono mt-0.5">{orgId.slice(0, 8)}</div>
             </div>
           </button>
-        ))}
+        )})}
       </div>
       <button onClick={() => setState(LoginState.AUTHENTICATE)} className="text-[10px] text-slate-500 hover:text-primary transition-colors block text-center w-full uppercase tracking-widest pt-2">
         Back
@@ -115,23 +159,7 @@ const AuthenticateStep: React.FC = () => {
     setGlobalError(null);
 
     try {
-      // 1. Resolve Organizations
-      const res = await api.post("/auth/resolve-orgs", { email: emailOrPhone }) as any;
-      const orgs = res.organizations || [];
-      setOrganizations(orgs);
-      
-      if (orgs.length > 1) {
-        setState(LoginState.SELECT_ORG);
-        setLoading(false);
-        return;
-      }
-
-      // If 1 or 0 (fallback) org, try direct login
-      const targetOrgId = orgs.length === 1 ? orgs[0].org_id : "";
-      setSelectedOrgId(targetOrgId);
-
-      // 2. Perform Login
-      await performLogin(targetOrgId);
+      await performLogin("");
     } catch (err: any) {
       setGlobalError({ message: err.message || "Authentication failed" });
       setLoading(false);
@@ -207,7 +235,7 @@ const AuthenticateStep: React.FC = () => {
 };
 
 const MFAStep: React.FC = () => {
-  const { tempToken, setGlobalError, setLoading, uiStrings, login, navigate } = useLoginStore();
+  const { tempToken, setGlobalError, setLoading, uiStrings, checkOrgsAndComplete } = useLoginStore();
   const [code, setCode] = useState<string[]>(Array(6).fill(""));
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
@@ -255,28 +283,8 @@ const MFAStep: React.FC = () => {
 
     try {
       const data = await api.post("/auth/mfa/verify", { temp_token: tempToken, code: fullCode }) as any;
-      const userData = {
-        ...data.user,
-        permissions: data.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
-      };
-
-      login(data.access_token, data.refresh_token, userData);
-
-      // Fix: Store org_id after MFA verification
-      const responseOrgId = data.user?.org_id;
-      if (responseOrgId) {
-        localStorage.setItem("org_id", responseOrgId);
-      }
-
-      // Fix 3: Use role-based routing after MFA, same logic as performLogin
-      const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
-      let targetPath = "/dashboard";
-      if (role.includes("customer") || role.includes("portal") || role === "user") {
-        targetPath = "/portal";
-      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
-        targetPath = "/admin";
-      }
-      navigate(targetPath);
+      const { checkOrgsAndComplete } = useLoginStore();
+      await checkOrgsAndComplete(data);
     } catch (err: any) {
       setGlobalError({ message: err.message });
     } finally {
@@ -365,9 +373,67 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [tempToken, setTempToken] = useState("");
   const [partialUser, setPartialUser] = useState<any>(null);
+  const [completeAuthData, setCompleteAuthData] = useState<any>(null);
   const { uiStrings } = useUIStrings("auth_extended");
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const finishAuth = (authData: any) => {
+    const userData = {
+      ...authData.user,
+      permissions: authData.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
+    };
+
+    const token = authData.token || authData.access_token;
+    const refreshTokenResult = authData.refresh_token || "";
+
+    const responseOrgId = authData.user?.org_id || authData.organization?.id;
+    if (responseOrgId) {
+      localStorage.setItem('org_id', responseOrgId);
+    }
+
+    login(token, refreshTokenResult, userData);
+
+    if (rememberMe) {
+      localStorage.setItem("remembered_email", emailOrPhone);
+    }
+
+    const role = (authData.user?.role_id || authData.user?.role || "").toLowerCase();
+    let targetPath = "/dashboard";
+    if (role.includes("customer") || role.includes("portal") || role === "user") {
+      targetPath = "/portal";
+    } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
+      targetPath = "/admin";
+    }
+    navigate(targetPath);
+  };
+
+  const checkOrgsAndComplete = async (authData: any) => {
+    try {
+      const token = authData.token || authData.access_token;
+      let apiUrl = import.meta.env.VITE_API_URL || "/api/v1";
+      if (/^https?:\/\/[^\/]+\/?$/.test(apiUrl)) {
+        apiUrl = apiUrl.replace(/\/$/, '') + '/api/v1';
+      }
+
+      const userOrgs = await axios.get(`${apiUrl}/auth/orgs`, {
+         headers: { Authorization: `Bearer ${token}` },
+         withCredentials: true
+      }).then((res: any) => res.data) as any;
+
+      if (userOrgs && userOrgs.length > 1) {
+        setOrganizations(userOrgs);
+        setCompleteAuthData(authData);
+        setState(LoginState.SELECT_ORG);
+        setLoading(false);
+        return;
+      }
+    } catch(e) {
+      console.warn("Could not fetch orgs", e);
+    }
+
+    finishAuth(authData);
+  };
 
   const performLogin = async (orgId: string) => {
     setLoading(true);
@@ -386,33 +452,11 @@ const Login: React.FC = () => {
         return;
       }
 
-      const userData = {
-        ...data.user,
-        permissions: data.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
-      };
-
-      // CRITICAL: Store org_id BEFORE calling login()
-      const responseOrgId = data.user?.org_id || orgId;
-      console.log('[LoginPage] Login response org_id:', responseOrgId);
-      if (responseOrgId) {
-        localStorage.setItem('org_id', responseOrgId);
-        console.log('[LoginPage] Stored org_id:', responseOrgId);
+      if (orgId) {
+        finishAuth(data);
+      } else {
+        await checkOrgsAndComplete(data);
       }
-
-      login(data.token || data.access_token, data.refresh_token || "", userData);
-
-      if (rememberMe) {
-        localStorage.setItem("remembered_email", emailOrPhone);
-      }
-
-      const role = (data.user?.role_id || data.user?.role || "").toLowerCase();
-      let targetPath = "/dashboard";
-      if (role.includes("customer") || role.includes("portal") || role === "user") {
-        targetPath = "/portal";
-      } else if (role === "super_admin" || role === "admin" || role === "support" || role === "org_admin" || role === "fleet_manager" || role === "dispatcher") {
-        targetPath = "/admin";
-      }
-      navigate(targetPath);
     } catch (err: any) {
       setGlobalError({ message: err.message || "Invalid credentials" });
     } finally {
@@ -442,7 +486,8 @@ const Login: React.FC = () => {
       globalError, setGlobalError, loading, setLoading,
       tempToken, setTempToken, partialUser, setPartialUser,
       rememberMe, setRememberMe, password, setPassword, 
-      uiStrings, navigate, login, performLogin
+      uiStrings, navigate, login, performLogin,
+      completeAuthData, setCompleteAuthData, finishAuth, checkOrgsAndComplete
     }}>
       <EnterpriseAuthLayout
         title={uiStrings?.login_title || "Sign In"}

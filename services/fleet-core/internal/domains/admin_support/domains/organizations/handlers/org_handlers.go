@@ -42,6 +42,8 @@ func (h *OrganizationHandlers) RegisterRoutes(r chi.Router) {
 	})
 
 	r.Get("/dashboard/stats", h.GetDashboardStats)
+	r.Get("/branches", h.ListBranches)
+	r.Get("/cost-centers", h.ListCostCenters)
 }
 
 func (h *OrganizationHandlers) ListOrganizations(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +138,48 @@ func (h *OrganizationHandlers) DeleteOrganization(w http.ResponseWriter, r *http
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ListBranches returns a list of branches for the organization
+func (h *OrganizationHandlers) ListBranches(w http.ResponseWriter, r *http.Request) {
+	branches, err := h.service.ListBranches(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to list branches", zap.Error(err))
+		h.errorJSON(w, "Failed to fetch branches", http.StatusInternalServerError)
+		return
+	}
+
+	// Map to frontend expectation { value, label }
+	var result []map[string]string
+	for _, b := range branches {
+		result = append(result, map[string]string{
+			"value": b.ID.String(),
+			"label": b.Name,
+		})
+	}
+
+	h.json(w, map[string]interface{}{"data": result}, http.StatusOK)
+}
+
+// ListCostCenters returns a list of cost centers for the organization
+func (h *OrganizationHandlers) ListCostCenters(w http.ResponseWriter, r *http.Request) {
+	costCenters, err := h.service.ListCostCenters(r.Context())
+	if err != nil {
+		h.logger.Error("Failed to list cost centers", zap.Error(err))
+		h.errorJSON(w, "Failed to fetch cost centers", http.StatusInternalServerError)
+		return
+	}
+
+	// Map to frontend expectation { value, label }
+	var result []map[string]string
+	for _, c := range costCenters {
+		result = append(result, map[string]string{
+			"value": c.ID.String(),
+			"label": c.Name,
+		})
+	}
+
+	h.json(w, map[string]interface{}{"data": result}, http.StatusOK)
 }
 
 // Helpers

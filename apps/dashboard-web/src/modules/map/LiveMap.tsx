@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import maplibregl from "maplibre-gl";
 import { useMapStore } from "./store";
 import MapEngine from "./MapEngine";
@@ -60,7 +60,7 @@ const LiveMap: React.FC = () => {
 
   }, [pulse]);
 
-  const handleMapLoad = (map: maplibregl.Map) => {
+  const handleMapLoad = useCallback((map: maplibregl.Map) => {
     mapRef.current = map;
 
     // Load simple placeholder sprites for status-based icon mapping
@@ -143,7 +143,7 @@ const LiveMap: React.FC = () => {
         "circle-stroke-color": "#fff",
       },
     });
-  };
+  }, []);
 
   return (
     <div style={{ height: "100%", minHeight: "600px", width: "100%", borderRadius: "0.5rem", overflow: "hidden" }}>

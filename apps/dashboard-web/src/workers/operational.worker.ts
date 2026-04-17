@@ -29,12 +29,42 @@ const shardedIndexes = new Map<string, MiniSearch>();
 let db: IDBDatabase | null = null;
 const vehicleMap = new Map<string, SearchableVehicle>();
 
+// Global Error Handler for diagnostics
+self.onerror = (message, source, lineno, colno, error) => {
+  self.postMessage({
+    type: "WORKER_CRASH_DIAGNOSTIC",
+    payload: {
+      message: typeof message === 'string' ? message : (message as any).message,
+      lineno,
+      colno,
+      stack: error?.stack,
+    },
+  });
+};
+
+self.onunhandledrejection = (e) => {
+  self.postMessage({
+    type: "WORKER_CRASH_DIAGNOSTIC",
+    payload: {
+      message: `Unhandled Rejection: ${e.reason}`,
+      stack: e.reason?.stack,
+    },
+  });
+};
+
 // Initialize IndexedDB for persistence
 const DB_NAME = "FlyFleet_Operational_DB";
 const DB_VERSION = 1;
 
 function initDB() {
   const request = indexedDB.open(DB_NAME, DB_VERSION);
+  request.onerror = (e) => {
+    console.error(`[OperationalWorker] Failed to open IndexedDB:`, e);
+    // Don't crash, just log. System can function in memory.
+  };
+  request.onblocked = () => {
+    console.warn("[OperationalWorker] IndexedDB is blocked. Waiting...");
+  };
   request.onupgradeneeded = (e: any) => {
     const db = e.target.result;
     if (!db.objectStoreNames.contains("telemetry_history")) {
@@ -46,7 +76,7 @@ function initDB() {
   };
   request.onsuccess = (e: any) => {
     db = e.target.result;
-    console.log("Operational DB Initialized");
+    console.log("[OperationalWorker] IndexedDB Initialized");
   };
 }
 
@@ -159,6 +189,7 @@ self.onmessage = async (event: MessageEvent) => {
   }
 
   if (type === "PING") {
+    // console.log("[OperationalWorker] Received PING, responding with PONG");
     self.postMessage({ type: "PONG" });
   }
 };

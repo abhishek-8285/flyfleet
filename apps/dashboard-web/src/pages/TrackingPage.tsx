@@ -95,40 +95,57 @@ const TrackingPage: React.FC = () => {
     }, [fallbackToPolling, dispatch]);
 
     return (
-        <div className="relative h-screen w-screen flex flex-col">
-            {/* Top Bar */}
-            <div className="absolute top-0 left-0 right-0 z-10 p-4 space-y-3">
-                {/* Search Bar */}
-                <div className="max-w-md mx-auto">
-                    <SearchBar />
+        <div className="relative h-screen w-screen flex flex-col bg-surface-dim overflow-hidden font-sans antialiased">
+            {/* Intel Command Overlay (Top Bar) */}
+            <div className="absolute top-8 left-8 right-8 z-10 flex flex-col md:flex-row gap-6 items-start justify-between pointer-events-none">
+                {/* Search & Insight Discovery */}
+                <div className="w-full max-w-xl pointer-events-auto">
+                    <div className="bg-surface-container/90 backdrop-blur-xl border border-outline rounded-[2.5rem] p-6 shadow-2xl">
+                        <div className="flex items-center gap-4 mb-4 opacity-50">
+                            <span className="material-symbols-outlined text-lg">radar</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Live Asset Surveillance</span>
+                        </div>
+                        <SearchBar />
+                    </div>
                 </div>
 
-                {/* Filter Bar */}
-                <div className="max-w-2xl mx-auto">
-                    <FilterBar />
+                {/* Filter Matrix */}
+                <div className="w-full max-w-2xl pointer-events-auto self-end">
+                    <div className="bg-surface-container/90 backdrop-blur-xl border border-outline rounded-[2rem] p-4 shadow-2xl">
+                        <FilterBar />
+                    </div>
                 </div>
             </div>
 
-            {/* Connection Status */}
-            <div className="absolute bottom-4 left-4 z-10">
-                <ConnectionIndicator />
+            {/* System Readiness Indicator */}
+            <div className="absolute bottom-8 left-8 z-10 pointer-events-auto">
+                <div className="bg-surface-container/90 backdrop-blur-xl border border-outline rounded-3xl p-4 shadow-2xl">
+                    <ConnectionIndicator />
+                </div>
             </div>
 
-            {/* Vehicle Count Badge */}
-            <div className="absolute bottom-4 right-4 z-10 bg-white rounded-full shadow-lg px-4 py-2">
-                <span className="text-sm text-gray-600">
-                    {filteredVehicles.length} / {Object.keys(vehicles).length} vehicles
-                </span>
+            {/* Asset Density Counter */}
+            <div className="absolute bottom-8 right-8 z-10 pointer-events-auto">
+                <div className="bg-surface-container/90 backdrop-blur-xl border border-outline rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-4">
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest">
+                        <span className="text-primary">{filteredVehicles.length}</span> / <span className="opacity-50">{Object.keys(vehicles).length}</span> Active Fleet Units
+                    </span>
+                </div>
             </div>
 
-            {/* Map */}
-            <VehicleMap />
+            {/* Operational Theater (Map) */}
+            <div className="absolute inset-0 z-0">
+                <VehicleMap />
+            </div>
 
-            {/* Detail Panel */}
-            <VehicleDetailPanel />
+            {/* Intel Detail Panel */}
+            <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 z-20 pointer-events-auto">
+                <VehicleDetailPanel />
+            </div>
 
-            {/* Playback Controls (when history is loaded) */}
-            <div className="absolute bottom-16 left-4 z-10 max-w-sm">
+            {/* Chronological Playback (when history is loaded) */}
+            <div className="absolute bottom-28 left-8 z-10 max-w-sm pointer-events-auto">
                 <PlaybackControls />
             </div>
         </div>

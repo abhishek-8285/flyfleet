@@ -207,6 +207,8 @@ const ControlTower: React.FC = () => {
     });
 
     monitor.register("telemetry");
+    monitor.register("ingestion");
+    monitor.register("spatial");
     monitor.register("operational");
     monitor.start();
     monitorRef.current = monitor;
@@ -227,14 +229,19 @@ const ControlTower: React.FC = () => {
   // MapHeartbeat handler
   useEffect(() => {
     const handlePong = (e: any) => {
-      // In a real system, workers would send specific PONG types
-      monitorRef.current?.heartbeat("telemetry");
-      monitorRef.current?.heartbeat("operational");
+      if (e.type === "TELEMETRY_PONG") monitorRef.current?.heartbeat("telemetry");
+      if (e.type === "INGESTION_PONG") monitorRef.current?.heartbeat("ingestion");
+      if (e.type === "SPATIAL_PONG") monitorRef.current?.heartbeat("spatial");
+      if (e.type === "OPERATIONAL_PONG") monitorRef.current?.heartbeat("operational");
     };
     window.addEventListener("TELEMETRY_PONG", handlePong);
+    window.addEventListener("INGESTION_PONG", handlePong);
+    window.addEventListener("SPATIAL_PONG", handlePong);
     window.addEventListener("OPERATIONAL_PONG", handlePong);
     return () => {
       window.removeEventListener("TELEMETRY_PONG", handlePong);
+      window.removeEventListener("INGESTION_PONG", handlePong);
+      window.removeEventListener("SPATIAL_PONG", handlePong);
       window.removeEventListener("OPERATIONAL_PONG", handlePong);
     };
   }, []);
@@ -378,11 +385,24 @@ const ControlTower: React.FC = () => {
       const zoom = mapRef.current.getZoom();
 
       // LOD 0: Heatmap/Cluster (Zoom 0-8)
-      mapRef.current.setLayoutProperty(
-        "cluster-layer",
-        "visibility",
-        zoom <= 8 ? "visible" : "none",
-      );
+      // Check for both polygon and count layers from ClusterLayer
+      const hasClusterPoly = mapRef.current.getLayer("h3-clusters-polygons");
+      const hasClusterCount = mapRef.current.getLayer("h3-clusters-counts");
+      
+      if (hasClusterPoly) {
+        mapRef.current.setLayoutProperty(
+          "h3-clusters-polygons",
+          "visibility",
+          zoom <= 8 ? "visible" : "none",
+        );
+      }
+      if (hasClusterCount) {
+        mapRef.current.setLayoutProperty(
+          "h3-clusters-counts",
+          "visibility",
+          zoom <= 8 ? "visible" : "none",
+        );
+      }
 
       // LOD 1: PointCloud (Zoom 8-12)
       const pcLayer = mapRef.current.getLayer("point-cloud-layer");

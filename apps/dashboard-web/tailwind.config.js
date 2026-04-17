@@ -11,14 +11,31 @@ module.exports = {
         "primary": "#137fec",
         "primary-dark": "#0f65bd",
         "background-light": "#f6f7f8",
-        "background-dark": "#101922",
+        "background-dark": "#0b1219",
         "surface-dark": "#16202a",
         "surface-darker": "#111a22",
         "surface-light": "#ffffff",
         "border-color": "#233648",
         "text-muted": "#92adc9",
-        "border-dark": "#233648", // keeping as alias
-        "text-secondary": "#92adc9", // keeping as alias
+        
+        // Obsidian Fleet Design Tokens
+        "surface-container": "#16202a",
+        "surface-container-low": "#111a22",
+        "surface-container-high": "#1d2936",
+        "surface-container-highest": "#233648",
+        "surface-container-lowest": "#0b1219",
+        "surface-dim": "#0b1219",
+        "surface-bright": "#16202a",
+        "on-surface": "#ffffff",
+        "on-surface-variant": "#92adc9",
+        "outline": "#233648",
+        "outline-variant": "#334d66",
+        "secondary-container": "#233648",
+        "inverse-surface": "#f9f9ff",
+        "inverse-on-surface": "#181c22",
+        "tertiary": "#964400",
+        "tertiary-container": "#bc5700",
+        "on-tertiary": "#ffffff",
         
         // Monitoring Module Specific
         "monitor-primary": "#ec5b13",

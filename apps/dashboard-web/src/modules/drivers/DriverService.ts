@@ -3,6 +3,7 @@ import {
   Driver,
   DriverListResponse,
   DriverDocument,
+  SafetyScore,
   BehaviorEvent,
   DriverAnalytics,
 } from "./types";
@@ -145,6 +146,25 @@ class DriverService {
   }> {
     const response = await api.getDriverBehaviorScore(id);
     return response;
+  }
+
+  /**
+   * Get safety score and events breakdown.
+   */
+  async getSafetyScore(id: string): Promise<SafetyScore> {
+    const analytics = await this.getAnalytics(id);
+    const behavior = await this.getBehaviorScore(id);
+    
+    return {
+      driverId: id,
+      score: behavior.behavior_score || 0,
+      events: {
+        harshBraking: (analytics as any).harsh_braking_count || 0,
+        harshTurning: 0, // Not explicitly tracked in simple analytics
+        overspeeding: (analytics as any).speeding_incidents || 0,
+      },
+      lastUpdated: new Date().toISOString(),
+    };
   }
 
   /**

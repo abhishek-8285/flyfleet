@@ -41,12 +41,16 @@ export interface Vehicle {
 
 export interface Driver {
   id: string;
-  name: string;
+  name?: string;
+  first_name?: string;
+  last_name?: string;
   phone: string;
   license_number: string;
-  status: 'available' | 'on_trip' | 'off_duty';
-  rating: number;
-  behavior_score: number;
+  license_expiry?: string;
+  status: string;
+  rating?: number;
+  behavior_score?: number;
+  updated_at?: string;
 }
 
 export interface Location {

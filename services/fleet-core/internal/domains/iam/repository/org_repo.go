@@ -19,7 +19,7 @@ func NewOrgRepository(pool *pgxpool.Pool) *OrgRepository {
 func (r *OrgRepository) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT o.id, o.name, uo.role, ''::text,
-			   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.org_id = o.id), 0)
+			   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = o.id), 0)
 		FROM user_organizations uo
 		JOIN organizations o ON o.id = uo.org_id
 		WHERE uo.user_id = $1`, userID)

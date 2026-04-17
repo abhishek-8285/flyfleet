@@ -1,33 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
-
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  ACTIVE: { bg: "bg-success/20", text: "text-success", label: "Active" },
-  MAINTENANCE: { bg: "bg-warning/20", text: "text-warning", label: "Maintenance" },
-  SUSPENDED: { bg: "bg-danger/20", text: "text-danger", label: "Inactive" },
-  DECOMMISSIONED: { bg: "bg-text-muted/20", text: "text-text-muted", label: "Decommissioned" },
-};
-
-const FUEL_LABELS: Record<string, string> = {
-  DIESEL: "Diesel",
-  PETROL: "Gasoline (Unleaded)",
-  CNG: "Compressed Natural Gas",
-  ELECTRIC: "Electric",
-  HYBRID: "Hybrid",
-  LPG: "LPG",
-};
-
-const TYPE_ICONS: Record<string, string> = {
-  TRUCK: "local_shipping",
-  VAN: "airport_shuttle",
-  CAR: "directions_car",
-  BUS: "directions_bus",
-  TRAILER: "luggage",
-  TANKER: "water_drop",
-  TIPPER: "dump_truck",
-  CRANE: "construction",
-};
+import { STATUS_COLORS, FUEL_LABELS, TYPE_ICONS } from "./constants";
+import { fromKm, fromTonnes, fromLitres, getUnitLabel } from "./utils";
 
 export const VehicleDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,19 +18,9 @@ export const VehicleDetail: React.FC = () => {
     fuel: "litres",
   });
 
-  // Conversion from metric (backend) to display units
-  const fromKm = (val: number, unit: string) => unit === "mi" ? (val / 1.60934).toFixed(1) : val.toLocaleString();
-  const fromTonnes = (val: number, unit: string) => unit === "lbs" ? (val * 2204.62).toFixed(0) : unit === "kg" ? (val * 1000).toFixed(0) : val.toString();
-  const fromLitres = (val: number, unit: string) => unit === "gallons" ? (val / 3.78541).toFixed(1) : val.toString();
-  const unitLabel = (type: string) => {
-    if (type === "odometer") return displayUnits.odometer === "mi" ? "mi" : "km";
-    if (type === "capacity") return displayUnits.capacity === "lbs" ? "lbs" : displayUnits.capacity === "kg" ? "kg" : "tonnes";
-    return displayUnits.fuel === "gallons" ? "gal" : "L";
-  };
-
   // CNG uses kg, not litres
   const isCNG = vehicle?.fuel_type === "CNG";
-  const fuelUnitLabel = isCNG ? "kg" : unitLabel("fuel");
+  const fuelUnitLabel = isCNG ? "kg" : getUnitLabel("fuel", displayUnits.fuel);
   const displayFuel = isCNG
     ? (vehicle?.fuel_tank_capacity || "—").toString()
     : (vehicle?.fuel_tank_capacity ? fromLitres(vehicle.fuel_tank_capacity, displayUnits.fuel) : "—");
@@ -195,7 +160,7 @@ export const VehicleDetail: React.FC = () => {
             </div>
             <div className="text-2xl font-bold text-white">
               {vehicle.odometer ? fromKm(vehicle.odometer, displayUnits.odometer) : "0"}{" "}
-              <span className="text-sm font-normal text-text-muted">{unitLabel("odometer")}</span>
+              <span className="text-sm font-normal text-text-muted">{getUnitLabel("odometer", displayUnits.odometer)}</span>
             </div>
             <div className="text-[10px] text-text-muted flex items-center gap-1 mt-1">
               <span className="material-symbols-outlined text-[12px]">schedule</span>
@@ -345,9 +310,7 @@ export const VehicleDetail: React.FC = () => {
                           <option value="lbs">lbs</option>
                         </select>
                       </div>
-                      <div className="text-white text-sm border-b border-border-color pb-1">
-                        {vehicle.capacity_tonnage ? `${fromTonnes(vehicle.capacity_tonnage, displayUnits.capacity)} ${unitLabel("capacity")}` : "—"}
-                      </div>
+                        {vehicle.capacity_tonnage ? `${fromTonnes(vehicle.capacity_tonnage, displayUnits.capacity)} ${getUnitLabel("capacity", displayUnits.capacity)}` : "—"}
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
@@ -367,6 +330,12 @@ export const VehicleDetail: React.FC = () => {
                       </div>
                       <div className="text-white text-sm border-b border-border-color pb-1">
                         {vehicle.fuel_tank_capacity ? `${displayFuel} ${fuelUnitLabel}` : "—"}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-wider text-text-muted font-bold">Speed Limit</label>
+                      <div className="text-white text-sm border-b border-border-color pb-1">
+                        {vehicle.speed_limit ? `${vehicle.speed_limit} km/h` : "No limit"}
                       </div>
                     </div>
                     <div className="space-y-1">

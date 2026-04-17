@@ -50,6 +50,10 @@ type Vehicle struct {
 	Model *string `json:"model"                db:"model"`
 	Year  *int    `json:"year"                 db:"year"`
 	Color *string `json:"color"                db:"color"`
+	Odometer           *int64     `json:"odometer"             db:"odometer"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id"`
+	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
+
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
@@ -94,6 +98,9 @@ type CreateVehicleRequest struct {
 	Model              *string    `json:"model"`
 	Year               *int       `json:"year" validate:"omitempty,min=1900,max=2030"`
 	Color              *string    `json:"color"`
+	Odometer           *int64     `json:"odometer"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"`
+	SpeedLimit         float64    `json:"speed_limit"`
 	// Legacy fields (still accepted from old clients)
 	LicensePlate *string `json:"license_plate"`
 }
@@ -119,8 +126,11 @@ type UpdateVehicleRequest struct {
 	Color              *string    `json:"color"`
 	// Legacy fields
 	Status    *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
-	Odometer  *int64  `json:"odometer" validate:"omitempty,min=0"`
-	Insurance *string `json:"insurance"`
+	Odometer           *int64     `json:"odometer" validate:"omitempty,min=0"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"`
+	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"`
+	SpeedLimit         *float64   `json:"speed_limit"`
+	Insurance          *string    `json:"insurance"`
 }
 
 // VehicleListResponse is the paginated list response.

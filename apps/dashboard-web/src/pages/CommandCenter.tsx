@@ -73,97 +73,104 @@ const CommandCenter: React.FC = () => {
     : null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-50 dark:bg-gray-900">
-      {/* Top Header / Stats */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shrink-0 shadow-sm z-10">
+    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-surface-dim font-sans antialiased">
+      {/* Tactical Header Overlay */}
+      <div className="bg-surface-container/60 backdrop-blur-3xl border-b border-outline p-8 shrink-0 z-20 shadow-2xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <MapIcon className="w-6 h-6 text-blue-600" />
-            {uiStrings?.title || "Fleet Command Center"}
-            {!isConnected && (
-              <span className="flex items-center gap-1 text-xs font-normal text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full animate-pulse">
-                <ArrowPathIcon className="w-3 h-3 animate-spin" />{" "}
-                {uiStrings?.status_disconnected || "Disconnected"}
-              </span>
-            )}
-          </h1>
+          <div className="space-y-1">
+            <nav className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">satellite_alt</span>
+              Global Operations Theater
+            </nav>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
+              {uiStrings?.title || "Fleet Command Core"}
+              {!isConnected && (
+                <div className="flex items-center gap-2 text-[9px] font-black text-rose-500 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-[10px] animate-pulse">
+                  <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                  {uiStrings?.status_disconnected || "OFFLINE / RECONNECTING"}
+                </div>
+              )}
+            </h1>
+          </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             <StatCard
-              label={uiStrings?.stat_total || "Total"}
+              label={uiStrings?.stat_total || "Active Assets"}
               value={vehicleStats.total}
-              color="blue"
+              color="primary"
             />
             <StatCard
-              label={uiStrings?.stat_moving || "Moving"}
+              label={uiStrings?.stat_moving || "In Motion"}
               value={vehicleStats.moving}
-              color="green"
+              color="emerald"
             />
             <StatCard
-              label={uiStrings?.stat_idle || "Idle"}
+              label={uiStrings?.stat_idle || "Static"}
               value={vehicleStats.idle}
-              color="yellow"
+              color="amber"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Alert Feed */}
-        <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col shrink-0">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-800/50">
-            <div className="flex items-center gap-2 font-semibold dark:text-white">
-              <BellIcon className="w-5 h-5 text-gray-500" />
-              {uiStrings?.feed_title || "Live Alerts"}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Left: Intelligence Stream */}
+        <div className="w-[400px] border-r border-outline bg-surface-container/40 backdrop-blur-2xl flex flex-col shrink-0 z-10 shadow-3xl">
+          <div className="p-8 border-b border-outline flex items-center justify-between bg-surface-dim/40">
+            <div className="flex items-center gap-4">
+              <span className="material-symbols-outlined text-primary">sensors</span>
+              <div className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+                {uiStrings?.feed_title || "Operational Intel"}
+              </div>
             </div>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
-              className="text-xs border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded py-1"
+              className="text-[10px] bg-surface-dim border border-outline rounded-xl px-3 py-1.5 text-white font-black uppercase tracking-widest focus:outline-none focus:border-primary transition-all"
             >
-              <option value="all">{uiStrings?.filter_all || "All"}</option>
-              <option value="critical">
-                {uiStrings?.filter_critical || "Critical"}
-              </option>
-              <option value="warning">
-                {uiStrings?.filter_warning || "Warning"}
-              </option>
+              <option value="all">{uiStrings?.filter_all || "Matrix: All"}</option>
+              <option value="critical">{uiStrings?.filter_critical || "Critical Only"}</option>
+              <option value="warning">{uiStrings?.filter_warning || "Warning Only"}</option>
             </select>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {filteredAlerts.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 text-sm">
-                {uiStrings?.no_alerts || "No active alerts"}
+              <div className="p-12 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant opacity-30">
+                  {uiStrings?.no_alerts || "Zero Signal Interference"}
+                </p>
               </div>
             ) : (
               filteredAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className="p-4 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                  className="p-8 border-b border-outline hover:bg-surface-container-highest/50 transition-all cursor-pointer group"
                 >
-                  <div className="flex justify-between items-start mb-1">
+                  <div className="flex justify-between items-start mb-4">
                     <span
-                      className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                      className={`text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-lg border ${
                         alert.severity === "critical"
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
                           : alert.severity === "warning"
-                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : "bg-primary/10 text-primary border-primary/20"
                       }`}
                     >
                       {alert.severity}
                     </span>
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] font-mono text-on-surface-variant opacity-40 font-bold">
                       {format(new Date(alert.timestamp), "HH:mm:ss")}
                     </span>
                   </div>
-                  <p className="text-xs font-medium text-gray-900 dark:text-gray-200">
+                  <p className="text-xs font-bold text-white tracking-tight leading-relaxed mb-4 group-hover:text-primary transition-colors">
                     {alert.message}
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {uiStrings?.th_vehicle || "Vehicle"}:{" "}
-                    {alert.vehicle_id?.substring(0, 8)}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[14px] text-on-surface-variant">local_shipping</span>
+                    <p className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40">
+                      Asset ID: <span className="text-white font-mono">{alert.vehicle_id?.substring(0, 8).toUpperCase()}</span>
+                    </p>
+                  </div>
                 </div>
               ))
             )}
@@ -179,75 +186,75 @@ const CommandCenter: React.FC = () => {
           />
         </div>
 
-        {/* Right: Info Panel */}
+        {/* Right: Asset Intelligence HUD */}
         {selectedVehicle && (
-          <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 overflow-y-auto shrink-0 animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-lg font-bold dark:text-white">
-                  {selectedVehicle.registration_number || "---"}
-                </h2>
-                <span className="text-xs text-gray-500">
-                  {selectedVehicle.id}
-                </span>
-              </div>
-              <button
-                onClick={() => setSelectedVehicleId(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                &times;
-              </button>
+          <div className="w-[450px] border-l border-outline bg-surface-container border-outline shadow-2xl z-20 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+            <div className="p-10 border-b border-outline bg-surface-dim">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <nav className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm">satellite_alt</span>
+                            Asset Telemetry Stream
+                        </nav>
+                        <h2 className="text-3xl font-bold text-white tracking-tighter uppercase">{selectedVehicle.registration_number || "UNIDENTIFIED"}</h2>
+                    </div>
+                    <button
+                        onClick={() => setSelectedVehicleId(null)}
+                        className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-container-highest border border-outline text-white hover:bg-rose-500 transition-all active:scale-95 shadow-lg"
+                    >
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+                </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
               <DetailItem
-                icon={<TruckIcon className="w-4 h-4" />}
-                label={uiStrings?.panel_status || "Status"}
+                icon="radar"
+                label={uiStrings?.panel_status || "Logistics Status"}
                 value={
                   (selectedVehicle.current_location?.speed || 0) > 5
-                    ? uiStrings?.stat_moving || "Moving"
-                    : uiStrings?.stat_idle || "Idle"
+                    ? uiStrings?.stat_moving || "In Motion"
+                    : uiStrings?.stat_idle || "Static"
                 }
                 color={
                   (selectedVehicle.current_location?.speed || 0) > 5
-                    ? "text-green-500"
-                    : "text-yellow-500"
+                    ? "text-emerald-500"
+                    : "text-amber-500"
                 }
               />
               <DetailItem
-                icon={<ArrowPathIcon className="w-4 h-4" />}
-                label={uiStrings?.panel_speed || "Speed"}
-                value={`${Math.round(selectedVehicle.current_location?.speed || 0)} km/h`}
+                icon="speed"
+                label={uiStrings?.panel_speed || "Current Velocity"}
+                value={`${Math.round(selectedVehicle.current_location?.speed || 0)} KM/H`}
               />
               <DetailItem
-                icon={<ExclamationTriangleIcon className="w-4 h-4" />}
-                label={uiStrings?.panel_alerts || "Open Alerts"}
+                icon="report"
+                label={uiStrings?.panel_alerts || "Interference Alerts"}
                 value={alerts
                   .filter((a) => a.vehicle_id === selectedVehicle.id)
                   .length.toString()}
+                color={alerts.filter((a) => a.vehicle_id === selectedVehicle.id).length > 0 ? "text-rose-500" : "text-white"}
               />
-            </div>
 
-            <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-700">
-              <h3 className="text-sm font-semibold mb-4 dark:text-white text-gray-900">
-                {uiStrings?.label_dispatcher || "Dispatcher Actions"}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <ActionButton
-                  icon={<ChatBubbleLeftRightIcon className="w-4 h-4" />}
-                  label={uiStrings?.btn_message || "Message"}
-                />
-                <ActionButton
-                  icon={<ArrowPathIcon className="w-4 h-4" />}
-                  label={uiStrings?.btn_reroute || "Reroute"}
-                />
-                <ActionButton
-                  icon={
-                    <ExclamationTriangleIcon className="w-4 h-4 text-red-500" />
-                  }
-                  label={uiStrings?.btn_incident || "Log Incident"}
-                  color="hover:bg-red-50 dark:hover:bg-red-900/20"
-                />
+              <div className="pt-8 border-t border-outline">
+                <h3 className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-6">
+                  {uiStrings?.label_dispatcher || "Operational Directives"}
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <ActionButton
+                    icon="chat"
+                    label={uiStrings?.btn_message || "Comms"}
+                  />
+                  <ActionButton
+                    icon="route"
+                    label={uiStrings?.btn_reroute || "Tactical Reroute"}
+                  />
+                  <ActionButton
+                    icon="warning"
+                    label={uiStrings?.btn_incident || "Log Incident"}
+                    variant="danger"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -265,19 +272,19 @@ const StatCard = ({
 }: {
   label: string;
   value: number;
-  color: "blue" | "green" | "yellow";
+  color: "primary" | "emerald" | "amber";
 }) => {
   const colors = {
-    blue: "text-blue-600 bg-blue-50 dark:bg-blue-900/20",
-    green: "text-green-600 bg-green-50 dark:bg-green-900/20",
-    yellow: "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20",
+    primary: "text-primary bg-primary/10 border-primary/20",
+    emerald: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    amber: "text-amber-500 bg-amber-500/10 border-amber-500/20",
   };
   return (
     <div
-      className={`px-4 py-1.5 rounded-lg border border-transparent dark:border-gray-700 shadow-sm flex items-center gap-3 ${colors[color]}`}
+      className={`px-6 py-3 rounded-2xl border flex items-center gap-4 shadow-lg ${colors[color]}`}
     >
-      <span className="text-xs font-medium uppercase opacity-80">{label}</span>
-      <span className="text-lg font-bold">{value}</span>
+      <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{label}</span>
+      <span className="text-xl font-bold tracking-tighter font-mono">{value}</span>
     </div>
   );
 };
@@ -286,22 +293,22 @@ const DetailItem = ({
   icon,
   label,
   value,
-  color = "text-gray-900 dark:text-gray-200",
+  color = "text-white",
 }: {
-  icon: React.ReactNode;
+  icon: string;
   label: string;
   value: string;
   color?: string;
 }) => (
-  <div className="flex items-center gap-3">
-    <div className="w-8 h-8 rounded bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400">
-      {icon}
+  <div className="flex items-center gap-6 bg-surface-dim border border-outline p-6 rounded-[1.5rem] shadow-inner">
+    <div className="w-12 h-12 rounded-2xl bg-surface-container-highest flex items-center justify-center text-primary shadow-lg">
+      <span className="material-symbols-outlined text-2xl">{icon}</span>
     </div>
     <div>
-      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+      <p className="text-[9px] text-on-surface-variant uppercase font-black tracking-[0.2em] mb-1">
         {label}
       </p>
-      <p className={`text-sm font-semibold ${color}`}>{value}</p>
+      <p className={`text-sm font-bold tracking-tight uppercase ${color}`}>{value}</p>
     </div>
   </div>
 );
@@ -309,17 +316,19 @@ const DetailItem = ({
 const ActionButton = ({
   icon,
   label,
-  color = "hover:bg-gray-50 dark:hover:bg-gray-700/50",
+  variant = "standard",
 }: {
-  icon: React.ReactNode;
+  icon: string;
   label: string;
-  color?: string;
+  variant?: "standard" | "danger";
 }) => (
   <button
-    className={`flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-gray-100 dark:border-gray-700 transition-all ${color}`}
+    className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-outline transition-all active:scale-95 shadow-lg group ${
+        variant === 'danger' ? 'hover:bg-rose-500/20 hover:border-rose-500/40' : 'hover:bg-primary/20 hover:border-primary/40'
+    }`}
   >
-    {icon}
-    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
+    <span className={`material-symbols-outlined text-xl transition-transform group-hover:scale-110 ${variant === 'danger' ? 'text-rose-500' : 'text-primary'}`}>{icon}</span>
+    <span className="text-[9px] font-black text-white uppercase tracking-widest text-center">
       {label}
     </span>
   </button>

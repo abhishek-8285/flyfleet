@@ -33,7 +33,7 @@ type VehicleRecord struct {
 func (r *VehicleRepository) GetOrgVehicles(ctx context.Context, orgID uuid.UUID) ([]VehicleRecord, error) {
 	q := `SELECT id, registration, make, model, COALESCE(current_driver_id, '00000000-0000-0000-0000-000000000000')
 	      FROM vehicles
-	      WHERE org_id = $1 AND status = 'active'
+	      WHERE tenant_id = $1 AND status = 'active'
 	      ORDER BY registration`
 
 	rows, err := r.pool.Query(ctx, q, orgID)

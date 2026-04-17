@@ -27,13 +27,18 @@ func (a *governanceDataAggregator) AggregateData(ctx context.Context, userID, or
 
 	// 1. User Profile
 	var userProfile map[string]interface{}
-	err := a.db.QueryRow(ctx, "SELECT row_to_json(u) FROM (SELECT id, org_id, email, first_name, last_name, phone_number, role, created_at FROM users WHERE id = $1 AND org_id = $2) u", userID, orgID).Scan(&userProfile)
+	err := a.db.QueryRow(ctx, `SELECT row_to_json(u) FROM (
+		SELECT users.id, uo.org_id, email, first_name, last_name, phone_number, role, users.created_at 
+		FROM users 
+		JOIN user_organizations uo ON uo.user_id = users.id
+		WHERE users.id = $1 AND uo.org_id = $2
+	) u`, userID, orgID).Scan(&userProfile)
 	if err == nil {
 		data.UserProfile = userProfile
 	}
 
 	// 2. Vehicles (Related to user's organization)
-	data.Vehicles = a.queryAsList(ctx, "SELECT row_to_json(v) FROM vehicles v WHERE org_id = $1", orgID)
+	data.Vehicles = a.queryAsList(ctx, "SELECT row_to_json(v) FROM vehicles v WHERE tenant_id = $1", orgID)
 
 	// 3. Trip History
 	data.TripHistory = a.queryAsList(ctx, "SELECT row_to_json(t) FROM trips t WHERE org_id = $1 AND (driver_id = $2 OR EXISTS (SELECT 1 FROM drivers d WHERE d.id = t.driver_id AND d.user_id = $2))", orgID, userID)

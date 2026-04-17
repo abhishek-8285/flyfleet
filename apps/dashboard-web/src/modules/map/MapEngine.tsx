@@ -8,26 +8,40 @@ interface MapEngineProps {
   onMapLoad?: (map: maplibregl.Map) => void;
 }
 
+const DEFAULT_CENTER: [number, number] = [78.9629, 20.5937];
+const DEFAULT_ZOOM = 5;
+
 const MapEngine: React.FC<MapEngineProps> = ({
-  center = [78.9629, 20.5937],
-  zoom = 5,
+  center = DEFAULT_CENTER,
+  zoom = DEFAULT_ZOOM,
   onMapLoad,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const onMapLoadRef = useRef(onMapLoad);
+  
+  // Track previous prop values to only trigger flyTo/setZoom when the PROP actually changes
+  const prevCenterRef = useRef<[number, number]>(center);
+  const prevZoomRef = useRef<number>(zoom);
 
+  // Sync ref for callback
   useEffect(() => {
-    console.log('[MapEngine] Initializing, container:', !!mapContainer.current);
+    onMapLoadRef.current = onMapLoad;
+  }, [onMapLoad]);
+
+  // 1. Initialization Effect: Runs exactly once
+  useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    console.log('[MapEngine] Creating maplibre map...');
+    console.log('[MapEngine] Creating maplibre map instance...');
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: "/carto-proxy/gl/dark-matter-gl-style/style.json",
       transformRequest: (url) => {
-        if (url.startsWith("https://basemaps.cartocdn.com")) {
+        if (url.includes("basemaps.cartocdn.com")) {
+          const proxiedUrl = url.replace(/^https:\/\/(tiles\.)?basemaps\.cartocdn\.com/, "/carto-proxy");
           return {
-            url: url.replace("https://basemaps.cartocdn.com", "/carto-proxy"),
+            url: proxiedUrl,
           };
         }
       },
@@ -43,8 +57,8 @@ const MapEngine: React.FC<MapEngineProps> = ({
 
     map.current.on("load", () => {
       console.log('[MapEngine] Map loaded successfully!');
-      if (onMapLoad && map.current) {
-        onMapLoad(map.current);
+      if (onMapLoadRef.current && map.current) {
+        onMapLoadRef.current(map.current);
       }
     });
     
@@ -54,16 +68,42 @@ const MapEngine: React.FC<MapEngineProps> = ({
 
     return () => {
       if (map.current) {
+        console.log('[MapEngine] Cleaning up map instance...');
         map.current.remove();
         map.current = null;
       }
     };
-  }, [center, zoom, onMapLoad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 2. Camera Update Effect: Synchronize only on EXPLICIT prop changes
+  useEffect(() => {
+    if (!map.current) return;
+    
+    const [prevLng, prevLat] = prevCenterRef.current;
+    const [nextLng, nextLat] = center;
+
+    // Only update if the prop's VALUE changed significantly compared to the LAST prop value
+    if (prevLng !== nextLng || prevLat !== nextLat) {
+      console.log('[MapEngine] Explicit center update detected, moving camera...');
+      map.current.flyTo({ center: center, duration: 1000 });
+      prevCenterRef.current = center;
+    }
+  }, [center]);
+
+  useEffect(() => {
+    if (!map.current) return;
+    
+    if (prevZoomRef.current !== zoom) {
+      console.log('[MapEngine] Explicit zoom update detected:', zoom);
+      map.current.setZoom(zoom);
+      prevZoomRef.current = zoom;
+    }
+  }, [zoom]);
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden">
       <div ref={mapContainer} className="absolute inset-0 w-full h-full" />
-      {/* Map Overlays can be added here */}
     </div>
   );
 };

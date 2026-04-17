@@ -32,10 +32,12 @@ const Drivers: React.FC = () => {
       setLoading(true);
       try {
         const data = await api.getDrivers();
-        const list = (data?.drivers ||
-          data?.data ||
-          data?.items ||
-          data) as Driver[];
+        // Handle nested response format: { data: { drivers: [...], total: n } }
+        const list = (data?.data?.drivers || 
+                      data?.drivers ||
+                      data?.data ||
+                      data?.items ||
+                      data) as Driver[];
         setDrivers(Array.isArray(list) ? list : []);
       } catch (error) {
         console.error("Failed to load drivers", error);
@@ -91,7 +93,7 @@ const Drivers: React.FC = () => {
             className="w-full max-w-4xl max-h-[90vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <DriverPerformance driver={selectedDriver} score={safetyScore} />
+            <DriverPerformance driver={selectedDriver as any} analytics={safetyScore} />
           </div>
         </div>
       )}

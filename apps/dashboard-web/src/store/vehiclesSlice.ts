@@ -18,7 +18,8 @@ const initialState: VehiclesState = {
 
 export const fetchVehicles = createAsyncThunk('vehicles/fetchAll', async (params: any = {}) => {
   const response = await api.getVehicles(params);
-  return response.vehicles || response;
+  // Handle nested response format: { data: { vehicles: [...], total: n } }
+  return response?.data?.vehicles || response?.vehicles || response?.data || response;
 });
 
 export const fetchVehicle = createAsyncThunk('vehicles/fetchOne', async (id: string, { rejectWithValue }) => {

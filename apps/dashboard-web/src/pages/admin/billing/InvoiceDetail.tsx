@@ -29,7 +29,7 @@ const InvoiceDetail: React.FC = () => {
 
   const fetchInvoice = async () => {
     try {
-      const data = (await apiClient.get("/billing/invoices/" + id)) as any;
+      const data = await billingService.getInvoice(id!);
       setInvoice(data);
       setPaymentAmount(data?.balance_due || 0);
     } catch (error) {
@@ -269,19 +269,21 @@ const InvoiceDetail: React.FC = () => {
                     <div className="flex justify-between items-center text-gray-400">
                       <span>{uiStrings?.invoice_subtotal || "Subtotal"}</span>
                       <span className="font-mono">
-                        ${invoice?.subtotal?.toFixed(2)}
+                        {invoice.currency === 'INR' ? '₹' : '$'}{invoice?.subtotal?.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-gray-400">
-                      <span>{uiStrings?.invoice_tax || "Tax"} (0%)</span>
-                      <span className="font-mono">$0.00</span>
+                      <span>{uiStrings?.invoice_tax || "Tax"}</span>
+                      <span className="font-mono">
+                        {invoice.currency === 'INR' ? '₹' : '$'}{invoice?.tax_amount?.toLocaleString() || '0.00'}
+                      </span>
                     </div>
                     <div className="pt-4 border-t border-white/10 flex justify-between items-center">
                       <span className="text-white font-bold">
                         {uiStrings?.invoice_total || "Total"}
                       </span>
                       <span className="text-white text-2xl font-black font-mono">
-                        ${invoice?.total?.toFixed(2)}
+                        {invoice.currency === 'INR' ? '₹' : '$'}{invoice?.total_amount?.toLocaleString()}
                       </span>
                     </div>
                   </div>

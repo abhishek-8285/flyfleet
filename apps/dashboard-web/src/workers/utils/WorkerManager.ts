@@ -25,13 +25,25 @@ export class WorkerManager {
     this.worker = this.options.createWorker();
 
     this.worker.onmessage = (e) => {
+      if (e.data?.type === "WORKER_CRASH_DIAGNOSTIC") {
+        console.error(
+          `[WorkerManager] Diagnostic from ${this.options.name}:`,
+          e.data.payload,
+        );
+        return;
+      }
       if (this.options.onMessage) {
         this.options.onMessage(e);
       }
     };
 
-    this.worker.onerror = (err) => {
-      console.error(`[WorkerManager] Error in ${this.options.name}:`, err);
+    this.worker.onerror = (err: ErrorEvent | any) => {
+      console.error(`[WorkerManager] Error in ${this.options.name}:`, {
+        message: err.message,
+        filename: err.filename,
+        lineno: err.lineno,
+        error: err.error,
+      });
       this.handleCrash();
     };
 
@@ -43,7 +55,17 @@ export class WorkerManager {
     this.flushQueue();
   }
 
+  private lastRestart: number = 0;
   private handleCrash() {
+    const now = Date.now();
+    if (now - this.lastRestart < 2000) {
+      console.error(
+        `[WorkerManager] ${this.options.name} is crashing too frequently. Waiting...`,
+      );
+      return;
+    }
+    this.lastRestart = now;
+
     console.warn(
       `[WorkerManager] Worker ${this.options.name} crashed. Restarting...`,
     );

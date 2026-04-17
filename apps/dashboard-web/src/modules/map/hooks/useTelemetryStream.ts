@@ -146,7 +146,7 @@ export const useTelemetryStream = () => {
       ];
 
       workers.forEach(({ ref, name }) => {
-        if (now - heartbeats[name] > 5000) {
+        if (now - heartbeats[name] > 15000) {
           console.warn(`[WorkerSupervisor] ${name} worker hung.`);
         }
         ref.current?.postMessage({ type: "PING" });
@@ -218,6 +218,7 @@ export const useTelemetryStream = () => {
       const { type, payload } = e.data;
       if (type === "PONG") {
         heartbeats.ingestion = Date.now();
+        window.dispatchEvent(new CustomEvent("INGESTION_PONG"));
         return;
       }
       if (type === "INGESTION_METRICS") {
@@ -229,6 +230,7 @@ export const useTelemetryStream = () => {
       const { type, payload } = e.data;
       if (type === "PONG") {
         heartbeats.spatial = Date.now();
+        window.dispatchEvent(new CustomEvent("SPATIAL_PONG"));
         return;
       }
       if (type === "SYNC_H3_SUBSCRIPTIONS") {

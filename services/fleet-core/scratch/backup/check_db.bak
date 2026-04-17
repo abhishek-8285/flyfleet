@@ -1,0 +1,50 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/jackc/pgx/v5"
+)
+
+func main() {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		fmt.Println("DATABASE_URL not set")
+		return
+	}
+
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, dbURL)
+	if err != nil {
+		fmt.Printf("Unable to connect to database: %v\n", err)
+		return
+	}
+	defer conn.Close(ctx)
+
+	var count int
+	err = conn.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&count)
+	if err != nil {
+		fmt.Printf("QueryRow failed: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Total vehicles: %d\n", count)
+
+	var tenantCount int
+	err = conn.QueryRow(ctx, "SELECT COUNT(DISTINCT tenant_id) FROM vehicles").Scan(&tenantCount)
+	if err != nil {
+		fmt.Printf("QueryRow tenant failed: %v\n", err)
+		return
+	}
+	fmt.Printf("Distinct tenant_ids: %d\n", tenantCount)
+
+	rows, _ := conn.Query(ctx, "SELECT id, tenant_id, registration_number FROM vehicles LIMIT 5")
+	fmt.Println("Sample vehicles:")
+	for rows.Next() {
+		var id, tid, reg string
+		rows.Scan(&id, &tid, &reg)
+		fmt.Printf("- %s (Tenant: %s, Reg: %s)\n", id, tid, reg)
+	}
+}

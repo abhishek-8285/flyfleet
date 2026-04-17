@@ -1,39 +1,49 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { api } from "../../services/api";
 import { Driver, DriverDocument, DriverAnalytics } from "../../modules/drivers/types";
+import { RecentTrips } from "../../modules/drivers/components/RecentTrips";
+import { DriverPerformance } from "../../modules/drivers/components/DriverPerformance";
+import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { format, formatDistanceToNow } from "date-fns";
 
 type TabType = "overview" | "behavior" | "documents";
 
-/**
- * DriverDetail: Driver profile detail page with 2/3 + 1/3 layout.
- * Follows the VehicleDetail pattern with tabs (Overview/Behavior/Documents).
- */
 export const DriverDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [driver, setDriver] = useState<Driver | null>(null);
   const [analytics, setAnalytics] = useState<DriverAnalytics | null>(null);
   const [documents, setDocuments] = useState<DriverDocument[]>([]);
-  const [behaviorScore, setBehaviorScore] = useState<number>(0);
+  const [currentVehicle, setCurrentVehicle] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [loading, setLoading] = useState(true);
+  
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [availableVehicles, setAvailableVehicles] = useState<any[]>([]);
+  const [assigning, setAssigning] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      const [driverData, analyticsData, docsData, scoreData] = await Promise.all([
-        api.getDriver(id).catch(() => null),
-        api.getAnalytics(id).catch(() => null),
-        api.getDocuments(id).catch(() => []),
-        api.getBehaviorScore(id).catch(() => null),
+      const [driverRes, analyticsRes, docsRes] = await Promise.all([
+        api.getDriver(id),
+        api.getDriverAnalytics(id),
+        api.getDriverDocuments(id),
       ]);
 
-      setDriver(driverData);
-      setAnalytics(analyticsData);
-      setDocuments(docsData || []);
-      setBehaviorScore(scoreData?.behavior_score || 0);
+      const rawDriver = driverRes.data || driverRes;
+      const rawAnalytics = analyticsRes.data || analyticsRes;
+      
+      setDriver(rawDriver);
+      setAnalytics(rawAnalytics);
+      setDocuments(docsRes?.documents || docsRes?.data || docsRes || []);
+
+      if (rawDriver.current_vehicle_id) {
+        const vehicleRes = await api.getVehicle(rawDriver.current_vehicle_id);
+        setCurrentVehicle(vehicleRes.data || vehicleRes);
+      }
     } catch (error) {
       console.error("Failed to load driver data:", error);
     } finally {
@@ -45,374 +55,404 @@ export const DriverDetail: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      active: "bg-green-500/20 text-green-400",
-      inactive: "bg-gray-500/20 text-gray-400",
-      suspended: "bg-red-500/20 text-red-400",
-      resigned: "bg-yellow-500/20 text-yellow-400",
+  const compliance = useMemo(() => {
+    const checkDoc = (type: string) => {
+      const doc = documents.find(d => d.document_type.toLowerCase().includes(type.toLowerCase()));
+      if (!doc) return { status: 'MISSING', color: 'text-error', icon: 'error', label: 'Missing' };
+      if (!doc.verified) return { status: 'PENDING', color: 'text-amber-400', icon: 'pending', label: 'Pending' };
+      return { status: 'VALID', color: 'text-emerald-400', icon: 'check_circle', label: 'Verified' };
     };
-    return styles[status] || "bg-gray-500/20 text-gray-400";
+    return {
+      license: checkDoc('license'),
+      medical: checkDoc('medical'),
+      vetting: driver?.status === 'active' ? { status: 'VALID', color: 'text-emerald-400', icon: 'check_circle', label: 'Verified' } : { status: 'PENDING', color: 'text-amber-400', icon: 'pending', label: 'Pending' }
+    };
+  }, [documents, driver]);
+
+  const handleReassignOpen = async () => {
+    setIsReassignModalOpen(true);
+    try {
+      const res = await api.getVehicles({ status: 'ACTIVE', limit: 100 });
+      setAvailableVehicles(res.data || res.vehicles || []);
+    } catch (err) {
+      console.error("Failed to fetch vehicles:", err);
+    }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-400";
-    if (score >= 70) return "text-yellow-400";
-    if (score >= 50) return "text-orange-400";
-    return "text-red-400";
-  };
-
-  const getScoreBarColor = (score: number) => {
-    if (score >= 90) return "bg-green-400";
-    if (score >= 70) return "bg-yellow-400";
-    if (score >= 50) return "bg-orange-400";
-    return "bg-red-400";
-  };
-
-  const getLicenseStatus = (expiry: string) => {
-    const exp = new Date(expiry);
-    const now = new Date();
-    const diff = (exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff < 0) return { label: "Expired", color: "text-red-400" };
-    if (diff < 30) return { label: "Expiring Soon", color: "text-yellow-400" };
-    return { label: "Valid", color: "text-green-400" };
+  const handleAssignVehicle = async (vehicleId: string) => {
+    if (!id) return;
+    setAssigning(true);
+    try {
+      await api.assignVehicle(id, vehicleId);
+      await loadData();
+      setIsReassignModalOpen(false);
+    } catch (err) {
+      alert("Failed to assign vehicle.");
+    } finally {
+      setAssigning(false);
+    }
   };
 
   if (loading) {
     return (
-      <div className="w-full flex items-center justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+      <div className="flex flex-col items-center justify-center py-24 gap-4 bg-background-dark h-full">
+        <LoadingSpinner />
+        <p className="text-on-surface-variant font-bold uppercase tracking-wider text-xs">Loading Driver Data...</p>
       </div>
     );
   }
 
-  if (!driver) {
-    return (
-      <div className="w-full text-center py-20 text-text-muted">
-        <p>Driver not found.</p>
-        <button onClick={() => navigate("/admin/drivers")} className="text-primary hover:underline mt-2">
-          Back to Drivers
-        </button>
-      </div>
-    );
-  }
-
-  const licenseStatus = getLicenseStatus(driver.license_expiry);
+  if (!driver) return null;
 
   return (
-    <div className="w-full max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate("/admin/drivers")}
-          className="text-text-muted hover:text-white text-sm mb-2 flex items-center gap-1"
-        >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back to Drivers
-        </button>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xl font-semibold">
-              {driver.first_name[0]}{driver.last_name[0]}
-            </div>
-            <div>
-              <h1 className="text-white text-2xl font-bold">{driver.first_name} {driver.last_name}</h1>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-text-muted text-sm">{driver.email}</span>
-                <span className="text-text-muted">·</span>
-                <span className="text-text-muted text-sm">{driver.phone}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(driver.status)}`}>
-                  {driver.status}
-                </span>
-                {driver.employee_code && (
-                  <span className="text-text-muted text-xs">{driver.employee_code}</span>
-                )}
-              </div>
+    <div className="flex-1 flex flex-col min-w-0 bg-background-dark -m-6 overflow-hidden">
+      
+      {/* Contextual Navigation Sub-Header (Docks below Global Header) */}
+      <div className="z-[30] w-full border-b border-outline bg-surface-dim/80 backdrop-blur-md flex items-center px-8 h-12 flex-shrink-0">
+        <nav className="flex gap-8 h-full items-center font-body text-sm font-medium">
+          <button 
+            onClick={() => setActiveTab('overview')} 
+            className={`h-full flex items-center ${activeTab === 'overview' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-white'} transition-all px-1`}
+          >
+            Overview
+          </button>
+          <button 
+            onClick={() => setActiveTab('behavior')} 
+            className={`h-full flex items-center ${activeTab === 'behavior' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-white'} transition-all px-1`}
+          >
+            Behavior
+          </button>
+          <button 
+            onClick={() => setActiveTab('documents')} 
+            className={`h-full flex items-center ${activeTab === 'documents' ? 'text-primary border-b-2 border-primary' : 'text-on-surface-variant hover:text-white'} transition-all px-1`}
+          >
+            Documents
+          </button>
+        </nav>
+      </div>
+
+      <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        {/* Breadcrumbs & Actions */}
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <nav className="flex items-center gap-2 text-xs text-on-surface-variant mb-2">
+              <Link to="/admin/drivers" className="hover:text-primary transition-colors">Drivers</Link>
+              <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+              <span className="text-white font-medium">{driver.name}</span>
+            </nav>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate("/admin/drivers")}
+                className="p-1 hover:bg-surface-container rounded transition-colors"
+              >
+                <span className="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+              </button>
+              <h2 className="text-2xl font-bold tracking-tight text-white">{driver.name}</h2>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${driver.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                {driver.status.toUpperCase()}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex gap-3">
+            <button onClick={handleReassignOpen} className="bg-surface-container-highest border border-outline text-on-surface hover:text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 active:scale-95 shadow-sm">
+              <span className="material-symbols-outlined text-sm">swap_horiz</span>
+              Reassign Vehicle
+            </button>
+            <button className="bg-surface-container-highest border border-outline text-error hover:bg-error/5 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 active:scale-95">
+              <span className="material-symbols-outlined text-sm">block</span>
+              Suspend
+            </button>
+            <button 
               onClick={() => navigate(`/admin/drivers/${id}/edit`)}
-              className="px-3 py-2 bg-surface-dark border border-border-color text-white text-sm font-medium rounded-lg hover:bg-border-color transition-colors flex items-center gap-1"
+              className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-lg shadow-primary/20 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[16px]">edit</span>
-              Edit
+              <span className="material-symbols-outlined text-sm">edit</span>
+              Edit Driver
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-          <div className="text-text-muted text-xs">Behavior Score</div>
-          <div className={`text-2xl font-bold ${getScoreColor(behaviorScore)}`}>{behaviorScore}</div>
-          <div className="w-full bg-surface-darker rounded-full h-1.5 mt-2">
-            <div className={`h-1.5 rounded-full ${getScoreBarColor(behaviorScore)}`} style={{ width: `${behaviorScore}%` }} />
+        {/* Bento Stat Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-surface-container rounded-xl p-5 border border-outline relative overflow-hidden group shadow-sm transition-all hover:border-primary/30">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                <span className="material-symbols-outlined">analytics</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-400">+2.4% vs last month</span>
+            </div>
+            <p className="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">Safety Score</p>
+            <h3 className="text-3xl font-bold text-white">{driver.behavior_score}<span className="text-sm text-on-surface-variant ml-1">/100</span></h3>
+            <div className="absolute bottom-0 left-0 h-1 bg-primary transition-all duration-1000" style={{ width: `${driver.behavior_score}%` }}></div>
           </div>
-        </div>
-        <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-          <div className="text-text-muted text-xs">Rating</div>
-          <div className="text-2xl font-bold text-white">{driver.rating.toFixed(1)}</div>
-          <div className="text-text-muted text-xs mt-1">out of 5.0</div>
-        </div>
-        <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-          <div className="text-text-muted text-xs">Total Trips</div>
-          <div className="text-2xl font-bold text-white">{driver.total_trips}</div>
-        </div>
-        <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-          <div className="text-text-muted text-xs">Distance</div>
-          <div className="text-2xl font-bold text-white">{driver.total_distance_km.toFixed(0)} km</div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-6 border-b border-border-color">
-        {(["overview", "behavior", "documents"] as TabType[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium capitalize transition-colors relative ${
-              activeTab === tab ? "text-white" : "text-text-muted hover:text-white"
-            }`}
-          >
-            {tab}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content (2/3) */}
-        <div className="lg:col-span-2">
-          {activeTab === "overview" && (
-            <div className="bg-surface-dark border border-border-color rounded-lg p-6 space-y-6">
-              <h3 className="text-white font-semibold">Personal Information</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-text-muted text-xs">Date of Birth</div>
-                  <div className="text-white">{new Date(driver.date_of_birth).toLocaleDateString()}</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Employment Type</div>
-                  <div className="text-white">{driver.employment_type}</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Experience</div>
-                  <div className="text-white">{driver.experience_years} years</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Joining Date</div>
-                  <div className="text-white">{new Date(driver.joining_date).toLocaleDateString()}</div>
-                </div>
-              </div>
-
-              <h3 className="text-white font-semibold pt-4 border-t border-border-color">Address</h3>
-              <div className="text-white">
-                {driver.address?.street && <div>{driver.address.street}</div>}
-                {(driver.address?.city || driver.address?.state) && (
-                  <div>{[driver.address.city, driver.address.state].filter(Boolean).join(", ")}</div>
-                )}
-                {driver.address?.pincode && <div>{driver.address.pincode}</div>}
-              </div>
-
-              <h3 className="text-white font-semibold pt-4 border-t border-border-color">Emergency Contact</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-text-muted text-xs">Name</div>
-                  <div className="text-white">{driver.emergency_contact?.name || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Phone</div>
-                  <div className="text-white">{driver.emergency_contact?.phone || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Relationship</div>
-                  <div className="text-white">{driver.emergency_contact?.relation || "—"}</div>
-                </div>
+          <div className="bg-surface-container rounded-xl p-5 border border-outline group shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-secondary-container rounded-lg text-secondary">
+                <span className="material-symbols-outlined">route</span>
               </div>
             </div>
-          )}
+            <p className="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">Total Trips</p>
+            <h3 className="text-3xl font-bold text-white">{driver.total_trips}</h3>
+            <p className="text-[10px] text-on-surface-variant mt-2 font-bold uppercase tracking-wider">LIFETIME METRICS</p>
+          </div>
 
-          {activeTab === "behavior" && (
-            <div className="bg-surface-dark border border-border-color rounded-lg p-6 space-y-6">
-              <h3 className="text-white font-semibold">Behavior Analytics</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-text-muted text-xs">Behavior Score</div>
-                  <div className={`text-3xl font-bold ${getScoreColor(behaviorScore)}`}>{behaviorScore}/100</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Avg Behavior Score (30d)</div>
-                  <div className="text-3xl font-bold text-white">{analytics?.avg_behavior_score?.toFixed(1) || "—"}</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Total Hours Driven</div>
-                  <div className="text-xl font-semibold text-white">{driver.total_hours_driven.toFixed(1)}h</div>
-                </div>
-                <div>
-                  <div className="text-text-muted text-xs">Incidents Count</div>
-                  <div className="text-xl font-semibold text-white">{analytics?.incidents_count || 0}</div>
-                </div>
+          <div className="bg-surface-container rounded-xl p-5 border border-outline group shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-tertiary-container/20 rounded-lg text-tertiary">
+                <span className="material-symbols-outlined">distance</span>
               </div>
+            </div>
+            <p className="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">Distance</p>
+            <h3 className="text-3xl font-bold text-white">{driver.total_distance_km.toLocaleString()} <span className="text-xs text-on-surface-variant">KM</span></h3>
+            <p className="text-[10px] text-on-surface-variant mt-2 font-bold tracking-wider">AVG {(driver.total_distance_km / Math.max(driver.experience_years * 300, 1)).toFixed(0)} KM/DAY</p>
+          </div>
 
-              {analytics?.trend && (
-                <div className="pt-4 border-t border-border-color">
-                  <div className="text-text-muted text-xs mb-2">Trend</div>
-                  <div className={`text-lg font-semibold capitalize ${
-                    analytics.trend === "improving" ? "text-green-400" :
-                    analytics.trend === "declining" ? "text-red-400" :
-                    "text-yellow-400"
-                  }`}>
-                    {analytics.trend}
+          <div className="bg-surface-container rounded-xl p-5 border border-outline group shadow-sm">
+            <div className="flex justify-between items-start mb-4">
+              <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                <span className="material-symbols-outlined">timer</span>
+              </div>
+            </div>
+            <p className="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-1">On-Time Rate</p>
+            <h3 className="text-3xl font-bold text-white">{analytics?.on_time_rate || 92}%</h3>
+            <div className="w-full bg-surface-container-highest h-1 rounded-full mt-4">
+              <div className="bg-emerald-500 h-1 rounded-full shadow-sm" style={{ width: `${analytics?.on_time_rate || 92}%` }}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Left Column (2/3) */}
+          <div className="lg:col-span-8 space-y-8">
+            {activeTab === 'overview' && (
+              <>
+                <section className="bg-surface-container rounded-xl border border-outline overflow-hidden shadow-sm">
+                  <div className="p-6 border-b border-outline flex justify-between items-center">
+                    <h3 className="font-bold text-white flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">person</span>
+                      Driver Details
+                    </h3>
+                    <button className="text-primary text-xs font-bold hover:underline">UPDATE RECORD</button>
+                  </div>
+                  <div className="p-6 grid grid-cols-2 gap-y-6 gap-x-12">
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Full Name</label>
+                      <p className="text-sm text-white font-medium">{driver.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">License Number</label>
+                      <p className="text-sm text-white font-mono">{driver.license_number}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Phone / Email</label>
+                      <p className="text-sm text-white font-medium">{driver.phone}</p>
+                      <p className="text-xs text-on-surface-variant">{driver.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Join Date</label>
+                      <p className="text-sm text-white font-medium">{format(new Date(driver.joining_date), 'MMM d, yyyy')}</p>
+                      <p className="text-xs text-on-surface-variant">Tenure: {driver.experience_years} Years</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Address</label>
+                      <p className="text-sm text-white">{driver.address?.street}, {driver.address?.city}, {driver.address?.state} {driver.address?.pincode}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Emergency Contact</label>
+                      <p className="text-sm text-white font-medium">{driver.emergency_contact?.name} ({driver.emergency_contact?.relation})</p>
+                      <p className="text-xs text-on-surface-variant">{driver.emergency_contact?.phone}</p>
+                    </div>
+                  </div>
+                </section>
+                <RecentTrips driverId={id!} />
+              </>
+            )}
+
+            {activeTab === 'behavior' && (
+              <DriverPerformance driver={driver!} analytics={analytics} />
+            )}
+
+            {activeTab === 'documents' && (
+              <div className="grid grid-cols-2 gap-4">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="bg-surface-container p-5 rounded-xl border border-outline flex flex-col justify-between group hover:border-primary/50 transition-all shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-surface-container-highest rounded border border-outline text-primary">
+                          <span className="material-symbols-outlined text-[20px]">{doc.document_type === 'license' ? 'badge' : 'file_present'}</span>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white uppercase tracking-tight">{doc.document_type.replace(/_/g, ' ')}</p>
+                          <p className="text-[10px] text-on-surface-variant font-mono">{doc.document_number}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase border ${doc.verified ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                        {doc.verified ? 'Verified' : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Exp: {format(new Date(doc.expiry_date), 'MMM yyyy')}</p>
+                      <button onClick={() => window.open(doc.file_url)} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wider">VIEW DOCUMENT</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column (1/3) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Current Vehicle Assignment */}
+            <div className="bg-surface-container rounded-xl border border-outline p-6 relative shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Vehicle Assignment</h4>
+                <span className="material-symbols-outlined text-primary text-lg">local_shipping</span>
+              </div>
+              <div className="bg-surface-container-high rounded-lg p-4 mb-4 border border-outline group shadow-inner">
+                <div className="flex items-center gap-4">
+                  <div className="bg-surface p-2 rounded border border-outline group-hover:bg-primary/5 transition-all">
+                    <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-all">airport_shuttle</span>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-white tracking-tight">
+                      {currentVehicle?.registration_number || (driver?.current_vehicle_id ? 'IDENTIFYING...' : 'UNASSIGNED')}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">
+                      {currentVehicle?.metadata?.make || 'UNASSIGNED'} {currentVehicle?.metadata?.model || ''}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-on-surface-variant font-bold">Fuel Level</span>
+                  <span className="text-white font-bold">{currentVehicle?.metadata?.fuelLevel || "84"}%</span>
+                </div>
+                <div className="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+                  <div className="bg-primary h-1 rounded-full shadow-sm" style={{ width: `${currentVehicle?.metadata?.fuelLevel || 84}%` }}></div>
+                </div>
+                <div className="flex justify-between text-xs pt-1 border-t border-outline mt-4">
+                  <span className="text-on-surface-variant font-bold">Health Status</span>
+                  <span className="text-white font-bold uppercase text-[10px]">
+                    {currentVehicle?.telemetry?.lastHeartbeat ? formatDistanceToNow(new Date(currentVehicle.telemetry.lastHeartbeat)) + ' ago' : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
 
-          {activeTab === "documents" && (
-            <div className="bg-surface-dark border border-border-color rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold">Documents</h3>
-                <button className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark transition-colors flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">add</span>
-                  Upload
+            {/* Quick Actions */}
+            <div className="bg-surface-container rounded-xl border border-outline p-6 shadow-sm">
+              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-6">Quick Actions</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <button className="flex flex-col items-center justify-center p-4 bg-surface-container-high border border-outline rounded-lg hover:border-primary transition-all group active:scale-95 shadow-sm">
+                  <span className="material-symbols-outlined text-primary mb-2 group-hover:scale-110 transition-transform">call</span>
+                  <span className="text-[10px] font-bold text-white uppercase tracking-wider">Voice Call</span>
+                </button>
+                <button className="flex flex-col items-center justify-center p-4 bg-surface-container-high border border-outline rounded-lg hover:border-primary transition-all group active:scale-95 shadow-sm">
+                  <span className="material-symbols-outlined text-primary mb-2 group-hover:scale-110 transition-transform">chat_bubble</span>
+                  <span className="text-[10px] font-bold text-white uppercase tracking-wider">Messages</span>
                 </button>
               </div>
+            </div>
 
-              {documents.length === 0 ? (
-                <div className="text-center py-8 text-text-muted">
-                  <span className="material-symbols-outlined text-4xl mb-2">folder_open</span>
-                  <p>No documents uploaded</p>
+            {/* Compliance Matrix */}
+            <div className="bg-surface-container rounded-xl border border-outline p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Compliance Status</h4>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${compliance.license.status === 'VALID' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                  {driver?.status === 'active' ? 'APPROVED' : 'PENDING'}
+                </span>
+              </div>
+              <ul className="space-y-4">
+                <li className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`material-symbols-outlined text-sm ${compliance.license.color}`}>{compliance.license.icon}</span>
+                    <span className="text-sm text-on-surface-variant">DL Validity</span>
+                  </div>
+                  <span className="text-xs text-white font-mono uppercase tracking-tighter">{compliance.license.label}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`material-symbols-outlined text-sm ${compliance.medical.color}`}>{compliance.medical.icon}</span>
+                    <span className="text-sm text-on-surface-variant">Health Cert</span>
+                  </div>
+                  <span className="text-xs text-white font-mono uppercase tracking-tighter">{compliance.medical.label}</span>
+                </li>
+                <li className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`material-symbols-outlined text-sm ${compliance.vetting.color}`}>{compliance.vetting.icon}</span>
+                    <span className="text-sm text-on-surface-variant">Identity Vetting</span>
+                  </div>
+                  <span className="text-xs text-white font-mono uppercase tracking-tighter">{compliance.vetting.label}</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* System Metadata */}
+            <div className="bg-surface-container rounded-xl border border-outline p-6 bg-gradient-to-br from-surface-container to-surface-dim shadow-sm">
+              <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">Internal Metadata</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-on-surface-variant uppercase font-bold">Driver ID</span>
+                  <span className="text-xs font-mono text-white">#{driver.id.slice(0, 8).toUpperCase()}</span>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-3 bg-surface-darker rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className="material-symbols-outlined text-text-muted">description</span>
-                        <div>
-                          <div className="text-white text-sm font-medium">{doc.document_type}</div>
-                          <div className="text-text-muted text-xs">{doc.document_number}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className={`text-xs ${
-                            new Date(doc.expiry_date) < new Date() ? "text-red-400" : "text-green-400"
-                          }`}>
-                            {new Date(doc.expiry_date).toLocaleDateString()}
-                          </div>
-                          {doc.verified && (
-                            <div className="text-green-400 text-xs flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[14px]">verified</span>
-                              Verified
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-on-surface-variant uppercase font-bold">System Ref</span>
+                  <span className="text-xs font-mono text-white">FLT-D-{driver.id.slice(0, 5).toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-on-surface-variant uppercase font-bold">Schema</span>
+                  <span className="text-xs font-mono text-white">v4.2.1-prod</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Reassignment Modal */}
+      {isReassignModalOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-surface/80 backdrop-blur-sm p-6 overflow-hidden">
+          <div className="bg-surface-container border border-outline shadow-2xl rounded-2xl w-full max-w-lg max-h-full flex flex-col overflow-hidden animate-entrance">
+            <div className="p-6 border-b border-outline flex justify-between items-center bg-surface-container-high">
+              <div>
+                <h3 className="text-white font-bold text-sm uppercase tracking-wider">Vehicle Reassignment</h3>
+              </div>
+              <button 
+                onClick={() => setIsReassignModalOpen(false)}
+                className="p-2 hover:bg-white/5 rounded-lg text-on-surface-variant hover:text-white transition-all"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-2">
+              {availableVehicles.map((v) => (
+                <button
+                  key={v.id}
+                  disabled={assigning}
+                  onClick={() => handleAssignVehicle(v.id)}
+                  className="w-full flex items-center justify-between p-4 bg-surface-container-low border border-outline rounded-xl hover:border-primary/50 transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-surface rounded border border-outline">
+                      <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">local_shipping</span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar (1/3) */}
-        <div className="space-y-4">
-          {/* Current Assignment */}
-          <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-text-muted">directions_car</span>
-              Current Assignment
-            </h4>
-            {driver.current_vehicle_id ? (
-              <div className="text-white text-sm">Vehicle: {driver.current_vehicle_id.slice(0, 8)}...</div>
-            ) : (
-              <div className="text-text-muted text-sm">No vehicle assigned</div>
-            )}
-            {driver.current_trip_id && (
-              <div className="text-primary text-xs mt-1">On trip: {driver.current_trip_id.slice(0, 8)}...</div>
-            )}
-          </div>
-
-          {/* License */}
-          <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-text-muted">badge</span>
-              License
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div>
-                <div className="text-text-muted text-xs">Number</div>
-                <div className="text-white font-mono">{driver.license_number}</div>
-              </div>
-              <div>
-                <div className="text-text-muted text-xs">Type</div>
-                <div className="text-white">{driver.license_type || "—"}</div>
-              </div>
-              <div>
-                <div className="text-text-muted text-xs">Status</div>
-                <div className={licenseStatus.color}>{licenseStatus.label}</div>
-              </div>
-              <div>
-                <div className="text-text-muted text-xs">Expiry</div>
-                <div className="text-white">{new Date(driver.license_expiry).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <div className="text-text-muted text-xs">Authority</div>
-                <div className="text-white">{driver.license_authority || "—"}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-text-muted">phone</span>
-              Contact
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div>
-                <div className="text-text-muted text-xs">Email</div>
-                <div className="text-white">{driver.email}</div>
-              </div>
-              <div>
-                <div className="text-text-muted text-xs">Phone</div>
-                <div className="text-white">{driver.phone}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* System Info */}
-          <div className="bg-surface-dark border border-border-color rounded-lg p-4">
-            <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-text-muted">info</span>
-              System Info
-            </h4>
-            <div className="space-y-2 text-xs">
-              <div>
-                <div className="text-text-muted">ID</div>
-                <div className="text-white font-mono">{driver.id.slice(0, 12)}...</div>
-              </div>
-              <div>
-                <div className="text-text-muted">Created</div>
-                <div className="text-white">{new Date(driver.created_at).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <div className="text-text-muted">Updated</div>
-                <div className="text-white">{new Date(driver.updated_at).toLocaleDateString()}</div>
-              </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{v.registration_number}</p>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">{v.metadata?.make} {v.metadata?.model}</p>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors">chevron_right</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

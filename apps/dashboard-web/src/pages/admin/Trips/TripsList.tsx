@@ -1,11 +1,3 @@
-import {
-  ArrowDownTrayIcon,
-  ArrowPathIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PlusIcon,
-  TruckIcon,
-} from "@heroicons/react/24/outline";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { TripFilters, TripFilterState } from "../../../components/trips/TripFilters";
@@ -26,17 +18,17 @@ interface Trip {
 }
 
 const statusColors: Record<string, string> = {
-  scheduled: "border-primary/40 bg-primary/5",
-  in_progress: "border-warning/40 bg-warning/5",
-  completed: "border-success/40 bg-success/5",
-  cancelled: "border-danger/40 bg-danger/5",
+  scheduled: "border-primary/40 bg-primary/10",
+  in_progress: "border-amber-500/40 bg-amber-500/10",
+  completed: "border-emerald-500/40 bg-emerald-500/10",
+  cancelled: "border-rose-500/40 bg-rose-500/10",
 };
 
 const statusDot: Record<string, string> = {
   scheduled: "bg-primary",
-  in_progress: "bg-warning animate-pulse",
-  completed: "bg-success",
-  cancelled: "bg-danger",
+  in_progress: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]",
+  completed: "bg-emerald-500",
+  cancelled: "bg-rose-500",
 };
 
 const COLUMNS = [
@@ -138,21 +130,21 @@ export default function TripsList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-            <span>{uiStrings.fleet_management_label || "Fleet Management"}</span>
-            <ChevronRightIcon className="w-3 h-3" />
-            <span className="text-white">{uiStrings.trips_title || "Trips"}</span>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
+            <span>Fleet Operations</span>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Active Manifests</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">
-            {uiStrings.trip_list_title || "Trip Management"}
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            Dispatch Operations Log
           </h1>
         </div>
         <Link
           to="/admin/trips/add"
-          className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-medium rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
+          className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-[11px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-primary/20 active:scale-95"
         >
-          <PlusIcon className="w-4 h-4" />
-          {uiStrings.btn_add_trip || "Add Trip"}
+          <span className="material-symbols-outlined text-[18px]">add</span>
+          Create Manifest
         </Link>
       </div>
 
@@ -217,70 +209,72 @@ function BoardView({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-white font-semibold">Board View</h2>
-        <span className="text-xs text-text-muted">{totalCount} trips</span>
+      <div className="flex items-center justify-between mb-4 mt-4 px-2">
+        <h2 className="text-white text-xs font-bold uppercase tracking-widest">Dispatch Board</h2>
+        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded border border-outline">
+          {totalCount} Active Manifests
+        </span>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-text-muted">
-          <ArrowPathIcon className="w-6 h-6 animate-spin mr-2" />
-          Loading…
+        <div className="flex items-center justify-center py-20 text-on-surface-variant">
+          <span className="material-symbols-outlined animate-spin mr-3">refresh</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest">Initialising Board...</span>
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-2">
           {columns.map((col) => (
             <div
               key={col.key}
-              className="min-w-[260px] w-[260px] flex-shrink-0 flex flex-col"
+              className="min-w-[280px] w-[280px] flex-shrink-0 flex flex-col"
             >
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <span className="material-symbols-outlined text-text-muted text-[18px]">
+              <div className="flex items-center gap-2 mb-4 px-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
                   {col.icon}
                 </span>
-                <span className="text-sm font-semibold text-white">{col.label}</span>
-                <span className="bg-surface-dark border border-border-color text-text-muted text-xs px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[11px] font-black text-white uppercase tracking-wider">{col.label}</span>
+                <span className="bg-surface-container border border-outline text-on-surface-variant text-[10px] px-2 py-0.5 rounded font-black ml-auto">
                   {col.trips.length}
                 </span>
               </div>
 
               <div className="space-y-2">
                 {col.trips.length === 0 ? (
-                  <div className="text-center py-8 text-text-muted text-xs border border-dashed border-border-color rounded-lg">
-                    No trips
+                  <div className="text-center py-12 text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-dashed border-outline rounded-2xl bg-surface-container/10">
+                    No Manifests
                   </div>
                 ) : (
                   col.trips.map((trip) => (
                     <Link
                       key={trip.id}
                       to={`/admin/trips/${trip.id}`}
-                      className={`block bg-surface-dark border rounded-xl p-3 hover:border-primary/40 transition-colors ${
+                      className={`block bg-surface-container border border-outline rounded-2xl p-4 hover:border-primary transition-all shadow-xl shadow-black/5 group ${
                         statusColors[trip.status] || ""
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-primary text-sm font-semibold">
-                          {trip.trip_id}
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="font-mono text-white text-[11px] font-bold bg-black/20 px-2 py-0.5 rounded">
+                          #{trip.trip_id}
                         </span>
-                        <span className={`w-2 h-2 rounded-full ${statusDot[trip.status] || ""}`} />
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${statusDot[trip.status] || ""}`} />
+                        </div>
                       </div>
-                      <div className="text-xs text-text-muted mb-2 truncate">
-                        {trip.start_location} → {trip.end_location}
+                      <div className="text-[11px] font-bold text-white mb-3 line-clamp-2 leading-relaxed">
+                        {trip.start_location} 
+                        <span className="material-symbols-outlined text-[10px] mx-1 text-on-surface-variant">arrow_forward</span> 
+                        {trip.end_location}
                       </div>
-                      <div className="flex items-center justify-between text-[11px] text-text-muted">
-                        <span className="flex items-center gap-1">
-                          <TruckIcon className="w-3 h-3" />
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-on-surface-variant border-t border-outline/30 pt-3 mt-3 group-hover:border-primary/20 transition-colors">
+                        <span className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[14px]">local_shipping</span>
                           {trip.vehicle_id?.slice(0, 8)}…
                         </span>
-                        <span className="font-mono">{trip.distance?.toFixed(1) || "—"} km</span>
+                        <span className="font-mono">{trip.distance?.toFixed(1) || "—"} KM</span>
                       </div>
-                      {trip.customer_name && (
-                        <div className="text-[11px] text-text-muted mt-1 truncate">
-                          {trip.customer_name}
-                        </div>
-                      )}
-                      <div className="text-[11px] text-text-muted mt-1">
-                        {formatDate(trip.start_time)}
+                      <div className="flex items-center justify-between text-[9px] font-bold text-on-surface-variant/70 mt-3 uppercase tracking-wider">
+                        <span className="truncate max-w-[120px]">{trip.customer_name || "Internal Fleet"}</span>
+                        <span>{formatDate(trip.start_time)}</span>
                       </div>
                     </Link>
                   ))
@@ -319,57 +313,59 @@ function ListView({
   onKeywordChange: (v: string) => void;
 }) {
   return (
-    <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
+    <div className="bg-surface-container border border-outline rounded-3xl overflow-hidden shadow-2xl mt-8">
       {/* Table Header with Search */}
-      <div className="p-4 border-b border-border-color flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface-darker">
-        <div className="flex items-center gap-3">
-          <h3 className="text-white font-semibold">
-            {uiStrings.title_active_trips || "Dispatch Operations Log"}
+      <div className="p-5 border-b border-outline flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container/50">
+        <div className="flex items-center gap-4">
+          <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+            Operational Intelligence Log
           </h3>
-          <span className="bg-primary/20 text-primary text-xs px-2 py-0.5 rounded-full font-bold">
-            {trips.filter((t) => t.status === "in_progress").length} Live
+          <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest border border-emerald-500/20">
+            {trips.filter((t) => t.status === "in_progress").length} Live Tracking
           </span>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Simple keyword search */}
-          <div className="relative flex-1 sm:flex-none sm:min-w-[240px]">
-            <span className="material-symbols-outlined absolute left-2.5 top-2 text-text-muted text-sm">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Enhanced search integration */}
+          <div className="relative flex-1 sm:flex-none sm:min-w-[280px]">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">
               search
             </span>
             <input
               type="text"
               value={keyword}
               onChange={(e) => onKeywordChange(e.target.value)}
-              placeholder="Search trips…"
-              className="w-full bg-surface-dark border border-border-color text-white text-sm rounded-lg pl-8 pr-3 py-1.5 focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted"
+              placeholder="Filter by Manifest ID, Driver, or Route..."
+              className="w-full bg-surface-dim border border-outline text-white text-xs rounded-xl pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/50 shadow-inner font-bold tracking-tight"
             />
           </div>
-          <button onClick={onRefresh} className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
-            <ArrowPathIcon className="w-4 h-4" />
+          <button onClick={onRefresh} className="p-2.5 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-white border border-outline transition-all active:scale-95" title="Refresh Log">
+            <span className="material-symbols-outlined text-[20px]">refresh</span>
           </button>
-          <button className="p-1.5 hover:bg-border-color rounded text-text-muted hover:text-white">
-            <ArrowDownTrayIcon className="w-4 h-4" />
+          <button className="p-2.5 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-white border border-outline transition-all active:scale-95" title="Export Manifests">
+            <span className="material-symbols-outlined text-[20px]">download</span>
           </button>
         </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="border-b border-border-color text-xs text-text-muted uppercase bg-surface-darker">
+          <thead className="border-b border-outline text-[10px] text-on-surface-variant font-bold uppercase tracking-wider bg-surface-container/80 backdrop-blur-sm">
             <tr>
-              <th className="px-4 py-3 font-semibold">Trip ID</th>
-              <th className="px-4 py-3 font-semibold">Vehicle</th>
-              <th className="px-4 py-3 font-semibold">Route</th>
-              <th className="px-4 py-3 font-semibold">Start Time</th>
-              <th className="px-4 py-3 font-semibold">Distance</th>
-              <th className="px-4 py-3 font-semibold">Customer</th>
-              <th className="px-4 py-3 font-semibold text-right">Status</th>
+              <th className="px-6 py-4">Manifest ID</th>
+              <th className="px-6 py-4">Assigned Vehicle</th>
+              <th className="px-6 py-4">Route Path</th>
+              <th className="px-6 py-4">STD / ATD</th>
+              <th className="px-6 py-4">Distance</th>
+              <th className="px-6 py-4">Organizational Client</th>
+              <th className="px-6 py-4 text-right">Operational Status</th>
             </tr>
           </thead>
           <tbody className="text-sm">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">Loading…</td>
+                <td colSpan={7} className="px-6 py-12 text-center text-on-surface-variant">
+                   <span className="material-symbols-outlined animate-spin text-2xl">refresh</span>
+                </td>
               </tr>
             ) : trips.length === 0 ? (
               <tr>
@@ -379,32 +375,34 @@ function ListView({
               trips.map((trip) => (
                 <tr
                   key={trip.id}
-                  className="border-b border-border-color hover:bg-surface-darker/50 transition-colors"
+                  className="border-b border-outline/50 hover:bg-surface-container/40 transition-all group"
                 >
-                  <td className="px-4 py-3">
-                    <Link to={`/admin/trips/${trip.id}`} className="font-mono text-primary hover:underline">
-                      {trip.trip_id}
+                  <td className="px-6 py-4">
+                    <Link to={`/admin/trips/${trip.id}`} className="font-mono text-white font-bold bg-white/5 px-2 py-1 rounded hover:bg-primary/20 hover:text-primary transition-all">
+                      #{trip.trip_id}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-white flex items-center gap-2">
-                    <TruckIcon className="w-4 h-4 text-text-muted" />
-                    {trip.vehicle_id?.slice(0, 8)}…
+                  <td className="px-6 py-4 text-white font-bold tracking-tight">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-on-surface-variant text-lg">local_shipping</span>
+                      {trip.vehicle_id?.slice(0, 8)}…
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-text-muted max-w-[200px] truncate">
-                    {trip.start_location} → {trip.end_location}
+                  <td className="px-6 py-4 text-on-surface-variant font-bold text-xs max-w-[240px] truncate">
+                    {trip.start_location} <span className="text-white/20 mx-1">→</span> {trip.end_location}
                   </td>
-                  <td className="px-4 py-3 text-text-muted whitespace-nowrap">
+                  <td className="px-6 py-4 text-on-surface-variant font-bold text-xs whitespace-nowrap">
                     {formatDate(trip.start_time)}
                   </td>
-                  <td className="px-4 py-3 text-text-muted font-mono">
-                    {trip.distance?.toFixed(1) || "---"} km
+                  <td className="px-6 py-4 text-white font-mono font-bold text-xs">
+                    {trip.distance?.toFixed(1) || "---"} <span className="text-[9px] text-on-surface-variant uppercase ml-1">km</span>
                   </td>
-                  <td className="px-4 py-3 text-text-muted max-w-[140px] truncate">
-                    {trip.customer_name || "—"}
+                  <td className="px-6 py-4 text-on-surface-variant font-black uppercase text-[10px] tracking-widest max-w-[160px] truncate">
+                    {trip.customer_name || "Internal Fleet"}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-6 py-4 text-right">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border ${
+                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-outline shadow-sm ${
                         statusColors[trip.status] || statusColors.scheduled
                       }`}
                     >
@@ -419,26 +417,26 @@ function ListView({
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="p-3 border-t border-border-color bg-surface-darker flex items-center justify-between">
-        <span className="text-xs text-text-muted">
-          Showing {(page - 1) * 20 + 1} – {Math.min(page * 20, total)} of {total}
+      {/* Pagination Footer Area */}
+      <div className="p-4 border-t border-outline bg-surface-container/50 flex items-center justify-between">
+        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-dim px-3 py-1 rounded-full border border-outline">
+          Log Entires {(page - 1) * 20 + 1} – {Math.min(page * 20, total)} of {total} Manifests
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setPage((p: number) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="p-1 rounded text-text-muted hover:text-white hover:bg-border-color disabled:opacity-50"
+            className="p-2 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container border border-outline disabled:opacity-20 transition-all active:scale-95"
           >
-            <ChevronLeftIcon className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
-          <span className="px-2 py-1 bg-primary text-white text-xs font-bold rounded">{page}</span>
+          <span className="px-3 py-1.5 bg-primary text-white text-[11px] font-black rounded-xl shadow-lg shadow-primary/20 tracking-widest">{page}</span>
           <button
             onClick={() => setPage((p: number) => p + 1)}
             disabled={page * 20 >= total}
-            className="p-1 rounded text-text-muted hover:text-white hover:bg-border-color disabled:opacity-50"
+            className="p-2 rounded-xl text-on-surface-variant hover:text-white hover:bg-surface-container border border-outline disabled:opacity-20 transition-all active:scale-95"
           >
-            <ChevronRightIcon className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
           </button>
         </div>
       </div>

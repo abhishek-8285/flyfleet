@@ -1,377 +1,700 @@
 [WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
-2026-04-02T19:12:29.427Z	INFO	cmd/main.go:245	Configuration loaded	{"db_url": "postgres://fleet_user:fleet_password@localhost:5433/fleet_db?sslmode=disable", "port": "8084"}
-2026-04-02T19:12:29.562Z	INFO	messaging/nats.go:58	Connected to NATS with JetStream	{"url": "nats://localhost:4222"}
-2026-04-02T19:12:29.598Z	INFO	cache/redis.go:42	Connected to Redis cache	{"addr": "localhost:6379"}
-2026-04-02T19:12:29.605Z	WARN	cmd/main.go:665	Failed to start websocket gateway	{"error": "nats: jetstream not enabled"}
-2026-04-02T19:12:29.608Z	INFO	workers/governance_retention_worker.go:27	Starting Governance Retention Worker (Daily schedule)
-2026-04-02T19:12:29.608Z	INFO	workers/governance_expiry_worker.go:27	Starting Governance Expiry Worker
-2026-04-02T19:12:29.608Z	INFO	workers/governance_retention_worker.go:44	Running daily governance retention enforcement
-2026-04-02T19:12:29.614Z	INFO	workers/india_compliance_worker.go:31	IndiaComplianceWorker started
-2026-04-02T19:12:29.615Z	INFO	workers/india_compliance_worker.go:51	IndiaComplianceWorker: starting compliance scan
-2026-04-02T19:12:29.616Z	INFO	engine/geofence_engine.go:88	Starting geofence engine...
-2026-04-02T19:12:29.616Z	INFO	engine/geofence_engine.go:120	Geofence engine started	{"subject": "fleet.telemetry.gps"}
-2026-04-02T19:12:29.616Z	INFO	service/telemetry_worker.go:37	Starting telemetry worker
-2026-04-02T19:12:29.616Z	INFO	cmd/main.go:1576	Starting fleet-core-service	{"port": "8084"}
-2026-04-02T19:12:29.616Z	INFO	service/telemetry_worker.go:63	Subscribed to fleet.telemetry.gps
-2026-04-02T19:12:29.647Z	INFO	workers/india_compliance_worker.go:103	IndiaComplianceWorker: scan completed
-2026/04/02 19:12:39 [localhost/vzFX7gyeo3-000001] "GET http://localhost:8084/healthz HTTP/1.1" from [::1]:42014 - 200 49B in 268.693µs
-2026-04-02T19:13:29.525Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 3, "max": 25}
-2026-04-02T19:13:29.527Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:13:29.527Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:13:29.527Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:13:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:14:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 3, "max": 25}
-2026-04-02T19:14:29.527Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:14:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:14:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:14:29.610Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:15:29.525Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 3, "max": 25}
-2026-04-02T19:15:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:15:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:15:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:15:29.610Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.657924ms
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.118154ms
-[PERF-ALERT] RLS BeforeAcquire overhead: 7.196385ms
-2026/04/02 19:16:09 [b48ee515-6974-48d6-9b10-9595797c1508] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36644 - 200 1336B in 116.369231ms
-2026/04/02 19:16:09 [d8d24a9e-36ac-4c95-85cd-8684d17d298a] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36630 - 200 1336B in 115.928615ms
-2026-04-02T19:16:09.525Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:09 [trace-4420e985-373f-4ab6-b642-2e762174801d] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36656 - 401 30B in 257.769µs
-2026-04-02T19:16:09.539Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:09 [trace-f9c13f9e-b766-42aa-a31e-0e3d282feab3] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36666 - 401 30B in 220.231µs
-2026/04/02 19:16:09 [localhost/vzFX7gyeo3-000002] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36678 - 200 1336B in 63.809308ms
-2026-04-02T19:16:09.649Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:09 [trace-1e6602ab-b89a-4b38-a738-d8ead9ac007f] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36688 - 401 30B in 156.692µs
-2026-04-02T19:16:09.678Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:09 [trace-946aeef8-358e-4725-9d8b-ead65d03ec27] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36694 - 401 30B in 417.616µs
-2026/04/02 19:16:09 [trace-203cd3a6-39e3-4117-9f13-3f152ccd5472] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36710 - 200 627B in 111.308µs
-2026/04/02 19:16:09 [trace-bc1d0d48-61af-40b9-aa61-186510f90251] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:36718 - 200 536B in 155.615µs
-2026/04/02 19:16:09 [trace-65fbfb91-47d4-4275-ba76-d92f49053e89] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36732 - 200 627B in 419.692µs
-2026/04/02 19:16:09 [trace-e960654a-c108-4983-bfa4-6c3f7ec4a80b] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36744 - 200 627B in 252.924µs
-2026/04/02 19:16:09 [trace-af583fc1-b341-4330-9242-2b575db31216] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:36750 - 200 536B in 287.923µs
-2026/04/02 19:16:09 [trace-2e9995e4-07ed-4048-b305-26e713797810] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36754 - 200 627B in 815.077µs
-2026/04/02 19:16:09 [trace-1aa4c9ca-ab0c-4dc6-a862-fd2c65572c5c] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36766 - 200 627B in 88.846µs
-2026/04/02 19:16:09 [trace-574fcd36-c695-4ab4-895b-5dbbdb32a1d9] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36776 - 200 627B in 102.692µs
-2026/04/02 19:16:09 [trace-be01943f-3dd9-4876-aba7-31610499bc24] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36790 - 200 627B in 122.692µs
-2026/04/02 19:16:09 [trace-7ae46b7c-38f3-4caf-8074-3f5bdbdf0a68] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36796 - 200 627B in 649.924µs
-2026/04/02 19:16:09 [trace-27f81915-9d65-42af-9b12-96aa86d85c12] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36806 - 200 627B in 240.692µs
-2026/04/02 19:16:09 [trace-af72abcc-fcdf-41be-b14d-5cda9a636526] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:36818 - 200 627B in 138.846µs
-2026-04-02T19:16:14.739Z	ERROR	handlers/handlers.go:261	token refresh failed	{"error": "security alert: token reuse detected. all sessions revoked"}
-2026/04/02 19:16:14 [bc94e58f-8a7b-4dde-a18d-ea70a5b76fde] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36820 - 401 45B in 16.326154ms
-2026-04-02T19:16:14.740Z	ERROR	handlers/handlers.go:261	token refresh failed	{"error": "security alert: token reuse detected. all sessions revoked"}
-2026/04/02 19:16:14 [eec3719f-1409-4834-9d07-61a97606b82d] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36822 - 401 45B in 17.792ms
-2026-04-02T19:16:14.825Z	ERROR	handlers/handlers.go:261	token refresh failed	{"error": "security alert: token reuse detected. all sessions revoked"}
-2026/04/02 19:16:14 [localhost/vzFX7gyeo3-000003] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36834 - 401 45B in 21.568923ms
-2026-04-02T19:16:15.209Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:15.216Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:15.217Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "org_admin@delta.io", "db": "fleet_db"}
-2026-04-02T19:16:15.219Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "org_admin@delta.io", "db": "fleet_db"}
-2026-04-02T19:16:15.223Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "org_admin@delta.io", "role": "org_admin"}
-2026-04-02T19:16:15.224Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "org_admin@delta.io", "role": "org_admin"}
-2026-04-02T19:16:15.224Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "org_admin@delta.io", "userID": "38f9e4b8-e1df-44c1-936e-a18ec3da16a9"}
-2026-04-02T19:16:15.225Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "org_admin@delta.io", "userID": "38f9e4b8-e1df-44c1-936e-a18ec3da16a9"}
-2026-04-02T19:16:15.509Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "org_admin@delta.io", "role": "org_admin", "risk_score": 30}
-2026-04-02T19:16:15.514Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:15.519Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "org_admin@delta.io", "role": "org_admin", "risk_score": 30}
-2026-04-02T19:16:15.519Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "org_admin@delta.io"}
-2026/04/02 19:16:15 [localhost/vzFX7gyeo3-000004] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 127.0.0.1:36836 - 200 1331B in 333.484ms
-2026/04/02 19:16:15 [localhost/vzFX7gyeo3-000005] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 127.0.0.1:36852 - 200 1331B in 329.788ms
-2026-04-02T19:16:15.683Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:15 [trace-3f0efc23-d683-48b9-b52f-ba20d9615b5f] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36862 - 401 30B in 442.539µs
-2026-04-02T19:16:15.714Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:15 [trace-39547c0c-848b-475d-b77c-10313ecf63f6] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:36878 - 401 30B in 154.538µs
-2026-04-02T19:16:15.851Z	ERROR	handlers/handlers.go:261	token refresh failed	{"error": "security alert: token reuse detected. all sessions revoked"}
-2026/04/02 19:16:15 [localhost/vzFX7gyeo3-000006] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:36892 - 401 45B in 21.920538ms
-2026/04/02 19:16:22 [8c6490fc-aa47-4922-9adb-7adb4a6edea0] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:33696 - 400 35B in 3.022154ms
-2026/04/02 19:16:22 [fb6be79d-20e5-46f9-85fb-6693454283d6] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:33704 - 400 35B in 2.873769ms
-2026-04-02T19:16:22.128Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:22.130Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:22.131Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "org_admin@delta.io", "db": "fleet_db"}
-2026-04-02T19:16:22.133Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "org_admin@delta.io", "db": "fleet_db"}
-2026-04-02T19:16:22.134Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "org_admin@delta.io", "role": "org_admin"}
-2026-04-02T19:16:22.134Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "org_admin@delta.io", "userID": "38f9e4b8-e1df-44c1-936e-a18ec3da16a9"}
-2026-04-02T19:16:22.139Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "org_admin@delta.io", "role": "org_admin"}
-2026-04-02T19:16:22.141Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "org_admin@delta.io", "userID": "38f9e4b8-e1df-44c1-936e-a18ec3da16a9"}
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.960384ms
-2026-04-02T19:16:22.422Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "org_admin@delta.io", "role": "org_admin", "risk_score": 30}
-2026-04-02T19:16:22.422Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "org_admin@delta.io"}
-2026-04-02T19:16:22.434Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "org_admin@delta.io", "role": "org_admin", "risk_score": 30}
-2026-04-02T19:16:22.434Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "org_admin@delta.io"}
-2026/04/02 19:16:22 [trace-2785c20c-a9a6-4d0d-aeda-ddf1a1398afc] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33722 - 200 627B in 326.384µs
-2026/04/02 19:16:22 [localhost/vzFX7gyeo3-000007] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 127.0.0.1:33718 - 200 1331B in 318.372ms
-2026/04/02 19:16:22 [trace-6d5b0c85-2bd3-4b58-be1c-5854f5c4a19e] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:33730 - 200 536B in 96µs
-2026/04/02 19:16:22 [localhost/vzFX7gyeo3-000008] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 127.0.0.1:33708 - 200 1331B in 332.828616ms
-2026/04/02 19:16:22 [trace-daba75a8-9fc0-43c2-9b0e-21f4288d5f2a] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33738 - 200 627B in 127.923µs
-2026/04/02 19:16:22 [trace-1a15b51a-9c29-4ee8-bc6e-8b98143cc92e] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:33752 - 200 536B in 104µs
-2026/04/02 19:16:22 [trace-a648f83b-3129-4f90-bad2-a3d07d6736b2] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33758 - 200 627B in 103.692µs
-2026-04-02T19:16:22.496Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:22 [trace-c7a49f01-2f26-40e1-b432-97ee6369832a] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:33762 - 401 30B in 175.077µs
-2026/04/02 19:16:22 [trace-1adbdd78-dee6-4604-854d-f44c218a4344] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33774 - 200 627B in 485.846µs
-2026-04-02T19:16:22.523Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:22 [trace-f781d85b-f378-49ef-a6d2-40b699fed220] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:33786 - 401 30B in 996.923µs
-2026/04/02 19:16:22 [trace-306bb4a1-b9e0-44cd-9bad-cc8a000fa64e] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33808 - 200 627B in 116µs
-2026/04/02 19:16:22 [trace-67afdf84-a585-4631-a2ea-31c5379b2def] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33814 - 200 627B in 440.616µs
-2026-04-02T19:16:22.570Z	ERROR	handlers/handlers.go:261	token refresh failed	{"error": "unauthorized: user does not belong to the requested organization"}
-2026/04/02 19:16:22 [localhost/vzFX7gyeo3-000009] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:33798 - 401 45B in 43.19023ms
-2026/04/02 19:16:22 [trace-826411be-e660-40bb-ae81-b134fb3d7fba] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33824 - 200 627B in 230.231µs
-2026/04/02 19:16:22 [trace-b064a6a7-80b7-4079-93e6-959533b98122] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33828 - 200 627B in 241.615µs
-2026/04/02 19:16:22 [trace-2ab8e1c1-ab4b-483b-b14b-99c792368a38] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33838 - 200 627B in 86.23µs
-2026/04/02 19:16:22 [trace-b8f27213-9cbd-4aea-a68f-abc6ce47fb08] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33850 - 200 627B in 354.462µs
-2026/04/02 19:16:25 [trace-04872ad9-406b-4173-958c-98a0138a78ae] "POST http://localhost:8084/api/v1/auth/resolve-orgs HTTP/1.1" from 127.0.0.1:33852 - 200 118B in 4.631154ms
-2026-04-02T19:16:25.809Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.com"}
-2026-04-02T19:16:25.811Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.com", "db": "fleet_db"}
-2026-04-02T19:16:25.818Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.com", "role": "super_admin"}
-2026-04-02T19:16:25.819Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.com", "userID": "5c4d2c9a-50a4-4252-9ebe-47fa52a22bd1"}
-2026-04-02T19:16:26.028Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "admin@flyfleet.com", "role": "super_admin", "risk_score": 30}
-2026-04-02T19:16:26.028Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "admin@flyfleet.com"}
-2026/04/02 19:16:26 [trace-cdd7b580-d779-43e2-94ed-45176afdc552] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from 127.0.0.1:33860 - 200 1336B in 240.515692ms
-2026/04/02 19:16:26 [trace-3db64d6b-e510-44c6-8326-eb1a633e2054] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33868 - 200 627B in 308.615µs
-2026/04/02 19:16:26 [trace-d2da71f9-0591-434b-9ca0-ba8c97b60a96] "GET http://localhost:8084/api/v1/ui/menus/menuItems HTTP/1.1" from 127.0.0.1:33872 - 200 407B in 3.813ms
-2026-04-02T19:16:26.157Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/dashboard/data", "method": "GET", "role": ""}
-2026/04/02 19:16:26 [trace-81656730-8610-4668-af0c-42f74eb7f9e7] "GET http://localhost:8084/api/v1/dashboard/data?time_range=today HTTP/1.1" from 127.0.0.1:33888 - 401 30B in 7.867462ms
-2026/04/02 19:16:26 [trace-11b26369-ee16-4dda-96de-7ac50c3a01ff] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33902 - 200 627B in 393.769µs
-2026-04-02T19:16:26.179Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/dashboard/data", "method": "GET", "role": ""}
-2026/04/02 19:16:26 [trace-b3d567bb-85bd-416e-bdc6-d15a527695de] "GET http://localhost:8084/api/v1/dashboard/data?time_range=today HTTP/1.1" from 127.0.0.1:33912 - 401 30B in 145.847µs
-2026/04/02 19:16:26 [trace-da6dcd3b-19bb-42d9-bc7b-ff9a89c21818] "GET http://localhost:8084/api/v1/ui/menus/menuItems HTTP/1.1" from 127.0.0.1:33918 - 200 407B in 403.693µs
-2026/04/02 19:16:26 [trace-de4d0248-d4de-4f2a-a562-751dfb1344cd] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33924 - 200 627B in 85.615µs
-2026/04/02 19:16:26 [trace-6ea95ef8-5aad-4a49-8dc2-59619e93493f] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33938 - 200 627B in 219µs
-2026/04/02 19:16:26 [trace-eb48bf4a-0880-4f39-ae52-3ee6093bd1c7] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33950 - 200 627B in 197µs
-2026/04/02 19:16:26 [trace-657f30c7-b72f-4646-a485-961cf743b01b] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33960 - 200 627B in 74.385µs
-2026/04/02 19:16:26 [trace-ca8ebfe1-06eb-4ac3-8928-0bfbe1eda4da] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33966 - 200 627B in 106.692µs
-2026/04/02 19:16:26 [trace-a03aab65-55a2-4b3b-9540-077d51015247] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33970 - 200 627B in 369.231µs
-2026/04/02 19:16:26 [trace-de4403a8-df75-4483-9979-60a332fe0da7] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33974 - 200 627B in 130.692µs
-2026/04/02 19:16:26 [trace-fe17cb57-d359-416c-ac0e-516a3e71ed46] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:33986 - 200 627B in 98.461µs
-2026/04/02 19:16:26 [trace-aa152a79-0b19-4375-a358-a95d2163d3b6] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:33988 - 200 536B in 271.77µs
-2026/04/02 19:16:27 [5ba40db2-9a2e-4c64-84c6-d464d4f4ce6c] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:47376 - 200 1336B in 38.380077ms
-2026/04/02 19:16:27 [c779effd-59e8-43ef-83e5-d69f65224d5a] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:47384 - 200 1336B in 42.239153ms
-2026-04-02T19:16:27.131Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:27 [trace-32a03ace-15bc-4294-8ce4-eed40216bd67] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:47386 - 401 30B in 155.384µs
-2026-04-02T19:16:27.141Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:27 [trace-362b59df-ba5a-475a-b5af-12c9e1886664] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:47394 - 401 30B in 319.385µs
-2026/04/02 19:16:27 [localhost/vzFX7gyeo3-000010] "POST http://localhost:8084/api/v1/auth/refresh HTTP/1.1" from 127.0.0.1:47398 - 200 1336B in 46.570231ms
-2026-04-02T19:16:27.221Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:27 [trace-9511d407-00ae-45cf-80da-8474e310f8db] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:47414 - 401 30B in 480.231µs
-2026-04-02T19:16:27.241Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:16:27 [trace-1242955f-a930-4753-b2cc-df6051dd8b4e] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from 127.0.0.1:47418 - 401 30B in 256.307µs
-2026/04/02 19:16:27 [trace-a34098d3-1617-4a4e-9637-c44dd0998fe3] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47426 - 200 627B in 322.77µs
-2026/04/02 19:16:27 [trace-ee718fe0-b259-4eb1-bf38-435f670c2fdb] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47440 - 200 627B in 176µs
-2026/04/02 19:16:27 [trace-0a02bff7-3ebb-4be1-832f-440616ddc4d7] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:47428 - 200 536B in 2.635077ms
-2026/04/02 19:16:27 [trace-6bf0ed71-6bd7-42ad-857f-fab5460f407c] "GET http://localhost:8084/api/v1/ui/misc/legal_docs HTTP/1.1" from 127.0.0.1:47454 - 200 536B in 194.693µs
-2026/04/02 19:16:27 [trace-335f2623-a0de-4352-ad26-6474bd2ca5af] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47456 - 200 627B in 166.077µs
-2026/04/02 19:16:27 [trace-e76d8f57-ab2f-41cf-bb32-5067b2ee348c] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47462 - 200 627B in 352.231µs
-2026/04/02 19:16:27 [trace-6863c93c-ad3a-4831-9c9f-f74dfdd5d956] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47476 - 200 627B in 241.538µs
-2026/04/02 19:16:27 [trace-39f78111-e972-428c-a344-bd751b3c3ce4] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47484 - 200 627B in 261.462µs
-2026/04/02 19:16:27 [trace-671f8758-3494-416f-896f-e5c9b326fe92] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47498 - 200 627B in 87.615µs
-2026/04/02 19:16:27 [trace-4fd64c58-622f-48d2-9784-0927ff7fcafa] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47506 - 200 627B in 174.231µs
-2026/04/02 19:16:27 [trace-b6da0a9a-e325-4f45-b044-49ee6658d9b0] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47510 - 200 627B in 221.923µs
-2026/04/02 19:16:27 [trace-9416df4c-a887-4f38-bc59-67ac9f339621] "GET http://localhost:8084/api/v1/ui/global_config HTTP/1.1" from 127.0.0.1:47512 - 200 627B in 206.461µs
-2026-04-02T19:16:29.527Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:16:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:16:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:16:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:16:29.611Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 19.053307ms
-2026-04-02T19:17:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:17:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:17:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:17:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:17:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 8.313539ms
-2026-04-02T19:18:29.525Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:18:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:18:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:18:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:18:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:19:29.525Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:19:29.566Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:19:29.566Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:19:29.566Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:19:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 6.257538ms
-2026-04-02T19:20:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:20:29.530Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:20:29.530Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:20:29.530Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:20:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:21:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:21:29.531Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:21:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:21:29.532Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:21:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:22:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:22:29.525Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:22:29.525Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:22:29.525Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:22:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:23:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:23:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:23:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:23:29.532Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:23:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.096077ms
-2026-04-02T19:24:29.532Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:24:29.539Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:24:29.540Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:24:29.540Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:24:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:25:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:25:29.525Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:25:29.526Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:25:29.526Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:25:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.166769ms
-2026-04-02T19:26:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:26:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:26:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:26:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:26:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 8.984538ms
-2026-04-02T19:27:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:27:29.530Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:27:29.530Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:27:29.530Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:27:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:28:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:28:29.525Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:28:29.525Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:28:29.525Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:28:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:29:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:29:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:29:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:29:29.532Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:29:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:30:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:30:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:30:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:30:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:30:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:31:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:31:29.533Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:31:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:31:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:31:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 6.184ms
-2026-04-02T19:32:29.526Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:32:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:32:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:32:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:32:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:33:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:33:29.533Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:33:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:33:29.534Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:33:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 9.104923ms
-2026-04-02T19:34:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:34:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:34:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:34:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:34:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:35:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:35:29.531Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:35:29.531Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:35:29.531Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:35:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:36:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:36:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:36:29.532Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:36:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:36:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.424846ms
-2026-04-02T19:37:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:37:29.530Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:37:29.530Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:37:29.530Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:37:29.608Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:38:29.526Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:38:29.527Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:38:29.527Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:38:29.527Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:38:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:39:29.525Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:39:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:39:29.529Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:39:29.529Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:39:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:40:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:40:29.537Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:40:29.537Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:40:29.537Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:40:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.410846ms
-2026-04-02T19:41:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:41:29.533Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 3, "max": 20}
-2026-04-02T19:41:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:41:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:41:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 5.807616ms
-2026-04-02T19:42:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:42:29.526Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 3, "idle": 0, "max": 20}
-2026-04-02T19:42:29.526Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 2, "idle": 0, "max": 10}
-2026-04-02T19:42:29.526Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:42:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:43:29.528Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:43:29.574Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:43:29.574Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:43:29.574Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:43:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 6.179692ms
-2026-04-02T19:44:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:44:29.533Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:44:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:44:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:44:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:45:29.530Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:45:29.532Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:45:29.533Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:45:29.533Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:45:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:46:29.532Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 4, "max": 25}
-2026-04-02T19:46:29.535Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:46:29.536Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:46:29.536Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:46:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 6.900615ms
-2026-04-02T19:47:29.529Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 25}
-2026-04-02T19:47:29.531Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:47:29.531Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:47:29.531Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:47:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026/04/02 19:47:42 [localhost/vzFX7gyeo3-000011] "GET http://localhost:8084/healthz HTTP/1.1" from [::1]:51578 - 200 49B in 4.638769ms
-2026-04-02T19:47:52.355Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.com"}
-2026-04-02T19:47:52.378Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.com", "db": "fleet_db"}
-2026-04-02T19:47:52.403Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.com", "role": "super_admin"}
-2026-04-02T19:47:52.405Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.com", "userID": "5c4d2c9a-50a4-4252-9ebe-47fa52a22bd1"}
-2026-04-02T19:47:52.711Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "admin@flyfleet.com", "role": "super_admin", "risk_score": 30}
-2026-04-02T19:47:52.712Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "admin@flyfleet.com"}
-2026/04/02 19:47:52 [localhost/vzFX7gyeo3-000012] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from [::1]:40772 - 200 1336B in 421.74ms
-2026-04-02T19:47:52.869Z	WARN	middleware/tenant_context.go:51	tenant context missing for authenticated request	{"path": "/api/v1/auth/profile", "method": "GET", "role": ""}
-2026/04/02 19:47:52 [localhost/vzFX7gyeo3-000013] "GET http://localhost:8084/api/v1/auth/profile HTTP/1.1" from [::1]:40776 - 401 30B in 2.333ms
-2026-04-02T19:48:29.524Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 25}
-2026-04-02T19:48:29.569Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:48:29.569Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:48:29.569Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:48:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-[PERF-ALERT] RLS BeforeAcquire overhead: 6.131616ms
-2026-04-02T19:48:34.424Z	INFO	logadapter/zap_adapter.go:20	Login attempt started	{"email": "admin@flyfleet.com"}
-2026-04-02T19:48:34.426Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail DEBUG	{"email": "admin@flyfleet.com", "db": "fleet_db"}
-2026-04-02T19:48:34.434Z	INFO	logadapter/zap_adapter.go:20	GetUserByEmail RESULT	{"email": "admin@flyfleet.com", "role": "super_admin"}
-2026-04-02T19:48:34.435Z	INFO	logadapter/zap_adapter.go:20	User found	{"email": "admin@flyfleet.com", "userID": "5c4d2c9a-50a4-4252-9ebe-47fa52a22bd1"}
-2026-04-02T19:48:34.635Z	INFO	logadapter/zap_adapter.go:20	Login success, checking MFA requirements	{"email": "admin@flyfleet.com", "role": "super_admin", "risk_score": 30}
-2026-04-02T19:48:34.635Z	INFO	logadapter/zap_adapter.go:20	Issuing tokens	{"email": "admin@flyfleet.com"}
-2026/04/02 19:48:34 [localhost/vzFX7gyeo3-000014] "POST http://localhost:8084/api/v1/auth/login HTTP/1.1" from [::1]:53244 - 200 1336B in 227.509846ms
-2026-04-02T19:49:29.526Z	DEBUG	cmd/main.go:286	DB Pool Saturation Audit	{"pool": "CRITICAL", "acquired": 0, "idle": 2, "max": 25}
-2026-04-02T19:49:29.528Z	DEBUG	cmd/main.go:303	DB Pool Saturation Audit	{"pool": "HIGH", "acquired": 0, "idle": 2, "max": 20}
-2026-04-02T19:49:29.528Z	DEBUG	cmd/main.go:307	DB Pool Saturation Audit	{"pool": "MEDIUM", "acquired": 0, "idle": 1, "max": 10}
-2026-04-02T19:49:29.528Z	DEBUG	cmd/main.go:311	DB Pool Saturation Audit	{"pool": "LOW", "acquired": 0, "idle": 2, "max": 10}
-2026-04-02T19:49:29.609Z	DEBUG	workers/governance_expiry_worker.go:41	Running governance request expiry check
-2026-04-02T19:49:40.568Z	INFO	workers/governance_retention_worker.go:35	Stopping Governance Retention Worker
-2026-04-02T19:49:40.568Z	INFO	workers/governance_expiry_worker.go:32	Stopping Governance Expiry Worker
-2026-04-02T19:49:40.568Z	INFO	cmd/main.go:1584	Context triggered shutdown	{"reason": "context canceled"}
-2026-04-02T19:49:40.568Z	INFO	cmd/main.go:1586	Shutting down fleet-core-service...
-2026-04-02T19:49:40.569Z	INFO	cmd/main.go:1592	Fleet-core-service exited
-2026-04-02T19:49:40.572Z	INFO	cache/redis.go:116	Redis connection closed
-2026-04-02T19:49:40.572Z	INFO	workers/india_compliance_worker.go:42	IndiaComplianceWorker stopped
-2026-04-02T19:49:40.577Z	INFO	messaging/nats.go:195	NATS connection closed
-2026-04-02T19:49:40.580Z	WARN	messaging/nats.go:42	NATS disconnected
+{"level":"info","ts":1776313575.8359826,"caller":"cmd/main.go:46","msg":"starting fleet-core service","port":"8084","environment":"development"}
+{"level":"info","ts":1776313575.8408463,"caller":"database/postgres.go:39","msg":"database connected","pool":"pgxpool"}
+{"level":"warn","ts":1776313575.8412983,"caller":"email/service.go:47","msg":"unknown email provider, using no-op","provider":"noop"}
+{"level":"info","ts":1776313575.841339,"caller":"cmd/main.go:102","msg":"IAM domain initialized","bcrypt_cost":12,"email_provider":"noop"}
+{"level":"info","ts":1776313575.8416445,"caller":"cmd/main.go:285","msg":"http server listening","addr":":8084"}
+{"level":"error","ts":1776313757.3031688,"caller":"handlers/auth_handler.go:46","msg":"identify failed","error":"ERROR: column v.org_id does not exist (SQLSTATE 42703)","email":"admin@delta.io","stacktrace":"github.com/flyfleet/fleet-core/internal/domains/iam/handlers.(*AuthHandler).Identify\n\t/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/handlers/auth_handler.go:46\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73\ngithub.com/go-chi/chi/v5.(*Mux).Mount.func1\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\nmain.main.requestLogger.func5.1\n\t/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:329\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1\n\t/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90\nnet/http.serverHandler.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311\nnet/http.(*conn).serve\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073"}
+{"level":"error","ts":1776313991.736725,"caller":"handlers/auth_handler.go:46","msg":"identify failed","error":"ERROR: column v.org_id does not exist (SQLSTATE 42703)","email":"admin@delta.io","stacktrace":"github.com/flyfleet/fleet-core/internal/domains/iam/handlers.(*AuthHandler).Identify\n\t/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/handlers/auth_handler.go:46\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73\ngithub.com/go-chi/chi/v5.(*Mux).Mount.func1\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).routeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\nmain.main.requestLogger.func5.1\n\t/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:329\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1\n\t/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228\nnet/http.HandlerFunc.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286\ngithub.com/go-chi/chi/v5.(*Mux).ServeHTTP\n\t/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90\nnet/http.serverHandler.ServeHTTP\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311\nnet/http.(*conn).serve\n\t/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073"}
+signal: killed
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-16T13:45:27.402+0530	INFO	cmd/main.go:58	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-16T13:45:27.406+0530	FATAL	cmd/main.go:67	database connection failed	{"error": "ping database: failed to connect to `user=fleet_user database=fleet_db`: 127.0.0.1:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user \"fleet_user\" (SQLSTATE 28P01)"}
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:67
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-16T13:46:17.513+0530	INFO	cmd/main.go:58	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-16T13:46:17.516+0530	FATAL	cmd/main.go:67	database connection failed	{"error": "ping database: failed to connect to `user=fleet_user database=fleet_db`: 127.0.0.1:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user \"fleet_user\" (SQLSTATE 28P01)"}
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:67
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-16T13:46:27.453+0530	INFO	cmd/main.go:58	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-16T13:46:27.459+0530	FATAL	cmd/main.go:67	database connection failed	{"error": "ping database: failed to connect to `user=fleet_user database=fleet_db`: 127.0.0.1:5432 (localhost): failed SASL auth: FATAL: password authentication failed for user \"fleet_user\" (SQLSTATE 28P01)"}
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:67
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-16T13:49:00.448+0530	INFO	cmd/main.go:58	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-16T13:49:00.452+0530	INFO	database/postgres.go:39	database connected	{"pool": "pgxpool"}
+2026-04-16T13:49:00.453+0530	WARN	email/service.go:47	unknown email provider, using no-op	{"provider": "noop"}
+github.com/flyfleet/fleet-core/internal/domains/iam/email.NewEmailService
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/email/service.go:47
+github.com/flyfleet/fleet-core/internal/domains/iam.NewModule
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/module.go:63
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:113
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+2026-04-16T13:49:00.453+0530	INFO	cmd/main.go:114	IAM domain initialized	{"bcrypt_cost": 12, "email_provider": "noop"}
+2026-04-16T13:49:00.454+0530	INFO	cmd/main.go:297	http server listening	{"addr": ":8084"}
+2026-04-16T14:01:35.141+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "database error: ERROR: column \"odometer\" does not exist (SQLSTATE 42703)"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:01:35.145+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "database error: ERROR: column \"odometer\" does not exist (SQLSTATE 42703)"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:01:35.169+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "database error: ERROR: column \"odometer\" does not exist (SQLSTATE 42703)"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:01:35.172+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "database error: ERROR: column \"odometer\" does not exist (SQLSTATE 42703)"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:06.244+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:06.247+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:06.293+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:06.296+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:15.705+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:15.713+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:15.739+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-16T14:06:15.745+0530	ERROR	handlers/vehicle_handlers.go:219	failed to list vehicles	{"error": "scan error: number of field descriptions must equal number of destinations, got 28 and 29"}
+github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers.(*VehicleHandlers).ListVehicles
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/vehicle/handlers/vehicle_handlers.go:219
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.4.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:63
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:100
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:341
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-16T14:07:41.903+0530	INFO	cmd/main.go:58	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-16T14:07:41.908+0530	INFO	database/postgres.go:39	database connected	{"pool": "pgxpool"}
+2026-04-16T14:07:41.909+0530	WARN	email/service.go:47	unknown email provider, using no-op	{"provider": "noop"}
+github.com/flyfleet/fleet-core/internal/domains/iam/email.NewEmailService
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/email/service.go:47
+github.com/flyfleet/fleet-core/internal/domains/iam.NewModule
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/module.go:63
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:113
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+2026-04-16T14:07:41.909+0530	INFO	cmd/main.go:114	IAM domain initialized	{"bcrypt_cost": 12, "email_provider": "noop"}
+2026-04-16T14:07:41.910+0530	INFO	cmd/main.go:297	http server listening	{"addr": ":8084"}
+2026-04-16T15:22:39.722+0530	INFO	service/auth_service.go:788	org_switched	{"user_id": "5d6d3a46-29e4-4235-a40d-03e087ecd8b5", "to_org_id": "550e8400-e29b-41d4-a716-446655440002"}
+2026-04-16T15:36:53.699+0530	INFO	service/auth_service.go:788	org_switched	{"user_id": "5d6d3a46-29e4-4235-a40d-03e087ecd8b5", "to_org_id": "550e8400-e29b-41d4-a716-446655440002"}
+2026-04-16T15:43:49.756+0530	INFO	service/auth_service.go:788	org_switched	{"user_id": "5d6d3a46-29e4-4235-a40d-03e087ecd8b5", "to_org_id": "550e8400-e29b-41d4-a716-446655440002"}
+2026-04-16T15:44:48.590+0530	INFO	service/auth_service.go:788	org_switched	{"user_id": "5d6d3a46-29e4-4235-a40d-03e087ecd8b5", "to_org_id": "550e8400-e29b-41d4-a716-446655440002"}
+2026-04-16T16:13:24.606+0530	INFO	cmd/main.go:308	shutting down server...
+2026-04-16T16:13:24.606+0530	INFO	cmd/main.go:322	server stopped gracefully

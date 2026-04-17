@@ -19,6 +19,13 @@ type Config struct {
 	Environment string   `mapstructure:"environment"`
 	Flags       FeatureFlags `mapstructure:"feature_flags"`
 	IAM         IAMConfig    `mapstructure:"iam"`
+	Billing     BillingConfig `mapstructure:"billing"`
+}
+
+// BillingConfig configures the invoice generator and billing services
+type BillingConfig struct {
+	Enabled               bool `mapstructure:"enabled"`
+	ChromeTimeoutSeconds  int  `mapstructure:"chrome_timeout_seconds"`
 }
 
 // FeatureFlags controls runtime toggles for the tracking feature.
@@ -54,7 +61,7 @@ func Load() *Config {
 
 	// Global defaults
 	v.SetDefault("port", "8084")
-	v.SetDefault("database_url", "postgres://fleet_user:fleet_pass@localhost:5432/fleet_db?sslmode=disable")
+	v.SetDefault("database_url", "postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable")
 	v.SetDefault("redis_url", "redis://localhost:6379/0")
 	v.SetDefault("nats_url", "nats://localhost:4222")
 	v.SetDefault("jwt_secret", "")
@@ -79,6 +86,10 @@ func Load() *Config {
 	v.SetDefault("iam.jwt_refresh_ttl", 604800)
 	v.SetDefault("iam.email_provider", "noop")
 	v.SetDefault("iam.email_smtp_port", 587)
+
+	// Billing defaults
+	v.SetDefault("billing.enabled", true)
+	v.SetDefault("billing.chrome_timeout_seconds", 30)
 
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
@@ -123,6 +134,10 @@ func Load() *Config {
 			EmailSMTPPassword:  v.GetString("iam.email_smtp_password"),
 			EmailFromAddress:   v.GetString("iam.email_from_address"),
 			EmailFromName:      v.GetString("iam.email_from_name"),
+		},
+		Billing: BillingConfig{
+			Enabled:              v.GetBool("billing.enabled"),
+			ChromeTimeoutSeconds: v.GetInt("billing.chrome_timeout_seconds"),
 		},
 	}
 }

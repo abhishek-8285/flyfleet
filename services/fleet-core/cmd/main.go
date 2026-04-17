@@ -34,13 +34,29 @@ import (
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
 	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
 	"github.com/flyfleet/fleet-core/internal/tracking/worker"
+	tripHandlers "github.com/flyfleet/fleet-core/internal/domains/trip/handlers"
+	tripRepo "github.com/flyfleet/fleet-core/internal/domains/trip/repository"
+	tripService "github.com/flyfleet/fleet-core/internal/domains/trip/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing"
 )
 
 func main() {
 	// --- Bootstrap ---
 	cfg := config.Load()
 
-	logger, _ := zap.NewProduction()
+	// Initialize Logger based on config
+	var zapCfg zap.Config
+	if cfg.Environment == "development" {
+		zapCfg = zap.NewDevelopmentConfig()
+	} else {
+		zapCfg = zap.NewProductionConfig()
+	}
+
+	if level, err := zap.ParseAtomicLevel(cfg.LogLevel); err == nil {
+		zapCfg.Level = level
+	}
+
+	logger, _ := zapCfg.Build()
 	defer logger.Sync()
 
 	logger.Info("starting fleet-core service",
@@ -153,6 +169,11 @@ func main() {
 	organizationRepo := orgRepo.NewOrganizationRepository(pool, logger)
 	organizationService := orgSvc.NewOrganizationService(organizationRepo, logger)
 	organizationHandler := orgHandlers.NewOrganizationHandlers(organizationService, logger)
+	
+	// --- Trip Domain ---
+	tRepo := tripRepo.NewTripRepository(pool)
+	tService := tripService.NewTripService(tRepo, logger)
+	tHandler := tripHandlers.NewTripHandler(tService, logger)
 
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
@@ -187,81 +208,104 @@ func main() {
 
 	// --- API Routes ---
 
-	// 1. IAM public routes (no auth)
-	if iamModule != nil {
-		r.Route("/api/v1", func(r chi.Router) {
-			iamModule.RegisterPublicRoutes(r, logger)
-		})
-	}
+	// --- API Routes ---
 
-	// Menu endpoints (static, no auth needed for sidebar)
-	menuHandler := th.NewMenuHandler()
-	r.Get("/api/v1/ui/menus/*", menuHandler.ServeHTTP)
-
-	// UI config / strings stubs (frontend falls back to defaults)
-	uiConfigHandler := th.NewUIConfigHandler()
-	uiStringsHandler := th.NewUIStringsHandler()
-	r.Get("/api/v1/ui/global_config", uiConfigHandler.ServeHTTP)
-	r.Get("/api/v1/ui/strings/*", uiStringsHandler.ServeHTTP)
-	r.Get("/api/v1/ui/misc/legal_docs", uiConfigHandler.GetLegalDocs)
-
-	// Admin stub endpoints (columns — drivers moved to real CRUD)
-	adminHandler := th.NewAdminHandler()
-	r.Get("/api/v1/ui/settings/columns", adminHandler.ServeHTTP)
-
-	// Dashboard stub endpoints
-	dashboardHandler := th.NewDashboardHandler()
-	r.Get("/api/v1/dashboard/overview", dashboardHandler.ServeHTTP)
-	r.Get("/api/v1/dashboard/data", dashboardHandler.ServeHTTP)
-
-	// Refresh endpoint (uses refresh_token from body, not JWT)
-	if iamModule != nil {
-		r.Post("/api/v1/auth/refresh", iamModule.AuthHandler.Refresh)
-	}
-
-	// 2. All authenticated API routes
-	r.Group(func(r chi.Router) {
-		authGate := middleware.NewJWKSAuthGate("FlyFleet", "fleet-dashboard", cfg.JWTSecret, logger)
-		r.Use(authGate.Handler)
-		r.Use(middleware.TenantMiddleware(logger))
-
-		// Authenticated IAM routes (profile, logout, etc.)
+	// Combined API v1 Route (Public & Authenticated)
+	r.Route("/api/v1", func(r chi.Router) {
+		// 1. IAM public routes
 		if iamModule != nil {
-			iamModule.RegisterAuthRoutes(r, logger)
+			iamModule.RegisterPublicRoutes(r, logger)
 		}
 
-		// Tracking endpoints
-		if cfg.Flags.VehicleMapEnabled {
-			r.Post("/api/v1/telemetry", ingestHandler.ServeHTTP)
-			r.Get("/api/v1/vehicles/locations", locationsHandler.ServeHTTP)
+		// Menu endpoints (static)
+		menuHandler := th.NewMenuHandler()
+		r.Get("/ui/menus/*", menuHandler.ServeHTTP)
 
-			if cfg.Flags.HistoryTrail {
-				r.Get("/api/v1/vehicles/{id}/telemetry/history", historyHandler.ServeHTTP)
-			}
+		// UI config / strings stubs
+		uiConfigHandler := th.NewUIConfigHandler()
+		uiStringsHandler := th.NewUIStringsHandler()
+		r.Get("/ui/global_config", uiConfigHandler.ServeHTTP)
+		r.Get("/ui/strings/*", uiStringsHandler.ServeHTTP)
+		r.Get("/ui/misc/legal_docs", uiConfigHandler.GetLegalDocs)
 
-			if cfg.Flags.RealTimeUpdates {
-				r.Get("/ws/telemetry", wsHandler.ServeHTTP)
-			}
+		// Admin stub endpoints
+		adminHandler := th.NewAdminHandler()
+		r.Get("/ui/settings/columns", adminHandler.ServeHTTP)
 
-			r.Get("/api/v1/geofences", geofenceHandler.ServeHTTP)
-			r.Post("/api/v1/geofences", geofenceHandler.ServeHTTP)
+		// Dashboard stub endpoints
+		dashboardHandler := th.NewDashboardHandler()
+		r.Get("/dashboard/overview", dashboardHandler.ServeHTTP)
+		r.Get("/dashboard/data", dashboardHandler.ServeHTTP)
+
+		// Refresh endpoint
+		if iamModule != nil {
+			r.Post("/auth/refresh", iamModule.AuthHandler.Refresh)
 		}
 
-		// Vehicle CRUD (always available)
-		r.Route("/api/v1/admin/vehicles", func(r chi.Router) {
-			vehicleHandlers.RegisterRoutes(r)
-		})
+		// Landing page data
+		landingHandler := th.NewLandingHandler()
+		r.Get("/data", landingHandler.ServeHTTP)
 
-		// Driver CRUD + extended endpoints
-		r.Route("/api/v1/admin/drivers", func(r chi.Router) {
-			driverHandler.RegisterRoutes(r)
-		})
+		// 2. All authenticated API routes
+		r.Group(func(r chi.Router) {
+			authGate := middleware.NewJWKSAuthGate("FlyFleet", "fleet-dashboard", cfg.JWTSecret, logger)
+			r.Use(authGate.Handler)
+			r.Use(middleware.TenantMiddleware(logger))
 
-		// Organization CRUD
-		r.Route("/api/v1/admin", func(r chi.Router) {
-			organizationHandler.RegisterRoutes(r)
+			// Authenticated IAM routes
+			if iamModule != nil {
+				iamModule.RegisterAuthRoutes(r, logger)
+			}
+
+			// Tracking endpoints
+			if cfg.Flags.VehicleMapEnabled {
+				r.Post("/telemetry", ingestHandler.ServeHTTP)
+				r.Get("/vehicles/locations", locationsHandler.ServeHTTP)
+
+				if cfg.Flags.HistoryTrail {
+					r.Get("/vehicles/{id}/telemetry/history", historyHandler.ServeHTTP)
+				}
+				
+				// WebSockets moved to main router if starting with /ws
+				// Handled below if needed
+			}
+
+			// Geofences
+			r.Get("/geofences", geofenceHandler.ServeHTTP)
+			r.Post("/geofences", geofenceHandler.ServeHTTP)
+
+			// Vehicle CRUD
+			r.Route("/admin/vehicles", func(r chi.Router) {
+				vehicleHandlers.RegisterRoutes(r)
+			})
+
+			// Driver CRUD
+			r.Route("/admin/drivers", func(r chi.Router) {
+				driverHandler.RegisterRoutes(r)
+			})
+
+			// Organization CRUD
+			r.Route("/admin", func(r chi.Router) {
+				organizationHandler.RegisterRoutes(r)
+			})
+
+			// Trip CRUD
+			r.Route("/admin/trips", func(r chi.Router) {
+				tHandler.RegisterRoutes(r)
+			})
+
+			// Billing Module
+			billing.RegisterModule(r, pool, billing.Config{
+				Enabled:              cfg.Billing.Enabled,
+				ChromeTimeoutSeconds: cfg.Billing.ChromeTimeoutSeconds,
+			}, logger)
 		})
 	})
+
+	// WebSockets (outside /api/v1)
+	if cfg.Flags.RealTimeUpdates {
+		r.Get("/ws/telemetry", wsHandler.ServeHTTP)
+	}
 
 	// --- Start HTTP Server ---
 	addr := fmt.Sprintf(":%s", cfg.Port)

@@ -6,63 +6,63 @@ import { BillingSettings, BillingMetrics, Invoice } from '../types/billing';
 
 const billingService = {
   getInvoices: async (page = 1, size = 10) => {
-    return apiClient.get<any, { data: any[]; total: number; page: number; size: number }>('/billing/invoices', {
+    return apiClient.get<any, { data: any[]; total: number; page: number; size: number }>('/admin/billing/invoices', {
       params: { page, size },
     });
   },
 
   getInvoice: async (id: string) => {
-    return apiClient.get<any, Invoice>(`/billing/invoices/${id}`);
+    return apiClient.get<any, Invoice>(`/admin/billing/invoices/${id}`);
   },
 
   createInvoice: async (invoice: Partial<Invoice>) => {
-    return apiClient.post<any, Invoice>('/billing/invoices', invoice);
+    return apiClient.post<any, Invoice>('/admin/billing/invoices', invoice);
   },
 
   updateInvoice: async (id: string, invoice: Partial<Invoice>) => {
-    return apiClient.put<any, Invoice>(`/billing/invoices/${id}`, invoice);
+    return apiClient.put<any, Invoice>(`/admin/billing/invoices/${id}`, invoice);
   },
 
   deleteInvoice: async (id: string) => {
-    return apiClient.delete(`/billing/invoices/${id}`);
+    return apiClient.delete(`/admin/billing/invoices/${id}`);
   },
 
   recordPayment: async (id: string, amount: number) => {
-    return apiClient.post(`/billing/invoices/${id}/payments`, { amount });
+    return apiClient.post(`/admin/billing/invoices/${id}/payments`, { amount });
   },
 
   downloadPDF: async (id: string): Promise<Blob> => {
-    const response = await apiClient.get(`/billing/invoices/${id}/pdf`, {
+    const response = await apiClient.get(`/admin/billing/invoices/${id}/pdf`, {
       responseType: 'blob',
     });
     return response as unknown as Blob;
   },
 
   emailInvoice: async (id: string, email: string, customerName: string) => {
-    return apiClient.post(`/billing/invoices/${id}/email`, {
+    return apiClient.post(`/admin/billing/invoices/${id}/email`, {
       email,
       customer_name: customerName,
     });
   },
 
   getSettings: async () => {
-    return apiClient.get<any, BillingSettings>('/billing/settings');
+    return apiClient.get<any, BillingSettings>('/admin/billing/settings');
   },
 
   updateSettings: async (settings: Partial<BillingSettings>) => {
-    return apiClient.put('/billing/settings', settings);
+    return apiClient.put('/admin/billing/settings', settings);
   },
 
   getMetrics: async () => {
-    return apiClient.get<any, BillingMetrics>('/billing/metrics');
+    return apiClient.get<any, BillingMetrics>('/admin/billing/metrics');
   },
 
   getHealth: async () => {
-    return apiClient.get('/billing/health');
+    return apiClient.get('/admin/billing/health');
   },
 
   getStats: async () => {
-    return apiClient.get('/billing/stats');
+    return apiClient.get('/admin/billing/stats');
   },
 };
 

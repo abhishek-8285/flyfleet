@@ -1,5 +1,6 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useUIStrings } from "../../hooks/useUIStrings";
 
 const InvoicesList: React.FC = () => {
@@ -37,76 +38,99 @@ const InvoicesList: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">
-        {uiStrings?.title || "Billing & Invoices"}
-      </h1>
+    <div className="space-y-8 bg-surface-dim min-h-screen p-8 -mx-6 -mt-6">
+      <div className="flex justify-between items-end bg-surface-container border border-outline rounded-3xl p-8 shadow-2xl">
+        <div>
+          <nav className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-4">
+            <Link to="/portal" className="hover:text-primary transition-colors">Command Overview</Link>
+            <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+            <span className="text-white">Financial Ledger</span>
+          </nav>
+          <h1 className="text-4xl font-bold text-white tracking-tighter uppercase">
+            {uiStrings?.title || "Accounts & Financial Ledger"}
+          </h1>
+        </div>
+        <div className="flex gap-4">
+          <button className="bg-surface-dim border border-outline text-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-surface-container-highest transition-all flex items-center gap-3 active:scale-95 shadow-lg">
+            <span className="material-symbols-outlined text-base">download_for_offline</span> Export Statement
+          </button>
+        </div>
+      </div>
 
-      <div className="bg-surface-dark border border-border-color rounded-xl overflow-hidden">
+      <div className="bg-surface-container border border-outline rounded-[2.5rem] overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-text-muted">
-            <thead className="bg-[#111a22] text-xs uppercase font-semibold text-text-muted/70">
+          <table className="w-full text-left">
+            <thead className="bg-surface-dim border-b border-outline text-[9px] uppercase font-black text-on-surface-variant tracking-[0.2em]">
               <tr>
-                <th className="px-5 py-3">Invoice #</th>
-                <th className="px-5 py-3">Amount</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Issue Date</th>
-                <th className="px-5 py-3">Due Date</th>
-                <th className="px-5 py-3 text-right">Action</th>
+                <th className="px-8 py-5">Reference ID</th>
+                <th className="px-8 py-5">Value (Base Currency)</th>
+                <th className="px-8 py-5">Settlement Status</th>
+                <th className="px-8 py-5">Issuance Date</th>
+                <th className="px-8 py-5">Maturity Date</th>
+                <th className="px-8 py-5 text-right">Operational Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-color">
+            <tbody className="divide-y divide-outline/30">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center">
-                    {uiStrings?.loading || "Loading invoices..."}
+                  <td colSpan={6} className="p-20 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+                        {uiStrings?.loading || "Synchronising Financial Records..."}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-10 text-center">
-                    {uiStrings?.empty || "No invoices found."}
+                  <td colSpan={6} className="p-20 text-center text-on-surface-variant">
+                    <span className="material-symbols-outlined text-6xl opacity-20 mb-4 block">receipt_long</span>
+                    <p className="text-[11px] font-black uppercase tracking-widest">
+                      {uiStrings?.empty || "No financial records detected."}
+                    </p>
                   </td>
                 </tr>
               ) : (
                 invoices.map((inv) => (
                   <tr
                     key={inv.id}
-                    className="hover:bg-surface-light/5 transition-colors"
+                    className="hover:bg-surface-light/5 transition-colors group"
                   >
-                    <td className="px-5 py-4 font-bold text-white uppercase">
-                      {inv.invoice_number}
+                    <td className="px-8 py-5 font-bold text-white font-mono text-xs">
+                      #{inv.invoice_number}
                     </td>
-                    <td className="px-5 py-4 text-white font-medium">
-                      {inv.currency} {inv.amount.toLocaleString()}
+                    <td className="px-8 py-5 text-white font-bold tracking-tighter">
+                      {inv.currency || "INR"} {inv.amount.toLocaleString(inv.currency === 'INR' ? 'en-IN' : 'en-US')}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-8 py-5">
                       <span
-                        className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                        className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] 
+                        ${
                           inv.status === "PAID"
-                            ? "bg-green-500/10 text-green-500"
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                             : inv.status === "OVERDUE"
-                              ? "bg-red-500/10 text-red-500"
-                              : "bg-yellow-500/10 text-yellow-500"
+                              ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                         }`}
                       >
                         {inv.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
-                      {new Date(inv.issue_date).toLocaleDateString()}
+                    <td className="px-8 py-5 text-[11px] font-mono font-bold text-on-surface-variant">
+                      {new Date(inv.issue_date).toLocaleDateString('en-GB')}
                     </td>
-                    <td className="px-5 py-4">
-                      {new Date(inv.due_date).toLocaleDateString()}
+                    <td className="px-8 py-5 text-[11px] font-mono font-bold text-on-surface-variant">
+                      {new Date(inv.due_date).toLocaleDateString('en-GB')}
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-8 py-5 text-right">
                       <button
                         onClick={() => handleDownload(inv)}
-                        className="p-2 hover:bg-primary/20 text-primary rounded-lg transition-colors"
-                        title="Download PDF"
+                        className="h-10 w-10 hover:bg-primary/10 text-on-surface-variant hover:text-primary border border-outline hover:border-primary/50 rounded-xl transition-all flex items-center justify-center active:scale-95"
+                        title="Download PDF Manifest"
                       >
-                        <span className="material-symbols-outlined">
-                          download
+                        <span className="material-symbols-outlined text-lg">
+                          file_download
                         </span>
                       </button>
                     </td>

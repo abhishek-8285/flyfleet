@@ -1,7 +1,68 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../services/api";
-import { Driver } from "../../modules/drivers/types";
+
+interface FormState {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  employee_code: string;
+  aadhaar_number: string;
+  pan_number: string;
+  date_of_birth: string;
+  license_number: string;
+  license_type: string;
+  license_expiry: string;
+  license_issue_date: string;
+  license_authority: string;
+  employment_type: string;
+  experience_years: string;
+  joining_date: string;
+  address_street: string;
+  address_city: string;
+  address_state: string;
+  address_pincode: string;
+  address_country: string;
+  emergency_name: string;
+  emergency_phone: string;
+  emergency_relation: string;
+  blood_group: string;
+  shift_type: string;
+  behavior_monitoring: boolean;
+  notes: string;
+}
+
+const initialForm: FormState = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone: "",
+  employee_code: "",
+  aadhaar_number: "",
+  pan_number: "",
+  date_of_birth: "",
+  license_number: "",
+  license_type: "LMV",
+  license_expiry: "",
+  license_issue_date: "",
+  license_authority: "",
+  employment_type: "FULL_TIME",
+  experience_years: "0",
+  joining_date: "",
+  address_street: "",
+  address_city: "",
+  address_state: "",
+  address_pincode: "",
+  address_country: "India",
+  emergency_name: "",
+  emergency_phone: "",
+  emergency_relation: "",
+  blood_group: "O+",
+  shift_type: "MORNING",
+  behavior_monitoring: true,
+  notes: "",
+};
 
 const LICENSE_TYPES = [
   { value: "LMV", label: "LMV (Light Motor Vehicle)" },
@@ -21,100 +82,44 @@ const SHIFT_TYPES = [
   { value: "ROTATING", label: "Rotating" },
 ];
 
-const STATUS_OPTIONS = [
-  { value: "active", label: "Active", color: "text-green-400" },
-  { value: "inactive", label: "Inactive", color: "text-gray-400" },
-  { value: "suspended", label: "Suspended", color: "text-red-400" },
-  { value: "resigned", label: "Resigned", color: "text-yellow-400" },
-];
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-interface FormState {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  employee_code: string;
-  license_number: string;
-  license_type: string;
-  license_expiry: string;
-  license_issue_date: string;
-  license_authority: string;
-  employment_type: string;
-  experience_years: string;
-  status: string;
-  address_street: string;
-  address_city: string;
-  address_state: string;
-  address_pincode: string;
-  address_country: string;
-  emergency_name: string;
-  emergency_phone: string;
-  emergency_relation: string;
-  notes: string;
-  shift_type: string;
-  behavior_monitoring: boolean;
-}
-
-/**
- * EditDriver: Single-page form for editing an existing driver.
- * Follows the EditVehicle pattern.
- */
 export const EditDriver: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [driver, setDriver] = useState<Driver | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    employee_code: "",
-    license_number: "",
-    license_type: "LMV",
-    license_expiry: "",
-    license_issue_date: "",
-    license_authority: "",
-    employment_type: "FULL_TIME",
-    experience_years: "0",
-    status: "active",
-    address_street: "",
-    address_city: "",
-    address_state: "",
-    address_pincode: "",
-    address_country: "India",
-    emergency_name: "",
-    emergency_phone: "",
-    emergency_relation: "",
-    notes: "",
-    shift_type: "MORNING",
-    behavior_monitoring: true,
-  });
+  const [submitting, setSubmitting] = useState(false);
 
-  const loadDriver = useCallback(async () => {
+  const formatDatePicker = (dateStr?: string) => {
+    if (!dateStr) return "";
+    return dateStr.split("T")[0];
+  };
+
+  const loadData = useCallback(async () => {
     if (!id) return;
-    setLoading(true);
     try {
-      const data = await api.getDriver(id);
-      setDriver(data);
-      const metadata = data.metadata || {};
+      const res = await api.getDriver(id);
+      const data = res.data || res;
       setForm({
-        first_name: data.first_name || "",
-        last_name: data.last_name || "",
+        first_name: data.first_name || data.name?.split(" ")[0] || "",
+        last_name: data.last_name || data.name?.split(" ")[1] || "",
         email: data.email || "",
         phone: data.phone || "",
         employee_code: data.employee_code || "",
+        aadhaar_number: data.aadhaar_number || "",
+        pan_number: data.pan_number || "",
+        date_of_birth: formatDatePicker(data.date_of_birth),
         license_number: data.license_number || "",
         license_type: data.license_type || "LMV",
-        license_expiry: data.license_expiry ? data.license_expiry.split("T")[0] : "",
-        license_issue_date: data.license_issue_date ? data.license_issue_date.split("T")[0] : "",
+        license_expiry: formatDatePicker(data.license_expiry),
+        license_issue_date: formatDatePicker(data.license_issue_date),
         license_authority: data.license_authority || "",
         employment_type: data.employment_type || "FULL_TIME",
         experience_years: String(data.experience_years || 0),
-        status: data.status || "active",
+        joining_date: formatDatePicker(data.metadata?.joining_date),
         address_street: data.address?.street || "",
         address_city: data.address?.city || "",
         address_state: data.address?.state || "",
@@ -123,9 +128,10 @@ export const EditDriver: React.FC = () => {
         emergency_name: data.emergency_contact?.name || "",
         emergency_phone: data.emergency_contact?.phone || "",
         emergency_relation: data.emergency_contact?.relation || "",
-        notes: metadata.notes || "",
-        shift_type: metadata.shift_type || "MORNING",
-        behavior_monitoring: metadata.behavior_monitoring ?? true,
+        blood_group: data.metadata?.blood_group || "O+",
+        shift_type: data.metadata?.shift_type || "MORNING",
+        behavior_monitoring: data.metadata?.behavior_monitoring ?? true,
+        notes: data.metadata?.notes || "",
       });
     } catch (error) {
       console.error("Failed to load driver:", error);
@@ -135,287 +141,252 @@ export const EditDriver: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    loadDriver();
-  }, [loadDriver]);
+    loadData();
+  }, [loadData]);
 
   const updateField = (field: keyof FormState, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const validateStep = (step: number): boolean => {
+    const newErrors: Partial<Record<keyof FormState, string>> = {};
+    if (step === 1) {
+      if (!form.first_name.trim()) newErrors.first_name = "Required";
+      if (!form.last_name.trim()) newErrors.last_name = "Required";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((s) => s + 1);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError("");
-    setSaving(true);
+    if (!id || !validateStep(3)) return;
+    setSubmitting(true);
     try {
-      await api.updateDriver(id!, {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email,
-        phone: form.phone,
-        employee_code: form.employee_code,
-        license_number: form.license_number,
-        license_type: form.license_type,
-        license_expiry: form.license_expiry ? new Date(form.license_expiry).toISOString() : undefined,
-        license_authority: form.license_authority,
-        employment_type: form.employment_type,
+      await api.updateDriver(id, {
+        ...form,
+        phone: form.phone.startsWith("+") ? form.phone : `+91${form.phone}`,
+        license_expiry: new Date(form.license_expiry).toISOString(),
+        date_of_birth: new Date(form.date_of_birth).toISOString(),
         experience_years: parseInt(form.experience_years) || 0,
-        status: form.status,
-        address: {
-          street: form.address_street,
-          city: form.address_city,
-          state: form.address_state,
-          pincode: form.address_pincode,
-          country: form.address_country,
-        },
-        emergency_contact: {
-          name: form.emergency_name,
-          phone: form.emergency_phone,
-          relation: form.emergency_relation,
-        },
-        metadata: {
-          notes: form.notes,
-          shift_type: form.shift_type,
-          behavior_monitoring: form.behavior_monitoring,
-        },
+        address: { street: form.address_street, city: form.address_city, state: form.address_state, pincode: form.address_pincode, country: form.address_country },
+        emergency_contact: { name: form.emergency_name, phone: form.emergency_phone, relation: form.emergency_relation },
+        metadata: { blood_group: form.blood_group, shift_type: form.shift_type, behavior_monitoring: form.behavior_monitoring, notes: form.notes, joining_date: form.joining_date }
       });
       navigate(`/admin/drivers/${id}`);
     } catch (error: any) {
-      setSubmitError(error?.response?.data?.error || "Failed to update driver");
+      alert(error?.response?.data?.error || "Modification failed.");
     } finally {
-      setSaving(false);
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Are you sure? This will permanently delete this driver.")) return;
-    try {
-      await api.deleteDriver(id!);
-      navigate("/admin/drivers");
-    } catch (error) {
-      alert("Failed to delete driver. They may have an active assignment or trip.");
-    }
-  };
-
-  const renderInput = (label: string, field: keyof FormState, type: string = "text", required?: boolean) => (
-    <div>
-      <label className="block text-text-muted text-xs mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
+  const renderInput = (label: string, field: keyof FormState, type: string = "text", placeholder?: string) => (
+    <div className="space-y-1.5 text-left">
+      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block italic ml-1">
+        {label}
       </label>
       <input
         type={type}
-        value={form[field] as string}
+        value={(form[field] as string) || ""}
         onChange={(e) => updateField(field, e.target.value)}
-        className="w-full bg-surface-dark border border-border-color text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary"
+        placeholder={placeholder}
+        className={`w-full bg-surface-container border ${errors[field] ? 'border-rose-500/50' : 'border-outline'} text-white text-sm rounded-xl px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/30 font-body shadow-inner`}
       />
+      {errors[field] && <p className="text-[10px] text-rose-400 font-bold uppercase tracking-tighter ml-1">*{errors[field]}</p>}
     </div>
   );
 
-  const renderSelect = (
-    label: string,
-    field: keyof FormState,
-    options: { value: string; label: string }[],
-    required?: boolean,
-  ) => (
-    <div>
-      <label className="block text-text-muted text-xs mb-1">
-        {label} {required && <span className="text-red-400">*</span>}
+  const renderSelect = (label: string, field: keyof FormState, options: { value: string; label: string }[]) => (
+    <div className="space-y-1.5 text-left">
+      <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block italic ml-1">
+        {label}
       </label>
       <select
-        value={form[field] as string}
+        value={(form[field] as string) || ""}
         onChange={(e) => updateField(field, e.target.value)}
-        className="w-full bg-surface-dark border border-border-color text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary"
+        className="w-full bg-surface-container border border-outline text-white text-sm rounded-xl px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all cursor-pointer font-body shadow-inner appearance-none"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} value={opt.value} className="bg-surface-container-highest">{opt.label}</option>
         ))}
       </select>
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="w-full flex items-center justify-center py-20">
-        <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
-      </div>
-    );
-  }
+  const steps = ["Genetic Bio", "Operational Credentials", "Protocol Setup"];
 
-  if (!driver) {
-    return (
-      <div className="w-full text-center py-20 text-text-muted">
-        <p>Driver not found.</p>
-        <button onClick={() => navigate("/admin/drivers")} className="text-primary hover:underline mt-2">
-          Back to Drivers
-        </button>
-      </div>
-    );
-  }
-
-  const statusOption = STATUS_OPTIONS.find((s) => s.value === driver.status);
+  if (loading) return <div className="p-20 text-center animate-pulse text-on-surface-variant font-black tracking-widest uppercase italic">RECONSTRUCTING NODE DATA...</div>;
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto py-8 px-4 relative">
+       {/* Background Aura */}
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
+
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-10 relative z-10 text-left">
         <button
           onClick={() => navigate(`/admin/drivers/${id}`)}
-          className="text-text-muted hover:text-white text-sm mb-2 flex items-center gap-1"
+          className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] mb-4 hover:text-white transition-all italic group"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-          Back to Driver
+          <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+          Abort Modification
         </button>
-        <div className="flex items-center gap-3">
-          <h1 className="text-white text-2xl font-bold">{driver.first_name} {driver.last_name}</h1>
-          {statusOption && (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-              driver.status === "active" ? "bg-green-500/20 text-green-400" :
-              driver.status === "inactive" ? "bg-gray-500/20 text-gray-400" :
-              driver.status === "suspended" ? "bg-red-500/20 text-red-400" :
-              "bg-yellow-500/20 text-yellow-400"
-            }`}>
-              {statusOption.label}
-            </span>
-          )}
-        </div>
-        <p className="text-text-muted text-sm">{driver.license_number} · {driver.license_type}</p>
+        <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Modify Operational Node</h1>
+        <p className="text-on-surface-variant text-xs font-medium mt-2">Section {currentStep}: {steps[currentStep-1]} — Ref: {id?.slice(0, 8).toUpperCase()}</p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-surface-dark border border-border-color rounded-lg p-6">
-        {submitError && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4 text-red-400 text-sm">
-            {submitError}
+      {/* Step Rail */}
+      <div className="flex items-center gap-4 mb-10 relative z-10">
+        {steps.map((title, i) => {
+          const stepNum = i + 1;
+          const isActive = stepNum === currentStep;
+          const isDone = stepNum < currentStep;
+          return (
+            <React.Fragment key={i}>
+              <div className="flex items-center gap-3">
+                <div className={`size-10 rounded-xl border flex items-center justify-center font-black transition-all duration-500 shadow-xl ${
+                  isDone ? 'bg-emerald-500 border-emerald-500 text-white' :
+                  isActive ? 'bg-primary border-primary text-white shadow-primary/20' :
+                  'bg-surface-container border-outline text-on-surface-variant opacity-40'
+                }`}>
+                  {isDone ? <span className="material-symbols-outlined text-lg">check</span> : stepNum}
+                </div>
+                <span className={`text-[10px] font-black uppercase tracking-widest hidden md:block transition-opacity duration-500 ${isActive ? 'opacity-100 text-white' : 'opacity-30 text-on-surface-variant'}`}>
+                  {title}
+                </span>
+              </div>
+              {i < 2 && <div className={`flex-1 h-0.5 rounded-full transition-all duration-700 ${isDone ? 'bg-emerald-500' : 'bg-outline'}`} />}
+            </React.Fragment>
+          );
+        })}
+      </div>
+
+      {/* Form Terminal */}
+      <form onSubmit={(e) => e.preventDefault()} className="bg-surface-container/40 backdrop-blur-md border border-outline rounded-3xl p-10 shadow-2xl relative z-10 animate-entrance">
+        {currentStep === 1 && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderInput("First Signature", "first_name", "text", "Aiden")}
+              {renderInput("Last Signature", "last_name", "text", "Pierce")}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderInput("Communication Hub (Email)", "email", "email", "aiden.p@obsidian.fleet")}
+              {renderInput("Mobile Frequency", "phone", "tel", "9876543210")}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {renderInput("Node Sequence ID", "employee_code", "text", "FF-NODE-88")}
+              {renderInput("Origin Date (DOB)", "date_of_birth", "date")}
+              {renderInput("Activation Date", "joining_date", "date")}
+            </div>
+            <div className="pt-4 border-t border-outline">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 italic text-left">Geographic Location</h3>
+              <div className="space-y-6">
+                {renderInput("Sector Address (Street)", "address_street", "text", "Terminal Alpha, Block 7")}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {renderInput("City Node", "address_city", "text", "Neo-Delhi")}
+                  {renderInput("State Cluster", "address_state", "text", "NCR")}
+                  {renderInput("Registry Pincode", "address_pincode", "text", "110001")}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderInput("First Name", "first_name", "text", true)}
-              {renderInput("Last Name", "last_name", "text", true)}
+        {currentStep === 2 && (
+          <div className="space-y-8 text-white">
+            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 italic text-left">Operational Credentials</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderInput("Registry License Number", "license_number", "text", "MH01-202X000123")}
+              {renderSelect("Asset Handling Grade", "license_type", LICENSE_TYPES)}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {renderInput("Email", "email", "email", true)}
-              {renderInput("Phone", "phone", "tel", true)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderInput("License Issuance", "license_issue_date", "date")}
+              {renderInput("Registry Expiry", "license_expiry", "date")}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {renderInput("Employee Code", "employee_code")}
-              {renderInput("Experience (Years)", "experience_years", "number")}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">License</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderInput("License Number", "license_number", "text", true)}
-              {renderSelect("License Type", "license_type", LICENSE_TYPES, true)}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {renderInput("License Issue Date", "license_issue_date", "date")}
-              {renderInput("License Expiry", "license_expiry", "date", true)}
-            </div>
-            {renderInput("License Authority", "license_authority", "text", true)}
-          </div>
-
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Address</h3>
-            {renderInput("Street", "address_street")}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-              {renderInput("City", "address_city")}
-              {renderInput("State", "address_state")}
-              {renderInput("Pincode", "address_pincode")}
+            {renderInput("Issuing Terminal (Authority)", "license_authority", "text", "RTO Sector-14")}
+            <div className="pt-4 border-t border-outline">
+              <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-6 italic text-left">Identity Encryption</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {renderInput("Biometric Registry (Aadhaar)", "aadhaar_number", "text", "4455-8899-2211")}
+                {renderInput("Taxation ID (PAN)", "pan_number", "text", "ABCDE1234F")}
+              </div>
             </div>
           </div>
+        )}
 
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Emergency Contact</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderInput("Name", "emergency_name")}
-              {renderInput("Phone", "emergency_phone", "tel")}
+        {currentStep === 3 && (
+          <div className="space-y-8">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderSelect("Deployment Class", "employment_type", EMPLOYMENT_TYPES)}
+              {renderInput("Flight Experience (Years)", "experience_years", "number", "5")}
             </div>
-            {renderInput("Relationship", "emergency_relation")}
-          </div>
-
-          <div>
-            <h3 className="text-white font-semibold text-lg mb-4">Settings</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {renderSelect("Status", "status", STATUS_OPTIONS)}
-              {renderSelect("Employment Type", "employment_type", EMPLOYMENT_TYPES)}
-              {renderSelect("Shift Type", "shift_type", SHIFT_TYPES)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {renderSelect("Pulse Shift Pattern", "shift_type", SHIFT_TYPES)}
+              {renderSelect("Biological Group", "blood_group", BLOOD_GROUPS.map(bg => ({value: bg, label: bg})))}
             </div>
-            <div className="flex items-center gap-3 mt-4">
-              <input
-                type="checkbox"
-                id="behavior_monitoring"
-                checked={form.behavior_monitoring}
-                onChange={(e) => updateField("behavior_monitoring", e.target.checked)}
-                className="rounded border-border-color"
-              />
-              <label htmlFor="behavior_monitoring" className="text-white text-sm">
-                Enable behavior monitoring
-              </label>
+            <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-between text-left">
+              <div>
+                <p className="text-white font-black text-xs uppercase italic tracking-widest">Telemetry Monitoring</p>
+                <p className="text-[10px] text-on-surface-variant font-medium mt-1">Enable real-time behavior tracking and incident logging.</p>
+              </div>
+              <button 
+                onClick={() => updateField("behavior_monitoring", !form.behavior_monitoring)}
+                className={`w-12 h-6 rounded-full transition-all relative ${form.behavior_monitoring ? 'bg-primary' : 'bg-surface-container-highest'}`}
+              >
+                <div className={`absolute top-1 size-4 rounded-full bg-white transition-all ${form.behavior_monitoring ? 'left-7' : 'left-1'}`} />
+              </button>
             </div>
-            <div className="mt-4">
-              <label className="block text-text-muted text-xs mb-1">Notes</label>
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest italic ml-1">Terminal Notes</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => updateField("notes", e.target.value)}
-                rows={3}
-                className="w-full bg-surface-dark border border-border-color text-white text-sm rounded-lg px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary resize-none"
+                rows={4}
+                className="w-full bg-surface-container border border-outline text-white text-sm rounded-2xl px-4 py-3 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/30 font-body shadow-inner resize-none"
+                placeholder="Additional operational instructions..."
               />
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Danger Zone */}
-        <div className="mt-8 pt-6 border-t border-border-color">
-          {!confirmDelete ? (
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-            >
-              Delete Driver
-            </button>
-          ) : (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex items-center gap-3">
-              <span className="text-red-400 text-sm">Permanently delete this driver?</span>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
-              >
-                Confirm Delete
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="px-3 py-1.5 text-text-muted hover:text-white text-sm transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Buttons */}
-        <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-border-color">
+        {/* Footer Navigation */}
+        <div className="flex items-center justify-between mt-12 pt-8 border-t border-outline">
           <button
             type="button"
-            onClick={() => navigate(`/admin/drivers/${id}`)}
-            className="px-4 py-2 text-sm font-medium text-text-muted hover:text-white transition-colors"
+            onClick={() => currentStep > 1 ? setCurrentStep(s => s - 1) : navigate(`/admin/drivers/${id}`)}
+            className="px-6 py-2.5 text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] hover:text-white transition-all italic"
           >
-            Cancel
+            {currentStep === 1 ? 'Discard Changes' : 'Previous Logic'}
           </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-6 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
-          >
-            {saving && <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>}
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
+          
+          <div className="flex items-center gap-4">
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={() => handleNext()}
+                className="px-8 py-2.5 bg-surface-container-highest text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary transition-all shadow-lg active:scale-95 italic"
+              >
+                Next Sequence
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="px-10 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-3 active:scale-95 italic"
+              >
+                {submitting && <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>}
+                {submitting ? "Committing..." : "Commit Modification"}
+              </button>
+            )}
+          </div>
         </div>
       </form>
     </div>

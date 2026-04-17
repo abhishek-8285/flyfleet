@@ -19,103 +19,166 @@ export const VehicleDetailPanel: React.FC = () => {
     const color = statusColor(vehicle.derived_status);
 
     return (
-        <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-10 overflow-y-auto">
-            <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">{vehicle.registration}</h2>
+        <div className="fixed right-0 top-0 h-full w-[450px] bg-surface-container border-l border-outline shadow-2xl z-20 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+            {/* Intel Panel Header */}
+            <div className="p-8 border-b border-outline bg-surface-dim">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <nav className="text-[9px] font-black uppercase tracking-[0.3em] text-on-surface-variant mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-sm">satellite_alt</span>
+                            Asset Telemetry Data
+                        </nav>
+                        <h2 className="text-4xl font-bold text-white tracking-tighter uppercase">{vehicle.registration}</h2>
+                    </div>
                     <button
                         onClick={() => dispatch(setSelectedVehicle(null))}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-container-highest border border-outline text-white hover:bg-rose-500 transition-all active:scale-95"
                     >
-                        ✕
+                        <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
+            </div>
 
-                <div className="space-y-4">
-                    {/* Status Badge */}
-                    <div className="flex items-center gap-2">
-                        <span
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: color }}
-                        />
-                        <span className="font-medium">{statusLabel(vehicle.derived_status)}</span>
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                    {/* Logistics Status Indicator */}
+                    <div className="bg-surface-dim border border-outline p-6 rounded-[2rem] flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <div 
+                                    className="w-3 h-3 rounded-full z-10"
+                                    style={{ backgroundColor: color }}
+                                />
+                                <div 
+                                    className="absolute inset-0 w-3 h-3 rounded-full animate-ping opacity-30"
+                                    style={{ backgroundColor: color }}
+                                />
+                            </div>
+                            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+                                {statusLabel(vehicle.derived_status)}
+                            </span>
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant opacity-50">
+                            Real-time Status
+                        </span>
                     </div>
 
-                    {/* Vehicle Info */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-gray-700 mb-2">Vehicle Details</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                                <span className="text-gray-500">Make</span>
-                                <p className="font-medium">{vehicle.make}</p>
+                    {/* Asset Specifications */}
+                    <div className="bg-surface-dim border border-outline p-6 rounded-[2rem]">
+                        <div className="flex items-center gap-3 mb-6 opacity-50">
+                            <span className="material-symbols-outlined text-lg text-primary">precision_manufacturing</span>
+                            <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Asset Specifications</h3>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Make</span>
+                                <p className="text-sm font-bold text-white tracking-tight">{vehicle.make}</p>
                             </div>
-                            <div>
-                                <span className="text-gray-500">Model</span>
-                                <p className="font-medium">{vehicle.model}</p>
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Architecture</span>
+                                <p className="text-sm font-bold text-white tracking-tight">{vehicle.model}</p>
                             </div>
-                            <div>
-                                <span className="text-gray-500">Year</span>
-                                <p className="font-medium">{vehicle.year}</p>
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Operational Year</span>
+                                <p className="text-sm font-bold text-white tracking-tight font-mono">{vehicle.year}</p>
                             </div>
-                            <div>
-                                <span className="text-gray-500">Last Update</span>
-                                <p className="font-medium">
+                            <div className="space-y-1">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Telemetry Update</span>
+                                <p className="text-sm font-bold text-primary tracking-tight font-mono">
                                     {new Date(vehicle.last_update).toLocaleTimeString()}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Location */}
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                        <h3 className="font-semibold text-gray-700 mb-2">Current Location</h3>
-                        <div className="text-sm space-y-1">
-                            <p><span className="text-gray-500">Lat:</span> {vehicle.latitude.toFixed(6)}</p>
-                            <p><span className="text-gray-500">Lng:</span> {vehicle.longitude.toFixed(6)}</p>
-                            {vehicle.speed_kmh && (
-                                <p><span className="text-gray-500">Speed:</span> {vehicle.speed_kmh.toFixed(1)} km/h</p>
-                            )}
-                            {vehicle.heading && (
-                                <p><span className="text-gray-500">Heading:</span> {vehicle.heading.toFixed(0)}°</p>
-                            )}
+                    {/* Positional Intelligence */}
+                    <div className="bg-surface-dim border border-outline p-6 rounded-[2rem]">
+                        <div className="flex items-center gap-3 mb-6 opacity-50">
+                            <span className="material-symbols-outlined text-lg text-primary">explore</span>
+                            <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Positional Intelligence</h3>
                         </div>
-                    </div>
-
-                    {/* Driver Info */}
-                    {vehicle.driver_name && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-700 mb-2">Driver</h3>
-                            <p className="font-medium">{vehicle.driver_name}</p>
-                            {vehicle.driver_phone && (
-                                <p className="text-sm text-gray-500">{vehicle.driver_phone}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Fuel */}
-                    {vehicle.fuel_level !== null && (
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <h3 className="font-semibold text-gray-700 mb-2">Fuel Level</h3>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                <div
-                                    className="bg-blue-600 h-2.5 rounded-full"
-                                    style={{ width: `${vehicle.fuel_level}%` }}
-                                />
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-surface-container rounded-2xl p-4 border border-outline/50">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant block mb-1">LATITUDE</span>
+                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">{vehicle.latitude.toFixed(6)}</p>
+                                </div>
+                                <div className="bg-surface-container rounded-2xl p-4 border border-outline/50">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant block mb-1">LONGITUDE</span>
+                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">{vehicle.longitude.toFixed(6)}</p>
+                                </div>
                             </div>
-                            <p className="text-sm text-gray-500 mt-1">{vehicle.fuel_level.toFixed(1)}%</p>
+                            {vehicle.speed_kmh !== undefined && (
+                                <div className="flex items-center justify-between px-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-xl text-amber-500">speed</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Velocity Spectrum</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-white tracking-tighter">
+                                        <span className="text-2xl">{vehicle.speed_kmh?.toFixed(1) || 0}</span> 
+                                        <span className="text-[10px] ml-1 opacity-50">KM/H</span>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Personnel Operations */}
+                    {vehicle.driver_name && (
+                        <div className="bg-surface-dim border border-outline p-6 rounded-[2rem]">
+                            <div className="flex items-center gap-3 mb-6 opacity-50">
+                                <span className="material-symbols-outlined text-lg text-primary">badge</span>
+                                <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Personnel Operations</h3>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black uppercase">
+                                    {vehicle.driver_name.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white tracking-tight">{vehicle.driver_name}</p>
+                                    {vehicle.driver_phone && (
+                                        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest font-mono mt-1">{vehicle.driver_phone}</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                        <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
-                            View History
-                        </button>
-                        <button className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300">
-                            Contact Driver
-                        </button>
-                    </div>
-                </div>
+                    {/* Consumable Analytics */}
+                    {vehicle.fuel_level !== null && (
+                        <div className="bg-surface-dim border border-outline p-6 rounded-[2rem]">
+                            <div className="flex items-center gap-3 mb-6 opacity-50">
+                                <span className="material-symbols-outlined text-lg text-primary">ev_station</span>
+                                <h3 className="text-[10px] font-black text-white uppercase tracking-widest">Consumable Analytics</h3>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-end">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant">Fuel Reservoir</span>
+                                    <span className="text-sm font-bold text-white font-mono">{vehicle.fuel_level.toFixed(1)}%</span>
+                                </div>
+                                <div className="w-full bg-surface-container rounded-full h-3 overflow-hidden border border-outline/50">
+                                    <div
+                                        className={`h-full transition-all duration-1000 ${
+                                            vehicle.fuel_level < 20 ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'bg-primary'
+                                        }`}
+                                        style={{ width: `${vehicle.fuel_level}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+            </div>
+
+            {/* Operational Directives */}
+            <div className="p-8 border-t border-outline bg-surface-dim grid grid-cols-2 gap-4">
+                <button className="bg-primary hover:bg-primary-dark text-white py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-3 active:scale-95">
+                    <span className="material-symbols-outlined text-base">history</span>
+                    Audit Trail
+                </button>
+                <button className="bg-surface-container hover:bg-surface-container-highest border border-outline text-white py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
+                    <span className="material-symbols-outlined text-base">call</span>
+                    Direct Link
+                </button>
             </div>
         </div>
     );

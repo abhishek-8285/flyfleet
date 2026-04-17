@@ -13,24 +13,24 @@ type Driver struct {
 	FullName          string                 `json:"name" db:"full_name"`
 	Email             string                 `json:"email" db:"email" validate:"required,email"`
 	Phone             string                 `json:"phone" db:"phone" validate:"required,e164"`
-	EmployeeCode      string                 `json:"employee_code" db:"employee_code" validate:"omitempty,max=50"`
-	AadhaarNumber     string                 `json:"aadhaar_number" db:"aadhaar_number" validate:"omitempty,len=12"`
-	PanNumber         string                 `json:"pan_number" db:"pan_number" validate:"omitempty,len=10"`
+	EmployeeCode      *string                `json:"employee_code" db:"employee_code" validate:"omitempty,max=50"`
+	AadhaarNumber     *string                `json:"aadhaar_number" db:"aadhaar_number" validate:"omitempty,len=12"`
+	PanNumber         *string                `json:"pan_number" db:"pan_number" validate:"omitempty,len=10"`
 	LicenseNumber     string                 `json:"license_number" db:"license_number" validate:"required,max=50"`
 	LicenseType       *string                `json:"license_type" db:"license_type" validate:"omitempty,oneof=LMV HMV Transport"`
-	LicenseExpiry     time.Time              `json:"license_expiry" db:"license_expiry" validate:"required"`
+	LicenseExpiry     *time.Time             `json:"license_expiry" db:"license_expiry" validate:"omitempty"`
 	LicenseIssueDate  *time.Time             `json:"license_issue_date" db:"license_issue_date" validate:"omitempty"`
-	LicenseAuthority  string                 `json:"license_authority" db:"license_authority" validate:"required,max=100"`
-	DateOfBirth       time.Time              `json:"date_of_birth" db:"date_of_birth" validate:"required"`
+	LicenseAuthority  *string                `json:"license_authority" db:"license_authority" validate:"omitempty,max=100"`
+	DateOfBirth       *time.Time             `json:"date_of_birth" db:"date_of_birth" validate:"omitempty"`
 	Address           Address                `json:"address" db:"address" validate:"required"`
 	EmergencyContact  EmergencyContact       `json:"emergency_contact" db:"emergency_contact" validate:"required"`
 	Status            string                 `json:"status" db:"status" validate:"required,oneof=active inactive suspended resigned"`
 	CurrentVehicleID  *string                `json:"current_vehicle_id" db:"current_vehicle_id"`
 	CurrentTripID     *string                `json:"current_trip_id" db:"current_trip_id"`
-	JoiningDate       time.Time              `json:"joining_date" db:"joining_date" validate:"required"`
+	JoiningDate       time.Time              `json:"joining_date" db:"joining_date"`
 	ResignationDate   *time.Time             `json:"resignation_date" db:"resignation_date"`
 	ExperienceYears   int                    `json:"experience_years" db:"experience_years" validate:"gte=0,lte=50"`
-	EmploymentType    string                 `json:"employment_type" db:"employment_type" validate:"required,oneof=FULL_TIME CONTRACT"`
+	EmploymentType    *string                `json:"employment_type" db:"employment_type" validate:"omitempty,oneof=FULL_TIME CONTRACT"`
 	Rating            float64                `json:"rating" db:"rating" validate:"gte=0,lte=5"`
 	TotalTrips        int                    `json:"total_trips" db:"total_trips" validate:"gte=0"`
 	TotalDistanceKm   float64                `json:"total_distance_km" db:"total_distance_km" validate:"gte=0"`
@@ -189,6 +189,7 @@ type SetScheduleRequest struct {
 
 // DriverListFilter represents filters for listing drivers
 type DriverListFilter struct {
+	OrgID     string `json:"org_id" form:"org_id" validate:"omitempty,uuid"`
 	Status    string `json:"status" form:"status" validate:"omitempty,oneof=active inactive suspended resigned"`
 	VehicleID string `json:"vehicle_id" form:"vehicle_id" validate:"omitempty,uuid"`
 	Name      string `json:"name" form:"name" validate:"omitempty,max=100"`

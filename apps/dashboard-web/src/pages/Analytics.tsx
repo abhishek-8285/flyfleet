@@ -50,7 +50,13 @@ const Analytics = () => {
   const [tripStats, setTripStats] = useState<any[]>([]);
   const [driverStats, setDriverStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [missionClock, setMissionClock] = useState(new Date());
   const { uiStrings } = useUIStrings("analytics");
+
+  useEffect(() => {
+    const timer = setInterval(() => setMissionClock(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -207,65 +213,103 @@ const Analytics = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background-dark">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-screen bg-surface-dim">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="material-symbols-outlined text-primary text-xl animate-pulse">radar</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-background-dark min-h-screen text-white p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {uiStrings?.title || "Analytics & Intelligence"}
-          </h1>
-          <p className="text-text-muted text-sm">
-            {uiStrings?.sub_title ||
-              "AI-driven predictive modeling and fleet performance"}
-          </p>
+    <div className="bg-surface-dim min-h-screen text-white p-8 space-y-10 font-sans antialiased">
+      {/* Intelligence Command Header */}
+      <div className="relative bg-surface-container/60 backdrop-blur-3xl border border-outline rounded-[3rem] p-10 shadow-2xl overflow-hidden group">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
+          <span className="material-symbols-outlined text-[180px] rotate-12">monitoring</span>
         </div>
-        <div className="flex gap-2">
-          <button className="px-4 py-2 bg-surface-dark border border-border-color rounded-lg text-sm font-medium text-white hover:bg-surface-darker transition-colors">
-            {uiStrings?.btn_last_7d || "Last 7 Days"}
-          </button>
-          <button className="px-4 py-2 bg-primary hover:bg-primary/90 rounded-lg text-sm font-medium text-white shadow-lg shadow-primary/20 transition-all">
-            {uiStrings?.btn_export || "Export Report"}
-          </button>
+        
+        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div className="space-y-4">
+            <nav className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-on-surface-variant">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              Strategic Intelligence Core
+            </nav>
+            <div>
+              <h1 className="text-5xl font-black tracking-tighter uppercase text-white mb-2">
+                {uiStrings?.title || "Operational HUD"}
+              </h1>
+              <p className="text-on-surface-variant text-sm font-medium tracking-wide">
+                {uiStrings?.sub_title || "AI-driven predictive modeling and fleet performance analytics"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-end md:items-center gap-6">
+            {/* Mission Clock */}
+            <div className="bg-surface-dim/80 border border-outline px-6 py-4 rounded-3xl flex items-center gap-6 shadow-inner">
+              <div className="flex flex-col text-right">
+                <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-50">Operational Time</span>
+                <span className="text-2xl font-bold text-primary tracking-tighter font-mono">
+                  {missionClock.toLocaleTimeString()}
+                </span>
+              </div>
+              <div className="h-8 w-[1px] bg-outline/30" />
+              <div className="flex flex-col text-right">
+                <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-50">Local Cycle</span>
+                <span className="text-sm font-bold text-white tracking-widest uppercase">
+                  {missionClock.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button className="h-14 px-8 bg-surface-container-highest border border-outline rounded-2xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-surface-on-variant transition-all active:scale-95 shadow-lg">
+                {uiStrings?.btn_last_7d || "Cycle: 7D"}
+              </button>
+              <button className="h-14 px-8 bg-primary hover:bg-primary-dark text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 flex items-center gap-3">
+                <span className="material-symbols-outlined text-lg">ios_share</span>
+                {uiStrings?.btn_export || "Deploy Report"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Telemetry Intelligence Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <KpiCard
-          title={uiStrings?.kpi_ref_fleet_eff || "Fleet Efficiency"}
+          title={uiStrings?.kpi_ref_fleet_eff || "Fleet Velocity Efficiency"}
           value={kpis.fleetEfficiency}
-          change="Live"
-          icon={<ArrowTrendingUpIcon className="text-emerald-400" />}
+          change="+2.4%"
+          icon="finance"
           positive
           uiStrings={uiStrings}
         />
         <KpiCard
-          title={uiStrings?.kpi_ref_fuel_cons || "Fuel Consumption"}
+          title={uiStrings?.kpi_ref_fuel_cons || "Resource Consumption"}
           value={kpis.fuelConsumption}
-          change="Live"
-          icon={<TruckIcon className="text-blue-400" />}
+          change="-0.8%"
+          icon="water_drop"
           positive
           uiStrings={uiStrings}
         />
         <KpiCard
-          title={uiStrings?.kpi_ref_maint_cost || "Maintenance Costs"}
+          title={uiStrings?.kpi_ref_maint_cost || "Operational Maintenance"}
           value={kpis.maintenanceCosts}
-          change="Live"
-          icon={<ArrowTrendingDownIcon className="text-red-400" />}
+          change="+12%"
+          icon="build"
           positive={false}
           uiStrings={uiStrings}
         />
         <KpiCard
-          title={uiStrings?.kpi_ref_on_time || "On-Time Delivery"}
+          title={uiStrings?.kpi_ref_on_time || "SLA Adherence Rate"}
           value={kpis.onTimeDelivery}
-          change="Live"
-          icon={<ClockIcon className="text-yellow-400" />}
+          change="+4.1%"
+          icon="schedule"
           positive
           uiStrings={uiStrings}
         />
@@ -282,45 +326,56 @@ const Analytics = () => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChartAny data={predictiveData}>
               <CartesianGridAny
-                strokeDasharray="3 3"
-                stroke="#334155"
+                strokeDasharray="4 4"
+                stroke="rgba(255,255,255,0.05)"
                 vertical={false}
               />
               <XAxisAny
                 dataKey="day"
-                tick={{ fill: "#94a3b8" }}
+                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 900 }}
                 axisLine={false}
                 tickLine={false}
+                dy={10}
               />
               <YAxisAny
-                tick={{ fill: "#94a3b8" }}
+                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 900 }}
                 axisLine={false}
                 tickLine={false}
+                dx={-10}
               />
               <TooltipAny
                 contentStyle={{
-                  backgroundColor: "#1e293b",
-                  borderRadius: "8px",
-                  border: "1px solid #334155",
+                  backgroundColor: "#0F1117",
+                  borderRadius: "1.5rem",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "1.5rem",
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
                   color: "#fff",
                 }}
+                itemStyle={{ fontSize: "12px", fontWeight: "bold", textTransform: "uppercase" }}
               />
-              <LegendAny />
+              <LegendAny 
+                verticalAlign="top" 
+                align="right" 
+                iconType="circle"
+                wrapperStyle={{ paddingBottom: "40px", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}
+              />
               <LineAny
                 type="monotone"
                 dataKey="actual"
                 name={uiStrings?.chart_predictive_actual || "Actual Usage"}
-                stroke="#3b82f6"
-                strokeWidth={3}
-                dot={{ r: 4 }}
+                stroke="#137FEC"
+                strokeWidth={4}
+                dot={{ r: 6, fill: "#137FEC", strokeWidth: 2, stroke: "#0F1117" }}
+                activeDot={{ r: 8, strokeWidth: 0 }}
               />
               <LineAny
                 type="monotone"
                 dataKey="predicted"
                 name={uiStrings?.chart_predictive_ai || "AI Prediction"}
-                stroke="#10b981"
-                strokeWidth={3}
-                strokeDasharray="5 5"
+                stroke="#10B981"
+                strokeWidth={4}
+                strokeDasharray="8 8"
                 dot={false}
               />
             </LineChartAny>
@@ -330,7 +385,7 @@ const Analytics = () => {
         {/* Driver Skills Radar */}
         <ChartCard
           title={
-            uiStrings?.chart_skills_title || "Driver Workforce Skills Matrix"
+            uiStrings?.chart_skills_title || "Workforce Competency Matrix"
           }
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -340,10 +395,10 @@ const Analytics = () => {
               outerRadius="80%"
               data={driverSkillsData}
             >
-              <PolarGridAny stroke="#334155" />
+              <PolarGridAny stroke="rgba(255,255,255,0.05)" />
               <PolarAngleAxisAny
                 dataKey="subject"
-                tick={{ fill: "#94a3b8", fontSize: 12 }}
+                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 900, textTransform: "uppercase" }}
               />
               <PolarRadiusAxisAny
                 angle={30}
@@ -352,18 +407,26 @@ const Analytics = () => {
                 axisLine={false}
               />
               <RadarAny
-                name={uiStrings?.chart_skills_avg || "Fleet Average"}
+                name={uiStrings?.chart_skills_avg || "Fleet Baseline"}
                 dataKey="A"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
-                fillOpacity={0.3}
+                stroke="#8B5CF6"
+                fill="#8B5CF6"
+                fillOpacity={0.15}
+                strokeWidth={3}
               />
-              <LegendAny />
+              <LegendAny 
+                verticalAlign="top" 
+                align="right" 
+                iconType="circle"
+                wrapperStyle={{ paddingBottom: "40px", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}
+              />
               <TooltipAny
                 contentStyle={{
-                  backgroundColor: "#1e293b",
-                  borderRadius: "8px",
-                  border: "1px solid #334155",
+                  backgroundColor: "#0F1117",
+                  borderRadius: "1.5rem",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "1.5rem",
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
                   color: "#fff",
                 }}
               />
@@ -374,127 +437,152 @@ const Analytics = () => {
 
       {/* Distance Trend Chart */}
       <ChartCard
-        title={uiStrings?.chart_distance_title || "Distance Traveled Analysis"}
-        height="h-80"
+        title={uiStrings?.chart_distance_title || "Operational Distance Spectrum"}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChartAny data={tripChartData}>
             <CartesianGridAny
-              strokeDasharray="3 3"
-              stroke="#334155"
+              strokeDasharray="4 4"
+              stroke="rgba(255,255,255,0.05)"
               vertical={false}
             />
             <XAxisAny
               dataKey="label"
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 900 }}
               axisLine={false}
               tickLine={false}
+              dy={10}
             />
             <YAxisAny
-              tick={{ fill: "#94a3b8" }}
+              tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 900 }}
               axisLine={false}
               tickLine={false}
+              dx={-10}
             />
             <TooltipAny
               contentStyle={{
-                backgroundColor: "#1e293b",
-                borderRadius: "8px",
-                border: "1px solid #334155",
+                backgroundColor: "#0F1117",
+                borderRadius: "1.5rem",
+                border: "1px solid rgba(255,255,255,0.1)",
+                padding: "1.5rem",
+                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
                 color: "#fff",
               }}
-              cursor={{ fill: "rgba(255,255,255,0.05)" }}
+              cursor={{ fill: "rgba(255,255,255,0.02)" }}
             />
-            <LegendAny />
+            <LegendAny 
+                verticalAlign="top" 
+                align="right" 
+                iconType="circle"
+                wrapperStyle={{ paddingBottom: "40px", fontSize: "10px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}
+            />
             <BarAny
               dataKey="total_distance"
-              name={uiStrings?.chart_distance_label || "Distance (km)"}
-              fill="#3b82f6"
-              radius={[4, 4, 0, 0]}
+              name={uiStrings?.chart_distance_label || "Active Distance (KM)"}
+              fill="#137FEC"
+              radius={[12, 12, 0, 0]}
+              barSize={40}
             />
           </BarChartAny>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Driver Performance Table - Dark Mode */}
-      <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-        <div className="p-6 border-b border-border-color bg-surface-darker/50">
-          <h2 className="text-lg font-bold text-white">
-            {uiStrings?.table_performance_title || "Top Driver Performance"}
-          </h2>
+      {/* Workforce Performance Matrix */}
+      <div className="bg-surface-container rounded-[3rem] border border-outline overflow-hidden shadow-2xl">
+        <div className="p-10 border-b border-outline bg-surface-dim flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="w-1.5 h-6 bg-primary rounded-full" />
+            <h2 className="text-xl font-bold text-white tracking-tighter uppercase">
+              {uiStrings?.table_performance_title || "Personnel Performance Matrix"}
+            </h2>
+          </div>
+          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em] opacity-50">
+            Telemetry Synced: {missionClock.toLocaleTimeString()}
+          </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border-color">
-            <thead className="bg-surface-darker">
+          <table className="min-w-full divide-y divide-outline">
+            <thead className="bg-surface-dim">
               <tr>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                  className="px-8 py-6 text-left text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]"
                 >
-                  {uiStrings?.th_driver || "Driver"}
+                  {uiStrings?.th_driver || "Assigned Personnel"}
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                  className="px-8 py-6 text-left text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]"
                 >
-                  {uiStrings?.th_safety_score || "Safety Score"}
+                  {uiStrings?.th_safety_score || "Safety Index"}
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                  className="px-8 py-6 text-left text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]"
                 >
-                  {uiStrings?.th_trips || "Trips"}
+                  {uiStrings?.th_trips || "Operations"}
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                  className="px-8 py-6 text-left text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]"
                 >
-                  {uiStrings?.th_on_time || "On-Time"}
+                  {uiStrings?.th_on_time || "SLA Adherence"}
                 </th>
                 <th
                   scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider"
+                  className="px-8 py-6 text-left text-[10px] font-black text-on-surface-variant uppercase tracking-[0.2em]"
                 >
-                  {uiStrings?.th_distance || "Distance"}
+                  {uiStrings?.th_distance || "Total Spectrum (KM)"}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-color">
+            <tbody className="divide-y divide-outline bg-surface-container">
               {normalizedDrivers.map((driver) => (
                 <tr
                   key={driver.driver_id}
-                  className="hover:bg-surface-darker/50 transition-colors"
+                  className="hover:bg-surface-container-highest transition-all duration-300 group"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-8 py-6 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold mr-3 border border-primary/30">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black uppercase text-lg border border-primary/20 shadow-inner group-hover:scale-110 transition-transform">
                         {driver.name.charAt(0)}
                       </div>
-                      <div className="text-sm font-medium text-white">
-                        {driver.name}
+                      <div className="ml-5">
+                        <div className="text-sm font-bold text-white tracking-tight group-hover:text-primary transition-colors">
+                          {driver.name}
+                        </div>
+                        <div className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40 mt-1">
+                          ID: <span className="font-mono">{driver.driver_id.toString().slice(-8).toUpperCase()}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full border ${
-                        driver.safety_score >= 90
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                          : driver.safety_score >= 80
-                            ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                            : "bg-red-500/10 text-red-500 border-red-500/20"
-                      }`}
-                    >
-                      {driver.safety_score}/100
-                    </span>
+                  <td className="px-8 py-6 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-2 w-2 rounded-full ${
+                        driver.safety_score >= 90 ? 'bg-emerald-500' : driver.safety_score >= 80 ? 'bg-amber-500' : 'bg-rose-500'
+                      }`} />
+                      <span
+                        className={`text-xs font-black font-mono tracking-tighter ${
+                          driver.safety_score >= 90
+                            ? "text-emerald-500"
+                            : driver.safety_score >= 80
+                              ? "text-amber-500"
+                              : "text-rose-500"
+                        }`}
+                      >
+                        {driver.safety_score}/100
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
+                  <td className="px-8 py-6 whitespace-nowrap text-sm font-bold text-white font-mono tracking-tighter">
                     {driver.trips_completed}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
+                  <td className="px-8 py-6 whitespace-nowrap text-sm font-bold text-white font-mono tracking-tighter">
                     {driver.on_time_rate}%
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-text-muted">
-                    {driver.total_distance.toLocaleString()} km
+                  <td className="px-8 py-6 whitespace-nowrap text-sm font-bold text-primary font-mono tracking-tighter">
+                    {driver.total_distance.toLocaleString()}
                   </td>
                 </tr>
               ))}
@@ -507,36 +595,45 @@ const Analytics = () => {
 };
 
 const KpiCard = ({ title, value, change, icon, positive, uiStrings }: any) => (
-  <div className="bg-surface-dark p-6 rounded-xl border border-border-color relative overflow-hidden group hover:border-primary/30 transition-all">
-    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-      {/* Clone icon for background effect */}
-      <div className="origin-top-right transform scale-150">{icon}</div>
+  <div className="bg-surface-container border border-outline rounded-[2rem] p-8 relative overflow-hidden group hover:bg-surface-container-highest transition-all duration-500 shadow-xl">
+    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-all transform group-hover:scale-110 duration-700">
+      <span className="material-symbols-outlined text-8xl">{icon}</span>
     </div>
-    <div className="flex justify-between items-start mb-4">
+    
+    <div className="relative space-y-6">
+      <div className="flex justify-between items-center">
+        <h4 className="text-[10px] font-black text-on-surface-variant uppercase tracking-[0.25em]">{title}</h4>
+        <div className={`h-1.5 w-1.5 rounded-full ${positive ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]'}`} />
+      </div>
+      
       <div>
-        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-          {title}
-        </p>
-        <h3 className="text-2xl font-bold text-white mt-1">{value}</h3>
+        <h3 className="text-4xl font-bold text-white tracking-tighter uppercase font-mono">{value}</h3>
       </div>
-      <div className="p-2 rounded-lg bg-surface-darker border border-border-color">
-        {icon}
+      
+      <div className="flex items-center gap-3">
+        <div className={`flex items-center gap-1 font-black text-[10px] ${positive ? 'text-emerald-500' : 'text-rose-500'} bg-surface-dim border border-outline px-2 py-1 rounded-lg`}>
+          <span className="material-symbols-outlined text-sm">{positive ? 'trending_up' : 'trending_down'}</span>
+          {change}
+        </div>
+        <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest opacity-40">
+          {uiStrings?.label_vs_last_month || "Vs Cycle Mean"}
+        </span>
       </div>
-    </div>
-    <div
-      className={`text-xs font-medium flex items-center gap-1 ${positive ? "text-emerald-500" : "text-red-500"}`}
-    >
-      <span>{change}</span>
-      <span className="text-text-muted">
-        {uiStrings?.label_vs_last_month || "vs last month"}
-      </span>
     </div>
   </div>
 );
 
-const ChartCard = ({ title, children, height = "h-80" }: any) => (
-  <div className="bg-surface-dark p-6 rounded-xl border border-border-color">
-    <h2 className="text-lg font-bold text-white mb-6">{title}</h2>
+const ChartCard = ({ title, children, height = "h-[450px]" }: any) => (
+  <div className="bg-surface-container border border-outline rounded-[3rem] p-10 shadow-2xl overflow-hidden relative group">
+    <div className="flex items-center justify-between mb-10">
+      <div className="flex items-center gap-4">
+        <div className="w-1.5 h-6 bg-primary rounded-full" />
+        <h2 className="text-xl font-bold text-white tracking-tighter uppercase">{title}</h2>
+      </div>
+      <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-surface-dim border border-outline text-on-surface-variant opacity-50 hover:opacity-100 hover:text-white transition-all cursor-crosshair">
+        <span className="material-symbols-outlined text-xl">fullscreen</span>
+      </div>
+    </div>
     <div className={`${height} w-full`}>{children}</div>
   </div>
 );

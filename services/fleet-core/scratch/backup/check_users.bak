@@ -1,0 +1,28 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+
+	"github.com/jackc/pgx/v5"
+)
+
+func main() {
+	dbURL := os.Getenv("DATABASE_URL")
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, dbURL)
+	if err != nil {
+		fmt.Printf("Unable to connect to database: %v\n", err)
+		return
+	}
+	defer conn.Close(ctx)
+
+	rows, _ := conn.Query(ctx, "SELECT email, password_hash, org_id FROM users")
+	fmt.Println("Users:")
+	for rows.Next() {
+		var email, hash, oid string
+		rows.Scan(&email, &hash, &oid)
+		fmt.Printf("- %s | %s | %s\n", email, hash, oid)
+	}
+}

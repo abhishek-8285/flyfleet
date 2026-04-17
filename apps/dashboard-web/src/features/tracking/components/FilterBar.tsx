@@ -21,7 +21,7 @@ export const FilterBar: React.FC = () => {
     };
 
     return (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-4 flex-wrap items-center">
             {statuses.map(status => {
                 const isActive = statusFilters.length === 0 || statusFilters.includes(status);
                 const color = statusColor(status);
@@ -30,17 +30,25 @@ export const FilterBar: React.FC = () => {
                     <button
                         key={status}
                         onClick={() => toggleStatus(status)}
-                        className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium transition-all ${
+                        className={`group flex items-center gap-3 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all border ${
                             isActive
-                                ? 'bg-white shadow border border-gray-200'
-                                : 'bg-gray-100 opacity-50'
+                                ? 'bg-surface-dim border-outline text-white shadow-lg'
+                                : 'bg-transparent border-transparent text-on-surface-variant opacity-40 hover:opacity-100 hover:bg-surface-container-highest'
                         }`}
                     >
-                        <span
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: color }}
-                        />
-                        <span className="capitalize">{status}</span>
+                        <div className="relative flex items-center justify-center">
+                            <span
+                                className="w-2 h-2 rounded-full z-10"
+                                style={{ backgroundColor: color }}
+                            />
+                            {isActive && (
+                                <span 
+                                    className="absolute w-4 h-4 rounded-full animate-ping opacity-20"
+                                    style={{ backgroundColor: color }}
+                                />
+                            )}
+                        </div>
+                        <span className="group-hover:translate-x-0.5 transition-transform">{status}</span>
                     </button>
                 );
             })}

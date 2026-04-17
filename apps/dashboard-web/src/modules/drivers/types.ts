@@ -136,12 +136,22 @@ export interface BehaviorEvent {
 export interface DriverAnalytics {
   driver_id: string;
   total_trips: number;
+  completed_trips: number;
+  cancelled_trips: number;
   total_distance_km: number;
   total_hours_driven: number;
-  avg_behavior_score: number;
-  avg_safety_score: number;
-  behavior_score: number;
-  incidents_count: number;
-  recent_incidents: BehaviorEvent[];
-  trend: "improving" | "stable" | "declining";
+  average_rating: number;
+  current_behavior_score: number;
+  attendance_rate: number;
+  on_time_rate: number;
+  fuel_efficiency: number;
+  speeding_incidents: number;
+  harsh_braking_count: number;
+  idling_time_hours: number;
+  completion_rate: number;
+  // Optional/Derived fields for UI
+  avg_behavior_score?: number;
+  incidents_count?: number;
+  recent_incidents?: BehaviorEvent[];
+  trend?: "improving" | "stable" | "declining";
 }

@@ -16,6 +16,8 @@ type OrganizationService interface {
 	GetDashboardStats(ctx context.Context) (models.DashboardStats, error)
 	CreateOrganization(ctx context.Context, req models.CreateOrganizationRequest) (models.CreateOrganizationResponse, error)
 	DeleteOrganization(ctx context.Context, id uuid.UUID) error
+	ListBranches(ctx context.Context) ([]models.Branch, error)
+	ListCostCenters(ctx context.Context) ([]models.CostCenter, error)
 }
 
 type organizationService struct {
@@ -50,6 +52,14 @@ func (s *organizationService) DeleteOrganization(ctx context.Context, id uuid.UU
 	return s.repo.DeleteOrganization(ctx, id, s.getUserID(ctx))
 }
 
+func (s *organizationService) ListBranches(ctx context.Context) ([]models.Branch, error) {
+	return s.repo.ListBranches(ctx, s.getOrgIDFromContext(ctx))
+}
+
+func (s *organizationService) ListCostCenters(ctx context.Context) ([]models.CostCenter, error) {
+	return s.repo.ListCostCenters(ctx, s.getOrgIDFromContext(ctx))
+}
+
 func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
 	val, ok := ctx.Value(ctxkeys.UserIDKey).(string)
 	if !ok {
@@ -57,4 +67,18 @@ func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
 	}
 	uid, _ := uuid.Parse(val)
 	return uid
+}
+
+func (s *organizationService) getOrgIDFromContext(ctx context.Context) uuid.UUID {
+	if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
+		switch v := val.(type) {
+		case string:
+			if id, err := uuid.Parse(v); err == nil {
+				return id
+			}
+		case uuid.UUID:
+			return v
+		}
+	}
+	return uuid.Nil
 }

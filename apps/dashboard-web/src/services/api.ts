@@ -211,11 +211,19 @@ class ApiService {
 
   // Vehicles
   async getVehicles(params?: any): Promise<any> {
-    return this.client.get("/vehicles", { params });
+    return this.client.get("/admin/vehicles", { params });
+  }
+
+  async searchVehicles(q: string, params?: any): Promise<any> {
+    return this.client.get("/admin/vehicles/search", { params: { ...params, q } });
   }
 
   async getVehicle(id: string): Promise<any> {
     return this.client.get(`/admin/vehicles/${id}`);
+  }
+
+  async getTrips(params?: any): Promise<any> {
+    return this.client.get("/admin/trips", { params });
   }
 
   async createVehicle(data: any): Promise<any> {
@@ -230,13 +238,13 @@ class ApiService {
     await this.client.delete(`/admin/vehicles/${id}`);
   }
 
-  // Trips
-  async getTrips(params?: any): Promise<any> {
-    return this.client.get("/dispatch/trips", { params });
+  // Dispatch Trips
+  async getDispatchTrips(params?: any): Promise<any> {
+    return this.client.get("/admin/trips", { params });
   }
 
   async getTripCustomers(): Promise<any> {
-    return this.client.get("/dispatch/trips/customers");
+    return this.client.get("/admin/trips/customers");
   }
 
   async getTrip(id: string): Promise<any> {

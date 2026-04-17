@@ -41,6 +41,8 @@ type createVehicleRequestDTO struct {
 	Model              *string    `json:"model"`
 	Year               *int       `json:"year" validate:"omitempty,min=1900,max=2030"`
 	Color              *string    `json:"color"`
+	Odometer           *int64     `json:"odometer"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"`
 	// Legacy fields (still accepted from old clients)
 	LicensePlate *string `json:"license_plate"`
 }
@@ -63,6 +65,7 @@ type updateVehicleRequestDTO struct {
 	Model              *string    `json:"model"`
 	Year               *int       `json:"year"    validate:"omitempty,min=1900,max=2030"`
 	Color              *string    `json:"color"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"`
 	// Legacy fields
 	Status    *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
 	Odometer  *int64  `json:"odometer" validate:"omitempty,min=0"`
@@ -136,6 +139,8 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 		Model:              dto.Model,
 		Year:               dto.Year,
 		Color:              dto.Color,
+		Odometer:           dto.Odometer,
+		CurrentDriverID:    dto.CurrentDriverID,
 		LicensePlate:       dto.LicensePlate,
 	}
 
@@ -258,6 +263,7 @@ func (h *VehicleHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) 
 		Model:              dto.Model,
 		Year:               dto.Year,
 		Color:              dto.Color,
+		CurrentDriverID:    dto.CurrentDriverID,
 		Status:             dto.Status,
 		Odometer:           dto.Odometer,
 		Insurance:          dto.Insurance,

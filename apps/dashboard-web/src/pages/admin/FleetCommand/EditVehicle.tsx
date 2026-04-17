@@ -1,41 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
-
-const FUEL_TYPES = [
-  { value: "DIESEL", label: "Diesel" },
-  { value: "PETROL", label: "Gasoline" },
-  { value: "CNG", label: "CNG" },
-  { value: "ELECTRIC", label: "Electric" },
-  { value: "HYBRID", label: "Hybrid" },
-  { value: "LPG", label: "LPG" },
-];
-
-const VEHICLE_TYPES = [
-  { value: "TRUCK", label: "Truck" },
-  { value: "BUS", label: "Bus" },
-  { value: "VAN", label: "Van" },
-  { value: "CAR", label: "Car" },
-  { value: "TRAILER", label: "Trailer" },
-  { value: "TANKER", label: "Tanker" },
-  { value: "TIPPER", label: "Tipper" },
-  { value: "CRANE", label: "Crane" },
-  { value: "OTHER", label: "Other" },
-];
-
-const OWNERSHIP_TYPES = [
-  { value: "OWNED", label: "Owned" },
-  { value: "LEASED", label: "Leased" },
-  { value: "FINANCED", label: "Financed" },
-  { value: "VENDOR", label: "Vendor" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "ACTIVE", label: "Active", color: "text-success" },
-  { value: "MAINTENANCE", label: "Maintenance", color: "text-warning" },
-  { value: "SUSPENDED", label: "Out of Service", color: "text-danger" },
-  { value: "DECOMMISSIONED", label: "Decommissioned", color: "text-text-muted" },
-];
+import { 
+  FUEL_TYPES, VEHICLE_TYPES, OWNERSHIP_TYPES, 
+  STATUS_OPTIONS, WEIGHT_UNITS, getFuelUnits 
+} from "./constants";
+import { toKm, toTonnes, toLitres } from "./utils";
+import { TextInput, SelectInput, ToggleInput } from "../../../components/common/FormFields";
 
 interface FormState {
   make: string;
@@ -54,14 +25,15 @@ interface FormState {
   parent_vehicle_id: string;
   branch_id: string;
   cost_center_id: string;
+  current_driver_id: string;
   immobilizer_enabled: boolean;
   ais140_compliant: boolean;
   status: string;
   notes: string;
+  odometer: string;
+  odometer_unit: string;
+  speed_limit: string;
 }
-
-const toTonnes = (val: number, unit: string) => unit === "lbs" ? val / 2204.62 : unit === "kg" ? val / 1000 : val;
-const toLitres = (val: number, unit: string) => unit === "gallons" ? val * 3.78541 : val;
 
 export const EditVehicle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -72,6 +44,7 @@ export const EditVehicle: React.FC = () => {
     fuel_tank_capacity: "", gps_device_id: "", color: "", chassis_number: "",
     engine_number: "", parent_vehicle_id: "", branch_id: "", cost_center_id: "",
     immobilizer_enabled: false, ais140_compliant: false, status: "ACTIVE", notes: "",
+    odometer: "0", odometer_unit: "km", speed_limit: "0", current_driver_id: "",
   });
   const [units, setUnits] = useState({ capacity: "tonnes", fuel: "litres" });
   const [saving, setSaving] = useState(false);
@@ -81,7 +54,43 @@ export const EditVehicle: React.FC = () => {
   const [vehicle, setVehicle] = useState<any>(null);
   const [charCount, setCharCount] = useState(0);
 
-  useEffect(() => { fetchVehicle(); }, [id]);
+  const [dropdowns, setDropdowns] = useState({
+    vehicles: [] as { value: string; label: string }[],
+    drivers: [] as { value: string; label: string }[],
+    branches: [] as { value: string; label: string }[],
+    costCenters: [] as { value: string; label: string }[],
+  });
+
+  useEffect(() => { 
+    fetchVehicle(); 
+    fetchDropdowns();
+  }, [id]);
+
+  const fetchDropdowns = async () => {
+    try {
+      const [vResp, dResp, bResp, cResp] = await Promise.all([
+        apiClient.get("/admin/vehicles"),
+        apiClient.get("/admin/drivers"),
+        apiClient.get("/admin/branches"),
+        apiClient.get("/admin/cost-centers")
+      ]);
+      setDropdowns(prev => ({
+        ...prev,
+        vehicles: (vResp.data?.vehicles || vResp.data || []).map((v: any) => ({
+          value: v.id,
+          label: `${v.registration_number || v.license_plate} (${v.make} ${v.model})`
+        })),
+        drivers: (dResp.data?.drivers || dResp.data || []).map((d: any) => ({
+          value: d.id,
+          label: `${d.first_name} ${d.last_name} (${d.employee_id})`
+        })),
+        branches: bResp.data?.data || bResp.data || [],
+        costCenters: cResp.data?.data || cResp.data || []
+      }));
+    } catch (err) {
+      console.error("Failed to fetch dropdown data:", err);
+    }
+  };
 
   const fetchVehicle = async () => {
     try {
@@ -98,9 +107,13 @@ export const EditVehicle: React.FC = () => {
         chassis_number: v.chassis_number || "", engine_number: v.engine_number || "",
         parent_vehicle_id: v.parent_vehicle_id || "", branch_id: v.branch_id || "",
         cost_center_id: v.cost_center_id || "",
+        current_driver_id: v.current_driver_id || "",
         immobilizer_enabled: v.immobilizer_enabled || false,
         ais140_compliant: v.ais140_compliant || false,
         status: v.status || "ACTIVE", notes: v.notes || "",
+        odometer: v.odometer ? (v.odometer / 1000).toString() : "0",
+        odometer_unit: "km",
+        speed_limit: v.speed_limit ? v.speed_limit.toString() : "0",
       });
       setCharCount((v.notes || "").length);
       if (v.fuel_type === "CNG") setUnits((p) => ({ ...p, fuel: "kg" }));
@@ -145,6 +158,11 @@ export const EditVehicle: React.FC = () => {
     if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
     if (form.color) payload.color = form.color.trim();
     if (form.branch_id) payload.branch_id = form.branch_id.trim();
+    if (form.cost_center_id) payload.cost_center_id = form.cost_center_id.trim();
+    if (form.current_driver_id) payload.current_driver_id = form.current_driver_id.trim();
+    if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
+    if (form.odometer) payload.odometer = Math.round(toKm(parseFloat(form.odometer), form.odometer_unit) * 1000);
+    if (form.speed_limit) payload.speed_limit = parseFloat(form.speed_limit);
     payload.immobilizer_enabled = form.immobilizer_enabled;
     payload.ais140_compliant = form.ais140_compliant;
 
@@ -204,161 +222,286 @@ export const EditVehicle: React.FC = () => {
 
       {/* Form */}
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <form id="edit-vehicle-form" onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-6">
+        <form id="edit-vehicle-form" onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-8">
           {submitError && (
-            <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-center gap-2">
+            <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-center gap-2 animate-shake">
               <span className="material-symbols-outlined text-sm">error</span>{submitError}
             </div>
           )}
 
-          {/* Vehicle Information */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6">
+          {/* Section 1: Basic Information */}
+          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <span className="material-symbols-outlined text-6xl text-white">badge</span>
+            </div>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
               <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">directions_car</span>
+                <span className="material-symbols-outlined text-[18px]">directions_car</span>
               </div>
               <h3 className="text-white font-semibold text-sm">Vehicle Information</h3>
             </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Field label="Make">
-                <input type="text" name="make" value={form.make} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 transition-shadow" />
-              </Field>
-              <Field label="Model">
-                <input type="text" name="model" value={form.model} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 transition-shadow" />
-              </Field>
-              <Field label="Year">
-                <input type="number" name="year" value={form.year} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow" />
-              </Field>
-              <Field label="VIN">
-                <input type="text" name="vin_number" value={form.vin_number} onChange={handleChange} maxLength={17} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 font-mono transition-shadow" />
-              </Field>
-              <Field label="Registration Number">
-                <input type="text" value={vehicle?.registration_number || ""} disabled className="w-full bg-surface-darker/50 border border-border-color rounded px-3 py-2 text-sm text-text-muted focus:outline-none cursor-not-allowed uppercase transition-shadow" />
-              </Field>
-              <Field label="Status">
-                <select name="status" value={form.status} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow">
-                  {STATUS_OPTIONS.map((s) => (<option key={s.value} value={s.value} className={s.color}>{s.label}</option>))}
-                </select>
-              </Field>
+              <TextInput
+                label="Make" name="make" value={form.make} onChange={handleChange}
+                placeholder="e.g. Tata, Mahindra" icon="factory"
+              />
+              <TextInput
+                label="Model" name="model" value={form.model} onChange={handleChange}
+                placeholder="e.g. Prima, Furio" icon="model_training"
+              />
+              <TextInput
+                label="Year" name="year" value={form.year} onChange={handleChange}
+                placeholder="e.g. 2024" icon="calendar_today"
+              />
+              <TextInput
+                label="VIN Number" name="vin_number" value={form.vin_number} onChange={handleChange}
+                placeholder="17-digit chassis number" icon="fingerprint" maxLength={17}
+              />
+              <TextInput
+                label="Registration" name="registration_number" value={vehicle?.registration_number || ""}
+                onChange={() => {}} icon="license" className="opacity-70 pointer-events-none"
+              />
+              <SelectInput
+                label="Operational Status" name="status" value={form.status} 
+                onChange={handleChange} options={STATUS_OPTIONS} icon="traffic"
+              />
             </div>
           </div>
 
-          {/* Operational Details */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6">
+          {/* Section 2: Hierarchy & Assignment */}
+          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <span className="material-symbols-outlined text-6xl text-white">account_tree</span>
+            </div>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
               <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined">settings_suggest</span>
+                <span className="material-symbols-outlined text-[18px]">hub</span>
               </div>
-              <h3 className="text-white font-semibold text-sm">Operational Details</h3>
+              <h3 className="text-white font-semibold text-sm">Hierarchy & Assignment</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SelectInput
+                label="Branch / Depot" name="branch_id" value={form.branch_id}
+                onChange={handleChange} options={dropdowns.branches} icon="location_on"
+                placeholder="Select assigned branch"
+              />
+              <SelectInput
+                label="Cost Center" name="cost_center_id" value={form.cost_center_id}
+                onChange={handleChange} options={dropdowns.costCenters} icon="payments"
+                placeholder="Select billing group"
+              />
+              <SelectInput
+                label="Parent Asset (Trailer/Convoy)" name="parent_vehicle_id" value={form.parent_vehicle_id}
+                onChange={handleChange} options={dropdowns.vehicles} icon="link"
+                placeholder="Search vehicles..."
+              />
+              <SelectInput
+                label="Primary Driver" name="current_driver_id" value={form.current_driver_id}
+                onChange={handleChange} options={dropdowns.drivers} icon="person"
+                placeholder="Assign a driver"
+              />
+              <TextInput
+                label="GPS Device ID" name="gps_device_id" value={form.gps_device_id}
+                onChange={handleChange} placeholder="IMEI or Serial Number" icon="gps_fixed"
+              />
+            </div>
+          </div>
+
+          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl space-y-6">
+             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
+              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined text-[18px]">speed</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm">Operational Metrics</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Vehicle Type */}
-              <Field label="Vehicle Type">
-                <select name="vehicle_type" value={form.vehicle_type} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow">
-                  <option value="">Select Type</option>
-                  {VEHICLE_TYPES.map((t) => (<option key={t.value} value={t.value}>{t.label}</option>))}
-                </select>
-              </Field>
-              {/* Ownership */}
-              <Field label="Ownership Type">
-                <select name="ownership_type" value={form.ownership_type} onChange={handleChange} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-shadow">
-                  {OWNERSHIP_TYPES.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
-                </select>
-              </Field>
-              {/* Capacity */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">Capacity</label>
+               <div className="space-y-1.5 lg:col-span-1">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Current Odometer Reading</label>
                 <div className="flex gap-2">
-                  <input type="number" name="capacity_tonnage" value={form.capacity_tonnage} onChange={handleChange} className="flex-1 bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 transition-shadow" />
-                  <select value={units.capacity} onChange={(e) => setUnits((p) => ({ ...p, capacity: e.target.value }))} className="bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary">
-                    <option value="tonnes">Tonnes</option>
-                    <option value="kg">kg</option>
-                    <option value="lbs">lbs</option>
+                  <TextInput
+                    label="" name="odometer" value={form.odometer}
+                    onChange={handleChange} type="number" placeholder="0"
+                    className="flex-1"
+                  />
+                  <select 
+                    name="odometer_unit"
+                    value={form.odometer_unit} 
+                    onChange={handleChange}
+                    className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
+                  >
+                    <option value="km">km</option>
+                    <option value="mi">mi</option>
                   </select>
                 </div>
               </div>
-              {/* Fuel Type */}
-              <Field label="Fuel Type">
-                <div className="flex gap-4 pt-1">
-                  {FUEL_TYPES.filter((f) => f.value !== "LPG").map((f) => (
-                    <label key={f.value} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="fuel_type" value={f.value} checked={form.fuel_type === f.value} onChange={handleChange} className="text-primary bg-surface-darker border-border-color focus:ring-primary focus:ring-offset-surface-dark" />
-                      <span className="text-sm text-white">{f.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </Field>
-              {/* Fuel Tank / Cylinder */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted">{form.fuel_type === "CNG" ? "CNG Cylinder (kg)" : "Fuel Tank Capacity"}</label>
+              <TextInput
+                label="Safety Speed Limit (km/h)" name="speed_limit" value={form.speed_limit}
+                onChange={handleChange} type="number" placeholder="80" icon="speed"
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Technical Specifications */}
+          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
+              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined text-[18px]">settings_suggest</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm">Technical Specifications</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SelectInput
+                label="Vehicle Body Type" name="vehicle_type" value={form.vehicle_type}
+                onChange={handleChange} options={VEHICLE_TYPES} icon="local_shipping"
+                placeholder="Select type"
+              />
+              <SelectInput
+                label="Fuel Engine Type" name="fuel_type" value={form.fuel_type}
+                onChange={handleChange} options={FUEL_TYPES} icon="local_gas_station"
+              />
+              <SelectInput
+                label="Ownership Model" name="ownership_type" value={form.ownership_type}
+                onChange={handleChange} options={OWNERSHIP_TYPES} icon="key"
+              />
+
+              <div className="space-y-1.5 lg:col-span-1">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Payload Capacity</label>
                 <div className="flex gap-2">
-                  <input type="number" name="fuel_tank_capacity" value={form.fuel_tank_capacity} onChange={handleChange} placeholder={form.fuel_type === "CNG" ? "e.g. 12" : "e.g. 200"} className="flex-1 bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 transition-shadow" />
+                  <TextInput
+                    label="" name="capacity_tonnage" value={form.capacity_tonnage}
+                    onChange={handleChange} type="number" placeholder="0.00"
+                    className="flex-1"
+                  />
+                  <select 
+                    value={units.capacity} 
+                    onChange={(e) => setUnits(p => ({ ...p, capacity: e.target.value }))}
+                    className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
+                  >
+                    {WEIGHT_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 lg:col-span-1">
+                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                  {form.fuel_type === "CNG" ? "Cylinder Capacity (kg)" : "Fuel Tank Capacity"}
+                </label>
+                <div className="flex gap-2">
+                  <TextInput
+                    label="" name="fuel_tank_capacity" value={form.fuel_tank_capacity}
+                    onChange={handleChange} type="number" placeholder="0.00"
+                    className="flex-1"
+                  />
                   {form.fuel_type !== "CNG" && (
-                    <select value={units.fuel} onChange={(e) => setUnits((p) => ({ ...p, fuel: e.target.value }))} className="bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary">
-                      <option value="litres">Litres</option>
-                      <option value="gallons">Gallons</option>
+                    <select 
+                      value={units.fuel} 
+                      onChange={(e) => setUnits(p => ({ ...p, fuel: e.target.value }))}
+                      className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
+                    >
+                      <option value="litres">L</option>
+                      <option value="gallons">gal</option>
                     </select>
                   )}
                 </div>
               </div>
-              {/* GPS Device */}
-              <Field label="GPS Device ID">
-                <input type="text" name="gps_device_id" value={form.gps_device_id} onChange={handleChange} placeholder="e.g. GPS-IMEI-12345678" className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 font-mono transition-shadow" />
-              </Field>
+
+              <TextInput
+                label="GPS Device ID" name="gps_device_id" value={form.gps_device_id}
+                onChange={handleChange} placeholder="e.g. GPS-12345" icon="router"
+              />
             </div>
           </div>
 
-          {/* Notes + Metadata */}
+          {/* Section 4: Notes & Metadata */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Notes */}
-            <div className="lg:col-span-2 bg-surface-dark rounded-xl border border-border-color p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined">description</span>
+            <div className="lg:col-span-2 space-y-6">
+              {/* Telemetry & Compliance */}
+              <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
+                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
+                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                  </div>
+                  <h3 className="text-white font-semibold text-sm">Telemetry & Compliance</h3>
                 </div>
-                <h3 className="text-white font-semibold text-sm">Notes</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ToggleInput
+                    label="Immobilizer" description="Remote engine lock capability"
+                    checked={form.immobilizer_enabled}
+                    onChange={(checked) => setForm(p => ({ ...p, immobilizer_enabled: checked }))}
+                    icon="lock"
+                  />
+                  <ToggleInput
+                    label="AIS-140 Compliant" description="Govt tracking standards"
+                    checked={form.ais140_compliant}
+                    onChange={(checked) => setForm(p => ({ ...p, ais140_compliant: checked }))}
+                    icon="gavel"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} maxLength={500} className="w-full bg-surface-darker border border-border-color rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-gray-600 transition-shadow resize-none" />
-                <p className="text-[10px] text-text-muted text-right">{charCount}/500 characters</p>
+
+              {/* Notes */}
+              <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined text-[18px]">description</span>
+                  </div>
+                  <h3 className="text-white font-semibold text-sm">Operational Notes</h3>
+                </div>
+                <textarea 
+                  name="notes" value={form.notes} onChange={handleChange} rows={5} maxLength={500}
+                  placeholder="Internal notes about vehicle history or specs..."
+                  className="w-full bg-surface-darker border border-border-color rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/30 transition-all resize-none"
+                />
+                <div className="flex justify-between items-center mt-2 px-1">
+                  <span className="text-[10px] text-text-muted">Avoid sensitive data in notes</span>
+                  <span className={`text-[10px] font-medium ${charCount > 450 ? "text-warning" : "text-text-muted"}`}>{charCount}/500</span>
+                </div>
               </div>
             </div>
 
-            {/* System Metadata */}
-            <div className="lg:col-span-1 bg-surface-dark rounded-xl border border-border-color p-6">
-              <div className="flex items-center gap-3 mb-4">
+            {/* Side Info Panel */}
+            <div className="lg:col-span-1 bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl flex flex-col">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined">info</span>
+                  <span className="material-symbols-outlined text-[18px]">info</span>
                 </div>
                 <h3 className="text-white font-semibold text-sm">System Metadata</h3>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-border-color pb-2">
+              <div className="flex-1 space-y-4">
+                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
                   <span className="text-xs text-text-muted">Vehicle ID</span>
-                  <span className="text-xs font-mono text-white">#{vehicle?.id?.slice(-6).toUpperCase()}</span>
+                  <span className="text-xs font-mono text-white">#{vehicle?.id?.slice(-8).toUpperCase()}</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-border-color pb-2">
-                  <span className="text-xs text-text-muted">Registration</span>
-                  <span className="text-xs font-mono text-white">{vehicle?.registration_number || "—"}</span>
+                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
+                  <span className="text-xs text-text-muted">Last Active</span>
+                  <span className="text-xs text-white">2 hrs ago</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-border-color pb-2">
-                  <span className="text-xs text-text-muted">Created Date</span>
+                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
+                  <span className="text-xs text-text-muted">Created</span>
                   <span className="text-xs text-white">{vehicle?.created_at ? new Date(vehicle.created_at).toLocaleDateString() : "—"}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-text-muted">Last Updated</span>
-                  <span className="text-xs text-white">{vehicle?.updated_at ? new Date(vehicle.updated_at).toLocaleString() : "—"}</span>
-                </div>
-                <div className="pt-4 mt-2">
-                  <button type="button" onClick={handleDelete} className={`w-full py-2 rounded text-xs font-semibold transition-colors flex items-center justify-center gap-2 ${
+              </div>
+              
+              <div className="mt-8">
+                <button 
+                  type="button" onClick={handleDelete}
+                  className={`w-full py-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 group ${
                     confirmDelete
-                      ? "bg-danger hover:bg-red-600 text-white"
+                      ? "bg-danger hover:bg-red-600 text-white shadow-lg shadow-danger/20"
                       : "border border-danger/30 text-danger hover:bg-danger/10"
-                  }`}>
-                    <span className="material-symbols-outlined text-[16px]">{confirmDelete ? "delete_forever" : "delete"}</span>
-                    {confirmDelete ? "Confirm Delete" : "Delete Vehicle"}
-                  </button>
-                </div>
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px] group-hover:animate-pulse">
+                    {confirmDelete ? "delete_forever" : "delete"}
+                  </span>
+                  {confirmDelete ? "CONFIRM PERMANENT DELETE" : "DELETE ASSET"}
+                </button>
+                {confirmDelete && (
+                  <p className="text-[10px] text-danger text-center mt-2 uppercase tracking-tighter">This action cannot be undone</p>
+                )}
               </div>
             </div>
           </div>
@@ -377,11 +520,5 @@ export const EditVehicle: React.FC = () => {
   );
 };
 
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-1.5">
-    <label className="text-xs font-medium text-text-muted">{label}</label>
-    {children}
-  </div>
-);
 
 export default EditVehicle;
