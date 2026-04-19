@@ -63,7 +63,7 @@ func (h *Hub) Run(ctx context.Context) {
 			}
 			h.clients[client.orgID][client] = true
 			h.mu.Unlock()
-			h.logger.Info("Websocket client registered", zap.String("org_id", client.orgID.String()))
+			h.logger.Info("Websocket client registered", zap.String("tenant_id", client.orgID.String()))
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client.orgID][client]; ok {
@@ -74,7 +74,7 @@ func (h *Hub) Run(ctx context.Context) {
 				}
 			}
 			h.mu.Unlock()
-			h.logger.Info("Websocket client unregistered", zap.String("org_id", client.orgID.String()))
+			h.logger.Info("Websocket client unregistered", zap.String("tenant_id", client.orgID.String()))
 		}
 	}
 }

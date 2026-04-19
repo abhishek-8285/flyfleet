@@ -13,7 +13,7 @@ import (
 
 type contextKey string
 
-const OrgIDKey contextKey = "org_id"
+const OrgIDKey contextKey = "tenant_id"
 
 // RateLimiter enforces a request quota per organization using Redis
 type RateLimiter struct {
@@ -52,7 +52,7 @@ func (rl *RateLimiter) OrgRateLimit(next http.Handler) http.Handler {
 
 		if int(val) > limit {
 			rl.logger.Warn("Organization rate limit exceeded",
-				zap.String("org_id", orgID.String()),
+				zap.String("tenant_id", orgID.String()),
 				zap.Int("limit", limit))
 			w.Header().Set("Retry-After", "1")
 			http.Error(w, fmt.Sprintf("Organization rate limit exceeded (%d req/sec)", limit), http.StatusTooManyRequests)

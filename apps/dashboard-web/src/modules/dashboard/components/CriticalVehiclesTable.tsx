@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 interface Vehicle {
   id: string;
+  registrationNumber?: string;
   driverId: string;
   severity: "critical" | "warning";
   location: string;
@@ -84,7 +85,7 @@ const CriticalVehiclesTable: React.FC<CriticalVehiclesTableProps> = ({
                 >
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-white">
-                      {vehicle.id}
+                      {vehicle.registrationNumber || `Asset ${vehicle.id.substring(0, 8)}`}
                     </div>
                     <div className="text-xs text-gray-500">
                       {vehicle.driverId}

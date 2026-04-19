@@ -62,7 +62,7 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	if delCount > 1 && s.nats != nil {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"alert_type":      "MULTIPLE_DELETIONS_DETECTED",
-			"org_id": req.OrganizationID.String(),
+			"tenant_id": req.OrganizationID.String(),
 			"user_id":         req.RequesterID.String(),
 			"timestamp":       time.Now().Unix(),
 		})
@@ -172,7 +172,7 @@ func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.
 	rows, err := s.db.Query(ctx, `
 		SELECT id, registration_number
 		FROM vehicles
-		WHERE driver_id = $1 AND org_id = $2`,
+		WHERE driver_id = $1 AND tenant_id = $2`,
 		userID, orgID,
 	)
 	if err != nil {

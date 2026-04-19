@@ -78,6 +78,7 @@ const InvoiceDetail: React.FC = () => {
     PENDING: <Clock className="w-4 h-4 text-amber-500" />,
     OVERDUE: <AlertCircle className="w-4 h-4 text-red-500" />,
     PARTIAL: <Clock className="w-4 h-4 text-blue-500" />,
+    DRAFT: <Clock className="w-4 h-4 text-gray-500" />,
   };
 
   const statusColors = {
@@ -85,6 +86,7 @@ const InvoiceDetail: React.FC = () => {
     PENDING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     OVERDUE: "bg-red-500/10 text-red-500 border-red-500/20",
     PARTIAL: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    DRAFT: "bg-gray-500/10 text-gray-400 border-gray-500/20",
   };
 
   if (loading)
@@ -128,7 +130,23 @@ const InvoiceDetail: React.FC = () => {
             </button>
           </div>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {invoice.status !== "PAID" && (
+            {invoice.status === "DRAFT" && (
+              <button
+                onClick={async () => {
+                  try {
+                    await billingService.updateInvoice(id!, { ...invoice, status: 'PENDING' });
+                    fetchInvoice();
+                  } catch (err) {
+                    console.error("Failed to send invoice", err);
+                  }
+                }}
+                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors shadow-lg shadow-green-900/20"
+              >
+                <CheckCircle2 className="w-4 h-4" />{" "}
+                {uiStrings?.btn_send_invoice || "Send Invoice"}
+              </button>
+            )}
+            {invoice.status !== "PAID" && invoice.status !== "DRAFT" && (
               <button
                 onClick={() => setShowPaymentModal(true)}
                 className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
@@ -202,6 +220,16 @@ const InvoiceDetail: React.FC = () => {
                       {uiStrings?.label_currency || "Currency"}
                     </p>
                     <p className="text-white font-medium">{invoice.currency}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                      Category
+                    </p>
+                    <p className={`text-sm font-bold uppercase tracking-wider ${
+                      invoice.category === "Miscellaneous" ? "text-purple-400" : "text-white"
+                    }`}>
+                      {invoice.category || "Transportation"}
+                    </p>
                   </div>
                 </div>
               </div>

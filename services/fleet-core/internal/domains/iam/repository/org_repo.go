@@ -21,7 +21,7 @@ func (r *OrgRepository) GetUserOrganizations(ctx context.Context, userID uuid.UU
 		SELECT o.id, o.name, uo.role, ''::text,
 			   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = o.id), 0)
 		FROM user_organizations uo
-		JOIN organizations o ON o.id = uo.org_id
+		JOIN organizations o ON o.id = uo.tenant_id
 		WHERE uo.user_id = $1`, userID)
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (r *OrgRepository) GetUserOrgRole(ctx context.Context, userID, orgID uuid.U
 	err := r.pool.QueryRow(ctx, `
 		SELECT uo.role, COALESCE(uo.role_id, '00000000-0000-0000-0000-000000000000'::uuid)
 		FROM user_organizations uo
-		WHERE uo.user_id = $1 AND uo.org_id = $2`,
+		WHERE uo.user_id = $1 AND uo.tenant_id = $2`,
 		userID, orgID,
 	).Scan(&role, &roleID)
 	if err != nil {

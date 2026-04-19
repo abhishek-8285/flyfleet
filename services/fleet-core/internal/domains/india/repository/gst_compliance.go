@@ -15,7 +15,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateGSTCompliance(ctx context.Context, compliance *models.GSTCompliance) error {
 	query := `
 		INSERT INTO gst_compliances (
-			id, org_id, gstin, status, legal_name, trade_name, address,
+			id, tenant_id, gstin, status, legal_name, trade_name, address,
 			centre_jurisdiction, state_jurisdiction, date_of_registration, date_of_cancellation,
 			last_updated, return_filing_frequency, return_filing_status, payment_status,
 			created_at, created_by, updated_at, updated_by
@@ -49,7 +49,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateGSTCompliance(ctx context.Context
 // GetGSTCompliance retrieves a GST compliance record by ID
 func (r *IndiaIntegrationRepositoryImpl) GetGSTCompliance(ctx context.Context, id string) (*models.GSTCompliance, error) {
 	query := `
-		SELECT id, org_id, gstin, status, legal_name, trade_name, address,
+		SELECT id, tenant_id, gstin, status, legal_name, trade_name, address,
 		       centre_jurisdiction, state_jurisdiction, date_of_registration, date_of_cancellation,
 		       last_updated, return_filing_frequency, return_filing_status, payment_status,
 		       created_at, created_by, updated_at, updated_by
@@ -94,7 +94,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetGSTCompliance(ctx context.Context, i
 // GetGSTComplianceByGSTIN retrieves a GST compliance record by GSTIN
 func (r *IndiaIntegrationRepositoryImpl) GetGSTComplianceByGSTIN(ctx context.Context, gstin string) (*models.GSTCompliance, error) {
 	query := `
-		SELECT id, org_id, gstin, status, legal_name, trade_name, address,
+		SELECT id, tenant_id, gstin, status, legal_name, trade_name, address,
 		       centre_jurisdiction, state_jurisdiction, date_of_registration, date_of_cancellation,
 		       last_updated, return_filing_frequency, return_filing_status, payment_status,
 		       created_at, created_by, updated_at, updated_by
@@ -192,11 +192,11 @@ func (r *IndiaIntegrationRepositoryImpl) DeleteGSTCompliance(ctx context.Context
 
 // ListGSTCompliances retrieves GST compliance records with filtering
 func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
-	countQuery := "SELECT COUNT(*) FROM gst_compliances WHERE org_id = $1"
+	countQuery := "SELECT COUNT(*) FROM gst_compliances WHERE tenant_id = $1"
 	args := []interface{}{orgID}
 	argIndex := 2
 
-	whereClause := "WHERE org_id = $1"
+	whereClause := "WHERE tenant_id = $1"
 	if status != nil {
 		whereClause += fmt.Sprintf(" AND status = $%d", argIndex)
 		args = append(args, status)
@@ -210,7 +210,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context,
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, org_id, gstin, status, legal_name, trade_name, address,
+		SELECT id, tenant_id, gstin, status, legal_name, trade_name, address,
 		       centre_jurisdiction, state_jurisdiction, date_of_registration, date_of_cancellation,
 		       last_updated, return_filing_frequency, return_filing_status, payment_status,
 		       created_at, created_by, updated_at, updated_by

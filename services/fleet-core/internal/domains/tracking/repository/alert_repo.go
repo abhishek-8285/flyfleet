@@ -30,7 +30,7 @@ func NewAlertRepository(db *pgxpool.Pool, logger *zap.Logger) *AlertRepository {
 func (r *AlertRepository) SaveAlert(ctx context.Context, alert *models.VehicleAlert) error {
 	const query = `
 		INSERT INTO vehicle_alerts (
-			id, vehicle_id, org_id, alert_type, severity, description,
+			id, vehicle_id, tenant_id, alert_type, severity, description,
 			latitude, longitude, alert_timestamp, metadata, processed, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
 	`
@@ -66,7 +66,7 @@ func (r *AlertRepository) SaveAlert(ctx context.Context, alert *models.VehicleAl
 // GetAlerts retrieves alerts for a vehicle in a time range
 func (r *AlertRepository) GetAlerts(ctx context.Context, vehicleID string, from, to time.Time, limit int) ([]*models.VehicleAlert, error) {
 	const query = `
-		SELECT id, vehicle_id, org_id, alert_type, severity, description,
+		SELECT id, vehicle_id, tenant_id, alert_type, severity, description,
 		       latitude, longitude, alert_timestamp, metadata, processed, processed_at, created_at
 		FROM vehicle_alerts
 		WHERE vehicle_id = $1 AND alert_timestamp BETWEEN $2 AND $3
@@ -111,7 +111,7 @@ func (r *AlertRepository) GetAlerts(ctx context.Context, vehicleID string, from,
 // GetUnprocessedAlerts retrieves unprocessed alerts for a vehicle
 func (r *AlertRepository) GetUnprocessedAlerts(ctx context.Context, vehicleID string) ([]*models.VehicleAlert, error) {
 	const query = `
-		SELECT id, vehicle_id, org_id, alert_type, severity, description,
+		SELECT id, vehicle_id, tenant_id, alert_type, severity, description,
 		       latitude, longitude, alert_timestamp, metadata, processed, processed_at, created_at
 		FROM vehicle_alerts
 		WHERE vehicle_id = $1 AND processed = false

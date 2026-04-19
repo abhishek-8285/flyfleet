@@ -28,3 +28,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, c *models.Customer
 func (s *CustomerService) GetCustomerByID(ctx context.Context, id uuid.UUID) (*models.Customer, error) {
 	return s.repo.GetCustomerByID(ctx, id)
 }
+
+func (s *CustomerService) ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error) {
+	return s.repo.ListCustomers(ctx, orgID)
+}

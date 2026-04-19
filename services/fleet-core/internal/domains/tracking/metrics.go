@@ -26,7 +26,7 @@ func NewMetrics() *Metrics {
 		EventsReceivedTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "telemetry_events_received_total",
 			Help: "Total number of telemetry events received.",
-		}, []string{"status", "org_id"}),
+		}, []string{"status", "tenant_id"}),
 
 		IngestionLatency: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "telemetry_ingestion_latency_seconds",
@@ -37,16 +37,16 @@ func NewMetrics() *Metrics {
 		TelemetryZombiePingsTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "telemetry_zombie_pings_total",
 			Help: "Total number of blocked zombie pings.",
-		}, []string{"org_id"}),
+		}, []string{"tenant_id"}),
 
 		GapsTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "telemetry_gaps_total",
 			Help: "Total number of telemetry gaps detected (missing messages).",
-		}, []string{"org_id", "vehicle_id", "gap_reason"}),
+		}, []string{"tenant_id", "vehicle_id", "gap_reason"}),
 
 		ExpectedTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "telemetry_expected_total",
 			Help: "Total number of expected telemetry messages based on schedule.",
-		}, []string{"org_id", "vehicle_id"}),
+		}, []string{"tenant_id", "vehicle_id"}),
 	}
 }

@@ -32,7 +32,7 @@ func NewAlertRepository(db *pgxpool.Pool) *AlertRepository {
 func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule) error {
 	query := `
 		INSERT INTO alert_rules (
-			id, org_id, name, type, description, conditions, severity,
+			id, tenant_id, name, type, description, conditions, severity,
 			actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at`
@@ -58,7 +58,7 @@ func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule
 // GetRuleByID retrieves an alert rule by its ID
 func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.AlertRule, error) {
 	query := `
-		SELECT id, org_id, name, type, description, conditions, severity,
+		SELECT id, tenant_id, name, type, description, conditions, severity,
 		       actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by, updated_by
 		FROM alert_rules WHERE id = $1`
 
@@ -87,10 +87,10 @@ func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.A
 // ListRules retrieves alert rules with filtering and pagination
 func (r *AlertRepository) ListRules(ctx context.Context, orgID uuid.UUID, filter models.AlertListFilter) ([]*models.AlertRule, int, error) {
 	baseQuery := `
-		SELECT id, org_id, name, type, description, severity, enabled, created_at, updated_at
-		FROM alert_rules WHERE org_id = $1`
+		SELECT id, tenant_id, name, type, description, severity, enabled, created_at, updated_at
+		FROM alert_rules WHERE tenant_id = $1`
 
-	countQuery := `SELECT COUNT(*) FROM alert_rules WHERE org_id = $1`
+	countQuery := `SELECT COUNT(*) FROM alert_rules WHERE tenant_id = $1`
 
 	var conditions []string
 	var args []interface{}
@@ -249,7 +249,7 @@ func (r *AlertRepository) DeleteRule(ctx context.Context, id string) error {
 func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) error {
 	query := `
 		INSERT INTO alerts (
-			id, org_id, rule_id, type, severity, vehicle_id, driver_id,
+			id, tenant_id, rule_id, type, severity, vehicle_id, driver_id,
 			location, timestamp, details, status, dedup_key, 
 			escalation_level, sla_deadline, created_at, updated_at, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
@@ -275,7 +275,7 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 // GetAlertByID retrieves an alert by its ID
 func (r *AlertRepository) GetAlertByID(ctx context.Context, id string) (*models.Alert, error) {
 	query := `
-		SELECT id, org_id, rule_id, type, severity, vehicle_id, driver_id,
+		SELECT id, tenant_id, rule_id, type, severity, vehicle_id, driver_id,
 		       location, timestamp, details, status, dedup_key, 
 		       escalation_level, last_escalated_at, sla_deadline, 
 		       acknowledged_by, acknowledged_at, resolved_by, resolved_at, 
@@ -310,11 +310,11 @@ func (r *AlertRepository) GetAlertByID(ctx context.Context, id string) (*models.
 // ListAlerts retrieves alerts with filtering and pagination
 func (r *AlertRepository) ListAlerts(ctx context.Context, filter models.AlertListFilter) ([]*models.Alert, int, error) {
 	baseQuery := `
-		SELECT id, org_id, rule_id, type, severity, vehicle_id, driver_id,
+		SELECT id, tenant_id, rule_id, type, severity, vehicle_id, driver_id,
 		       timestamp, status, created_at, updated_at
-		FROM alerts WHERE org_id = $1`
+		FROM alerts WHERE tenant_id = $1`
 
-	countQuery := `SELECT COUNT(*) FROM alerts WHERE org_id = $1`
+	countQuery := `SELECT COUNT(*) FROM alerts WHERE tenant_id = $1`
 
 	var conditions []string
 	var args []interface{}
@@ -472,7 +472,7 @@ func (r *AlertRepository) UpdateAlertStatus(ctx context.Context, id string, stat
 // GetActiveRulesForVehicle retrieves active alert rules for a specific vehicle
 func (r *AlertRepository) GetActiveRulesForVehicle(ctx context.Context, vehicleID uuid.UUID) ([]*models.AlertRule, error) {
 	query := `
-		SELECT id, org_id, name, type, description, conditions, severity,
+		SELECT id, tenant_id, name, type, description, conditions, severity,
 		       actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by
 		FROM alert_rules 
 		WHERE enabled = TRUE 
@@ -514,7 +514,7 @@ func (r *AlertRepository) GetActiveRulesForVehicle(ctx context.Context, vehicleI
 // GetActiveRulesForDriver retrieves active alert rules for a specific driver
 func (r *AlertRepository) GetActiveRulesForDriver(ctx context.Context, driverID uuid.UUID) ([]*models.AlertRule, error) {
 	query := `
-		SELECT id, org_id, name, type, description, conditions, severity,
+		SELECT id, tenant_id, name, type, description, conditions, severity,
 		       actions, vehicles, driver_ids, enabled, created_at, updated_at, created_by
 		FROM alert_rules 
 		WHERE enabled = TRUE 
@@ -565,7 +565,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 			COUNT(CASE WHEN severity = 'warning' THEN 1 END) as warning_alerts,
 			COUNT(CASE WHEN severity = 'info' THEN 1 END) as info_alerts
 		FROM alerts 
-		WHERE org_id = $1 
+		WHERE tenant_id = $1 
 		  AND timestamp >= $2 
 		  AND timestamp <= $3`
 
@@ -592,7 +592,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 	typeQuery := `
 		SELECT type, COUNT(*) 
 		FROM alerts 
-		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY type`
 
 	typeRows, err := r.db.Query(ctx, typeQuery, orgID, fromDate, toDate)
@@ -612,7 +612,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 	statusQuery := `
 		SELECT status, COUNT(*) 
 		FROM alerts 
-		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY status`
 
 	statusRows, err := r.db.Query(ctx, statusQuery, orgID, fromDate, toDate)
@@ -651,9 +651,9 @@ func (r *AlertRepository) GetStats(ctx context.Context) (*models.AlertStats, err
 // Returns sql.ErrNoRows if no matching template exists.
 func (r *AlertRepository) GetTemplate(ctx context.Context, alertType, channel, language string, orgID uuid.UUID) (*models.Template, error) {
 	query := `
-		SELECT id, org_id, alert_type, channel, language, subject, body, created_at, updated_at
+		SELECT id, tenant_id, alert_type, channel, language, subject, body, created_at, updated_at
 		FROM alert_templates
-		WHERE alert_type = $1 AND channel = $2 AND language = $3 AND org_id = $4
+		WHERE alert_type = $1 AND channel = $2 AND language = $3 AND tenant_id = $4
 		LIMIT 1`
 
 	var tpl models.Template

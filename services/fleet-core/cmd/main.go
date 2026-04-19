@@ -38,6 +38,12 @@ import (
 	tripRepo "github.com/flyfleet/fleet-core/internal/domains/trip/repository"
 	tripService "github.com/flyfleet/fleet-core/internal/domains/trip/service"
 	"github.com/flyfleet/fleet-core/internal/domains/billing"
+	customerHandlers "github.com/flyfleet/fleet-core/internal/domains/customer/handlers"
+	customerRepo "github.com/flyfleet/fleet-core/internal/domains/customer/repository"
+	customerSvc "github.com/flyfleet/fleet-core/internal/domains/customer/service"
+	invoicingHandlers "github.com/flyfleet/fleet-core/internal/domains/invoicing/handlers"
+	invoicingRepo "github.com/flyfleet/fleet-core/internal/domains/invoicing/repository/postgres"
+	invoicingSvc "github.com/flyfleet/fleet-core/internal/domains/invoicing/service"
 )
 
 func main() {
@@ -175,6 +181,32 @@ func main() {
 	tService := tripService.NewTripService(tRepo, logger)
 	tHandler := tripHandlers.NewTripHandler(tService, logger)
 
+	// --- Custom Customer V2 Domain (Injected as needed) ---
+	cV2Repo := customerRepo.NewCustomerV2Repository(pool)
+	custV2Svc := customerSvc.NewCustomerService(cV2Repo)
+	// Other services stubs (as required by NewCustomerV2Handler)
+	bookV2Svc := customerSvc.NewBookingService(cV2Repo)
+	shipV2Svc := customerSvc.NewShipmentService(cV2Repo, nil)
+	priceV2Svc := customerSvc.NewPricingService(cV2Repo)
+	creditV2Svc := customerSvc.NewCreditService(cV2Repo)
+	slaV2Svc := customerSvc.NewSLAService(cV2Repo)
+
+	custV2Handler := customerHandlers.NewCustomerV2Handler(
+		custV2Svc, 
+		bookV2Svc, 
+		shipV2Svc, 
+		priceV2Svc, 
+		creditV2Svc, 
+		slaV2Svc, 
+		cV2Repo, 
+		logger,
+	)
+
+	// --- New Invoicing Domain ---
+	invRepo := invoicingRepo.NewInvoiceRepository(pool)
+	invoicingService := invoicingSvc.NewInvoicingService(invRepo)
+	invoicingHandler := invoicingHandlers.NewHandler(invoicingService)
+
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
 	if cfg.Flags.GeofenceAlerts {
@@ -231,6 +263,7 @@ func main() {
 		// Admin stub endpoints
 		adminHandler := th.NewAdminHandler()
 		r.Get("/ui/settings/columns", adminHandler.ServeHTTP)
+		r.Get("/ui/settings/gps-types", adminHandler.ServeHTTP)
 
 		// Dashboard stub endpoints
 		dashboardHandler := th.NewDashboardHandler()
@@ -292,6 +325,16 @@ func main() {
 			// Trip CRUD
 			r.Route("/admin/trips", func(r chi.Router) {
 				tHandler.RegisterRoutes(r)
+			})
+
+			// Customer Lookups for Invoicing
+			r.Route("/admin/customers", func(r chi.Router) {
+				custV2Handler.RegisterRoutes(r)
+			})
+
+			// New Invoicing Domain (Isolated)
+			r.Route("/admin/invoicing", func(r chi.Router) {
+				invoicingHandler.RegisterRoutes(r)
 			})
 
 			// Billing Module

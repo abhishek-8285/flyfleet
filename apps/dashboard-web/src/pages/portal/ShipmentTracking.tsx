@@ -216,6 +216,7 @@ const ShipmentTracking: React.FC = () => {
                 currentLocation[1] as number,
               ]}
               zoom={13}
+              attributionControl={false}
               style={{ height: "100%", width: "100%" }}
               className="z-0"
             >

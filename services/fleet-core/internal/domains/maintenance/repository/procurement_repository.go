@@ -24,7 +24,7 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 	po.UpdatedAt = now
 
 	poQuery := `
-		INSERT INTO purchase_orders (id, org_id, vendor_id, order_number, status, total_cost, created_at, updated_at)
+		INSERT INTO purchase_orders (id, tenant_id, vendor_id, order_number, status, total_cost, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err = tx.Exec(ctx, poQuery,
@@ -56,7 +56,7 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 }
 
 func (r *MaintenanceRepositoryImpl) GetPOByID(ctx context.Context, id uuid.UUID) (*models.PurchaseOrder, error) {
-	query := `SELECT id, org_id, vendor_id, order_number, status, total_cost, created_at FROM purchase_orders WHERE id = $1`
+	query := `SELECT id, tenant_id, vendor_id, order_number, status, total_cost, created_at FROM purchase_orders WHERE id = $1`
 	var po models.PurchaseOrder
 	err := r.db.QueryRow(ctx, query, id).Scan(&po.ID, &po.OrgID, &po.VendorID, &po.OrderNumber, &po.Status, &po.TotalCost, &po.CreatedAt)
 	if err != nil {

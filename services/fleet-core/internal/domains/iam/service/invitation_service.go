@@ -108,7 +108,7 @@ func (s *InvitationService) CreateInvite(ctx context.Context, orgID, invitedBy u
 	s.log.Info("invite_created",
 		zap.String("invite_id", inv.ID.String()),
 		zap.String("email", email),
-		zap.String("org_id", orgID.String()),
+		zap.String("tenant_id", orgID.String()),
 	)
 
 	return inv, nil

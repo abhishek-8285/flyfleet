@@ -5,9 +5,20 @@ export interface VehicleTelemetry {
   latitude: number;
   longitude: number;
   speed: number;
+  speed_kmh?: number; // Legacy/UI support
   heading: number;
   lastUpdate: string;
+  last_update?: string; // Legacy/UI support
   status: "moving" | "idling" | "alert" | "offline";
+  derived_status?: string;
+  registrationNumber?: string;
+  registration?: string;
+  make?: string;
+  model?: string;
+  year?: string | number;
+  driver_name?: string;
+  driver_phone?: string;
+  fuel_level?: number | null;
   driverId?: string;
   tripId?: string;
   index?: number; // Pointer to SharedArrayBuffer slot

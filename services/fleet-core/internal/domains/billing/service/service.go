@@ -135,7 +135,7 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 		if s.seqServ != nil {
 			num, err := s.seqServ.GetNextInvoiceNumber(ctx, inv.OrgID)
 			if err != nil {
-				s.logger.Error("Failed to generate invoice number", zap.Error(err), zap.String("org_id", inv.OrgID.String()))
+				s.logger.Error("Failed to generate invoice number", zap.Error(err), zap.String("tenant_id", inv.OrgID.String()))
 			} else {
 				inv.InvoiceNumber = num
 			}
@@ -148,7 +148,7 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 		// Calculate Regional Taxes
 		taxLines, err := s.taxServ.CalculateInvoiceTaxes(ctx, inv, settings.TaxCountry, settings.TaxState)
 		if err != nil {
-			s.logger.Error("Failed to calculate taxes", zap.Error(err), zap.String("org_id", inv.OrgID.String()))
+			s.logger.Error("Failed to calculate taxes", zap.Error(err), zap.String("tenant_id", inv.OrgID.String()))
 		} else if len(taxLines) > 0 {
 			// Update Invoice amounts based on calculated taxes
 			var totalTax float64
@@ -409,6 +409,7 @@ func (s *BillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UU
 		DueDate:       time.Now().AddDate(0, 0, 14).UTC(), // Default 14 days
 		Status:        models.InvoiceStatus("DRAFT"),
 		Currency:      "USD",
+		Category:      "Subscription",
 		Items:         []models.InvoiceItem{},
 	}
 

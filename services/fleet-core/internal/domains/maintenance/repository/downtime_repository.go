@@ -16,7 +16,7 @@ type DowntimeRepository interface {
 
 func (r *MaintenanceRepositoryImpl) RecordDowntimeStart(ctx context.Context, d *models.VehicleDowntime) error {
 	query := `
-		INSERT INTO vehicle_downtime (id, org_id, vehicle_id, work_order_id, downtime_start, reason)
+		INSERT INTO vehicle_downtime (id, tenant_id, vehicle_id, work_order_id, downtime_start, reason)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
 	if d.ID == uuid.Nil {

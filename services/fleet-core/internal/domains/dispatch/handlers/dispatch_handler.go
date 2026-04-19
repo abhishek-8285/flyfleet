@@ -25,9 +25,9 @@ func NewDispatchHandler(svc service.DispatchService, eng engine.SuggestionEngine
 }
 
 func (h *DispatchHandler) Assign(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, ok := r.Context().Value("org_id").(string)
+	orgIDStr, ok := r.Context().Value("tenant_id").(string)
 	if !ok || orgIDStr == "" {
-		http.Error(w, `{"error":"missing org_id"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
 		return
 	}
 	orgID, _ := uuid.Parse(orgIDStr)
@@ -79,9 +79,9 @@ func (h *DispatchHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DispatchHandler) Redispatch(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, ok := r.Context().Value("org_id").(string)
+	orgIDStr, ok := r.Context().Value("tenant_id").(string)
 	if !ok || orgIDStr == "" {
-		http.Error(w, `{"error":"missing org_id"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
 		return
 	}
 	orgID, _ := uuid.Parse(orgIDStr)

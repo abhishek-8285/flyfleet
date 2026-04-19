@@ -38,7 +38,7 @@ func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, orgI
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized document upload attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 			zap.String("vehicle_tenant", vehicle.TenantID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
@@ -92,7 +92,7 @@ func (s *DocumentsService) ListDocuments(ctx context.Context, vehicleID uuid.UUI
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized document list attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
 	return s.docsRepo.List(ctx, vehicleID)
@@ -116,7 +116,7 @@ func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID, org
 		s.logger.Warn("unauthorized document access attempt",
 			zap.String("doc_id", docID.String()),
 			zap.String("vehicle_id", doc.VehicleID.String()),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		return nil, nil
 	}
 	return doc, nil

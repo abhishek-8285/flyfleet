@@ -1,51 +1,124 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../store";
-import { useAuth } from "../../context/AuthProvider";
-import { useUIStrings } from "../../hooks/useUIStrings";
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthProvider';
+import { useUIStrings } from '../../hooks/useUIStrings';
+import { extractUserRole, isRoleAllowed } from '../../utils/rbac';
+import type { RootState } from '../../store';
 
 export const GlobalAdminSidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { toggleSidebar } = useAuth();
+  const { toggleSidebar, logout } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
-  const { uiStrings } = useUIStrings("layout_sidebar");
+  const { uiStrings } = useUIStrings('layout_sidebar');
   const collapsed = user?.sidebar_collapsed ?? false;
 
   const isActive = (path: string) => {
-    return (
-      location.pathname === path || location.pathname.startsWith(path + "/")
-    );
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
-  const role = effectiveUser?.role?.toLowerCase() || '';
+  const role = extractUserRole(effectiveUser);
 
-  const canSee = (roles: string[]) => roles.includes('*') || roles.includes(role);
+  const canSee = (roles: string[]) => isRoleAllowed(role, roles);
 
-  const [menuItems] = useState<any[]>([
-    { title: "Dashboard", path: "/admin", icon: "dashboard", roles: ["*"], items: [] },
-    { title: "Control Tower", path: "/admin/control-tower", icon: "satellite_alt", roles: ["*"], items: [] },
-    { title: "Dispatch", path: "/admin/dispatch", icon: "support_agent", roles: ["*"], items: [] },
-    { title: "Vehicles", path: "/admin/vehicles", icon: "local_shipping", roles: ["*"], items: [] },
-    { title: "Drivers", path: "/admin/drivers", icon: "group", roles: ["*"], items: [] },
-    { title: "Trips", path: "/admin/trips", icon: "route", roles: ["*"], items: [] },
-    { title: "Maintenance", path: "/admin/maintenance/work-orders", icon: "build", roles: ["*"], items: [] },
-    { title: "Finance", path: "/admin/finance/fuel", icon: "attach_money", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
-    { title: "Billing", path: "/admin/billing", icon: "receipt_long", roles: ["admin", "super_admin"], items: [] },
-    { title: "Organizations", path: "/admin/organizations", icon: "business", roles: ["admin", "super_admin"], items: [] },
-    { title: "Users", path: "/admin/users", icon: "group_add", roles: ["admin", "super_admin"], items: [] },
-    { title: "Reports", path: "/admin/reports", icon: "assessment", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
-    { title: "Monitoring", path: "/admin/monitoring", icon: "monitoring", roles: ["admin", "super_admin", "fleet_manager"], items: [] },
-    { title: "Settings", path: "/admin/settings/platform", icon: "settings", roles: ["admin", "super_admin"], items: [] },
-    { title: "Support", path: "/support", icon: "help", roles: ["admin", "super_admin"], items: [] },
-  ].filter(item => canSee(item.roles)));
+  const [menuItems] = useState<any[]>(
+    [
+      { title: 'Dashboard', path: '/admin', icon: 'dashboard', roles: ['*'], items: [] },
+      {
+        title: 'Control Tower',
+        path: '/admin/control-tower',
+        icon: 'satellite_alt',
+        roles: ['*'],
+        items: [],
+      },
+      {
+        title: 'Dispatch',
+        path: '/admin/dispatch',
+        icon: 'support_agent',
+        roles: ['*'],
+        items: [],
+      },
+      {
+        title: 'Vehicles',
+        path: '/admin/vehicles',
+        icon: 'local_shipping',
+        roles: ['*'],
+        items: [],
+      },
+      { title: 'Drivers', path: '/admin/drivers', icon: 'group', roles: ['*'], items: [] },
+      { title: 'Trips', path: '/admin/trips', icon: 'route', roles: ['*'], items: [] },
+      {
+        title: 'Maintenance',
+        path: '/admin/maintenance/work-orders',
+        icon: 'build',
+        roles: ['*'],
+        items: [],
+      },
+      {
+        title: 'Finance',
+        path: '/admin/finance/fuel',
+        icon: 'attach_money',
+        roles: ['admin', 'super_admin', 'fleet_manager'],
+        items: [],
+      },
+      {
+        title: 'Billing',
+        path: '/admin/billing',
+        icon: 'receipt_long',
+        roles: ['admin', 'super_admin'],
+        items: [],
+      },
+      {
+        title: 'Organizations',
+        path: '/admin/organizations',
+        icon: 'business',
+        roles: ['super_admin'],
+        items: [],
+      },
+      {
+        title: 'Users',
+        path: '/admin/users',
+        icon: 'group_add',
+        roles: ['admin', 'super_admin'],
+        items: [],
+      },
+      {
+        title: 'Reports',
+        path: '/admin/reports',
+        icon: 'assessment',
+        roles: ['admin', 'super_admin', 'fleet_manager'],
+        items: [],
+      },
+      {
+        title: 'Monitoring',
+        path: '/admin/monitoring',
+        icon: 'monitoring',
+        roles: ['super_admin'],
+        items: [],
+      },
+      {
+        title: 'Settings',
+        path: '/admin/settings/platform',
+        icon: 'settings',
+        roles: ['admin', 'super_admin'],
+        items: [],
+      },
+      {
+        title: 'Support',
+        path: '/support',
+        icon: 'help',
+        roles: ['admin', 'super_admin'],
+        items: [],
+      },
+    ].filter((item) => canSee(item.roles))
+  );
 
   return (
     <aside
       className={`bg-surface-container-low border-r border-outline flex flex-col transition-all duration-300 ease-in-out shadow-sm z-[60] ${
-        collapsed ? "w-16" : "w-64"
+        collapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* Header Branding */}
@@ -65,23 +138,10 @@ export const GlobalAdminSidebar: React.FC = () => {
           className={`p-2 rounded-lg hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-colors ${collapsed ? 'mx-auto' : 'ml-auto'}`}
         >
           <span className="material-symbols-outlined text-lg">
-            {collapsed ? "menu_open" : "menu"}
+            {collapsed ? 'menu_open' : 'menu'}
           </span>
         </button>
       </div>
-
-      {/* Primary Action Button */}
-      {!collapsed && (
-        <div className="px-4 py-6 border-b border-outline">
-          <button 
-            onClick={() => navigate("/admin/drivers/add")}
-            className="w-full bg-primary text-white py-2.5 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all hover:bg-primary-dark active:scale-[0.98] uppercase tracking-wider"
-          >
-            <span className="material-symbols-outlined text-sm">person_add</span>
-            Add Driver
-          </button>
-        </div>
-      )}
 
       {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto py-4 no-scrollbar">
@@ -92,16 +152,16 @@ export const GlobalAdminSidebar: React.FC = () => {
                 to={item.path}
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all group ${
                   isActive(item.path)
-                    ? "bg-surface-container-high text-white border-l-4 border-primary shadow-sm"
-                    : "text-on-surface-variant hover:text-white hover:bg-surface-container-high"
+                    ? 'bg-surface-container-high text-white border-l-4 border-primary shadow-sm'
+                    : 'text-on-surface-variant hover:text-white hover:bg-surface-container-high'
                 }`}
               >
-                <span className={`material-symbols-outlined text-lg flex-shrink-0 ${isActive(item.path) ? 'text-white' : 'group-hover:text-white'}`}>
+                <span
+                  className={`material-symbols-outlined text-lg flex-shrink-0 ${isActive(item.path) ? 'text-white' : 'group-hover:text-white'}`}
+                >
                   {item.icon}
                 </span>
-                {!collapsed && (
-                  <span className="flex-1 tracking-tight">{item.title}</span>
-                )}
+                {!collapsed && <span className="flex-1 tracking-tight">{item.title}</span>}
               </Link>
             </li>
           ))}
@@ -122,28 +182,42 @@ export const GlobalAdminSidebar: React.FC = () => {
 
       {/* Profile Footer */}
       <div className="p-4 border-t border-outline bg-surface-container-lowest/30">
-        <div className={`flex items-center gap-3 ${collapsed ? "justify-center" : "px-2"}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : 'px-2'}`}>
           <div className="relative size-8 flex-shrink-0">
             <img
-              src={effectiveUser?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(effectiveUser?.name || 'F+M')}&background=137fec&color=fff`}
-              alt={effectiveUser?.name || "User"}
+              src={
+                effectiveUser?.avatar_url ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(effectiveUser?.name || 'F+M')}&background=137fec&color=fff`
+              }
+              alt={effectiveUser?.name || 'User'}
               className="size-full rounded-full object-cover border border-outline shadow-sm"
               onError={(e) => {
                 // Fallback to a simple data-uri or local asset if CDN fails
-                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(effectiveUser?.name || 'User')}&background=0D1117&color=FFFFFF`;
+                (e.target as HTMLImageElement).src =
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(effectiveUser?.name || 'User')}&background=0D1117&color=FFFFFF`;
               }}
             />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-bold truncate uppercase tracking-tight">
-                {effectiveUser?.name || "Fleet Manager"}
+                {effectiveUser?.name || 'Fleet Manager'}
               </p>
               <p className="text-on-surface-variant text-[9px] truncate uppercase font-bold tracking-wider leading-none mt-1">
-                {effectiveUser?.role?.replace('_', ' ') || "Operations Manager"}
+                {effectiveUser?.role?.replace('_', ' ') || 'Operations Manager'}
               </p>
             </div>
           )}
+
+          <button
+            onClick={logout}
+            className="p-1.5 bg-surface-container hover:bg-surface-container-high rounded-lg text-on-surface-variant hover:text-error transition-all border border-outline ml-2 group active:scale-95"
+            title="Logout"
+          >
+            <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">
+              power_settings_new
+            </span>
+          </button>
         </div>
       </div>
     </aside>

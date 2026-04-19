@@ -9,7 +9,7 @@ import (
 type contextKey string
 
 const (
-	orgIDKey  contextKey = "org_id"
+	orgIDKey  contextKey = "tenant_id"
 	userIDKey contextKey = "user_id"
 )
 

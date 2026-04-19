@@ -94,7 +94,7 @@ func (s *MaintenanceIntegrationTestSuite) SetupSuite() {
 		);
 		CREATE TABLE IF NOT EXISTS vehicles (
 			id UUID PRIMARY KEY,
-			org_id UUID,
+			tenant_id UUID,
 			license_plate TEXT,
 			vin TEXT,
 			vehicle_type TEXT,

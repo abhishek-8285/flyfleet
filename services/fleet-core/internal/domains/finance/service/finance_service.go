@@ -76,7 +76,7 @@ func (s *FinanceService) SubmitExpenseReport(ctx context.Context, report *models
 		return errors.New("total_amount must be greater than zero")
 	}
 	if report.OrgID == "" || report.SubmitterID == "" {
-		return errors.New("org_id and submitter_id are required")
+		return errors.New("tenant_id and submitter_id are required")
 	}
 	if report.Currency == "" {
 		report.Currency = "USD"
@@ -102,7 +102,7 @@ func (s *FinanceService) RejectExpenseReport(ctx context.Context, reportID, appr
 
 func (s *FinanceService) ListExpenseReports(ctx context.Context, orgID, status string, limit, offset int) (*models.ExpenseReportListResponse, error) {
 	if strings.TrimSpace(orgID) == "" {
-		return nil, errors.New("org_id is required")
+		return nil, errors.New("tenant_id is required")
 	}
 	if limit <= 0 || limit > 500 {
 		limit = 50
@@ -126,7 +126,7 @@ func (s *FinanceService) ListExpenseReports(ctx context.Context, orgID, status s
 
 func (s *FinanceService) ListExpensePolicies(ctx context.Context, orgID string) ([]models.ExpensePolicy, error) {
 	if strings.TrimSpace(orgID) == "" {
-		return nil, errors.New("org_id is required")
+		return nil, errors.New("tenant_id is required")
 	}
 	return s.repo.GetExpensePolicies(ctx, orgID)
 }
@@ -136,7 +136,7 @@ func (s *FinanceService) UpsertExpensePolicy(ctx context.Context, policy *models
 		return errors.New("policy is required")
 	}
 	if strings.TrimSpace(policy.OrgID) == "" {
-		return errors.New("org_id is required")
+		return errors.New("tenant_id is required")
 	}
 	if strings.TrimSpace(policy.Category) == "" {
 		return errors.New("category is required")

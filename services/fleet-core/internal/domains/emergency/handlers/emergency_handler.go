@@ -189,11 +189,11 @@ func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Requ
 	// Convert to CreateSOSRequest
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
-	h.logger.Info("Triggering AIS140 SOS", zap.String("org_id", orgID.String()))
+	h.logger.Info("Triggering AIS140 SOS", zap.String("tenant_id", orgID.String()))
 
 	createReq := models.CreateSOSRequest{
 		DeviceID:     req.DeviceID,
@@ -236,7 +236,7 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -257,7 +257,7 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 func (h *EmergencyHandlers) ListActiveIncidents(w http.ResponseWriter, r *http.Request) {
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -289,7 +289,7 @@ func (h *EmergencyHandlers) AcknowledgeIncident(w http.ResponseWriter, r *http.R
 
 	orgID := middleware.GetOrgID(r.Context())
 	userID := middleware.GetUserID(r.Context())
-	h.logger.Info("Context info for acknowledge", zap.String("org_id", orgID.String()), zap.String("user_id", userID.String()))
+	h.logger.Info("Context info for acknowledge", zap.String("tenant_id", orgID.String()), zap.String("user_id", userID.String()))
 
 	if err := h.service.AcknowledgeIncident(r.Context(), id, orgID, userID, req.Notes); err != nil {
 		h.logger.Error("Failed to acknowledge incident in service", zap.String("id", id.String()), zap.Error(err))
@@ -320,7 +320,7 @@ func (h *EmergencyHandlers) ResolveIncident(w http.ResponseWriter, r *http.Reque
 	orgID := middleware.GetOrgID(r.Context())
 	userID := middleware.GetUserID(r.Context())
 	status := models.SOSStatus(req.Status)
-	h.logger.Info("Context info for resolve", zap.String("org_id", orgID.String()), zap.String("user_id", userID.String()), zap.String("status", string(status)))
+	h.logger.Info("Context info for resolve", zap.String("tenant_id", orgID.String()), zap.String("user_id", userID.String()), zap.String("status", string(status)))
 
 	if err := h.service.ResolveIncident(r.Context(), id, orgID, userID, req.Notes, status); err != nil {
 		h.logger.Error("Failed to resolve incident in service", zap.String("id", id.String()), zap.Error(err))
@@ -341,7 +341,7 @@ func (h *EmergencyHandlers) GetIncident(w http.ResponseWriter, r *http.Request) 
 
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -374,7 +374,7 @@ func (h *EmergencyHandlers) MarkAsFalseAlarm(w http.ResponseWriter, r *http.Requ
 
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -558,7 +558,7 @@ func (h *EmergencyHandlers) CreateContact(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Set org_id from context
+	// Set tenant_id from context
 	contact.OrgID = orgID
 
 	if err := h.service.CreateContact(r.Context(), &contact); err != nil {
@@ -688,15 +688,15 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// SECURITY: Require org_id from authenticated context ONLY (prevent spoofing)
+	// SECURITY: Require tenant_id from authenticated context ONLY (prevent spoofing)
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
 
-	// SECURITY FIX: Do NOT accept org_id from request body - force use of authenticated org
+	// SECURITY FIX: Do NOT accept tenant_id from request body - force use of authenticated org
 	sosReq := models.CreateSOSRequest{
 		OrgID:          orgID,
 		VehicleID:      req.VehicleID,
@@ -714,7 +714,7 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.logger.Info("Drill simulation completed", zap.String("incident_id", incident.ID.String()),
-		zap.String("org_id", orgID.String()))
+		zap.String("tenant_id", orgID.String()))
 	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"status":       "drill_triggered",
 		"incident_id":  incident.ID,
@@ -733,7 +733,7 @@ func (h *EmergencyHandlers) GetIncidentTimeline(w http.ResponseWriter, r *http.R
 
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.respondWithError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}

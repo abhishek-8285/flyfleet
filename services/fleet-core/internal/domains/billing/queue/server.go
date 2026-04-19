@@ -71,16 +71,16 @@ func (ws *BillingWorkerServer) HandleGenerateInvoice(ctx context.Context, t *asy
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
 
-	ws.logger.Info("Generating automated invoice", zap.String("org_id", payload.OrgID.String()))
+	ws.logger.Info("Generating automated invoice", zap.String("tenant_id", payload.OrgID.String()))
 
 	invoice, err := ws.service.GenerateDraftInvoice(ctx, payload.OrgID)
 	if err != nil {
-		ws.logger.Error("Failed to generate automated invoice", zap.Error(err), zap.String("org_id", payload.OrgID.String()))
+		ws.logger.Error("Failed to generate automated invoice", zap.Error(err), zap.String("tenant_id", payload.OrgID.String()))
 		return fmt.Errorf("generate draft invoice failed: %w", err)
 	}
 
 	ws.logger.Info("Successfully generated automated draft invoice",
-		zap.String("org_id", payload.OrgID.String()),
+		zap.String("tenant_id", payload.OrgID.String()),
 		zap.String("invoice_id", invoice.ID.String()))
 
 	return nil

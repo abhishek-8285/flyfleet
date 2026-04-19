@@ -36,7 +36,7 @@ func (r *HardwareRepository) ListProducts(ctx context.Context) ([]models.Hardwar
 }
 
 func (r *HardwareRepository) GetAssignmentByDevice(ctx context.Context, deviceID string) (*models.DeviceAssignment, error) {
-	query := `SELECT id, org_id, device_id, product_id, billing_type, status, activated_at, invoice_id, created_at, updated_at 
+	query := `SELECT id, tenant_id, device_id, product_id, billing_type, status, activated_at, invoice_id, created_at, updated_at 
 	          FROM billing_device_assignments WHERE device_id = $1`
 
 	var a models.DeviceAssignment
@@ -50,7 +50,7 @@ func (r *HardwareRepository) GetAssignmentByDevice(ctx context.Context, deviceID
 }
 
 func (r *HardwareRepository) CreateAssignment(ctx context.Context, a *models.DeviceAssignment) error {
-	query := `INSERT INTO billing_device_assignments (id, org_id, device_id, product_id, billing_type, status) 
+	query := `INSERT INTO billing_device_assignments (id, tenant_id, device_id, product_id, billing_type, status) 
 	          VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.db.Exec(ctx, query, a.ID, a.OrgID, a.DeviceID, a.ProductID, a.BillingType, a.Status)
 	return err

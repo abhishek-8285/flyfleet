@@ -18,7 +18,7 @@ const (
 
 type PurchaseOrder struct {
 	ID          uuid.UUID  `json:"id" db:"id"`
-	OrgID       uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID       uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	VendorID    *uuid.UUID `json:"vendor_id,omitempty" db:"vendor_id"`
 	OrderNumber string     `json:"order_number" db:"order_number"`
 	Status      POStatus   `json:"status" db:"status"`

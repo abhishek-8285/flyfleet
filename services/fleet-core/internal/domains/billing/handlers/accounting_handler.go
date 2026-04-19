@@ -28,7 +28,7 @@ func NewAccountingHandler(accServ *service.AccountingService, logger *zap.Logger
 func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -48,7 +48,7 @@ func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request)
 		// SECURITY FIX: Log detailed error but return generic message to client
 		h.logger.Error("ExportLedger failed",
 			zap.Error(err),
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 			zap.String("user_id", userID.String()),
 			zap.String("system", string(system)))
 		h.errorJSON(w, r, "Failed to export ledger", http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request)
 func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -82,7 +82,7 @@ func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Reques
 		// SECURITY FIX: Log detailed error but return generic message
 		h.logger.Error("ExportInvoices failed",
 			zap.Error(err),
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 			zap.String("user_id", userID.String()),
 			zap.String("system", string(system)))
 		h.errorJSON(w, r, "Failed to export invoices", http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Reques
 func (h *AccountingHandler) GetExportHistory(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -105,7 +105,7 @@ func (h *AccountingHandler) GetExportHistory(w http.ResponseWriter, r *http.Requ
 		// SECURITY FIX: Log detailed error but return generic message
 		h.logger.Error("GetExportHistory failed",
 			zap.Error(err),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		h.errorJSON(w, r, "Failed to get export history", http.StatusInternalServerError)
 		return
 	}

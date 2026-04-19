@@ -47,7 +47,7 @@ func NewMetrics() *Metrics {
 			prometheus.NewCounterVec(prometheus.CounterOpts{
 				Name: "dispatch_assignments_total",
 				Help: "Total number of trip assignments",
-			}, []string{"type", "org_id"}),
+			}, []string{"type", "tenant_id"}),
 		},
 		DispatchSuggestionLatency: &MetricVec{
 			prometheus.NewCounterVec(prometheus.CounterOpts{

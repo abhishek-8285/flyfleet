@@ -172,7 +172,7 @@ func (h *InspectionHandler) getOrgID(r *http.Request) uuid.UUID {
 	}
 	// SECURITY FIX: Removed insecure fallback to prevent unauthorized access
 	// The org ID must come from validated JWT context only
-	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 

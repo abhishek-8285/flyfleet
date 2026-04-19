@@ -211,11 +211,11 @@ export const TripFilters: React.FC<TripFiltersProps> = ({
             onChange={(e) => updateFilter("status", e.target.value)}
             className="bg-surface-container border border-outline text-white text-xs font-bold rounded-xl px-4 py-2.5 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-surface-container-highest transition-all min-w-[160px] outline-none shadow-sm"
           >
-            <option value="">{uiStrings.filter_all_statuses || "All Operations"}</option>
-            <option value="scheduled">Manifested</option>
+            <option value="">{uiStrings.filter_all_statuses || "All Trips"}</option>
+            <option value="scheduled">Scheduled</option>
             <option value="in_progress">In Transit</option>
-            <option value="completed">Delivered</option>
-            <option value="cancelled">Voided</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
           </select>
         </div>
 
@@ -346,9 +346,9 @@ export const TripFilters: React.FC<TripFiltersProps> = ({
               className="bg-surface-container border border-outline text-white text-xs font-bold rounded-xl px-4 py-2.5 focus:ring-1 focus:ring-primary cursor-pointer hover:bg-surface-container-highest transition-all min-w-[140px] outline-none shadow-sm"
             >
               <option value="">{uiStrings.sort_default || "Newest Entry"}</option>
-              <option value="created_at">Submission Date</option>
-              <option value="scheduled_start">Manifest Start</option>
-              <option value="status">Status Level</option>
+              <option value="created_at">Booking Date</option>
+              <option value="scheduled_start">Trip Start</option>
+              <option value="status">Status</option>
             </select>
             {filters.orderBy && (
               <button

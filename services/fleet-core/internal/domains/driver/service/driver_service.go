@@ -618,7 +618,7 @@ func (s *DriverService) MarkAttendance(ctx context.Context, driverID, orgID uuid
 	// Publish event for attendance marking
 	s.publishEvent("driver.attendance.marked", map[string]interface{}{
 		"driver_id": driverID,
-		"org_id":    orgID,
+		"tenant_id":    orgID,
 		"date":      date.Format("2006-01-02"),
 		"status":    status,
 	})
@@ -699,7 +699,7 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UU
 	// Publish event for schedule update
 	s.publishEvent("driver.schedule.updated", map[string]interface{}{
 		"driver_id":  driverID,
-		"org_id":     orgID,
+		"tenant_id":     orgID,
 		"day":        dayOfWeek,
 		"start_time": startTime,
 		"end_time":   endTime,

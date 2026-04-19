@@ -33,7 +33,7 @@ func NewAlertsHandlers(service *service.AlertsService, repo repository.Repositor
 func (h *AlertsHandlers) getOrgID(c *gin.Context) uuid.UUID {
 	orgID := middleware.GetOrgID(c.Request.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware",
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware",
 			zap.String("path", c.Request.URL.Path))
 	}
 	return orgID
@@ -77,7 +77,7 @@ func (h *AlertsHandlers) TriggerAlert(c *gin.Context) {
 		return
 	}
 
-	// Convert DTO to model with org_id injected
+	// Convert DTO to model with tenant_id injected
 	modelReq := req.ToModel(orgID)
 
 	if err := h.service.TriggerAlert(c.Request.Context(), modelReq); err != nil {

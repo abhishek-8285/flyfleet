@@ -17,6 +17,7 @@ export interface Invoice {
   org_id: string;
   customer_name: string;
   customer_email?: string;
+  customer_phone?: string;
   billing_address?: string;
   invoice_number?: string;
   invoice_date: string;
@@ -29,6 +30,7 @@ export interface Invoice {
   subtotal?: number;
   tax_amount?: number;
   notes?: string;
+  category?: string;
   items?: InvoiceItem[];
   created_at: string;
   updated_at: string;

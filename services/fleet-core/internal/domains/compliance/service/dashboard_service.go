@@ -32,7 +32,7 @@ func (s *dashboardServiceImpl) GetDashboardMetrics(ctx context.Context, orgID uu
 	metrics, err := s.repo.GetDashboardMetrics(ctx, orgID)
 	if err != nil {
 		// If not found, trigger a refresh and return fresh/empty
-		s.logger.Info("dashboard metrics not found, refreshing", zap.String("org_id", orgID.String()))
+		s.logger.Info("dashboard metrics not found, refreshing", zap.String("tenant_id", orgID.String()))
 		_ = s.RefreshMetrics(ctx, orgID)
 		return s.repo.GetDashboardMetrics(ctx, orgID)
 	}

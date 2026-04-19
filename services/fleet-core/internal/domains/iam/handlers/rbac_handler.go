@@ -263,7 +263,7 @@ func (h *RBACHandler) BulkAssignRole(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserIDs []uuid.UUID `json:"user_ids"`
 		RoleIDs []uuid.UUID `json:"role_ids"`
-		OrgID   uuid.UUID   `json:"org_id"`
+		OrgID   uuid.UUID   `json:"tenant_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)

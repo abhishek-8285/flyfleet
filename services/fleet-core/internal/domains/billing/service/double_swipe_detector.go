@@ -72,7 +72,7 @@ func (d *DoubleSwipeDetector) Detect(ctx context.Context, tx *india_models.FASTa
 
 			subject := fmt.Sprintf("billing.alerts.double_swipe.%s", tx.OrganizationID.String())
 			if d.nc != nil {
-				d.nc.Publish(subject, []byte(fmt.Sprintf(`{"org_id":"%s", "msg": "Double-Swipe detected for vehicle %s at %s"}`, tx.OrganizationID, tx.VehicleID, tx.TollPlaza)))
+				d.nc.Publish(subject, []byte(fmt.Sprintf(`{"tenant_id":"%s", "msg": "Double-Swipe detected for vehicle %s at %s"}`, tx.OrganizationID, tx.VehicleID, tx.TollPlaza)))
 				// Also publish the full alert
 				data, _ := json.Marshal(alert)
 				d.nc.Publish("billing.v2.alerts", data)

@@ -40,7 +40,7 @@ type InvoiceTaxLine struct {
 
 // InvoiceSequence tracks the gapless sequential numbering per organization
 type InvoiceSequence struct {
-	OrgID     uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	Prefix    string    `json:"prefix" db:"prefix"`
 	NextValue int64     `json:"next_value" db:"next_value"`
 	Suffix    string    `json:"suffix" db:"suffix"`

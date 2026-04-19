@@ -18,14 +18,14 @@ type Organization struct {
 
 type UserOrganization struct {
 	UserID     uuid.UUID  `json:"user_id"`
-	OrgID      uuid.UUID  `json:"org_id"`
+	OrgID      uuid.UUID  `json:"tenant_id"`
 	RoleID     uuid.UUID  `json:"role_id"`
 	Role       string     `json:"role"`
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type OrgInfo struct {
-	ID            uuid.UUID `json:"org_id"`
+	ID            uuid.UUID `json:"tenant_id"`
 	Name          string    `json:"org_name"`
 	Role          string    `json:"role"`
 	VehicleCount  int       `json:"vehicle_count"`

@@ -17,7 +17,7 @@ const (
 
 type Invitation struct {
 	ID            uuid.UUID        `json:"id"`
-	OrgID         uuid.UUID        `json:"org_id"`
+	OrgID         uuid.UUID        `json:"tenant_id"`
 	Email         string           `json:"email"`
 	InvitedBy     uuid.UUID        `json:"invited_by"`
 	Token         string           `json:"-"`

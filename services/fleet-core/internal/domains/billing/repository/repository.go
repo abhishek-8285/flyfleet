@@ -26,8 +26,8 @@ func NewBillingRepository(db *pgxpool.Pool) *BillingRepository {
 func (r *BillingRepository) ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	offset := (page - 1) * size
 
-	query := `SELECT id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, created_at, updated_at
-	          FROM invoices WHERE org_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+	query := `SELECT id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, created_at, updated_at
+	          FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID, size, offset)
@@ -49,8 +49,8 @@ func (r *BillingRepository) ListInvoices(ctx context.Context, orgID uuid.UUID, p
 
 	start2 := time.Now()
 	var total int
-	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM invoices WHERE org_id = $1 AND deleted_at IS NULL", orgID).Scan(&total)
-	metrics.RecordDBQuery("SELECT COUNT(*) FROM invoices WHERE org_id = $1 AND deleted_at IS NULL", time.Since(start2))
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL", orgID).Scan(&total)
+	metrics.RecordDBQuery("SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start2))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count invoices: %w", err)
 	}
@@ -68,7 +68,7 @@ func (r *BillingRepository) CreateInvoice(ctx context.Context, inv *models.Invoi
 	defer tx.Rollback(ctx)
 
 	inv.ID = uuid.New()
-	query := `INSERT INTO invoices (id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields)
+	query := `INSERT INTO invoices (id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING created_at, updated_at`
 
 	start1 := time.Now()
@@ -120,7 +120,7 @@ func (r *BillingRepository) GetInvoice(ctx context.Context, id uuid.UUID) (*mode
 	var i models.Invoice
 	var notes sql.NullString
 	var customFields []byte
-	query := `SELECT id, org_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields, created_at, updated_at
+	query := `SELECT id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields, created_at, updated_at
 	          FROM invoices WHERE id = $1 AND deleted_at IS NULL`
 
 	start := time.Now()
@@ -233,8 +233,8 @@ func (r *BillingRepository) DeleteInvoice(ctx context.Context, id uuid.UUID) err
 
 func (r *BillingRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
 	var s models.BillingSettings
-	query := `SELECT org_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, created_at, updated_at
-	          FROM billing_settings WHERE org_id = $1`
+	query := `SELECT tenant_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, created_at, updated_at
+	          FROM billing_settings WHERE tenant_id = $1`
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, orgID).Scan(&s.OrgID, &s.DefaultTaxRate, &s.BaseCurrency, &s.GracePeriodDays, &s.AutoInvoicingEnabled, &s.TaxCountry, &s.TaxState, &s.InvoicePrefix, &s.NextInvoiceNumber, &s.RenderConfig, &s.CreatedAt, &s.UpdatedAt)
@@ -249,9 +249,9 @@ func (r *BillingRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*
 }
 
 func (r *BillingRepository) UpdateSettings(ctx context.Context, s *models.BillingSettings) error {
-	query := `INSERT INTO billing_settings (org_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, updated_at)
+	query := `INSERT INTO billing_settings (tenant_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
-	          ON CONFLICT (org_id) DO UPDATE SET
+	          ON CONFLICT (tenant_id) DO UPDATE SET
 	          default_tax_rate = EXCLUDED.default_tax_rate,
 	          base_currency = EXCLUDED.base_currency,
 	          grace_period_days = EXCLUDED.grace_period_days,
@@ -276,7 +276,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	var m models.BillingMetrics
 
 	// Total Invoiced MTD
-	mtdQuery := `SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE org_id = $1 AND invoice_date >= date_trunc('month', CURRENT_DATE) AND deleted_at IS NULL`
+	mtdQuery := `SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE tenant_id = $1 AND invoice_date >= date_trunc('month', CURRENT_DATE) AND deleted_at IS NULL`
 	start1 := time.Now()
 	err := r.db.QueryRow(ctx, mtdQuery, orgID).Scan(&m.TotalInvoicedMTD)
 	metrics.RecordDBQuery(mtdQuery, time.Since(start1))
@@ -285,7 +285,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	}
 
 	// Pending Payment
-	pendingQuery := `SELECT COALESCE(SUM(balance_due), 0), COUNT(*) FROM invoices WHERE org_id = $1 AND (status = 'PENDING' OR status = 'PARTIAL') AND deleted_at IS NULL`
+	pendingQuery := `SELECT COALESCE(SUM(balance_due), 0), COUNT(*) FROM invoices WHERE tenant_id = $1 AND (status = 'PENDING' OR status = 'PARTIAL') AND deleted_at IS NULL`
 	start2 := time.Now()
 	err = r.db.QueryRow(ctx, pendingQuery, orgID).Scan(&m.PendingPayment, &m.OpenCount)
 	metrics.RecordDBQuery(pendingQuery, time.Since(start2))
@@ -294,7 +294,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	}
 
 	// Overdue Amount
-	overdueQuery := `SELECT COALESCE(SUM(balance_due), 0) FROM invoices WHERE org_id = $1 AND status = 'OVERDUE' AND deleted_at IS NULL`
+	overdueQuery := `SELECT COALESCE(SUM(balance_due), 0) FROM invoices WHERE tenant_id = $1 AND status = 'OVERDUE' AND deleted_at IS NULL`
 	start3 := time.Now()
 	err = r.db.QueryRow(ctx, overdueQuery, orgID).Scan(&m.OverdueAmount)
 	metrics.RecordDBQuery(overdueQuery, time.Since(start3))
@@ -303,7 +303,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	}
 
 	// Paid Count (last 30 days)
-	paidQuery := `SELECT COUNT(*) FROM invoices WHERE org_id = $1 AND status = 'PAID' AND updated_at >= CURRENT_DATE - INTERVAL '30 days' AND deleted_at IS NULL`
+	paidQuery := `SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND status = 'PAID' AND updated_at >= CURRENT_DATE - INTERVAL '30 days' AND deleted_at IS NULL`
 	start4 := time.Now()
 	err = r.db.QueryRow(ctx, paidQuery, orgID).Scan(&m.PaidCount)
 	metrics.RecordDBQuery(paidQuery, time.Since(start4))

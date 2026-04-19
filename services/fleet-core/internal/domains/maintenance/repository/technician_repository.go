@@ -27,7 +27,7 @@ type TechnicianRepository interface {
 func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *models.Technician) error {
 	query := `
 		INSERT INTO maintenance_technicians (
-			id, org_id, user_id, name, specialization, certifications,
+			id, tenant_id, user_id, name, specialization, certifications,
 			hourly_rate, availability_status, current_workload, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
@@ -50,7 +50,7 @@ func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *
 
 func (r *MaintenanceRepositoryImpl) GetTechnicianByID(ctx context.Context, id uuid.UUID) (*models.Technician, error) {
 	query := `
-		SELECT id, org_id, user_id, name, specialization, certifications,
+		SELECT id, tenant_id, user_id, name, specialization, certifications,
 			   hourly_rate, availability_status, current_workload, created_at, updated_at
 		FROM maintenance_technicians WHERE id = $1`
 
@@ -94,9 +94,9 @@ func (r *MaintenanceRepositoryImpl) UpdateWorkload(ctx context.Context, techID u
 
 func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, orgID uuid.UUID) ([]*models.Technician, error) {
 	query := `
-		SELECT id, org_id, user_id, name, specialization, certifications,
+		SELECT id, tenant_id, user_id, name, specialization, certifications,
 			   hourly_rate, availability_status, current_workload, created_at, updated_at
-		FROM maintenance_technicians WHERE org_id = $1`
+		FROM maintenance_technicians WHERE tenant_id = $1`
 
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
@@ -143,7 +143,7 @@ func (r *MaintenanceRepositoryImpl) GetSkillsByTechnician(ctx context.Context, t
 func (r *MaintenanceRepositoryImpl) UpdateTechnician(ctx context.Context, tech *models.Technician) error {
 	query := `
 		UPDATE maintenance_technicians SET
-			org_id = $1, user_id = $2, name = $3, specialization = $4,
+			tenant_id = $1, user_id = $2, name = $3, specialization = $4,
 			certifications = $5, hourly_rate = $6, availability_status = $7,
 			current_workload = $8, updated_at = NOW()
 		WHERE id = $9`

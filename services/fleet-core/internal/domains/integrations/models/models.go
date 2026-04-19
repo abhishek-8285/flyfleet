@@ -8,7 +8,7 @@ import (
 
 type Integration struct {
 	ID        uuid.UUID  `json:"id" db:"id"`
-	OrgID     uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID     uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	Name      string     `json:"name" db:"name"`
 	Type      string     `json:"type" db:"type"`
 	Provider  string     `json:"provider" db:"provider"`
@@ -23,7 +23,7 @@ type Integration struct {
 
 type APIClient struct {
 	ID               uuid.UUID  `json:"id" db:"id"`
-	OrgID            uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID            uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	ClientID         string     `json:"client_id" db:"client_id"`
 	ClientSecretHash string     `json:"-" db:"client_secret_hash"`
 	Name             string     `json:"name" db:"name"`
@@ -38,7 +38,7 @@ type APIClient struct {
 
 type Webhook struct {
 	ID        uuid.UUID `json:"id" db:"id"`
-	OrgID     uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	URL       string    `json:"url" db:"url"`
 	Events    []string  `json:"events" db:"events"`
 	Secret    string    `json:"secret" db:"secret"`
@@ -51,7 +51,7 @@ type Webhook struct {
 
 type IntegrationLog struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
-	OrgID         uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID         uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	IntegrationID *uuid.UUID `json:"integration_id" db:"integration_id"`
 	Method        string     `json:"method" db:"method"`
 	Endpoint      string     `json:"endpoint" db:"endpoint"`

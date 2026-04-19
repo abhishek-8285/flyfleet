@@ -9,7 +9,7 @@ import (
 // InvoicePermission represents role-based permissions for invoices
 type InvoicePermission struct {
 	ID                   uuid.UUID `json:"id" db:"id"`
-	OrgID                uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID                uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	RoleName             string    `json:"role_name" db:"role_name"`
 	CanCreateInvoice     bool      `json:"can_create_invoice" db:"can_create_invoice"`
 	CanEditInvoice       bool      `json:"can_edit_invoice" db:"can_edit_invoice"`
@@ -31,7 +31,7 @@ type InvoicePermission struct {
 // UserInvoiceAccess represents per-user invoice access overrides
 type UserInvoiceAccess struct {
 	ID                   uuid.UUID  `json:"id" db:"id"`
-	OrgID                uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID                uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	UserID               uuid.UUID  `json:"user_id" db:"user_id"`
 	OverrideRole         bool       `json:"override_role" db:"override_role"`
 	CanCreateInvoice     bool       `json:"can_create_invoice" db:"can_create_invoice"`
@@ -52,7 +52,7 @@ type UserInvoiceAccess struct {
 // InvoiceApprovalMatrix defines approval rules based on amount
 type InvoiceApprovalMatrix struct {
 	ID                uuid.UUID `json:"id" db:"id"`
-	OrgID             uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID             uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	MinAmount         float64   `json:"min_amount" db:"min_amount"`
 	MaxAmount         float64   `json:"max_amount,omitempty" db:"max_amount"`
 	RequiredRole      string    `json:"required_role" db:"required_role"`

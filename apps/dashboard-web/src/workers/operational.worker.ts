@@ -14,8 +14,8 @@ interface SearchableVehicle {
 }
 
 const miniSearch = new MiniSearch({
-  fields: ["id", "type", "org", "status"],
-  storeFields: ["id", "type", "org", "status", "lastUpdate"],
+  fields: ["id", "type", "org", "status", "gps_enabled"],
+  storeFields: ["id", "type", "org", "status", "lastUpdate", "gps_enabled"],
   searchOptions: {
     boost: { id: 2 },
     fuzzy: 0.2,
@@ -88,21 +88,24 @@ self.onmessage = async (event: MessageEvent) => {
   if (type === "INDEX_VEHICLES") {
     const updates: SearchableVehicle[] = [];
     payload.forEach((v: any) => {
-      vehicleMap.set(v.id, v);
-      updates.push(v);
+      const existing = vehicleMap.get(v.id) || {};
+      const updated = { ...existing, ...v };
+      vehicleMap.set(v.id, updated as SearchableVehicle);
+      updates.push(updated as SearchableVehicle);
 
       // Update sharded index if org is present
-      if (v.org) {
-        if (!shardedIndexes.has(v.org)) {
+      const org = updated.org;
+      if (org) {
+        if (!shardedIndexes.has(org)) {
           shardedIndexes.set(
-            v.org,
+            org,
             new MiniSearch({
-              fields: ["id", "type", "status"],
-              storeFields: ["id", "type", "status", "lastUpdate"],
+              fields: ["id", "type", "status", "gps_enabled"],
+              storeFields: ["id", "type", "status", "lastUpdate", "gps_enabled"],
             }),
           );
         }
-        shardedIndexes.get(v.org)!.add(v);
+        shardedIndexes.get(org)!.add(updated);
       }
     });
 
@@ -123,22 +126,37 @@ self.onmessage = async (event: MessageEvent) => {
       prefix: true,
     };
 
+    // Shared filter logic
+    if (filters) {
+      searchOptions.filter = (result: any) => {
+        return Object.entries(filters).every(([key, value]) => {
+          if (!value || key === 'org') return true; // 'org' is handled by sharding or direct scan
+          // Handle boolean strings from the UI (e.g. "true")
+          if (key === "gps_enabled") {
+            return String(result[key]) === String(value);
+          }
+          return result[key] === value;
+        });
+      };
+    }
+
     let results: any[] = [];
 
-    // Use sharded index if org filter is active
-    if (filters?.org && shardedIndexes.has(filters.org)) {
+    // Optimize for empty query + filters: scan the map directly instead of MiniSearch
+    if (!query && filters) {
+      results = Array.from(vehicleMap.values())
+        .filter((v: any) => {
+          // If org filter is present, check it first
+          if (filters.org && v.org !== filters.org) return false;
+          // Apply other filters
+          return searchOptions.filter(v);
+        });
+    } else if (filters?.org && shardedIndexes.has(filters.org)) {
+      // Use sharded index if org filter is active
       results = shardedIndexes
         .get(filters.org)!
         .search(query || "", searchOptions);
     } else {
-      if (filters) {
-        searchOptions.filter = (result: any) => {
-          return Object.entries(filters).every(([key, value]) => {
-            if (!value) return true;
-            return result[key] === value;
-          });
-        };
-      }
       results = miniSearch.search(query || "", searchOptions);
     }
 

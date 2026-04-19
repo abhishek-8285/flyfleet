@@ -10,7 +10,7 @@ import (
 
 type orgCtxKey string
 
-const orgIDKey orgCtxKey = "org_id"
+const orgIDKey orgCtxKey = "tenant_id"
 
 func orgScopeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

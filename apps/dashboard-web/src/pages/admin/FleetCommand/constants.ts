@@ -55,6 +55,14 @@ export const FUEL_UNITS: DropdownOption[] = [
   { value: "gallons", label: "Gallons (US)" },
 ];
 
+export const GPS_DEVICE_TYPES: DropdownOption[] = [
+  { value: "AIS140_OBD", label: "AIS-140 OBD" },
+  { value: "AIS140_HARDWIRED", label: "AIS-140 Hardwired" },
+  { value: "INTERNAL_SENSOR", label: "Internal Sensor" },
+  { value: "MOBILE_APP", label: "Mobile App Hub" },
+  { value: "PLATFORM_MOCK", label: "Platform Mock (Test)" },
+];
+
 export const FUEL_LABELS: Record<string, string> = {
   DIESEL: "Diesel",
   PETROL: "Gasoline (Unleaded)",

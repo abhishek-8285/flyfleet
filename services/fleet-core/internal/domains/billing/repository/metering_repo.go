@@ -24,7 +24,7 @@ func (r *MeteringRepository) RecordConsumption(ctx context.Context, event *model
 		event.Time = time.Now().UTC()
 	}
 
-	query := `INSERT INTO consumption_events (time, org_id, vehicle_id, meter_code, amount, metadata) 
+	query := `INSERT INTO consumption_events (time, tenant_id, vehicle_id, meter_code, amount, metadata) 
 	          VALUES ($1, $2, $3, $4, $5, $6)`
 
 	_, err := r.db.Exec(ctx, query, event.Time, event.OrgID, event.VehicleID, event.MeterCode, event.Amount, event.Metadata)
@@ -39,7 +39,7 @@ func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UU
 	query := `SELECT ce.meter_code, um.name, um.unit, SUM(ce.amount) as total, SUM(ce.amount * um.unit_price) as amount
 	          FROM consumption_events ce
 	          JOIN usage_meters um ON ce.meter_code = um.code
-	          WHERE ce.org_id = $1 AND ce.processed_invoice_id IS NULL
+	          WHERE ce.tenant_id = $1 AND ce.processed_invoice_id IS NULL
 	          GROUP BY ce.meter_code, um.name, um.unit`
 
 	rows, err := r.db.Query(ctx, query, orgID)
@@ -63,7 +63,7 @@ func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UU
 // MarkUsageAsBilled links consumption events to a generated invoice
 func (r *MeteringRepository) MarkUsageAsBilled(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID) error {
 	query := `UPDATE consumption_events SET processed_invoice_id = $1 
-	          WHERE org_id = $2 AND processed_invoice_id IS NULL`
+	          WHERE tenant_id = $2 AND processed_invoice_id IS NULL`
 
 	_, err := r.db.Exec(ctx, query, invoiceID, orgID)
 	if err != nil {

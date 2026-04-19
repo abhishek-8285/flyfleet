@@ -79,7 +79,7 @@ func (r *AuditLogRepository) GetAuditLogsByOrg(ctx context.Context, orgID uuid.U
 		       ial.changed_by, ial.changed_by_email, ial.changed_at, ial.ip_address, ial.user_agent, ial.reason
 		FROM invoice_audit_log ial
 		JOIN invoices i ON ial.invoice_id = i.id
-		WHERE i.org_id = $1
+		WHERE i.tenant_id = $1
 		ORDER BY ial.changed_at DESC
 		LIMIT $2 OFFSET $3`
 

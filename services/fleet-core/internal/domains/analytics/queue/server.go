@@ -198,7 +198,7 @@ func (ws *AnalyticsWorkerServer) HandleCacheInvalidateTask(ctx context.Context, 
 	}
 
 	ws.logger.Info("Processing cache invalidation task",
-		zap.String("org_id", payload.OrganizationID.String()),
+		zap.String("tenant_id", payload.OrganizationID.String()),
 		zap.String("pattern", payload.Pattern),
 		zap.String("type", payload.ResourceType))
 

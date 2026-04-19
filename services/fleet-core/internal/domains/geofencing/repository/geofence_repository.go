@@ -26,7 +26,7 @@ func (r *GeofenceRepository) DB() *pgxpool.Pool { return r.db }
 func (r *GeofenceRepository) Create(ctx context.Context, geofence *models.Geofence) error {
 	query := `
 		INSERT INTO geofences (
-			id, org_id, name, type,
+			id, tenant_id, name, type,
 			center, radius_meters, coordinates,
 			route_polyline, buffer_meters,
 			entry_alert, exit_alert, speed_limit,
@@ -64,14 +64,14 @@ func (r *GeofenceRepository) Create(ctx context.Context, geofence *models.Geofen
 func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Geofence, error) {
 	query := `
 		SELECT
-			id, org_id, name, type,
+			id, tenant_id, name, type,
 			center, radius_meters, coordinates,
 			route_polyline, buffer_meters,
 			entry_alert, exit_alert, speed_limit,
 			vehicles, metadata,
 			enabled, created_by, created_at, updated_at
 		FROM geofences
-		WHERE id = $1 AND org_id = $2 AND enabled = true`
+		WHERE id = $1 AND tenant_id = $2 AND enabled = true`
 
 	row := r.db.QueryRow(ctx, query, id, orgID)
 
@@ -108,7 +108,7 @@ func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uu
 
 // List retrieves geofences with pagination and filtering
 func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *models.ListGeofencesRequest) ([]models.Geofence, int64, error) {
-	baseQuery := `SELECT id, org_id, name, type, 
+	baseQuery := `SELECT id, tenant_id, name, type, 
 	                 center, radius_meters, coordinates,
 	                 route_polyline, buffer_meters,
 	                 entry_alert, exit_alert, speed_limit,
@@ -116,7 +116,7 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 	                 enabled, created_by, created_at, updated_at,
 	                 COUNT(*) OVER() as total
 	          FROM geofences 
-	          WHERE org_id = $1 AND enabled = true`
+	          WHERE tenant_id = $1 AND enabled = true`
 
 	args := []interface{}{orgID}
 	argCount := 2
@@ -248,7 +248,7 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, orgID uui
 		argCount++
 	}
 
-	query += fmt.Sprintf(" WHERE id = $%d AND org_id = $%d", argCount+1, argCount+2)
+	query += fmt.Sprintf(" WHERE id = $%d AND tenant_id = $%d", argCount+1, argCount+2)
 	args = append(args, id, orgID)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -260,7 +260,7 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, orgID uui
 
 // Delete marks a geofence as inactive
 func (r *GeofenceRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
-	query := `UPDATE geofences SET enabled = false, updated_at = NOW() WHERE id = $1 AND org_id = $2`
+	query := `UPDATE geofences SET enabled = false, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`
 	_, err := r.db.Exec(ctx, query, id, orgID)
 	if err != nil {
 		return fmt.Errorf("failed to delete geofence: %w", err)
@@ -277,7 +277,7 @@ func (r *GeofenceRepository) GetEvents(ctx context.Context, filter *models.Geofe
 	              FROM geofence_events ge
 	              JOIN geofences g ON ge.geofence_id = g.id
 	              LEFT JOIN vehicles v ON ge.vehicle_id = v.id
-	              WHERE g.org_id = $1`
+	              WHERE g.tenant_id = $1`
 
 	args := []interface{}{filter.OrgID}
 	argCount := 2

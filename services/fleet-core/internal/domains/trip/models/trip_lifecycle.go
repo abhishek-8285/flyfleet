@@ -141,7 +141,7 @@ type TripCompliance struct {
 
 // TripSearchFilter represents search filters for trips
 type TripSearchFilter struct {
-	OrgID         string    `json:"org_id"`
+	OrgID         string    `json:"tenant_id"`
 	VehicleID     string    `json:"vehicle_id"`
 	DriverID      string    `json:"driver_id"`
 	Status        []string  `json:"status"`

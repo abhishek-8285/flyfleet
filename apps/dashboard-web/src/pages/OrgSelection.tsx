@@ -18,29 +18,58 @@ const OrgSelection: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
+  const isSuperAdmin = (user?.role || "").toLowerCase().includes("super_admin");
 
   React.useEffect(() => {
     const fetchOrgs = async () => {
       try {
-        const payload = await api.getOrganizations();
-        setOrgs(payload.data || payload || []);
+        if (isSuperAdmin) {
+          const payload = await api.getOrganizations();
+          // Defensive check for payload format
+          const rawOrgs = payload?.data || payload || [];
+          setOrgs(Array.isArray(rawOrgs) ? rawOrgs : []);
+        } else {
+          // Use organizations from profile (authorized only)
+          const profileOrgs = (user as any)?.organizations || [];
+          setOrgs(
+            profileOrgs.map((o: any) => ({
+              id: o.org_id || o.id,
+              name: o.org_name || o.name,
+              role: o.role,
+              isLocked: o.isLocked || o.is_locked || false,
+            })),
+          );
+        }
       } catch (error) {
-        console.error("Failed to fetch orgs", error);
+        console.error("Failed to fetch/resolve authorized orgs", error);
+        setOrgs([]);
       }
     };
     fetchOrgs();
-  }, []);
+  }, [user, isSuperAdmin]);
 
-  const filteredOrgs = orgs.filter((org) =>
-    org.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  // Handle automatic selection if only one organization exists
+  React.useEffect(() => {
+    if (!loading && orgs?.length === 1 && !selectedOrgId) {
+      const singleOrg = orgs[0];
+      if (singleOrg?.id && !singleOrg?.isLocked) {
+        setSelectedOrgId(singleOrg.id);
+        // Automatic trigger
+        const timer = setTimeout(() => {
+           handleOrgSelect(singleOrg.id);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [orgs, loading, selectedOrgId]);
 
-  const handleOrgSelect = async () => {
-    if (!selectedOrgId) return;
+  const handleOrgSelect = async (overrideId?: string) => {
+    const targetId = overrideId || selectedOrgId;
+    if (!targetId) return;
     setLoading(true);
 
     try {
-      await setOrganization(selectedOrgId);
+      await setOrganization(targetId);
       
       const role = (user?.role_id || user?.role || "").toLowerCase();
       let targetPath = "/dashboard";
@@ -57,6 +86,10 @@ const OrgSelection: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const filteredOrgs = (orgs || []).filter((org) =>
+    (org?.name || "").toLowerCase().includes((searchQuery || "").toLowerCase()),
+  );
 
   return (
     <EnterpriseAuthLayout
@@ -146,7 +179,7 @@ const OrgSelection: React.FC = () => {
 
         <div className="pt-2">
           <button
-            onClick={handleOrgSelect}
+            onClick={() => handleOrgSelect()}
             disabled={loading || !selectedOrgId}
             className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary-dark hover:to-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
           >

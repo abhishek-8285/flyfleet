@@ -183,9 +183,9 @@ func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid
 	// Check for dependent records before deleting
 	var userCount, vehicleCount int
 
-	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM user_organizations WHERE org_id = $1 AND status = 'active'", id).Scan(&userCount)
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM user_organizations WHERE tenant_id = $1 AND status = 'active'", id).Scan(&userCount)
 	if err != nil {
-		r.logger.Error("Failed to count users", zap.String("org_id", id.String()), zap.Error(err))
+		r.logger.Error("Failed to count users", zap.String("tenant_id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to check dependencies: %w", err)
 	}
 
@@ -195,7 +195,7 @@ func (r *OrganizationRepository) DeleteOrganization(ctx context.Context, id uuid
 
 	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", id).Scan(&vehicleCount)
 	if err != nil {
-		r.logger.Error("Failed to count vehicles", zap.String("org_id", id.String()), zap.Error(err))
+		r.logger.Error("Failed to count vehicles", zap.String("tenant_id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to check dependencies: %w", err)
 	}
 

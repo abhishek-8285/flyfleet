@@ -5,6 +5,7 @@ import apiClient from "../../services/apiClient";
 interface Vehicle {
   id: string;
   name: string;
+  registration_number: string;
   license_plate: string;
   status: string;
   org_id: string;
@@ -84,10 +85,10 @@ export const VehicleDetail: React.FC = () => {
           </div>
           <div className="flex flex-col justify-center">
             <h1 className="text-4xl font-bold text-white tracking-tighter">
-              {vehicle.name}
+              {vehicle.registration_number || vehicle.license_plate || vehicle.name || "Unnamed Asset"}
             </h1>
-            <p className="text-on-surface-variant mt-2 font-mono text-xl font-bold">
-              {vehicle.license_plate}
+            <p className="text-on-surface-variant mt-2 font-mono text-xl font-bold opacity-70">
+              {vehicle.registration_number ? vehicle.license_plate : (vehicle.name || vehicle.id.slice(0, 8))}
             </p>
             <div className="flex items-center gap-4 mt-6">
               <span

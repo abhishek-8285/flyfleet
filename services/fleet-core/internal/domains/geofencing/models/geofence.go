@@ -9,7 +9,7 @@ import (
 // Geofence represents a geographic boundary for monitoring
 type Geofence struct {
 	ID            uuid.UUID              `json:"id" db:"id"`
-	OrgID         uuid.UUID              `json:"org_id" db:"org_id"`
+	OrgID         uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Name          string                 `json:"name" db:"name"`
 	Type          string                 `json:"type" db:"type"`                               // circle, polygon, route_corridor
 	Center        *Location              `json:"center,omitempty" db:"center"`                 // For circle geofences

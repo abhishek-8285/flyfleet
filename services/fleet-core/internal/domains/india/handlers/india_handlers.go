@@ -75,7 +75,7 @@ func (h *IndiaIntegrationHandlers) writeErrorResponse(w http.ResponseWriter, sta
 // CreateFASTagTransaction creates a new FASTag transaction
 func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	reqID := r.Header.Get("X-Request-ID")
-	orgID := r.Context().Value("org_id") // standard flyfleet context extraction
+	orgID := r.Context().Value("tenant_id") // standard flyfleet context extraction
 
 	// SECURITY FIX: Do not trust X-Org-ID header (CWE-284/290) - only use authenticated context
 	var orgIDStr string
@@ -126,7 +126,7 @@ func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r
 	id := chi.URLParam(r, "id")
 
 	// Get orgID from context for authorization
-	orgID := r.Context().Value("org_id")
+	orgID := r.Context().Value("tenant_id")
 	var orgIDStr string
 	if orgID != nil {
 		if oid, ok := orgID.(string); ok {
@@ -774,7 +774,7 @@ func (h *IndiaIntegrationHandlers) DeleteGSTCompliance(w http.ResponseWriter, r 
 // ListGSTCompliances retrieves GST compliance records with filtering
 func (h *IndiaIntegrationHandlers) ListGSTCompliances(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("org_id")
+	orgIDStr := query.Get("tenant_id")
 	status := query.Get("status")
 	limitStr := query.Get("limit")
 	offsetStr := query.Get("offset")
@@ -849,7 +849,7 @@ func (h *IndiaIntegrationHandlers) GetIntegrationConfig(w http.ResponseWriter, r
 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
 func (h *IndiaIntegrationHandlers) GetIntegrationConfigByServiceType(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := chi.URLParam(r, "org_id")
+	orgIDStr := chi.URLParam(r, "tenant_id")
 	serviceType := chi.URLParam(r, "service_type")
 
 	orgID, err := uuid.Parse(orgIDStr)

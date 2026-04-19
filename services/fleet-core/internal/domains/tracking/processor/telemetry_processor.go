@@ -236,7 +236,7 @@ func (tp *TelemetryProcessor) flushGPS(batch []*models.GPSTelemetry) {
 			return nil
 		})
 		if err != nil {
-			tp.logger.Error("Batch GPS flush failed for org", zap.String("org_id", orgID.String()), zap.Error(err))
+			tp.logger.Error("Batch GPS flush failed for org", zap.String("tenant_id", orgID.String()), zap.Error(err))
 		}
 	}
 }
@@ -298,7 +298,7 @@ func (tp *TelemetryProcessor) storeGPSDataBatchTx(ctx context.Context, tx databa
 	_, err := tx.CopyFrom(ctx,
 		[]string{"gps_locations"},
 		[]string{
-			"time", "vehicle_id", "org_id", "latitude", "longitude",
+			"time", "vehicle_id", "tenant_id", "latitude", "longitude",
 			"altitude", "speed", "heading", "accuracy", "ignition",
 			"odometer", "battery_level", "satellites", "raw_data",
 		},
@@ -321,7 +321,7 @@ func (tp *TelemetryProcessor) storeOBDDataBatchTx(ctx context.Context, tx databa
 	_, err := tx.CopyFrom(ctx,
 		[]string{"obd_readings"},
 		[]string{
-			"time", "vehicle_id", "org_id", "rpm", "coolant_temp",
+			"time", "vehicle_id", "tenant_id", "rpm", "coolant_temp",
 			"engine_load", "throttle_pos", "fuel_level", "dtcs", "vin", "raw_data",
 		},
 		pgx.CopyFromRows(rows),
@@ -360,7 +360,7 @@ func (tp *TelemetryProcessor) storeFuelDataBatchTx(ctx context.Context, tx datab
 	_, err := tx.CopyFrom(ctx,
 		[]string{"fuel_readings"},
 		[]string{
-			"time", "vehicle_id", "org_id", "level_percent", "level_liters",
+			"time", "vehicle_id", "tenant_id", "level_percent", "level_liters",
 			"refuel_event", "theft_event", "location", "raw_data",
 		},
 		pgx.CopyFromRows(rows),
@@ -399,13 +399,13 @@ func (tp *TelemetryProcessor) storeFuelData(ctx context.Context, fuel *models.Fu
 func (tp *TelemetryProcessor) storeDeviceHeartbeat(ctx context.Context, heartbeat *models.DeviceHeartbeat) error {
 	query := `
 		INSERT INTO device_heartbeats (
-			device_id, vehicle_id, org_id, status, last_seen, battery_level, 
+			device_id, vehicle_id, tenant_id, status, last_seen, battery_level, 
 			signal_strength, error_codes
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (device_id) 
 		DO UPDATE SET 
 			vehicle_id = EXCLUDED.vehicle_id,
-			org_id = EXCLUDED.org_id,
+			tenant_id = EXCLUDED.tenant_id,
 			status = EXCLUDED.status,
 			last_seen = EXCLUDED.last_seen,
 			battery_level = EXCLUDED.battery_level,
@@ -426,18 +426,18 @@ func (tp *TelemetryProcessor) updateVehicleLocation(ctx context.Context, orgID, 
 func (tp *TelemetryProcessor) processAnalytics(orgID, vehicleIDStr string, startTime, endTime time.Time) {
 	vehicleID, err := uuid.Parse(vehicleIDStr)
 	if err != nil {
-		tp.logger.Error("Failed to parse vehicle ID for analytics", zap.String("org_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
+		tp.logger.Error("Failed to parse vehicle ID for analytics", zap.String("tenant_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		return
 	}
 
 	err = tp.analytics.ProcessAdvancedAnalytics(context.Background(), orgID, vehicleID, startTime, endTime)
 	if err != nil {
-		tp.logger.Error("Failed to process advanced analytics", zap.String("org_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
+		tp.logger.Error("Failed to process advanced analytics", zap.String("tenant_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		return
 	}
 
 	tp.logger.Debug("Advanced analytics processed",
-		zap.String("org_id", orgID),
+		zap.String("tenant_id", orgID),
 		zap.String("vehicle_id", vehicleIDStr),
 		zap.Time("start_time", startTime),
 		zap.Time("end_time", endTime))

@@ -391,7 +391,7 @@ func (h *GeofenceHandler) getOrgID(r *http.Request) uuid.UUID {
 	}
 	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
 	// The org ID must come from validated JWT context only
-	h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+	h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 

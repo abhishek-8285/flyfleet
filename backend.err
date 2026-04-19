@@ -1,0 +1,669 @@
+[WARN] VEHICLE_FIELD_ENCRYPTION_KEY not set — chassis/engine numbers will be stored in plaintext (dev/test only)
+2026-04-19T01:50:41.522+0530	INFO	cmd/main.go:68	starting fleet-core service	{"port": "8084", "environment": "development"}
+2026-04-19T01:50:41.527+0530	INFO	database/postgres.go:39	database connected	{"pool": "pgxpool"}
+2026-04-19T01:50:41.527+0530	WARN	email/service.go:47	unknown email provider, using no-op	{"provider": "noop"}
+github.com/flyfleet/fleet-core/internal/domains/iam/email.NewEmailService
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/email/service.go:47
+github.com/flyfleet/fleet-core/internal/domains/iam.NewModule
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/iam/module.go:63
+main.main
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:123
+runtime.main
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/runtime/proc.go:290
+2026-04-19T01:50:41.527+0530	INFO	cmd/main.go:124	IAM domain initialized	{"bcrypt_cost": 12, "email_provider": "noop"}
+2026-04-19T01:50:41.528+0530	INFO	billing/module.go:105	Billing module initialized
+2026-04-19T01:50:41.528+0530	INFO	cmd/main.go:364	http server listening	{"addr": ":8084"}
+2026-04-19T02:03:19.564+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T02:03:19.571+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T02:03:19.571+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T02:03:19.582+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T02:03:19.584+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T02:03:19.584+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:06:41.164+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T12:06:41.166+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:06:41.166+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:06:41.175+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T12:06:41.179+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:06:41.179+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:09:28.977+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T12:09:28.979+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:09:28.979+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:09:28.992+0530	INFO	handlers/trip_handler.go:199	DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips
+2026-04-19T12:09:28.993+0530	ERROR	service/trip_service.go:192	failed to list trips	{"error": "can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/service.(*TripService).List
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/service/trip_service.go:192
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:236
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073
+2026-04-19T12:09:28.993+0530	ERROR	handlers/trip_handler.go:238	failed to list trips	{"error": "failed to list trips: can't scan into dest[8] (col: planned_distance): cannot scan NULL into *float64"}
+github.com/flyfleet/fleet-core/internal/domains/trip/handlers.(*TripHandler).ListTrips
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/domains/trip/handlers/trip_handler.go:238
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.func2.1.TenantMiddleware.7.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/tenant.go:71
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/flyfleet/fleet-core/internal/middleware.(*JWKSAuthHandler).Handler-fm.(*JWKSAuthHandler).Handler.func1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/internal/middleware/jwks_auth.go:104
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*ChainHandler).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/chain.go:31
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:73
+github.com/go-chi/chi/v5.(*Mux).Mount.func1
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:327
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).routeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:459
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+main.main.requestLogger.func5.1
+	/home/abhishek/Desktop/flyfleet/services/fleet-core/cmd/main.go:408
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/cors.(*Cors).Handler-fm.(*Cors).Handler.func1
+	/tmp/go/pkg/mod/github.com/go-chi/cors@v1.2.1/cors.go:228
+net/http.HandlerFunc.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2286
+github.com/go-chi/chi/v5.(*Mux).ServeHTTP
+	/tmp/go/pkg/mod/github.com/go-chi/chi/v5@v5.1.0/mux.go:90
+net/http.serverHandler.ServeHTTP
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:3311
+net/http.(*conn).serve
+	/tmp/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/src/net/http/server.go:2073

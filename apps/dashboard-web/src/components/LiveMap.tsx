@@ -109,6 +109,7 @@ const LiveMap: React.FC<LiveMapProps> = ({
     <MapContainer
       center={center}
       zoom={5}
+      attributionControl={false}
       style={{
         height: height,
         width: "100%",

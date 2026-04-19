@@ -43,6 +43,8 @@ type Vehicle struct {
 	CostCenterID       *uuid.UUID `json:"cost_center_id"       db:"cost_center_id"`
 	Status             string     `json:"status"               db:"status"`
 	GPSDeviceID        *string    `json:"gps_device_id"        db:"gps_device_id"`
+	GPSEnabled         bool       `json:"gps_enabled"          db:"gps_enabled"`
+	GPSDeviceType      *string    `json:"gps_device_type"      db:"gps_device_type"`
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"  db:"immobilizer_enabled"`
 	AIS140Compliant    bool       `json:"ais140_compliant"     db:"ais140_compliant"`
 	// Legacy / convenience fields
@@ -92,6 +94,8 @@ type CreateVehicleRequest struct {
 	BranchID           *uuid.UUID `json:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"`
 	GPSDeviceID        *string    `json:"gps_device_id"`
+	GPSEnabled         bool       `json:"gps_enabled"`
+	GPSDeviceType      *string    `json:"gps_device_type"`
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"`
 	AIS140Compliant    bool       `json:"ais140_compliant"`
 	Make               *string    `json:"make"`
@@ -118,6 +122,8 @@ type UpdateVehicleRequest struct {
 	BranchID           *uuid.UUID `json:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"`
 	GPSDeviceID        *string    `json:"gps_device_id"`
+	GPSEnabled         *bool      `json:"gps_enabled"`
+	GPSDeviceType      *string    `json:"gps_device_type"`
 	ImmobilizerEnabled *bool      `json:"immobilizer_enabled"`
 	AIS140Compliant    *bool      `json:"ais140_compliant"`
 	Make               *string    `json:"make"`
@@ -158,12 +164,13 @@ type VehicleStats struct {
 
 // VehicleSearchParams holds query params for GET /vehicles/search.
 type VehicleSearchParams struct {
-	TenantID    *uuid.UUID
-	Query       string
-	Status      string
+	TenantID   *uuid.UUID
+	Query      string
+	Status     string
 	VehicleType string
 	FuelType    string
 	BranchID    *uuid.UUID
+	GPSEnabled  *bool
 	Page        int
 	Limit       int
 }

@@ -51,7 +51,7 @@ func NewRouteOptimizationHandler(svc service.RouteOptimizationService, logger *z
 func (h *RouteOptimizationHandler) getOrgID(r *http.Request) uuid.UUID {
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware",
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware",
 			zap.String("path", r.URL.Path))
 	}
 	return orgID
@@ -273,7 +273,7 @@ func (h *RouteOptimizationHandler) DeleteOptimizationRequest(w http.ResponseWrit
 func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	// SECURITY: Always use org from authenticated context, ignore any org_id query parameter
+	// SECURITY: Always use org from authenticated context, ignore any tenant_id query parameter
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)

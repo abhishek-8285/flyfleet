@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
 import { 
   FUEL_TYPES, VEHICLE_TYPES, OWNERSHIP_TYPES, 
-  ODOMETER_UNITS, WEIGHT_UNITS, getFuelUnits 
+  ODOMETER_UNITS, WEIGHT_UNITS, getFuelUnits,
+  GPS_DEVICE_TYPES
 } from "./constants";
 import { toKm, toTonnes, toLitres } from "./utils";
 import { TextInput, SelectInput, ToggleInput } from "../../../components/common/FormFields";
+import { DropdownOption } from "../../../types/common";
 
 // ── Types ──
 interface FormState {
@@ -23,6 +25,8 @@ interface FormState {
   capacity_tonnage: string;
   fuel_tank_capacity: string;
   gps_device_id: string;
+  gps_enabled: boolean;
+  gps_device_type: string;
   color: string;
   odometer: string;
   odometer_unit: string;
@@ -44,7 +48,7 @@ interface FieldValidation {
   pattern?: RegExp;
   min?: number;
   max?: number;
-  custom?: (value: string) => string | null;
+  custom?: (value: string, form?: FormState) => string | null;
 }
 
 interface ValidationRule {
@@ -158,7 +162,26 @@ const VALIDATION_RULES: ValidationRule = {
   },
   gps_device_id: {
     label: "GPS Device ID",
-    rules: [{ maxLength: 100 }],
+    rules: [
+      {
+        custom: (v, form) => {
+          if (form?.gps_enabled && !v) return "Device ID is required when GPS is enabled";
+          return null;
+        }
+      },
+      { maxLength: 100 }
+    ],
+  },
+  gps_device_type: {
+    label: "GPS Device Type",
+    rules: [
+      {
+        custom: (v, form) => {
+          if (form?.gps_enabled && !v) return "Device Type is required when GPS is enabled";
+          return null;
+        }
+      }
+    ],
   },
   color: {
     label: "Color",
@@ -210,6 +233,8 @@ const initialForm: FormState = {
   capacity_tonnage: "",
   fuel_tank_capacity: "",
   gps_device_id: "",
+  gps_enabled: false,
+  gps_device_type: "AIS140_HARDWIRED",
   color: "",
   odometer: "",
   odometer_unit: "km",
@@ -222,28 +247,30 @@ const initialForm: FormState = {
   speed_limit: "0",
 };
 
-function validateField(name: FieldName, value: string | boolean): string | null {
-  // Skip validation for boolean fields
-  if (typeof value === 'boolean') return null;
+function validateField(name: FieldName, value: string | boolean, form?: FormState): string | null {
+  // Skip validation for boolean fields unless they have custom rules
+  if (typeof value === 'boolean' && !VALIDATION_RULES[name]?.rules.some(r => r.custom)) return null;
   
   const config = VALIDATION_RULES[name];
   if (!config) return null;
 
+  const stringValue = typeof value === 'string' ? value : '';
+
   for (const rule of config.rules) {
-    if (rule.required && !value.trim()) {
+    if (rule.required && !stringValue.trim()) {
       return `${config.label} is required`;
     }
-    if (value.trim() && rule.minLength && value.trim().length < rule.minLength) {
+    if (stringValue.trim() && rule.minLength && stringValue.trim().length < rule.minLength) {
       return `${config.label} must be at least ${rule.minLength} characters`;
     }
-    if (value.trim() && rule.maxLength && value.trim().length > rule.maxLength) {
+    if (stringValue.trim() && rule.maxLength && stringValue.trim().length > rule.maxLength) {
       return `${config.label} must be less than ${rule.maxLength} characters`;
     }
-    if (value.trim() && rule.pattern && !rule.pattern.test(value)) {
+    if (stringValue.trim() && rule.pattern && !rule.pattern.test(stringValue)) {
       return `${config.label} contains invalid characters`;
     }
-    if (value.trim() && rule.custom) {
-      const error = rule.custom(value);
+    if (rule.custom) {
+      const error = rule.custom(stringValue, form);
       if (error) return error;
     }
   }
@@ -256,11 +283,11 @@ function validateStep(step: number, form: FormState): Record<string, string> {
   const stepFields: Record<number, FieldName[]> = {
     1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
     2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity", "odometer", "speed_limit"],
-    3: ["gps_device_id", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
+    3: ["gps_enabled", "gps_device_id", "gps_device_type", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
   };
 
   for (const field of stepFields[step] || []) {
-    const error = validateField(field, form[field]);
+    const error = validateField(field, form[field], form);
     if (error) errors[field] = error;
   }
 
@@ -284,6 +311,7 @@ export const AddVehicle: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const lastStepChange = React.useRef(0);
 
+  const [gpsDeviceTypes, setGpsDeviceTypes] = useState<DropdownOption[]>([]);
   const [dropdowns, setDropdowns] = useState({
     vehicles: [] as { value: string; label: string }[],
     drivers: [] as { value: string; label: string }[],
@@ -294,11 +322,12 @@ export const AddVehicle: React.FC = () => {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [vResp, dResp, bResp, cResp] = await Promise.all([
+        const [vResp, dResp, bResp, cResp, tResp] = await Promise.all([
           apiClient.get("/admin/vehicles"),
           apiClient.get("/admin/drivers"),
           apiClient.get("/admin/branches"),
-          apiClient.get("/admin/cost-centers")
+          apiClient.get("/admin/cost-centers"),
+          apiClient.get("/ui/settings/gps-types")
         ]);
         
         // Handle vehicles (api response format might vary, check VehicleListResponse)
@@ -322,8 +351,16 @@ export const AddVehicle: React.FC = () => {
           branches: bResp.data?.data || bResp.data || [],
           costCenters: cResp.data?.data || cResp.data || []
         }));
+
+        // Set GPS types from backend
+        setGpsDeviceTypes(tResp.data || []);
       } catch (err) {
         console.error("Failed to fetch dropdown data:", err);
+        // Fallback for mission-critical UX
+        setGpsDeviceTypes([
+           { value: "AIS140_HARDWIRED", label: "AIS-140 Hardwired (Static)" },
+           { value: "AIS140_OBD", label: "AIS-140 OBD (Static)" }
+        ]);
       }
     };
     fetchData();
@@ -344,7 +381,7 @@ export const AddVehicle: React.FC = () => {
       setForm((prev) => ({ ...prev, [name]: value }));
       // Clear error on change if field is touched
       if (touched[name]) {
-        const error = validateField(name as FieldName, value);
+        const error = validateField(name as FieldName, value, { ...form, [name]: value });
         setErrors((prev) => {
           const next = { ...prev };
           if (error) next[name] = error;
@@ -353,13 +390,29 @@ export const AddVehicle: React.FC = () => {
         });
       }
     },
-    [touched]
+    [touched, form]
+  );
+
+  const handleToggle = useCallback(
+    (name: FieldName, checked: boolean) => {
+      setForm((prev) => ({ ...prev, [name]: checked }));
+      if (touched[name]) {
+        const error = validateField(name, checked, { ...form, [name]: checked });
+        setErrors((prev) => {
+          const next = { ...prev };
+          if (error) next[name] = error;
+          else delete next[name];
+          return next;
+        });
+      }
+    },
+    [touched, form]
   );
 
   const handleBlur = useCallback(
     (fieldName: FieldName) => {
       setTouched((prev) => ({ ...prev, [fieldName]: true }));
-      const error = validateField(fieldName, form[fieldName]);
+      const error = validateField(fieldName, form[fieldName], form);
       setErrors((prev) => {
         const next = { ...prev };
         if (error) next[fieldName] = error;
@@ -370,11 +423,6 @@ export const AddVehicle: React.FC = () => {
     [form]
   );
 
-  const canProceed = useCallback((): boolean => {
-    const stepErrors = validateStep(step, form);
-    return Object.keys(stepErrors).length === 0;
-  }, [step, form]);
-
   const handleNext = useCallback(() => {
     // Validate current step
     const stepErrors = validateStep(step, form);
@@ -383,8 +431,8 @@ export const AddVehicle: React.FC = () => {
     // Mark all step fields as touched
     const stepFields: Record<number, FieldName[]> = {
       1: ["registration_number", "vehicle_type", "fuel_type", "ownership_type"],
-      2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity", "odometer"],
-      3: ["gps_device_id", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
+      2: ["make", "model", "year", "vin_number", "chassis_number", "engine_number", "capacity_tonnage", "fuel_tank_capacity", "odometer", "speed_limit"],
+      3: ["gps_enabled", "gps_device_id", "gps_device_type", "color", "parent_vehicle_id", "branch_id", "cost_center_id", "current_driver_id"],
     };
     const touchedMap: Record<string, boolean> = {};
     for (const f of stepFields[step] || []) touchedMap[f] = true;
@@ -468,13 +516,19 @@ export const AddVehicle: React.FC = () => {
         }
       }
       if (form.speed_limit) payload.speed_limit = parseFloat(form.speed_limit);
-    if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
       if (form.color) payload.color = form.color.trim();
       if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
       if (form.branch_id) payload.branch_id = form.branch_id.trim();
       if (form.cost_center_id) payload.cost_center_id = form.cost_center_id.trim();
       if (form.current_driver_id) payload.current_driver_id = form.current_driver_id.trim();
       if (form.odometer) payload.odometer = Math.round(toKm(parseFloat(form.odometer), form.odometer_unit) * 1000);
+      
+      payload.gps_enabled = form.gps_enabled;
+      if (payload.gps_enabled) {
+        payload.gps_device_id = form.gps_device_id.trim();
+        payload.gps_device_type = form.gps_device_type;
+      }
+
       payload.immobilizer_enabled = form.immobilizer_enabled;
       payload.ais140_compliant = form.ais140_compliant;
 
@@ -852,28 +906,62 @@ export const AddVehicle: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="p-6 space-y-6">
-                {/* GPS Device & Color */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <TextInput
-                    name="gps_device_id"
-                    value={form.gps_device_id}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur("gps_device_id")}
-                    label="GPS Device ID"
-                    placeholder="e.g. GPS-IMEI-12345678"
-                    icon="gps_fixed"
-                    error={errors.gps_device_id}
-                    maxLength={100}
-                    hint="AIS-140 compliant GPS tracker IMEI or serial number"
-                  />
+              <div className="p-6 space-y-8">
+                {/* Hardware & Tracking Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-sm text-primary">satellite_alt</span>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">Telemetry & Hardware</h4>
+                  </div>
+                  
+                  <div className="bg-surface-darker/50 rounded-xl p-6 border border-border-color/50 space-y-6">
+                    <ToggleInput
+                      label="Enable GPS Tracking"
+                      description="Broadcast real-time location to dispatch center"
+                      checked={form.gps_enabled}
+                      onChange={(checked) => setForm((prev) => ({ ...prev, gps_enabled: checked }))}
+                    />
+
+                    {form.gps_enabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <TextInput
+                          name="gps_device_id"
+                          value={form.gps_device_id}
+                          onChange={handleChange}
+                          onBlur={() => handleBlur("gps_device_id")}
+                          label="GPS Device Serial / IMEI"
+                          placeholder="e.g. 35789210..."
+                          icon="gps_fixed"
+                          error={errors.gps_device_id}
+                          maxLength={100}
+                          required
+                          hint="Must be registered in Asset Inventory"
+                        />
+                        <SelectInput
+                          name="gps_device_type"
+                          value={form.gps_device_type}
+                          onChange={handleChange}
+                          onBlur={() => handleBlur("gps_device_type")}
+                          label="Device Protocol"
+                          options={gpsDeviceTypes}
+                          icon="settings_input_component"
+                          error={errors.gps_device_type}
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                   <TextInput
                     name="color"
                     value={form.color}
                     onChange={handleChange}
                     onBlur={() => handleBlur("color")}
-                    label="Color"
-                    placeholder="e.g. White, Blue"
+                    label="Vehicle Appearance / Color"
+                    placeholder="e.g. Arctic White"
+                    icon="palette"
                     error={errors.color}
                     maxLength={50}
                   />

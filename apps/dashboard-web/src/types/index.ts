@@ -1,3 +1,12 @@
+export interface UserOrganization {
+  org_id: string;
+  org_name: string;
+  role: string;
+  vehicle_count?: number;
+  theme_color?: string;
+  is_locked?: boolean;
+}
+
 export interface User {
   id: string;
   user_id?: string;       // Alternate user identifier (backwards compatibility)
@@ -10,7 +19,9 @@ export interface User {
   theme?: string;
   language?: string;
   sidebar_collapsed?: boolean;
+  organizations?: UserOrganization[]; // Organizations the user is authorized for
 }
+
 
 export interface AuthState {
   user: User | null;
@@ -23,7 +34,8 @@ export interface AuthState {
 export interface Vehicle {
   id: string;
   org_id: string;
-  registration_number: string;
+  registrationNumber: string;
+  registration_number: string; // compatibility with backend snake_case
   type: string;
   make: string;
   model: string;

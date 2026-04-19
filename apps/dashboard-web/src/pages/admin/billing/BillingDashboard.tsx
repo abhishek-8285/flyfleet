@@ -10,6 +10,9 @@ import { useNavigate } from "react-router-dom";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import billingService from "../../../services/billingService";
 import { BillingMetrics, Invoice } from "../../../types/billing";
+import UsageOverview from "./UsageOverview";
+import SubscriptionPlans from "./SubscriptionPlans";
+import InvoiceForm from "./InvoiceForm";
 
 const BillingDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -77,9 +80,17 @@ const BillingDashboard: React.FC = () => {
               "Manage payment methods, invoices, and service tiers"}
           </p>
         </div>
-        <button className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-primary-hover transition-colors">
-          {uiStrings?.btn_manage || "Manage Subscription"}
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => navigate("/admin/billing/new")}
+            className="bg-white/10 text-white px-6 py-2 rounded-xl font-bold hover:bg-white/20 transition-colors"
+          >
+            {uiStrings?.btn_create_invoice || "Create Invoice"}
+          </button>
+          <button className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-primary-hover transition-colors">
+            {uiStrings?.btn_manage || "Manage Subscription"}
+          </button>
+        </div>
       </div>
 
       {/* New Stat Cards */}
@@ -122,12 +133,12 @@ const BillingDashboard: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-8 mb-8 border-b border-border-color">
-        {["Overview", "Invoice History", "Payment Methods"].map((tab) => (
+      <div className="flex gap-8 mb-8 border-b border-border-color overflow-x-auto">
+        {["Overview", "Usage", "Subscription Plans", "Invoice History", "Miscellaneous", "Payment Methods"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`pb-4 px-2 font-medium transition-all ${
+            className={`pb-4 px-2 font-medium transition-all whitespace-nowrap ${
               activeTab === tab
                 ? "text-primary border-b-2 border-primary"
                 : "text-text-muted hover:text-white"
@@ -135,14 +146,27 @@ const BillingDashboard: React.FC = () => {
           >
             {tab === "Overview"
               ? uiStrings?.tab_overview || tab
-              : tab === "Invoice History"
-                ? uiStrings?.tab_history || tab
-                : tab === "Payment Methods"
-                  ? uiStrings?.tab_methods || tab
-                  : tab}
+              : tab === "Usage"
+                ? tab
+                : tab === "Subscription Plans"
+                  ? tab
+                  : tab === "Invoice History"
+                    ? uiStrings?.tab_history || tab
+                    : tab === "Miscellaneous"
+                      ? "Miscellaneous"
+                      : tab === "Payment Methods"
+                        ? uiStrings?.tab_methods || tab
+                        : tab}
           </button>
         ))}
       </div>
+
+      {activeTab === "Usage" && <UsageOverview />}
+      {activeTab === "Subscription Plans" && <SubscriptionPlans />}
+
+      {activeTab === "Overview" && (
+        <>
+          {/* New Stat Cards */}
 
       {/* Recent Invoices */}
       <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
@@ -166,6 +190,9 @@ const BillingDashboard: React.FC = () => {
                   {uiStrings?.th_invoice_id || "Invoice ID"}
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                  Category
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
                   {uiStrings?.th_date || "Date"}
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
@@ -185,6 +212,15 @@ const BillingDashboard: React.FC = () => {
                   <td className="px-6 py-4">
                     <span className="text-white font-medium">
                       #{invoice.id.substring(0, 8).toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-xs px-2 py-0.5 rounded border ${
+                      invoice.category === "Miscellaneous" 
+                        ? "bg-purple-500/10 text-purple-400 border-purple-500/20" 
+                        : "bg-white/5 text-gray-400 border-white/10"
+                    }`}>
+                      {invoice.category || "Transportation"}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -219,7 +255,69 @@ const BillingDashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+            </div>
+        </>
+      )}
+
+      {activeTab === "Invoice History" && (
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden min-h-[400px]">
+           <div className="p-12 text-center text-text-muted">
+              History content will be paginated here.
+           </div>
+        </div>
+      )}
+
+      {activeTab === "Miscellaneous" && (
+        <div className="space-y-6">
+          <div className="bg-purple-500/10 border border-purple-500/20 p-6 rounded-2xl">
+            <h2 className="text-lg font-bold text-purple-400 mb-2">Miscellaneous Billing</h2>
+            <p className="text-sm text-purple-300/70">
+              Track ad-hoc charges, administrative fees, and non-transportation items here.
+            </p>
+          </div>
+          
+          <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-white/10">
+              <h3 className="text-white font-semibold">Ad-hoc Invoice List</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-surface-darker border-b border-border-color">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">ID</th>
+                    <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Customer</th>
+                    <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Date</th>
+                    <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Amount</th>
+                    <th className="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-widest">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {invoices.filter(i => i.category === "Miscellaneous").map((invoice) => (
+                    <tr key={invoice.id} className="hover:bg-white/5 transition-colors cursor-pointer">
+                      <td className="px-6 py-4 text-white font-medium">#{invoice.id.substring(0, 8).toUpperCase()}</td>
+                      <td className="px-6 py-4 text-gray-300">{invoice.customer_name}</td>
+                      <td className="px-6 py-4 text-gray-400">{new Date(invoice.invoice_date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-white font-semibold">₹{invoice.total_amount.toLocaleString()}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[invoice.status]}`}>
+                          {invoice.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {invoices.filter(i => i.category === "Miscellaneous").length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        No miscellaneous invoices found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

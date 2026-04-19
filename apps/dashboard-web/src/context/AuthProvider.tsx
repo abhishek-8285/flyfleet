@@ -35,28 +35,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [authError, setAuthError] = useState<string | null>(null);
 
   const hydrateUser = (data: any) => {
+    const userPayload = data.user || data;
     const userWithPermissions: User = {
-      ...data.user,
-      permissions: data.user.permissions || (data.permissions?.map((p: any) =>
+      ...userPayload,
+      org_id: userPayload.org_id || userPayload.tenant_id || data.organization?.id,
+      permissions: userPayload.permissions || (data.permissions?.map((p: any) =>
         typeof p === "string" ? p : `${p.module}:${p.action}`
       ) || []),
     } as User;
     store.dispatch(setReduxUser(userWithPermissions));
     localStorage.setItem('user_data', JSON.stringify(userWithPermissions));
+    if (userWithPermissions.org_id) {
+      localStorage.setItem('org_id', userWithPermissions.org_id);
+    }
     return userWithPermissions;
   };
 
   const fetchProfile = async () => {
     try {
-      const profileData = await apiClient.get("/auth/profile") as any;
+      const profileData = (await apiClient.get("/auth/profile")) as any;
+      if (!profileData) {
+        throw new Error("Profile synchronization failed: No data received");
+      }
 
       // Handle both nested { user: {...} } format and flat ProfileResponse format
       const userPayload = profileData.user || profileData;
-      const permissionsPayload = profileData.permissions || userPayload.permissions || [];
+      const permissionsPayload =
+        profileData.permissions || userPayload?.permissions || [];
+      const organizationsPayload = profileData.organizations || [];
 
-      const profileOrgId = userPayload.org_id || userPayload.current_org?.id;
+      if (!userPayload) {
+        throw new Error("Profile synchronization failed: Missing identity payload");
+      }
+
+      const profileOrgId = userPayload.org_id || 
+                           userPayload.tenant_id || 
+                           userPayload.current_org?.id || 
+                           profileData.organization?.id;
+
       if (profileOrgId) {
-        localStorage.setItem('org_id', profileOrgId);
+        localStorage.setItem("org_id", profileOrgId);
       }
 
       const backendTheme = userPayload.theme;
@@ -76,18 +94,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const userData: User = {
         ...userPayload,
-        permissions:
-          permissionsPayload.map((p: any) =>
-            typeof p === "string" ? p : `${p.module}:${p.action}`
-          ),
+        org_id: profileOrgId,
+        permissions: permissionsPayload.map((p: any) =>
+          typeof p === "string" ? p : `${p.module}:${p.action}`,
+        ),
+        organizations: organizationsPayload,
         theme: savedTheme,
         language: savedLang,
         sidebar_collapsed: savedSidebar,
       };
-
-      if (profileOrgId && !userData.org_id) {
-        userData.org_id = profileOrgId;
-      }
 
       store.dispatch(setReduxUser(userData));
       localStorage.setItem('user_data', JSON.stringify(userData));
@@ -166,9 +181,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 localStorage.setItem('refresh_token', devResponse.data.refresh_token);
               }
               if (devResponse.data?.user) {
-                hydrateUser(devResponse.data);
-                if (devResponse.data.user?.org_id) {
-                  localStorage.setItem('org_id', devResponse.data.user.org_id);
+                const hydrated = hydrateUser(devResponse.data);
+                if (hydrated.org_id) {
+                  localStorage.setItem('org_id', hydrated.org_id);
                 }
               }
               await fetchProfile();
@@ -195,19 +210,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = (token: string, refreshToken: string, userData: User) => {
+    // Normalization: backend models use tenant_id, frontend uses org_id
+    const normalizedUser = {
+      ...userData,
+      org_id: userData.org_id || (userData as any).tenant_id,
+    };
+
     store.dispatch(setToken(token));
-    store.dispatch(setReduxUser(userData));
-    if (userData?.org_id) {
-      localStorage.setItem('org_id', userData.org_id);
+    store.dispatch(setReduxUser(normalizedUser));
+    
+    if (normalizedUser.org_id) {
+      localStorage.setItem('org_id', normalizedUser.org_id);
     }
+    
     localStorage.setItem('access_token', token);
     if (refreshToken) {
       localStorage.setItem('refresh_token', refreshToken);
     }
-    if (userData.theme) {
-      applyTheme(userData.theme);
+    if (normalizedUser.theme) {
+      applyTheme(normalizedUser.theme);
     }
-    localStorage.setItem('user_data', JSON.stringify(userData));
+    localStorage.setItem('user_data', JSON.stringify(normalizedUser));
   };
 
   const logout = async () => {

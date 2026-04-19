@@ -39,7 +39,7 @@ func TestSecurity_Enterprise(t *testing.T) {
 		
 		// Attempt access by Tenant B
 		fetched, err := repo.GetDevice(ctx, deviceA, tenantB)
-		// Repository should return error for cross-tenant access due to WHERE clause (id=$1 AND org_id=$2)
+		// Repository should return error for cross-tenant access due to WHERE clause (id=$1 AND tenant_id=$2)
 		assert.Error(t, err)
 		assert.Nil(t, fetched, "Should not return data for cross-tenant access")
 	})

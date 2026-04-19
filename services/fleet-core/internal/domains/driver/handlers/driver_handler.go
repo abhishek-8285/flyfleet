@@ -1218,7 +1218,7 @@ func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
 	}
 
 	// Check legacy/string literal fallbacks
-	for _, key := range []interface{}{"orgID", "org_id", ctxkeys.TenantIDKey} {
+	for _, key := range []interface{}{"orgID", "tenant_id", ctxkeys.TenantIDKey} {
 		if val := ctx.Value(key); val != nil {
 			switch v := val.(type) {
 			case uuid.UUID:

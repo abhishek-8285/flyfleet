@@ -268,6 +268,7 @@ const RouteOptimization: React.FC = () => {
                 <MapContainer
                   center={[20.5937, 78.9629]}
                   zoom={5}
+                  attributionControl={false}
                   style={{ height: "100%", width: "100%" }}
                   className="z-0"
                 >

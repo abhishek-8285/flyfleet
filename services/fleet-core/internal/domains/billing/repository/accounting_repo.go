@@ -27,7 +27,7 @@ func (r *AccountingRepository) CreateExport(ctx context.Context, export *models.
 
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO billing_accounting_exports (
-			id, org_id, external_system, export_type, status, file_key, records_count, created_at, created_by
+			id, tenant_id, external_system, export_type, status, file_key, records_count, created_at, created_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`, export.ID, export.OrgID, export.ExternalSystem, export.ExportType, export.Status, export.FileKey, export.RecordsCount, export.CreatedAt, export.CreatedBy)
 
@@ -46,9 +46,9 @@ func (r *AccountingRepository) UpdateExportStatus(ctx context.Context, id uuid.U
 
 func (r *AccountingRepository) GetExportHistory(ctx context.Context, orgID uuid.UUID, limit int) ([]models.AccountingExport, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, org_id, external_system, export_type, status, file_key, records_count, error_message, created_at, completed_at, created_by
+		SELECT id, tenant_id, external_system, export_type, status, file_key, records_count, error_message, created_at, completed_at, created_by
 		FROM billing_accounting_exports
-		WHERE org_id = $1
+		WHERE tenant_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2
 	`, orgID, limit)

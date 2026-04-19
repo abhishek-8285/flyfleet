@@ -22,7 +22,7 @@ type UsageMeter struct {
 // ConsumptionEvent represents an atomic unit of usage
 type ConsumptionEvent struct {
 	Time               time.Time              `json:"time" db:"time"`
-	OrgID              uuid.UUID              `json:"org_id" db:"org_id"`
+	OrgID              uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	VehicleID          *uuid.UUID             `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	MeterCode          string                 `json:"meter_code" db:"meter_code"`
 	Amount             float64                `json:"amount" db:"amount"`

@@ -10,7 +10,7 @@ import (
 type CreditNote struct {
 	ID                 uuid.UUID  `json:"id" db:"id"`
 	CreditNoteNo       string     `json:"credit_note_no" db:"credit_note_no"`
-	OrgID              uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID              uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	OriginalInvoiceID  uuid.UUID  `json:"original_invoice_id" db:"original_invoice_id"`
 	CustomerID         uuid.UUID  `json:"customer_id" db:"customer_id"`
 	CustomerName       string     `json:"customer_name" db:"customer_name"`

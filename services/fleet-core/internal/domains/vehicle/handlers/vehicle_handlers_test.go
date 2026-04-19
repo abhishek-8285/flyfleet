@@ -235,7 +235,7 @@ func TestVehicleHandlers_ListVehicles_Success(t *testing.T) {
 
 	mockService.On("ListVehicles", mock.Anything, orgID, 1, 20).Return(expectedVehicles, int64(2), nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/vehicles?org_id="+orgID.String()+"&page=1&limit=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/vehicles?tenant_id="+orgID.String()+"&page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
 
 	handler.ListVehicles(rr, req)

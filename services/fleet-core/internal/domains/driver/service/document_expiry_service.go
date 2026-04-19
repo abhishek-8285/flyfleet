@@ -53,7 +53,7 @@ func (s *DocumentExpiryService) GetExpiringDocuments(ctx context.Context, orgID 
 	// In production, this would query the database for:
 	// SELECT d.id, d.full_name, doc.*
 	// FROM drivers d, jsonb_array_elements(d.documents) as doc
-	// WHERE d.org_id = $1
+	// WHERE d.tenant_id = $1
 	//   AND (doc->>'expiry_date')::date <= $2
 	//   AND d.deleted_at IS NULL
 
@@ -70,7 +70,7 @@ func (s *DocumentExpiryService) GetExpiredDocuments(ctx context.Context, orgID s
 	// In production, this would query:
 	// SELECT d.id, d.full_name, doc.*
 	// FROM drivers d, jsonb_array_elements(d.documents) as doc
-	// WHERE d.org_id = $1
+	// WHERE d.tenant_id = $1
 	//   AND (doc->>'expiry_date')::date < CURRENT_DATE
 	//   AND d.deleted_at IS NULL
 
@@ -211,8 +211,8 @@ func (s *DocumentExpiryService) GetDocumentComplianceRate(ctx context.Context, o
 	// Calculate compliance rate
 
 	// In production:
-	// total_docs := SELECT COUNT(*) FROM drivers, jsonb_array_elements(documents) WHERE org_id = $1
-	// valid_docs := SELECT COUNT(*) FROM drivers, jsonb_array_elements(documents) WHERE org_id = $1 AND (doc->>'expiry_date')::date >= CURRENT_DATE
+	// total_docs := SELECT COUNT(*) FROM drivers, jsonb_array_elements(documents) WHERE tenant_id = $1
+	// valid_docs := SELECT COUNT(*) FROM drivers, jsonb_array_elements(documents) WHERE tenant_id = $1 AND (doc->>'expiry_date')::date >= CURRENT_DATE
 	// rate = (valid_docs / total_docs) * 100
 
 	return 100.0, nil // Placeholder

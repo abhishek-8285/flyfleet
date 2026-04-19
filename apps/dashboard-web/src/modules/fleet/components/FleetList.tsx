@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { setSelectedVehicle } from "../../../store/telemetrySlice";
+import { setSelectedVehicle, updateTelemetryBatch } from "../../../store/telemetrySlice";
 import { fleetService } from "../FleetService";
 import { Vehicle } from "../types";
 
@@ -9,13 +9,20 @@ import { Vehicle } from "../types";
  * FleetList: A high-performance reactive grid for the vehicle registry.
  * Leverages FleetService for worker-offloaded search and filtering.
  */
-export const FleetList: React.FC = () => {
+interface FleetListProps {
+  variant?: "full" | "compact";
+  gpsOnly?: boolean;
+}
+
+export const FleetList: React.FC<FleetListProps> = ({ variant = "full", gpsOnly = false }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filters, setFilters] = useState<Record<string, string>>(
+    gpsOnly ? { gps_enabled: "true" } : {}
+  );
   const [metadata, setMetadata] = useState<{
     orgs: string[];
     statuses: string[];
@@ -27,11 +34,19 @@ export const FleetList: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      const meta = await fleetService.getFilterMetadata();
-      setMetadata(meta);
-      const results = await fleetService.searchVehicles("", {});
-      setVehicles(results as Vehicle[]);
-      setLoading(false);
+      try {
+        const meta = await fleetService.getFilterMetadata();
+        setMetadata(meta);
+        const results = await fleetService.searchVehicles("", filters);
+        setVehicles(results as Vehicle[]);
+        
+        // Sync with Map Registry
+        dispatch(updateTelemetryBatch(results as any));
+      } catch (err) {
+        console.error("[FleetList] Initialization failed:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     init();
   }, []);
@@ -40,6 +55,7 @@ export const FleetList: React.FC = () => {
     setSearchQuery(query);
     const results = await fleetService.searchVehicles(query, filters);
     setVehicles(results as Vehicle[]);
+    dispatch(updateTelemetryBatch(results as any));
   };
 
   const handleFilterChange = async (key: string, value: string) => {
@@ -48,14 +64,13 @@ export const FleetList: React.FC = () => {
     setFilters(newFilters);
     const results = await fleetService.searchVehicles(searchQuery, newFilters);
     setVehicles(results as Vehicle[]);
+    dispatch(updateTelemetryBatch(results as any));
   };
 
   const handleVehicleSelect = (id: string | null) => {
     dispatch(setSelectedVehicle(id));
-    if (id) {
-      // Navigate to details or just stay on list depending on UX preference
-      // For enterprise apps, we often keep the list and update a side-panel,
-      // but here we'll support both selection and navigation.
+    if (id && variant !== "compact") {
+      // Navigate to details only in full view
       navigate(`/admin/vehicles/${id}`);
     }
   };
@@ -63,22 +78,26 @@ export const FleetList: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-surface text-white">
       {/* Header & Controls */}
-      <div className="p-6 border-b border-border-color bg-surface-dark">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">Fleet Registry</h1>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 bg-primary hover:bg-primary-hover rounded-lg font-medium transition-all">
-              Export CSV
-            </button>
-            <button
-              className="px-4 py-2 bg-surface-darker border border-border-color rounded-lg font-medium"
-              onClick={() => navigate("/admin/vehicles/new")}
-            >
-              Add Asset
-            </button>
+      {variant === "full" && (
+        <div className="p-6 border-b border-border-color bg-surface-dark">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold tracking-tight">Fleet Registry</h1>
+            <div className="flex gap-2">
+              <button className="px-4 py-2 bg-primary hover:bg-primary-hover rounded-lg font-medium transition-all">
+                Export CSV
+              </button>
+              <button
+                className="px-4 py-2 bg-surface-darker border border-border-color rounded-lg font-medium"
+                onClick={() => navigate("/admin/vehicles/new")}
+              >
+                Add Asset
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
+      <div className={`${variant === "compact" ? "p-4" : "p-6"} space-y-4`}>
         <div className="flex flex-wrap gap-4">
           <div className="relative flex-1 min-w-[300px]">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
@@ -126,49 +145,51 @@ export const FleetList: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className={variant === "compact" ? "flex flex-col gap-2" : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"}>
             {vehicles.map((v) => (
               <div
                 key={v.id}
                 onClick={() => handleVehicleSelect(v.id)}
-                className={`bg-surface-darker border rounded-xl p-4 hover:border-primary/50 transition-all cursor-pointer group ${
-                  selectedId === v.id ? "border-primary" : "border-border-color"
-                }`}
+                className={`bg-surface-darker/50 border transition-all cursor-pointer group ${
+                  selectedId === v.id ? "border-primary bg-primary/5" : "border-border-color hover:border-primary/30"
+                } ${variant === "compact" ? "p-3 rounded-lg flex items-center justify-between" : "p-4 rounded-xl"}`}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined">
-                      local_shipping
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-transform ${
+                    v.status === 'STALLED' ? 'bg-red-500/10 text-red-500 animate-pulse' : 'bg-primary/10 text-primary'
+                  }`}>
+                    <span className="material-symbols-outlined text-lg">
+                      {v.status === 'STALLED' ? 'warning' : 'local_shipping'}
                     </span>
                   </div>
+                  <div className="overflow-hidden">
+                    <h3 className="font-bold text-sm truncate">
+                      {v.registrationNumber || v.name || `Asset ${v.id.substring(0, 8)}`}
+                    </h3>
+                    <p className="text-[10px] text-text-muted truncate opacity-70">
+                      {v.status === 'STALLED' ? 'CRITICAL ALERT' : `Last update: ${new Date(v.lastUpdate).toLocaleTimeString()}`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {variant === "full" && (
+                     <div className="text-right hidden sm:block">
+                        <p className="text-[10px] text-text-muted uppercase tracking-widest font-bold">Capacity</p>
+                        <p className="text-xs font-mono">{v.metadata?.capacity || "N/A"}T</p>
+                     </div>
+                  )}
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      v.status === "ACTIVE"
+                    className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
+                      v.status === "ACTIVE" || (v.telemetry?.speed ?? 0) > 0
                         ? "bg-emerald-500/10 text-emerald-400"
+                        : v.status === "STALLED"
+                        ? "bg-red-500/10 text-red-400"
                         : "bg-yellow-500/10 text-yellow-400"
                     }`}
                   >
                     {v.status}
                   </span>
-                </div>
-                <h3 className="font-bold text-lg mb-1">
-                  {v.name || `Asset ${v.id.substring(0, 8)}`}
-                </h3>
-                <p className="text-text-muted text-xs mb-4 font-mono">{v.id}</p>
-
-                <div className="space-y-2 border-t border-border-color/50 pt-4">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-muted">Capacity</span>
-                    <span className="font-medium">
-                      {v.metadata?.capacity || "N/A"} Tons
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-text-muted">Last Update</span>
-                    <span className="font-medium">
-                      {new Date(v.lastUpdate).toLocaleTimeString()}
-                    </span>
-                  </div>
                 </div>
               </div>
             ))}

@@ -242,7 +242,7 @@ func (r *UserRepository) GetOrganizations(ctx context.Context, userID uuid.UUID)
 	rows, err := r.pool.Query(ctx, `
 		SELECT o.id, o.name, uo.role
 		FROM user_organizations uo
-		JOIN organizations o ON uo.org_id = o.id
+		JOIN organizations o ON uo.tenant_id = o.id
 		WHERE uo.user_id = $1 AND uo.is_active = true
 	`, userID)
 	if err != nil {

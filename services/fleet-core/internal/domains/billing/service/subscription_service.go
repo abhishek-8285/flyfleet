@@ -58,7 +58,7 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, pl
 		return nil, err
 	}
 
-	s.logger.Info("organization subscribed", zap.String("org_id", orgID.String()), zap.String("plan_id", planID.String()))
+	s.logger.Info("organization subscribed", zap.String("tenant_id", orgID.String()), zap.String("plan_id", planID.String()))
 	return sub, nil
 }
 
@@ -104,7 +104,7 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 
 		prorationCredit = monthlyTotal * fraction
 		s.logger.Info("Proration credit calculated",
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 			zap.String("old_plan_id", sub.PlanID.String()),
 			zap.Float64("credit_amount", prorationCredit),
 			zap.Float64("fraction", fraction))
@@ -127,7 +127,7 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 	}
 
 	s.logger.Info("subscription plan changed with proration",
-		zap.String("org_id", orgID.String()),
+		zap.String("tenant_id", orgID.String()),
 		zap.String("old_plan_id", sub.PlanID.String()),
 		zap.String("new_plan_id", newPlanID.String()),
 		zap.Float64("proration_credit", prorationCredit))

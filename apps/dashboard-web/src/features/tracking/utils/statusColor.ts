@@ -14,5 +14,6 @@ export function statusColor(status: VehicleStatus): string {
 }
 
 export function statusLabel(status: VehicleStatus): string {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    if (!status) return 'Offline';
+    return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
 }

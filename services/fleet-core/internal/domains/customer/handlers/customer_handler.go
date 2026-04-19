@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/customer/models"
 	"github.com/flyfleet/fleet-core/internal/domains/customer/repository"
 	"github.com/flyfleet/fleet-core/internal/domains/customer/service"
+	"github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -18,7 +20,7 @@ import (
 type createCustomerRequestDTO struct {
 	CompanyName    string  `json:"company_name" binding:"required"`
 	GSTNumber      *string `json:"gst_number,omitempty"`
-	BillingAddress []byte  `json:"billing_address,omitempty"`
+	BillingAddress string  `json:"billing_address,omitempty"`
 	ContactEmail   *string `json:"contact_email,omitempty"`
 	ContactPhone   *string `json:"contact_phone,omitempty"`
 	Status         string  `json:"status,omitempty"`
@@ -47,8 +49,14 @@ type createShipmentRequestDTO struct {
 	EwayBillDocument *string    `json:"eway_bill_document,omitempty"`
 }
 
+type CustomerService interface {
+	CreateCustomer(ctx context.Context, c *models.Customer) error
+	GetCustomerByID(ctx context.Context, id uuid.UUID) (*models.Customer, error)
+	ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error)
+}
+
 type CustomerV2Handler struct {
-	customerService *service.CustomerService
+	customerService CustomerService
 	bookingService  *service.BookingService
 	shipmentService *service.ShipmentService
 	pricingService  *service.PricingService
@@ -82,7 +90,8 @@ func NewCustomerV2Handler(
 
 func (h CustomerV2Handler) RegisterRoutes(r chi.Router) {
 	// Customers
-	r.Post("/customers", h.CreateCustomer)
+	r.Post("/", h.CreateCustomer)
+	r.Get("/customers", h.ListCustomers)
 	r.Get("/customers/{id}", h.GetCustomer)
 
 	// Bookings
@@ -154,6 +163,38 @@ func (h CustomerV2Handler) APIGetInvoices(w http.ResponseWriter, r *http.Request
 	h.GetInvoices(w, r)
 }
 
+func (h CustomerV2Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	if !ok {
+		// Fallback for different middleware conventions
+		orgIDStr, okStr := r.Context().Value(middleware.OrgIDKey).(string)
+		if okStr {
+			var err error
+			orgID, err = uuid.Parse(orgIDStr)
+			if err != nil {
+				http.Error(w, "invalid organization context", http.StatusUnauthorized)
+				return
+			}
+			ok = true
+		}
+	}
+
+	if !ok {
+		http.Error(w, "organization context required", http.StatusUnauthorized)
+		return
+	}
+
+	customers, err := h.customerService.ListCustomers(ctx, orgID)
+	if err != nil {
+		http.Error(w, "failed to list customers: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(customers)
+}
+
 func (h CustomerV2Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
 	var dto createCustomerRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
@@ -165,7 +206,7 @@ func (h CustomerV2Handler) CreateCustomer(w http.ResponseWriter, r *http.Request
 	c := &models.Customer{
 		CompanyName:    dto.CompanyName,
 		GSTNumber:      dto.GSTNumber,
-		BillingAddress: dto.BillingAddress,
+		BillingAddress: []byte(dto.BillingAddress),
 		ContactEmail:   dto.ContactEmail,
 		ContactPhone:   dto.ContactPhone,
 		Status:         dto.Status,

@@ -29,7 +29,7 @@ const (
 
 type GovernanceRequest struct {
 	ID                 uuid.UUID               `json:"id" db:"id"`
-	OrganizationID     uuid.UUID               `json:"org_id" db:"organization_id"`
+	OrganizationID     uuid.UUID               `json:"tenant_id" db:"organization_id"`
 	RequesterID        uuid.UUID               `json:"requester_id" db:"requester_id"`
 	RequestType        GovernanceRequestType   `json:"request_type" db:"request_type"`
 	DataScope          string                  `json:"data_scope" db:"data_scope"`
@@ -49,7 +49,7 @@ type GovernanceRequest struct {
 }
 
 type GovernanceSettings struct {
-	OrganizationID    uuid.UUID       `json:"org_id" db:"org_id"`
+	OrganizationID    uuid.UUID       `json:"tenant_id" db:"tenant_id"`
 	RetentionPolicies json.RawMessage `json:"retention_policies" db:"retention_policies"`
 	MaskingRules      json.RawMessage `json:"masking_rules" db:"masking_rules"`
 	AutoExpiryEnabled bool            `json:"auto_expiry_enabled" db:"auto_expiry_enabled"`
@@ -62,7 +62,7 @@ type GovernanceSettings struct {
 
 type GovernanceAuditLog struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrganizationID uuid.UUID `json:"org_id" db:"organization_id"`
+	OrganizationID uuid.UUID `json:"tenant_id" db:"organization_id"`
 	UserID         uuid.UUID `json:"user_id" db:"user_id"`
 	Action         string    `json:"action" db:"action"`
 	Module         string    `json:"module" db:"module"`
@@ -80,7 +80,7 @@ type CreateGovernanceRequest struct {
 }
 
 type GovernanceRequestFilter struct {
-	OrganizationID uuid.UUID                 `json:"org_id"`
+	OrganizationID uuid.UUID                 `json:"tenant_id"`
 	Type           *GovernanceRequestType    `json:"type"`
 	Status         []GovernanceRequestStatus `json:"status"`
 	Search         string                    `json:"search"`
@@ -130,14 +130,14 @@ type DownloadToken struct {
 
 type ExpiredRequestInfo struct {
 	ID             uuid.UUID             `json:"id"`
-	OrganizationID uuid.UUID             `json:"org_id"`
+	OrganizationID uuid.UUID             `json:"tenant_id"`
 	RequesterID    uuid.UUID             `json:"requester_id"`
 	RequestType    GovernanceRequestType `json:"request_type"`
 }
 
 type LegalHold struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
-	OrganizationID uuid.UUID  `json:"org_id" db:"organization_id"`
+	OrganizationID uuid.UUID  `json:"tenant_id" db:"organization_id"`
 	EntityType     string     `json:"entity_type" db:"entity_type"`
 	EntityID       uuid.UUID  `json:"entity_id" db:"entity_id"`
 	Reason         string     `json:"reason" db:"reason"`

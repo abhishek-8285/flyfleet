@@ -187,6 +187,7 @@ export default function LocationPickerMap({
         zoom={value ? 14 : 5}
         className="w-full h-full z-0"
         scrollWheelZoom
+        attributionControl={false}
       >
         <TileLayer
           attribution='&copy; OpenStreetMap'

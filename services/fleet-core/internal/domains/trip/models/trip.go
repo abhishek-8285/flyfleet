@@ -36,7 +36,7 @@ const (
 // Trip represents a vehicle journey
 type Trip struct {
 	ID                   string       `json:"id" db:"id"`
-	OrgID                string       `json:"org_id" db:"org_id"`
+	OrgID                string       `json:"tenant_id" db:"tenant_id"`
 	VehicleID            string       `json:"vehicle_id" db:"vehicle_id"`
 	DriverID             *string      `json:"driver_id" db:"driver_id"`
 	Status               string       `json:"status" db:"status"` // planned, in_progress, paused, completed, cancelled
@@ -259,7 +259,7 @@ type RouteOptimization struct {
 
 // TripListFilter represents filters for listing trips
 type TripListFilter struct {
-	OrgID        string `json:"org_id"`
+	OrgID        string `json:"tenant_id"`
 	VehicleID    string `json:"vehicle_id"`
 	DriverID     string `json:"driver_id"`
 	CustomerName string `json:"customer_name"` // Party/organization that gave the job

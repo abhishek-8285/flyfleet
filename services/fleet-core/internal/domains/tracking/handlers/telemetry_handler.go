@@ -130,7 +130,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
 				}
-				if orgClaim, ok := claims["org_id"].(string); ok {
+				if orgClaim, ok := claims["tenant_id"].(string); ok {
 					orgIDStr = orgClaim
 				}
 			}
@@ -212,7 +212,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 
 	if vehicleID == uuid.Nil {
 		row := h.db.QueryRow(r.Context(),
-			`SELECT vehicle_id, org_id FROM devices WHERE device_id = $1 AND status = 'active'`,
+			`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 			payload.DeviceID,
 		)
 		err := row.Scan(&vehicleID, &orgID)
@@ -250,7 +250,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"org_id"`
+		OrgID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.GPSTelemetry `json:"data"`
 	}{
@@ -336,7 +336,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
 				}
-				if orgClaim, ok := claims["org_id"].(string); ok {
+				if orgClaim, ok := claims["tenant_id"].(string); ok {
 					orgIDStr = orgClaim
 				}
 			}
@@ -377,7 +377,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 
 	var vehicleID, orgID uuid.UUID
 	row := h.db.QueryRow(r.Context(),
-		`SELECT vehicle_id, org_id FROM devices WHERE device_id = $1 AND status = 'active'`,
+		`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 		payload.DeviceID,
 	)
 	err := row.Scan(&vehicleID, &orgID)
@@ -392,7 +392,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"org_id"`
+		OrgID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.OBDTelemetry `json:"data"`
 	}{
@@ -462,7 +462,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 				if jtiClaim, ok := claims["jti"].(string); ok {
 					jti = jtiClaim
 				}
-				if orgClaim, ok := claims["org_id"].(string); ok {
+				if orgClaim, ok := claims["tenant_id"].(string); ok {
 					orgIDStr = orgClaim
 				}
 			}
@@ -504,7 +504,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	// 3. Resolve Device and Vechicle (Cached path would be better but keeping simple for MVP)
 	var vehicleID, orgID uuid.UUID
 	row := h.db.QueryRow(r.Context(),
-		`SELECT vehicle_id, org_id FROM devices WHERE device_id = $1 AND status = 'active'`,
+		`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 		deviceID,
 	)
 	err = row.Scan(&vehicleID, &orgID)
@@ -517,7 +517,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"org_id"`
+		OrgID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.GPSTelemetry `json:"data"`
 	}{

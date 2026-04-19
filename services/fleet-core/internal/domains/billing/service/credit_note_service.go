@@ -39,7 +39,7 @@ func (s *CreditNoteService) IssueCreditNote(ctx context.Context, cn *models.Cred
 	// The existing repo expects items as a separate argument
 	err := s.repo.Create(ctx, cn, items)
 	if err != nil {
-		s.logger.Error("Failed to issue credit note", zap.Error(err), zap.String("org_id", cn.OrgID.String()))
+		s.logger.Error("Failed to issue credit note", zap.Error(err), zap.String("tenant_id", cn.OrgID.String()))
 		return err
 	}
 

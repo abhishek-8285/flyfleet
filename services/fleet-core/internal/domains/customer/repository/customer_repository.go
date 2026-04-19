@@ -23,6 +23,7 @@ type CustomerV2Repository interface {
 	GetDashboardMetrics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
 	GetAnalytics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
 	SearchShipments(ctx context.Context, customerID uuid.UUID, filters map[string]interface{}) ([]models.Shipment, error)
+	ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error)
 }
 
 type customerV2Repository struct {
@@ -85,6 +86,36 @@ func (r customerV2Repository) GetCustomerByID(ctx context.Context, id uuid.UUID)
 	}
 
 	return &c, nil
+}
+
+func (r *customerV2Repository) ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error) {
+	query := `
+		SELECT id, organization_id, company_name, gst_number, billing_address,
+			   contact_email, contact_phone, status, created_at, updated_at
+		FROM customer_v2_customers 
+		WHERE organization_id = $1 AND status = 'ACTIVE'
+		ORDER BY company_name ASC`
+
+	rows, err := r.db.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list customers: %w", err)
+	}
+	defer rows.Close()
+
+	var customers []models.Customer
+	for rows.Next() {
+		var c models.Customer
+		err := rows.Scan(
+			&c.ID, &c.OrganizationID, &c.CompanyName, &c.GSTNumber, &c.BillingAddress,
+			&c.ContactEmail, &c.ContactPhone, &c.Status, &c.CreatedAt, &c.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan customer: %w", err)
+		}
+		customers = append(customers, c)
+	}
+
+	return customers, nil
 }
 
 // -- Booking Request Methods --

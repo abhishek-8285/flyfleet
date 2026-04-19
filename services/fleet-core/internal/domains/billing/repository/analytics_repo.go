@@ -128,7 +128,7 @@ func (r *AnalyticsRepository) GetLTV(ctx context.Context) (float64, error) {
 			FROM billing_subscriptions s
 			JOIN billing_pricing_components pc ON s.plan_id = pc.plan_id
 			WHERE s.status = 'ACTIVE' AND pc.type = 'FLAT'
-			GROUP BY s.org_id
+			GROUP BY s.tenant_id
 		) sub
 	`).Scan(&averageRevenuePerUser)
 	if err != nil {

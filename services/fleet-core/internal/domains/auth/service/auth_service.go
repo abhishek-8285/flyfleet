@@ -194,7 +194,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 	if orgIDStr != "" {
 		orgID, err := uuid.Parse(orgIDStr)
 		if err != nil {
-			return nil, errors.New("invalid org_id format")
+			return nil, errors.New("invalid tenant_id format")
 		}
 
 		orgs, err := s.repo.GetOrganizationsByEmail(ctx, email)
@@ -362,7 +362,7 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddr
 		EventType: "SESSION_ISSUED",
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
-		Metadata:  fmt.Sprintf("org_id: %s, role: %s", user.OrgID.String(), user.Role),
+		Metadata:  fmt.Sprintf("tenant_id: %s, role: %s", user.OrgID.String(), user.Role),
 	})
 
 	return &models.AuthResponse{
@@ -389,7 +389,7 @@ func (s *AuthService) generateTempToken(user *models.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": claims.UserID,
-		"org_id":  claims.OrgID,
+		"tenant_id":  claims.OrgID,
 		"role":    claims.Role,
 		"type":    claims.Type,
 		"exp":     time.Now().Add(5 * time.Minute).Unix(),
@@ -721,7 +721,7 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 		"sub":    user.ID.String(),
 		"iss":    "FlyFleet",
 		"aud":    "fleet-dashboard",
-		"org_id": user.OrgID.String(),
+		"tenant_id": user.OrgID.String(),
 		"rol":    user.Role,
 		"ten":    tenantType, // tenant_type claim
 		"type":   "access",
@@ -822,7 +822,7 @@ func (s *AuthService) RevokeDeviceAccess(ctx context.Context, deviceID string, r
 		event := map[string]string{
 			"jti":       jtiStr,
 			"user_id":   userIDStr, // would be fetched if needed
-			"org_id":    orgIDStr,  // would be fetched if needed
+			"tenant_id":    orgIDStr,  // would be fetched if needed
 			"device_id": deviceID,
 			"reason":    reason,
 			"action":    "revoked",
@@ -978,10 +978,10 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 			role = "org_admin"
 		} else {
 			// Public signup with no invite and no org creation attempt -> fallback to restricted driver
-			// Or we could return an error if we strictly enforce org_id. The instructions say "public signup -> driver".
-			// But org_id is NOT NULL in the DB. So we must put them somewhere.
+			// Or we could return an error if we strictly enforce tenant_id. The instructions say "public signup -> driver".
+			// But tenant_id is NOT NULL in the DB. So we must put them somewhere.
 			// Wait, the plan says: "if creating org -> org_admin. If public signup (no invite, no org creation) -> driver."
-			// Since org_id is NOT NULL, let's create a "Personal Organization" for them, or require org creation.
+			// Since tenant_id is NOT NULL, let's create a "Personal Organization" for them, or require org creation.
 			// Let's create a personal org for drivers to satisfy the constraint.
 			orgID = uuid.New()
 			org := &models.Organization{

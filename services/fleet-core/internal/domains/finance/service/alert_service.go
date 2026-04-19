@@ -23,7 +23,7 @@ type AlertingService struct {
 
 type AlertEvent struct {
 	EventType  string                 `json:"event_type"`
-	OrgID      uuid.UUID              `json:"org_id"`
+	OrgID      uuid.UUID              `json:"tenant_id"`
 	OccurredAt time.Time              `json:"occurred_at"`
 	Payload    map[string]interface{} `json:"payload"`
 }

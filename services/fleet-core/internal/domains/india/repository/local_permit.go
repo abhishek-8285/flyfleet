@@ -15,7 +15,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateLocalPermit(ctx context.Context, permit *models.LocalPermit) error {
 	query := `
 		INSERT INTO local_permits (
-			id, vehicle_id, driver_id, org_id, permit_number, permit_type, permit_category,
+			id, vehicle_id, driver_id, tenant_id, permit_number, permit_type, permit_category,
 			permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 			number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
 			created_at, created_by, updated_at, updated_by
@@ -53,7 +53,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateLocalPermit(ctx context.Context, 
 // GetLocalPermit retrieves a local permit by ID
 func (r *IndiaIntegrationRepositoryImpl) GetLocalPermit(ctx context.Context, id string) (*models.LocalPermit, error) {
 	query := `
-		SELECT id, vehicle_id, driver_id, org_id, permit_number, permit_type, permit_category,
+		SELECT id, vehicle_id, driver_id, tenant_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
 		       created_at, created_by, updated_at, updated_by
@@ -102,7 +102,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetLocalPermit(ctx context.Context, id 
 // GetLocalPermitByNumber retrieves a local permit by permit number
 func (r *IndiaIntegrationRepositoryImpl) GetLocalPermitByNumber(ctx context.Context, permitNumber string) (*models.LocalPermit, error) {
 	query := `
-		SELECT id, vehicle_id, driver_id, org_id, permit_number, permit_type, permit_category,
+		SELECT id, vehicle_id, driver_id, tenant_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
 		       created_at, created_by, updated_at, updated_by
@@ -232,7 +232,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListLocalPermits(ctx context.Context, v
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, vehicle_id, driver_id, org_id, permit_number, permit_type, permit_category,
+		SELECT id, vehicle_id, driver_id, tenant_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
 		       created_at, created_by, updated_at, updated_by

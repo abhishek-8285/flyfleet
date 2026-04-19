@@ -93,7 +93,7 @@ func (w *InvoiceWorker) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	// 2. Fetch Branding Config
 	config, err := w.billingConfigService.GetConfig(ctx, invoice.OrgID)
 	if err != nil {
-		w.logger.Warn("Failed to fetch billing config, using defaults", zap.Error(err), zap.String("org_id", invoice.OrgID.String()))
+		w.logger.Warn("Failed to fetch billing config, using defaults", zap.Error(err), zap.String("tenant_id", invoice.OrgID.String()))
 		config = models.DefaultBillingConfig(invoice.OrgID)
 	}
 

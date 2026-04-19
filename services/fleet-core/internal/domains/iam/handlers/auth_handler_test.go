@@ -40,7 +40,7 @@ func TestAuthHandler_Login_RequestParsing(t *testing.T) {
 	}{
 		{
 			name:        "valid_login",
-			body:        `{"email":"user@example.com","password":"secret123","org_id":"org-001"}`,
+			body:        `{"email":"user@example.com","password":"secret123","tenant_id":"org-001"}`,
 			expectEmail: "user@example.com",
 			expectPass:  "secret123",
 			expectOrgID: "org-001",
@@ -78,13 +78,13 @@ func TestAuthHandler_Login_RequestParsing(t *testing.T) {
 }
 
 func TestAuthHandler_Register_RequestParsing(t *testing.T) {
-	body := `{"email":"new@example.com","password":"MyP@ssw0rd!","name":"New User","org_id":"org-001"}`
+	body := `{"email":"new@example.com","password":"MyP@ssw0rd!","name":"New User","tenant_id":"org-001"}`
 
 	var parsed struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
-		OrgID    string `json:"org_id"`
+		OrgID    string `json:"tenant_id"`
 	}
 	err := json.Unmarshal([]byte(body), &parsed)
 	require.NoError(t, err)
@@ -113,13 +113,13 @@ func TestRBACHandler_BulkAssign_RequestParsing(t *testing.T) {
 	body := `{
 		"user_ids": ["550e8400-e29b-41d4-a716-446655440001","550e8400-e29b-41d4-a716-446655440002"],
 		"role_ids": ["550e8400-e29b-41d4-a716-446655440003"],
-		"org_id": "550e8400-e29b-41d4-a716-446655440004"
+		"tenant_id": "550e8400-e29b-41d4-a716-446655440004"
 	}`
 
 	var parsed struct {
 		UserIDs []string `json:"user_ids"`
 		RoleIDs []string `json:"role_ids"`
-		OrgID   string   `json:"org_id"`
+		OrgID   string   `json:"tenant_id"`
 	}
 	err := json.Unmarshal([]byte(body), &parsed)
 	require.NoError(t, err)

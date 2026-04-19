@@ -197,7 +197,7 @@ func (s *LifecycleService) emitEvent(ctx context.Context, vehicleID uuid.UUID, e
 // ensureVehicleOrgMatch verifies that the vehicle belongs to the organization from the request context.
 // Returns ErrVehicleNotFound if the check fails to avoid information leakage.
 func (s *LifecycleService) ensureVehicleOrgMatch(ctx context.Context, vehicle *models.Vehicle) error {
-	orgIDVal := ctx.Value("org_id")
+	orgIDVal := ctx.Value("tenant_id")
 	if orgIDVal == nil {
 		s.logger.Error("Organization context missing")
 		return ErrVehicleNotFound

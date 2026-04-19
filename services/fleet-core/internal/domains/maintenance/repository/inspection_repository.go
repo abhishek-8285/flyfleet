@@ -28,7 +28,7 @@ func NewInspectionRepository(db *pgxpool.Pool) *InspectionRepository {
 func (r *InspectionRepository) CreateTemplate(ctx context.Context, template *models.InspectionTemplate) error {
 	query := `
 		INSERT INTO inspection_templates (
-			org_id, name, description, applicable_vehicle_types, checklist_items, is_active
+			tenant_id, name, description, applicable_vehicle_types, checklist_items, is_active
 		) VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at, updated_at
 	`
@@ -41,7 +41,7 @@ func (r *InspectionRepository) CreateTemplate(ctx context.Context, template *mod
 // GetTemplateByID retrieves a template by ID
 func (r *InspectionRepository) GetTemplateByID(ctx context.Context, id uuid.UUID) (*models.InspectionTemplate, error) {
 	query := `
-		SELECT id, org_id, name, description, applicable_vehicle_types,
+		SELECT id, tenant_id, name, description, applicable_vehicle_types,
 			   checklist_items, is_active, created_at, updated_at
 		FROM inspection_templates WHERE id = $1
 	`
@@ -62,7 +62,7 @@ func (r *InspectionRepository) ListTemplates(ctx context.Context, orgID uuid.UUI
 	var args []interface{}
 	argIdx := 1
 
-	conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIdx))
+	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
 	args = append(args, orgID)
 	argIdx++
 
@@ -73,7 +73,7 @@ func (r *InspectionRepository) ListTemplates(ctx context.Context, orgID uuid.UUI
 
 	whereClause := strings.Join(conditions, " AND ")
 	query := fmt.Sprintf(`
-		SELECT id, org_id, name, description, applicable_vehicle_types,
+		SELECT id, tenant_id, name, description, applicable_vehicle_types,
 			   checklist_items, is_active, created_at, updated_at
 		FROM inspection_templates WHERE %s AND is_active = true
 		ORDER BY name ASC
@@ -105,7 +105,7 @@ func (r *InspectionRepository) ListTemplates(ctx context.Context, orgID uuid.UUI
 func (r *InspectionRepository) CreateInspection(ctx context.Context, inspection *models.VehicleInspection) error {
 	query := `
 		INSERT INTO vehicle_inspections (
-			org_id, vehicle_id, template_id, inspector_id,
+			tenant_id, vehicle_id, template_id, inspector_id,
 			status, results, notes, odometer_at_inspection
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
@@ -120,7 +120,7 @@ func (r *InspectionRepository) CreateInspection(ctx context.Context, inspection 
 // GetInspectionByID retrieves an inspection report by ID
 func (r *InspectionRepository) GetInspectionByID(ctx context.Context, id uuid.UUID) (*models.VehicleInspection, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, template_id, inspector_id,
+		SELECT id, tenant_id, vehicle_id, template_id, inspector_id,
 			   status, results, notes, odometer_at_inspection, created_at, updated_at
 		FROM vehicle_inspections WHERE id = $1
 	`
@@ -138,7 +138,7 @@ func (r *InspectionRepository) GetInspectionByID(ctx context.Context, id uuid.UU
 // ListByVehicle retrieves inspections for a specific vehicle
 func (r *InspectionRepository) ListByVehicle(ctx context.Context, vehicleID uuid.UUID, limit int) ([]models.VehicleInspection, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, template_id, inspector_id,
+		SELECT id, tenant_id, vehicle_id, template_id, inspector_id,
 			   status, results, notes, odometer_at_inspection, created_at, updated_at
 		FROM vehicle_inspections WHERE vehicle_id = $1
 		ORDER BY created_at DESC

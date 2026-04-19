@@ -24,7 +24,7 @@ func NewBillingConfigRepository(db *pgxpool.Pool) *BillingConfigRepository {
 // GetByOrgID retrieves billing config for an organization
 func (r *BillingConfigRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID) (*models.BillingConfiguration, error) {
 	query := `
-		SELECT id, org_id, company_name, company_address, company_gstin, company_pan,
+		SELECT id, tenant_id, company_name, company_address, company_gstin, company_pan,
 		       company_email, company_phone, company_website, company_logo_url,
 		       primary_color, secondary_color, theme,
 		       bank_name, bank_account_name, bank_account_number, bank_ifsc, bank_branch, bank_upi,
@@ -32,7 +32,7 @@ func (r *BillingConfigRepository) GetByOrgID(ctx context.Context, orgID uuid.UUI
 		       default_currency, default_tax_calculation, default_payment_terms_days,
 		       is_active, created_at, created_by, updated_at, updated_by
 		FROM billing_configurations
-		WHERE org_id = $1 AND is_active = true`
+		WHERE tenant_id = $1 AND is_active = true`
 
 	var config models.BillingConfiguration
 	var termsJSON []byte
@@ -74,7 +74,7 @@ func (r *BillingConfigRepository) Create(ctx context.Context, config *models.Bil
 
 	query := `
 		INSERT INTO billing_configurations (
-			id, org_id, company_name, company_address, company_gstin, company_pan,
+			id, tenant_id, company_name, company_address, company_gstin, company_pan,
 			company_email, company_phone, company_website, company_logo_url,
 			primary_color, secondary_color, theme,
 			bank_name, bank_account_name, bank_account_number, bank_ifsc, bank_branch, bank_upi,
@@ -85,7 +85,7 @@ func (r *BillingConfigRepository) Create(ctx context.Context, config *models.Bil
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
 			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
 		)
-		ON CONFLICT (org_id) DO UPDATE SET
+		ON CONFLICT (tenant_id) DO UPDATE SET
 			company_name = EXCLUDED.company_name,
 			company_address = EXCLUDED.company_address,
 			company_gstin = EXCLUDED.company_gstin,
@@ -140,7 +140,7 @@ func (r *BillingConfigRepository) Update(ctx context.Context, config *models.Bil
 
 // Delete soft-deletes a billing configuration
 func (r *BillingConfigRepository) Delete(ctx context.Context, orgID uuid.UUID) error {
-	query := `UPDATE billing_configurations SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE org_id = $1`
+	query := `UPDATE billing_configurations SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1`
 	_, err := r.db.Exec(ctx, query, orgID)
 	if err != nil {
 		return fmt.Errorf("failed to delete billing config: %w", err)

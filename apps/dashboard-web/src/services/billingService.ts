@@ -64,6 +64,22 @@ const billingService = {
   getStats: async () => {
     return apiClient.get('/admin/billing/stats');
   },
+
+  generateDraftInvoice: async () => {
+    return apiClient.post<any, Invoice>('/admin/billing/invoices/generate-draft');
+  },
+
+  getUsageSummary: async () => {
+    return apiClient.get<any, any[]>('/admin/billing/usage/summary');
+  },
+
+  getPlans: async () => {
+    return apiClient.get<any, any[]>('/admin/billing/plans');
+  },
+
+  getSubscription: async () => {
+    return apiClient.get<any, any>('/admin/billing/subscription');
+  },
 };
 
 export default billingService;

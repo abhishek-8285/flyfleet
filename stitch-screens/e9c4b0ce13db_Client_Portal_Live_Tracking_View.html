@@ -1,282 +1,416 @@
-<!DOCTYPE html>
+<!doctype html>
 
-<html class="light dark" lang="en"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Client Portal Live Tracking View</title>
-<!-- Fonts -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<!-- Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<!-- Tailwind Config -->
-<script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#ee8c2b",
-                        "background-light": "#f8f7f6",
-                        "background-dark": "#221910",
-                    },
-                    fontFamily: {
-                        "display": ["Inter", "sans-serif"]
-                    },
-                    borderRadius: {
-                        "DEFAULT": "0.5rem",
-                        "lg": "1rem",
-                        "xl": "1.5rem",
-                        "full": "9999px"
-                    },
-                },
+<html class="light dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Client Portal Live Tracking View</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <!-- Material Symbols -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Tailwind Config -->
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: '#ee8c2b',
+              'background-light': '#f8f7f6',
+              'background-dark': '#221910',
             },
-        }
+            fontFamily: {
+              display: ['Inter', 'sans-serif'],
+            },
+            borderRadius: {
+              DEFAULT: '0.5rem',
+              lg: '1rem',
+              xl: '1.5rem',
+              full: '9999px',
+            },
+          },
+        },
+      };
     </script>
-</head>
-<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100 h-screen flex flex-col overflow-hidden">
-<!-- Top Navigation -->
-<header class="flex-none flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a120b] px-6 py-4 z-20 shadow-sm">
-<div class="flex items-center gap-3">
-<div class="size-8 text-primary">
-<svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-<path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"></path>
-</svg>
-</div>
-<h2 class="text-xl font-bold tracking-tight">FleetPortal <span class="text-gray-400 font-normal">| Client View</span></h2>
-</div>
-<div class="flex items-center gap-4">
-<button class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors relative">
-<span class="material-symbols-outlined">notifications</span>
-<span class="absolute top-2 right-2 size-2 bg-primary rounded-full border-2 border-white dark:border-[#1a120b]"></span>
-</button>
-<button class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors">
-<span class="material-symbols-outlined">settings</span>
-</button>
-<div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-2"></div>
-<div class="flex items-center gap-3">
-<div class="text-right hidden md:block">
-<p class="text-sm font-semibold leading-none">Alex Morgan</p>
-<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Logistics Manager</p>
-</div>
-<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-white dark:border-gray-700 shadow-sm" data-alt="Portrait of a smiling professional woman" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAQ05nrE0g3cDUki-67gus2qOVcGEOKSSrpIXJQL8W3v20PSq9uHZeB2YcPcyULto3-uQtajlQ-sxcbRgS7KqPOP8QY8hYMu2krAiDs9hvGE1jF1075wQJasfur0pE_X5Tg6h4pkx2TTGFGA6diK4dHeLSYwceiKOfjgR7mBlrgxN8obnP9SINZLr1PboxmzHPPRhbnGTq5m02u96tKbnKtoPq0GKhEXsPfkew5uPcB32YmFMmJYT8c7agsq83zx5DEB0OpZtOyPfE");'></div>
-</div>
-</div>
-</header>
-<!-- Main Content Area -->
-<div class="flex flex-1 overflow-hidden">
-<!-- Sidebar / List View -->
-<aside class="w-full max-w-[420px] bg-white dark:bg-[#1e1611] flex flex-col border-r border-gray-200 dark:border-gray-800 z-10 shadow-lg">
-<!-- Search & Filter Header -->
-<div class="p-5 pb-0">
-<div class="relative group mb-4">
-<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-<span class="material-symbols-outlined text-primary">search</span>
-</div>
-<input class="block w-full pl-10 pr-3 py-3 border-none rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm" placeholder="Track Vehicle, Order ID, or Driver..." type="text"/>
-</div>
-<!-- Chips -->
-<div class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-sm font-medium shadow-sm shadow-primary/30 transition-transform hover:scale-105">
-<span>All</span>
-<span class="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">5</span>
-</button>
-<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors">
-<span>In Transit</span>
-<span class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full text-xs">3</span>
-</button>
-<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors">
-<span>Delayed</span>
-<span class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full text-xs">1</span>
-</button>
-<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors">
-<span>Arrived</span>
-</button>
-</div>
-<div class="flex items-center justify-between mt-2 mb-2">
-<h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">Active Shipments (3)</h3>
-<button class="text-xs font-medium text-primary hover:text-primary/80">View History</button>
-</div>
-</div>
-<!-- List of Cards -->
-<div class="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
-<!-- Card 1 (Active) -->
-<div class="group relative bg-white dark:bg-[#251d16] rounded-xl border-2 border-primary shadow-md p-4 cursor-pointer transition-all hover:shadow-lg">
-<div class="absolute top-4 right-4">
-<span class="material-symbols-outlined text-primary">my_location</span>
-</div>
-<div class="flex items-start gap-4 mb-3">
-<div class="size-12 rounded-lg bg-orange-100 dark:bg-orange-900/20 text-primary flex items-center justify-center shrink-0">
-<span class="material-symbols-outlined text-[28px]">local_shipping</span>
-</div>
-<div>
-<h4 class="font-bold text-gray-900 dark:text-white text-lg leading-tight">Order #88321</h4>
-<p class="text-sm text-gray-500 dark:text-gray-400">Truck 42 • Driver: Mike R.</p>
-</div>
-</div>
-<div class="relative pl-4 border-l-2 border-dashed border-gray-200 dark:border-gray-700 ml-2 space-y-4 my-4">
-<div class="relative">
-<div class="absolute -left-[23px] top-1 size-3 bg-gray-300 rounded-full"></div>
-<p class="text-xs text-gray-500 uppercase font-semibold">Origin</p>
-<p class="text-sm font-medium text-gray-800 dark:text-gray-200">Central Warehouse A</p>
-</div>
-<div class="relative">
-<div class="absolute -left-[23px] top-1 size-3 bg-primary rounded-full ring-4 ring-orange-100 dark:ring-orange-900/30"></div>
-<p class="text-xs text-gray-500 uppercase font-semibold">Destination</p>
-<p class="text-sm font-medium text-gray-800 dark:text-gray-200">Tech Park Client Site B</p>
-</div>
-</div>
-<div class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
-<div>
-<p class="text-xs text-gray-500">Estimated Arrival</p>
-<p class="text-primary font-bold text-base flex items-center gap-1">
-<span class="material-symbols-outlined text-sm">schedule</span>
-                                Today, 2:30 PM
-                            </p>
-</div>
-<span class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold uppercase tracking-wide">
-                            On Time
-                        </span>
-</div>
-<!-- Hover Actions -->
-<div class="absolute inset-x-0 -bottom-10 opacity-0 group-hover:bottom-4 group-hover:opacity-100 transition-all duration-300 flex justify-center pointer-events-none">
-<button class="pointer-events-auto shadow-lg bg-white dark:bg-[#332a24] text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d322b]">
-<span class="material-symbols-outlined text-sm">share</span> Share Link
-                         </button>
-</div>
-</div>
-<!-- Card 2 -->
-<div class="bg-gray-50 dark:bg-[#1a120b] rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 p-4 cursor-pointer transition-all">
-<div class="flex items-start gap-4 mb-3">
-<div class="size-12 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-500 flex items-center justify-center shrink-0">
-<span class="material-symbols-outlined text-[28px]">package_2</span>
-</div>
-<div class="flex-1">
-<div class="flex justify-between items-start">
-<h4 class="font-bold text-gray-800 dark:text-gray-200 text-base">Order #99412</h4>
-<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold uppercase">Delayed</span>
-</div>
-<p class="text-sm text-gray-500 dark:text-gray-400">Truck 18 • Driver: Sarah L.</p>
-</div>
-</div>
-<div class="flex items-center justify-between mt-2 pl-16">
-<div class="text-sm text-gray-600 dark:text-gray-300">
-<span class="block text-xs text-gray-400">ETA</span>
-                             Tomorrow, 9:00 AM
-                         </div>
-</div>
-</div>
-<!-- Card 3 -->
-<div class="bg-gray-50 dark:bg-[#1a120b] rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 p-4 cursor-pointer transition-all">
-<div class="flex items-start gap-4 mb-3">
-<div class="size-12 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-500 flex items-center justify-center shrink-0">
-<span class="material-symbols-outlined text-[28px]">local_shipping</span>
-</div>
-<div class="flex-1">
-<div class="flex justify-between items-start">
-<h4 class="font-bold text-gray-800 dark:text-gray-200 text-base">Order #77123</h4>
-<span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase">On Time</span>
-</div>
-<p class="text-sm text-gray-500 dark:text-gray-400">Truck 05 • Driver: Dave B.</p>
-</div>
-</div>
-<div class="flex items-center justify-between mt-2 pl-16">
-<div class="text-sm text-gray-600 dark:text-gray-300">
-<span class="block text-xs text-gray-400">ETA</span>
-                             Today, 5:45 PM
-                         </div>
-</div>
-</div>
-</div>
-<!-- Quick Promo / Footer -->
-<div class="p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#1a120b]">
-<div class="flex items-center justify-between">
-<p class="text-xs text-gray-500">Need to check past shipments?</p>
-<a class="text-xs font-bold text-primary hover:underline" href="#">View Archive</a>
-</div>
-</div>
-</aside>
-<!-- Map View -->
-<main class="flex-1 relative bg-gray-100 dark:bg-[#140e0a] overflow-hidden">
-<!-- Map Background Image (Simulated) -->
-<div class="absolute inset-0 bg-cover bg-center opacity-80 dark:opacity-40 grayscale-[20%]" data-alt="Stylized map showing city streets and blocks in light grey tones" data-location="Los Angeles" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCOauwrbVWCLO8pbkce0qTDIsiIsqAZwX3_wi6BFhvZ0ryqj7B2wtoaAlYdAmByiaYyxGMg1KjVsUd51wVCaY25VPo43mAGEoWHL0km69jcfLAeFDQIuqsqHsxXDqFuGAdJaN8NWFJ9vFHF6Z9954BLanOBGPQn0OELJ6VSTXtggug9CV7ejLh9vPA_Dqr2xijstZrwUVoTM3J6z5bZMs3KE57ltDfUCLf_L_SB7liin6BpxvqmclSA0dJyendn3NOl16ksc2Ip8YQ');"></div>
-<!-- Map Overlays -->
-<!-- Route Line Simulation (SVG) -->
-<svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1;">
-<!-- Path for active shipment -->
-<path class="drop-shadow-lg animate-pulse" d="M 400 200 Q 550 350 700 450 T 900 400" fill="none" stroke="#ee8c2b" stroke-dasharray="10 5" stroke-linecap="round" stroke-width="4"></path>
-<!-- Start Point -->
-<circle cx="400" cy="200" fill="white" r="6" stroke="#ee8c2b" stroke-width="3"></circle>
-<!-- End Point -->
-<circle cx="900" cy="400" fill="#ee8c2b" r="6"></circle>
-</svg>
-<!-- Active Vehicle Pin -->
-<div class="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center group cursor-pointer">
-<!-- Info Bubble (Shows on hover or active) -->
-<div class="bg-white dark:bg-[#251d16] p-3 rounded-lg shadow-xl mb-2 min-w-[160px] transform transition-transform scale-100 origin-bottom">
-<div class="flex items-center justify-between mb-1">
-<span class="text-xs font-bold text-gray-900 dark:text-white">Truck 42</span>
-<span class="text-[10px] bg-green-100 text-green-700 px-1.5 rounded">Moving</span>
-</div>
-<p class="text-[10px] text-gray-500">55 mph • I-405 South</p>
-<p class="text-[10px] text-primary font-bold mt-1">12 mins to destination</p>
-<!-- Tooltip arrow -->
-<div class="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-[#251d16] rotate-45"></div>
-</div>
-<!-- Pin Icon -->
-<div class="relative">
-<div class="size-12 bg-primary rounded-full border-4 border-white dark:border-[#1a120b] shadow-xl flex items-center justify-center text-white relative z-10">
-<span class="material-symbols-outlined text-[24px]">local_shipping</span>
-</div>
-<!-- Ripple Effect -->
-<div class="absolute inset-0 bg-primary rounded-full animate-ping opacity-75 z-0"></div>
-</div>
-</div>
-<!-- Secondary Vehicle Pin (Delayed) -->
-<div class="absolute top-[25%] left-[25%] z-0 flex flex-col items-center group cursor-pointer opacity-80 hover:opacity-100 hover:z-20">
-<div class="bg-white dark:bg-[#251d16] p-2 rounded-lg shadow-md mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-<span class="text-xs font-bold block text-center">Truck 18</span>
-</div>
-<div class="size-8 bg-gray-700 dark:bg-gray-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
-<span class="material-symbols-outlined text-[16px]">local_shipping</span>
-</div>
-</div>
-<!-- Secondary Vehicle Pin (On Time) -->
-<div class="absolute top-[65%] left-[80%] z-0 flex flex-col items-center group cursor-pointer opacity-80 hover:opacity-100 hover:z-20">
-<div class="bg-white dark:bg-[#251d16] p-2 rounded-lg shadow-md mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-<span class="text-xs font-bold block text-center">Truck 05</span>
-</div>
-<div class="size-8 bg-gray-700 dark:bg-gray-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white">
-<span class="material-symbols-outlined text-[16px]">local_shipping</span>
-</div>
-</div>
-<!-- Map Controls -->
-<div class="absolute bottom-8 right-8 flex flex-col gap-2 z-10">
-<button class="size-10 bg-white dark:bg-[#251d16] text-gray-700 dark:text-gray-200 rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors" title="Zoom In">
-<span class="material-symbols-outlined">add</span>
-</button>
-<button class="size-10 bg-white dark:bg-[#251d16] text-gray-700 dark:text-gray-200 rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors" title="Zoom Out">
-<span class="material-symbols-outlined">remove</span>
-</button>
-<button class="size-10 bg-white dark:bg-[#251d16] text-primary rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors mt-2" title="Re-center Map">
-<span class="material-symbols-outlined">near_me</span>
-</button>
-</div>
-<!-- Floating Action Button for Mobile / Quick Share on Map -->
-<div class="absolute top-6 right-6 z-10">
-<button class="bg-white/90 backdrop-blur dark:bg-[#251d16]/90 text-gray-800 dark:text-white px-4 py-2 rounded-lg shadow-lg font-medium text-sm flex items-center gap-2 hover:bg-white dark:hover:bg-[#332a24] transition-all border border-white/20">
-<span class="material-symbols-outlined text-primary">ios_share</span>
-                    Share Tracking View
-                </button>
-</div>
-<!-- Map Copyright/Attribution simulation -->
-<div class="absolute bottom-1 right-2 text-[10px] text-gray-500 bg-white/50 dark:bg-black/50 px-1 rounded">
-                © Mapbox © OpenStreetMap
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-gray-100 h-screen flex flex-col overflow-hidden"
+  >
+    <!-- Top Navigation -->
+    <header
+      class="flex-none flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a120b] px-6 py-4 z-20 shadow-sm"
+    >
+      <div class="flex items-center gap-3">
+        <div class="size-8 text-primary">
+          <svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"
+            ></path>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold tracking-tight">
+          FleetPortal <span class="text-gray-400 font-normal">| Client View</span>
+        </h2>
+      </div>
+      <div class="flex items-center gap-4">
+        <button
+          class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors relative"
+        >
+          <span class="material-symbols-outlined">notifications</span>
+          <span
+            class="absolute top-2 right-2 size-2 bg-primary rounded-full border-2 border-white dark:border-[#1a120b]"
+          ></span>
+        </button>
+        <button
+          class="flex items-center justify-center p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+        >
+          <span class="material-symbols-outlined">settings</span>
+        </button>
+        <div class="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-2"></div>
+        <div class="flex items-center gap-3">
+          <div class="text-right hidden md:block">
+            <p class="text-sm font-semibold leading-none">Alex Morgan</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Logistics Manager</p>
+          </div>
+          <div
+            class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-white dark:border-gray-700 shadow-sm"
+            data-alt="Portrait of a smiling professional woman"
+            style="
+              background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQ05nrE0g3cDUki-67gus2qOVcGEOKSSrpIXJQL8W3v20PSq9uHZeB2YcPcyULto3-uQtajlQ-sxcbRgS7KqPOP8QY8hYMu2krAiDs9hvGE1jF1075wQJasfur0pE_X5Tg6h4pkx2TTGFGA6diK4dHeLSYwceiKOfjgR7mBlrgxN8obnP9SINZLr1PboxmzHPPRhbnGTq5m02u96tKbnKtoPq0GKhEXsPfkew5uPcB32YmFMmJYT8c7agsq83zx5DEB0OpZtOyPfE');
+            "
+          ></div>
+        </div>
+      </div>
+    </header>
+    <!-- Main Content Area -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sidebar / List View -->
+      <aside
+        class="w-full max-w-[420px] bg-white dark:bg-[#1e1611] flex flex-col border-r border-gray-200 dark:border-gray-800 z-10 shadow-lg"
+      >
+        <!-- Search & Filter Header -->
+        <div class="p-5 pb-0">
+          <div class="relative group mb-4">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <span class="material-symbols-outlined text-primary">search</span>
             </div>
-</main>
-</div>
-</body></html>
+            <input
+              class="block w-full pl-10 pr-3 py-3 border-none rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-sm"
+              placeholder="Track Vehicle, Order ID, or Driver..."
+              type="text"
+            />
+          </div>
+          <!-- Chips -->
+          <div class="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-sm font-medium shadow-sm shadow-primary/30 transition-transform hover:scale-105"
+            >
+              <span>All</span>
+              <span class="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">5</span>
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
+            >
+              <span>In Transit</span>
+              <span class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded-full text-xs">3</span>
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
+            >
+              <span>Delayed</span>
+              <span
+                class="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded-full text-xs"
+                >1</span
+              >
+            </button>
+            <button
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-medium transition-colors"
+            >
+              <span>Arrived</span>
+            </button>
+          </div>
+          <div class="flex items-center justify-between mt-2 mb-2">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+              Active Shipments (3)
+            </h3>
+            <button class="text-xs font-medium text-primary hover:text-primary/80">
+              View History
+            </button>
+          </div>
+        </div>
+        <!-- List of Cards -->
+        <div class="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+          <!-- Card 1 (Active) -->
+          <div
+            class="group relative bg-white dark:bg-[#251d16] rounded-xl border-2 border-primary shadow-md p-4 cursor-pointer transition-all hover:shadow-lg"
+          >
+            <div class="absolute top-4 right-4">
+              <span class="material-symbols-outlined text-primary">my_location</span>
+            </div>
+            <div class="flex items-start gap-4 mb-3">
+              <div
+                class="size-12 rounded-lg bg-orange-100 dark:bg-orange-900/20 text-primary flex items-center justify-center shrink-0"
+              >
+                <span class="material-symbols-outlined text-[28px]">local_shipping</span>
+              </div>
+              <div>
+                <h4 class="font-bold text-gray-900 dark:text-white text-lg leading-tight">
+                  Order #88321
+                </h4>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Truck 42 • Driver: Mike R.</p>
+              </div>
+            </div>
+            <div
+              class="relative pl-4 border-l-2 border-dashed border-gray-200 dark:border-gray-700 ml-2 space-y-4 my-4"
+            >
+              <div class="relative">
+                <div class="absolute -left-[23px] top-1 size-3 bg-gray-300 rounded-full"></div>
+                <p class="text-xs text-gray-500 uppercase font-semibold">Origin</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Central Warehouse A
+                </p>
+              </div>
+              <div class="relative">
+                <div
+                  class="absolute -left-[23px] top-1 size-3 bg-primary rounded-full ring-4 ring-orange-100 dark:ring-orange-900/30"
+                ></div>
+                <p class="text-xs text-gray-500 uppercase font-semibold">Destination</p>
+                <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Tech Park Client Site B
+                </p>
+              </div>
+            </div>
+            <div
+              class="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800"
+            >
+              <div>
+                <p class="text-xs text-gray-500">Estimated Arrival</p>
+                <p class="text-primary font-bold text-base flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">schedule</span>
+                  Today, 2:30 PM
+                </p>
+              </div>
+              <span
+                class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold uppercase tracking-wide"
+              >
+                On Time
+              </span>
+            </div>
+            <!-- Hover Actions -->
+            <div
+              class="absolute inset-x-0 -bottom-10 opacity-0 group-hover:bottom-4 group-hover:opacity-100 transition-all duration-300 flex justify-center pointer-events-none"
+            >
+              <button
+                class="pointer-events-auto shadow-lg bg-white dark:bg-[#332a24] text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#3d322b]"
+              >
+                <span class="material-symbols-outlined text-sm">share</span> Share Link
+              </button>
+            </div>
+          </div>
+          <!-- Card 2 -->
+          <div
+            class="bg-gray-50 dark:bg-[#1a120b] rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 p-4 cursor-pointer transition-all"
+          >
+            <div class="flex items-start gap-4 mb-3">
+              <div
+                class="size-12 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-500 flex items-center justify-center shrink-0"
+              >
+                <span class="material-symbols-outlined text-[28px]">package_2</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start">
+                  <h4 class="font-bold text-gray-800 dark:text-gray-200 text-base">Order #99412</h4>
+                  <span
+                    class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-[10px] font-bold uppercase"
+                    >Delayed</span
+                  >
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Truck 18 • Driver: Sarah L.</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-2 pl-16">
+              <div class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="block text-xs text-gray-400">ETA</span>
+                Tomorrow, 9:00 AM
+              </div>
+            </div>
+          </div>
+          <!-- Card 3 -->
+          <div
+            class="bg-gray-50 dark:bg-[#1a120b] rounded-xl border border-transparent hover:border-gray-300 dark:hover:border-gray-700 p-4 cursor-pointer transition-all"
+          >
+            <div class="flex items-start gap-4 mb-3">
+              <div
+                class="size-12 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-500 flex items-center justify-center shrink-0"
+              >
+                <span class="material-symbols-outlined text-[28px]">local_shipping</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-start">
+                  <h4 class="font-bold text-gray-800 dark:text-gray-200 text-base">Order #77123</h4>
+                  <span
+                    class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-bold uppercase"
+                    >On Time</span
+                  >
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">Truck 05 • Driver: Dave B.</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between mt-2 pl-16">
+              <div class="text-sm text-gray-600 dark:text-gray-300">
+                <span class="block text-xs text-gray-400">ETA</span>
+                Today, 5:45 PM
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quick Promo / Footer -->
+        <div class="p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#1a120b]">
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-gray-500">Need to check past shipments?</p>
+            <a class="text-xs font-bold text-primary hover:underline" href="#">View Archive</a>
+          </div>
+        </div>
+      </aside>
+      <!-- Map View -->
+      <main class="flex-1 relative bg-gray-100 dark:bg-[#140e0a] overflow-hidden">
+        <!-- Map Background Image (Simulated) -->
+        <div
+          class="absolute inset-0 bg-cover bg-center opacity-80 dark:opacity-40 grayscale-[20%]"
+          data-alt="Stylized map showing city streets and blocks in light grey tones"
+          data-location="Los Angeles"
+          style="
+            background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCOauwrbVWCLO8pbkce0qTDIsiIsqAZwX3_wi6BFhvZ0ryqj7B2wtoaAlYdAmByiaYyxGMg1KjVsUd51wVCaY25VPo43mAGEoWHL0km69jcfLAeFDQIuqsqHsxXDqFuGAdJaN8NWFJ9vFHF6Z9954BLanOBGPQn0OELJ6VSTXtggug9CV7ejLh9vPA_Dqr2xijstZrwUVoTM3J6z5bZMs3KE57ltDfUCLf_L_SB7liin6BpxvqmclSA0dJyendn3NOl16ksc2Ip8YQ');
+          "
+        ></div>
+        <!-- Map Overlays -->
+        <!-- Route Line Simulation (SVG) -->
+        <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1">
+          <!-- Path for active shipment -->
+          <path
+            class="drop-shadow-lg animate-pulse"
+            d="M 400 200 Q 550 350 700 450 T 900 400"
+            fill="none"
+            stroke="#ee8c2b"
+            stroke-dasharray="10 5"
+            stroke-linecap="round"
+            stroke-width="4"
+          ></path>
+          <!-- Start Point -->
+          <circle cx="400" cy="200" fill="white" r="6" stroke="#ee8c2b" stroke-width="3"></circle>
+          <!-- End Point -->
+          <circle cx="900" cy="400" fill="#ee8c2b" r="6"></circle>
+        </svg>
+        <!-- Active Vehicle Pin -->
+        <div
+          class="absolute top-[40%] left-[60%] -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center group cursor-pointer"
+        >
+          <!-- Info Bubble (Shows on hover or active) -->
+          <div
+            class="bg-white dark:bg-[#251d16] p-3 rounded-lg shadow-xl mb-2 min-w-[160px] transform transition-transform scale-100 origin-bottom"
+          >
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-gray-900 dark:text-white">Truck 42</span>
+              <span class="text-[10px] bg-green-100 text-green-700 px-1.5 rounded">Moving</span>
+            </div>
+            <p class="text-[10px] text-gray-500">55 mph • I-405 South</p>
+            <p class="text-[10px] text-primary font-bold mt-1">12 mins to destination</p>
+            <!-- Tooltip arrow -->
+            <div
+              class="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white dark:bg-[#251d16] rotate-45"
+            ></div>
+          </div>
+          <!-- Pin Icon -->
+          <div class="relative">
+            <div
+              class="size-12 bg-primary rounded-full border-4 border-white dark:border-[#1a120b] shadow-xl flex items-center justify-center text-white relative z-10"
+            >
+              <span class="material-symbols-outlined text-[24px]">local_shipping</span>
+            </div>
+            <!-- Ripple Effect -->
+            <div class="absolute inset-0 bg-primary rounded-full animate-ping opacity-75 z-0"></div>
+          </div>
+        </div>
+        <!-- Secondary Vehicle Pin (Delayed) -->
+        <div
+          class="absolute top-[25%] left-[25%] z-0 flex flex-col items-center group cursor-pointer opacity-80 hover:opacity-100 hover:z-20"
+        >
+          <div
+            class="bg-white dark:bg-[#251d16] p-2 rounded-lg shadow-md mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          >
+            <span class="text-xs font-bold block text-center">Truck 18</span>
+          </div>
+          <div
+            class="size-8 bg-gray-700 dark:bg-gray-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white"
+          >
+            <span class="material-symbols-outlined text-[16px]">local_shipping</span>
+          </div>
+        </div>
+        <!-- Secondary Vehicle Pin (On Time) -->
+        <div
+          class="absolute top-[65%] left-[80%] z-0 flex flex-col items-center group cursor-pointer opacity-80 hover:opacity-100 hover:z-20"
+        >
+          <div
+            class="bg-white dark:bg-[#251d16] p-2 rounded-lg shadow-md mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          >
+            <span class="text-xs font-bold block text-center">Truck 05</span>
+          </div>
+          <div
+            class="size-8 bg-gray-700 dark:bg-gray-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white"
+          >
+            <span class="material-symbols-outlined text-[16px]">local_shipping</span>
+          </div>
+        </div>
+        <!-- Map Controls -->
+        <div class="absolute bottom-8 right-8 flex flex-col gap-2 z-10">
+          <button
+            class="size-10 bg-white dark:bg-[#251d16] text-gray-700 dark:text-gray-200 rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors"
+            title="Zoom In"
+          >
+            <span class="material-symbols-outlined">add</span>
+          </button>
+          <button
+            class="size-10 bg-white dark:bg-[#251d16] text-gray-700 dark:text-gray-200 rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors"
+            title="Zoom Out"
+          >
+            <span class="material-symbols-outlined">remove</span>
+          </button>
+          <button
+            class="size-10 bg-white dark:bg-[#251d16] text-primary rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#332a24] transition-colors mt-2"
+            title="Re-center Map"
+          >
+            <span class="material-symbols-outlined">near_me</span>
+          </button>
+        </div>
+        <!-- Floating Action Button for Mobile / Quick Share on Map -->
+        <div class="absolute top-6 right-6 z-10">
+          <button
+            class="bg-white/90 backdrop-blur dark:bg-[#251d16]/90 text-gray-800 dark:text-white px-4 py-2 rounded-lg shadow-lg font-medium text-sm flex items-center gap-2 hover:bg-white dark:hover:bg-[#332a24] transition-all border border-white/20"
+          >
+            <span class="material-symbols-outlined text-primary">ios_share</span>
+            Share Tracking View
+          </button>
+        </div>
+        <!-- Map Copyright/Attribution simulation -->
+        <div
+          class="absolute bottom-1 right-2 text-[10px] text-gray-500 bg-white/50 dark:bg-black/50 px-1 rounded"
+        ></div>
+      </main>
+    </div>
+  </body>
+</html>

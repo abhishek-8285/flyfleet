@@ -96,7 +96,7 @@ func (w *IncidentSLAWorker) publishSLABreach(ctx context.Context, incident model
 	payload := map[string]interface{}{
 		"violation_id": violation.ID,
 		"incident_id":  incident.ID,
-		"org_id":       incident.OrgID,
+		"tenant_id":       incident.OrgID,
 		"severity":     incident.Severity,
 		"duration":     duration.Seconds(),
 		"breached_at":  violation.BreachTime,

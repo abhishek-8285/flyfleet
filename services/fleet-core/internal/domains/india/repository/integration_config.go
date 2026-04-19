@@ -16,7 +16,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationConfig(ctx context.Context, config *models.IntegrationConfig) error {
 	query := `
 		INSERT INTO integration_configs (
-			id, org_id, service_type, api_endpoint, api_key, username, password,
+			id, tenant_id, service_type, api_endpoint, api_key, username, password,
 			client_id, client_secret, environment, active, last_sync_at, next_sync_at,
 			sync_interval, created_at, created_by, updated_at, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`
@@ -54,7 +54,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationConfig(ctx context.Con
 // GetIntegrationConfig retrieves an integration configuration by ID
 func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Context, id string) (*models.IntegrationConfig, error) {
 	query := `
-		SELECT id, org_id, service_type, api_endpoint, api_key, username, password,
+		SELECT id, tenant_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
 		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs
@@ -103,11 +103,11 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
 func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
 	query := `
-		SELECT id, org_id, service_type, api_endpoint, api_key, username, password,
+		SELECT id, tenant_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
 		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs
-		WHERE org_id = $1 AND service_type = $2`
+		WHERE tenant_id = $1 AND service_type = $2`
 
 	var config models.IntegrationConfig
 
@@ -214,11 +214,11 @@ func (r *IndiaIntegrationRepositoryImpl) DeleteIntegrationConfig(ctx context.Con
 
 // ListIntegrationConfigs retrieves integration configurations with filtering
 func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
-	countQuery := "SELECT COUNT(*) FROM integration_configs WHERE org_id = $1"
+	countQuery := "SELECT COUNT(*) FROM integration_configs WHERE tenant_id = $1"
 	args := []interface{}{orgID}
 	argIndex := 2
 
-	whereClause := "WHERE org_id = $1"
+	whereClause := "WHERE tenant_id = $1"
 	if serviceType != nil {
 		whereClause += fmt.Sprintf(" AND service_type = $%d", argIndex)
 		args = append(args, serviceType)
@@ -237,7 +237,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Cont
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, org_id, service_type, api_endpoint, api_key, username, password,
+		SELECT id, tenant_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
 		       sync_interval, created_at, created_by, updated_at, updated_by
 		FROM integration_configs

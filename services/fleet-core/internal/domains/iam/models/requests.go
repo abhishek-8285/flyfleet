@@ -13,7 +13,7 @@ type IdentifyRequest struct {
 type LoginRequest struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
-	OrgID          string `json:"org_id"`
+	OrgID          string `json:"tenant_id"`
 	RememberDevice bool   `json:"remember_device"`
 }
 
@@ -99,13 +99,13 @@ type UpdateRolePermissionsRequest struct {
 type AssignRoleRequest struct {
 	UserID uuid.UUID `json:"user_id"`
 	RoleID uuid.UUID `json:"role_id"`
-	OrgID  uuid.UUID `json:"org_id"`
+	OrgID  uuid.UUID `json:"tenant_id"`
 }
 
 type UnassignRoleRequest struct {
 	UserID uuid.UUID `json:"user_id"`
 	RoleID uuid.UUID `json:"role_id"`
-	OrgID  uuid.UUID `json:"org_id"`
+	OrgID  uuid.UUID `json:"tenant_id"`
 }
 
 type SetupTOTPRequest struct {
@@ -128,7 +128,7 @@ type DisableMFARequest struct {
 }
 
 type SwitchOrgRequest struct {
-	OrgID string `json:"org_id"`
+	OrgID string `json:"tenant_id"`
 }
 
 type ProfileUpdateRequest struct {
@@ -181,7 +181,7 @@ type UserInfo struct {
 	Name         string    `json:"name"`
 	AvatarURL    string    `json:"avatar_url,omitempty"`
 	Role         string    `json:"role"`
-	OrgID        uuid.UUID `json:"org_id"`
+	OrgID        uuid.UUID `json:"tenant_id"`
 	OrgName      string    `json:"org_name"`
 	Permissions  []string  `json:"permissions"`
 }

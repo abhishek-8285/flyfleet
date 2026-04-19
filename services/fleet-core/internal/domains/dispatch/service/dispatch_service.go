@@ -54,7 +54,7 @@ func (s *dispatchService) Assign(ctx context.Context, orgID uuid.UUID, req Assig
 		s.eventBus.Publish("trip.assigned", map[string]interface{}{
 			"trip_id":     tripID,
 			"shipment_id": req.ShipmentID,
-			"org_id":      orgID,
+			"tenant_id":      orgID,
 		})
 	}
 

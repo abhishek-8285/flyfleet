@@ -155,7 +155,7 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 	s.logger.Info("trip created",
 		zap.String("trip_id", trip.ID),
 		zap.String("correlation_id", trip.CorrelationID),
-		zap.String("org_id", trip.OrgID),
+		zap.String("tenant_id", trip.OrgID),
 	)
 	return trip, nil
 }
@@ -601,7 +601,7 @@ func (s *TripService) Complete(ctx context.Context, id, driverID string, req *mo
 	// Financial Hooks & Event Emission
 	s.publishEvent("trip.completed", map[string]interface{}{
 		"trip_id":           id,
-		"org_id":            trip.OrgID,
+		"tenant_id":            trip.OrgID,
 		"vehicle_id":        trip.VehicleID,
 		"driver_id":         driverID,
 		"billable_distance": actualDistance,
@@ -837,7 +837,7 @@ func (s *TripService) GetActiveTripsForVehicle(ctx context.Context, vehicleID st
 func (s *TripService) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
 	summary, err := s.repo.GetTripSummary(ctx, orgID, startDate, endDate)
 	if err != nil {
-		s.logger.Error("failed to get trip summary", zap.String("org_id", orgID), zap.Error(err))
+		s.logger.Error("failed to get trip summary", zap.String("tenant_id", orgID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get trip summary: %w", err)
 	}
 

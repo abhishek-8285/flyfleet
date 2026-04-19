@@ -42,7 +42,7 @@ func (r *iamRepository) CreateUser(ctx context.Context, user *models.User) error
 	}
 
 	// 2. Insert into user_organizations
-	queryLink := `INSERT INTO user_organizations (id, user_id, org_id, role, status, created_at)
+	queryLink := `INSERT INTO user_organizations (id, user_id, tenant_id, role, status, created_at)
 	              VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err = tx.Exec(ctx, queryLink, uuid.New(), user.ID, user.OrganizationID, "admin", "active", time.Now())
 	if err != nil {
@@ -55,7 +55,7 @@ func (r *iamRepository) CreateUser(ctx context.Context, user *models.User) error
 func (r *iamRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.org_id
+		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.tenant_id
 		FROM users u
 		LEFT JOIN user_organizations uo ON u.id = uo.user_id
 		WHERE u.email = $1
@@ -70,7 +70,7 @@ func (r *iamRepository) GetUserByEmail(ctx context.Context, email string) (*mode
 func (r *iamRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.org_id
+		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.tenant_id
 		FROM users u
 		LEFT JOIN user_organizations uo ON u.id = uo.user_id
 		WHERE u.id = $1
@@ -83,7 +83,7 @@ func (r *iamRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*mod
 }
 
 func (r *iamRepository) GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]*models.Role, error) {
-	query := `SELECT id, name, organization_id, description FROM roles WHERE organization_id = $1 OR organization_id IS NULL`
+	query := `SELECT id, name, tenant_id, description FROM roles WHERE tenant_id = $1 OR tenant_id IS NULL`
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
 		return nil, err

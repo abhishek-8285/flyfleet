@@ -8,7 +8,7 @@ import (
 
 type VehicleDowntime struct {
 	ID              uuid.UUID  `json:"id" db:"id"`
-	OrgID           uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID           uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	VehicleID       uuid.UUID  `json:"vehicle_id" db:"vehicle_id"`
 	WorkOrderID     *uuid.UUID `json:"work_order_id,omitempty" db:"work_order_id"`
 	DowntimeStart   time.Time  `json:"downtime_start" db:"downtime_start"`

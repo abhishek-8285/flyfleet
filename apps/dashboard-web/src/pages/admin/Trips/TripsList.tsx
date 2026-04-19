@@ -59,10 +59,26 @@ export default function TripsList() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<TripFilterState>(defaultFilters);
   const [keyword, setKeyword] = useState("");
+  const [vehicleMap, setVehicleMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadTrips();
+    loadVehicles();
   }, [page, filters]);
+
+  const loadVehicles = async () => {
+    try {
+      const res = await api.getVehicles({ limit: 1000 });
+      const vehicles = res.vehicles || res.data || [];
+      const map: Record<string, string> = {};
+      vehicles.forEach((v: any) => {
+        map[v.id] = v.registration_number || v.plate_number || v.name || v.id.slice(0, 8);
+      });
+      setVehicleMap(map);
+    } catch (err) {
+      console.warn("Failed to load vehicle registry for mapping:", err);
+    }
+  };
 
   const loadTrips = async () => {
     try {
@@ -109,16 +125,19 @@ export default function TripsList() {
   const filtered = useMemo(() => {
     if (!keyword.trim()) return trips;
     const q = keyword.toLowerCase();
-    return trips.filter(
-      (t) =>
+    return trips.filter((t) => {
+      const vehicleName = vehicleMap[t.vehicle_id]?.toLowerCase() || "";
+      return (
         t.trip_id.toLowerCase().includes(q) ||
         t.vehicle_id.toLowerCase().includes(q) ||
+        vehicleName.includes(q) ||
         (t.driver_id || "").toLowerCase().includes(q) ||
         (t.customer_name || "").toLowerCase().includes(q) ||
         t.start_location.toLowerCase().includes(q) ||
-        t.end_location.toLowerCase().includes(q),
-    );
-  }, [trips, keyword]);
+        t.end_location.toLowerCase().includes(q)
+      );
+    });
+  }, [trips, keyword, vehicleMap]);
 
   const boardTripsByStatus = COLUMNS.map((col) => ({
     ...col,
@@ -133,10 +152,10 @@ export default function TripsList() {
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">
             <span>Fleet Operations</span>
             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
-            <span className="text-white">Active Manifests</span>
+            <span className="text-white">Active Trips</span>
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
-            Dispatch Operations Log
+            Fleet Trips
           </h1>
         </div>
         <Link
@@ -144,7 +163,7 @@ export default function TripsList() {
           className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-[11px] font-bold uppercase tracking-wider rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-primary/20 active:scale-95"
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
-          Create Manifest
+          Add New Trip
         </Link>
       </div>
 
@@ -163,6 +182,7 @@ export default function TripsList() {
         onKeywordChange={setKeyword}
         formatDate={formatDate}
         totalCount={filtered.length}
+        vehicleMap={vehicleMap}
       />
 
       {/* List View (Table) */}
@@ -177,6 +197,7 @@ export default function TripsList() {
         onRefresh={loadTrips}
         keyword={keyword}
         onKeywordChange={setKeyword}
+        vehicleMap={vehicleMap}
       />
     </div>
   );
@@ -199,6 +220,7 @@ function BoardView({
   onKeywordChange,
   formatDate,
   totalCount,
+  vehicleMap,
 }: {
   columns: { key: string; label: string; icon: string; trips: Trip[] }[];
   loading: boolean;
@@ -206,13 +228,14 @@ function BoardView({
   onKeywordChange: (v: string) => void;
   formatDate: (d: string) => string;
   totalCount: number;
+  vehicleMap: Record<string, string>;
 }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4 mt-4 px-2">
-        <h2 className="text-white text-xs font-bold uppercase tracking-widest">Dispatch Board</h2>
+        <h2 className="text-white text-xs font-bold uppercase tracking-widest">Trips Board</h2>
         <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded border border-outline">
-          {totalCount} Active Manifests
+          {totalCount} Active Trips
         </span>
       </div>
 
@@ -241,7 +264,7 @@ function BoardView({
               <div className="space-y-2">
                 {col.trips.length === 0 ? (
                   <div className="text-center py-12 text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-dashed border-outline rounded-2xl bg-surface-container/10">
-                    No Manifests
+                    No Trips
                   </div>
                 ) : (
                   col.trips.map((trip) => (
@@ -266,9 +289,9 @@ function BoardView({
                         {trip.end_location}
                       </div>
                       <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-on-surface-variant border-t border-outline/30 pt-3 mt-3 group-hover:border-primary/20 transition-colors">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5" title={trip.vehicle_id}>
                           <span className="material-symbols-outlined text-[14px]">local_shipping</span>
-                          {trip.vehicle_id?.slice(0, 8)}…
+                          {vehicleMap[trip.vehicle_id] || trip.vehicle_id?.slice(0, 8) + "…"}
                         </span>
                         <span className="font-mono">{trip.distance?.toFixed(1) || "—"} KM</span>
                       </div>
@@ -300,6 +323,7 @@ function ListView({
   onRefresh,
   keyword,
   onKeywordChange,
+  vehicleMap,
 }: {
   trips: Trip[];
   loading: boolean;
@@ -311,6 +335,7 @@ function ListView({
   onRefresh: () => void;
   keyword: string;
   onKeywordChange: (v: string) => void;
+  vehicleMap: Record<string, string>;
 }) {
   return (
     <div className="bg-surface-container border border-outline rounded-3xl overflow-hidden shadow-2xl mt-8">
@@ -318,7 +343,7 @@ function ListView({
       <div className="p-5 border-b border-outline flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container/50">
         <div className="flex items-center gap-4">
           <h3 className="text-white font-bold text-sm uppercase tracking-wider">
-            Operational Intelligence Log
+            Detailed Trip Log
           </h3>
           <span className="bg-emerald-500/10 text-emerald-400 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-widest border border-emerald-500/20">
             {trips.filter((t) => t.status === "in_progress").length} Live Tracking
@@ -334,14 +359,14 @@ function ListView({
               type="text"
               value={keyword}
               onChange={(e) => onKeywordChange(e.target.value)}
-              placeholder="Filter by Manifest ID, Driver, or Route..."
+              placeholder="Filter by Trip ID, Vehicle, or Route..."
               className="w-full bg-surface-dim border border-outline text-white text-xs rounded-xl pl-10 pr-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/50 shadow-inner font-bold tracking-tight"
             />
           </div>
           <button onClick={onRefresh} className="p-2.5 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-white border border-outline transition-all active:scale-95" title="Refresh Log">
             <span className="material-symbols-outlined text-[20px]">refresh</span>
           </button>
-          <button className="p-2.5 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-white border border-outline transition-all active:scale-95" title="Export Manifests">
+          <button className="p-2.5 hover:bg-surface-container rounded-xl text-on-surface-variant hover:text-white border border-outline transition-all active:scale-95" title="Export Trips">
             <span className="material-symbols-outlined text-[20px]">download</span>
           </button>
         </div>
@@ -351,13 +376,13 @@ function ListView({
         <table className="w-full text-left">
           <thead className="border-b border-outline text-[10px] text-on-surface-variant font-bold uppercase tracking-wider bg-surface-container/80 backdrop-blur-sm">
             <tr>
-              <th className="px-6 py-4">Manifest ID</th>
-              <th className="px-6 py-4">Assigned Vehicle</th>
+              <th className="px-6 py-4">Trip ID</th>
+              <th className="px-6 py-4">Vehicle</th>
               <th className="px-6 py-4">Route Path</th>
-              <th className="px-6 py-4">STD / ATD</th>
+              <th className="px-6 py-4">Planned / Actual</th>
               <th className="px-6 py-4">Distance</th>
-              <th className="px-6 py-4">Organizational Client</th>
-              <th className="px-6 py-4 text-right">Operational Status</th>
+              <th className="px-6 py-4">Customer</th>
+              <th className="px-6 py-4 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="text-sm">
@@ -383,9 +408,9 @@ function ListView({
                     </Link>
                   </td>
                   <td className="px-6 py-4 text-white font-bold tracking-tight">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3" title={trip.vehicle_id}>
                       <span className="material-symbols-outlined text-on-surface-variant text-lg">local_shipping</span>
-                      {trip.vehicle_id?.slice(0, 8)}…
+                      {vehicleMap[trip.vehicle_id] || trip.vehicle_id?.slice(0, 8) + "…"}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-on-surface-variant font-bold text-xs max-w-[240px] truncate">
@@ -420,7 +445,7 @@ function ListView({
       {/* Pagination Footer Area */}
       <div className="p-4 border-t border-outline bg-surface-container/50 flex items-center justify-between">
         <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-dim px-3 py-1 rounded-full border border-outline">
-          Log Entires {(page - 1) * 20 + 1} – {Math.min(page * 20, total)} of {total} Manifests
+          Trips {(page - 1) * 20 + 1} – {Math.min(page * 20, total)} of {total}
         </span>
         <div className="flex items-center gap-2">
           <button

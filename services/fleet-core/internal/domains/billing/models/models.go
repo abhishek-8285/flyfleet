@@ -17,7 +17,7 @@ const (
 
 type Invoice struct {
 	ID             uuid.UUID              `json:"id" db:"id"`
-	OrgID          uuid.UUID              `json:"org_id" db:"org_id" validate:"required"`
+	OrgID          uuid.UUID              `json:"tenant_id" db:"tenant_id" validate:"required"`
 	InvoiceNumber  string                 `json:"invoice_number" db:"invoice_number"`
 	CustomerName   string                 `json:"customer_name" db:"customer_name" validate:"required"`
 	CustomerEmail  string                 `json:"customer_email" db:"customer_email"`
@@ -63,7 +63,7 @@ type InvoiceItem struct {
 }
 
 type BillingSettings struct {
-	OrgID                uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID                uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	DefaultTaxRate       float64   `json:"default_tax_rate" db:"default_tax_rate"`
 	BaseCurrency         string    `json:"base_currency" db:"base_currency"`
 	GracePeriodDays      int       `json:"grace_period_days" db:"grace_period_days"`

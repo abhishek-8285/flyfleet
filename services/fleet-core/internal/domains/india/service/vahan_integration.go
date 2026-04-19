@@ -45,7 +45,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 		if err == nil {
 			var cached models.VehicleVerification
 			if err := json.Unmarshal([]byte(val), &cached); err == nil {
-				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber), zap.String("org_id", orgID.String()))
+				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber), zap.String("tenant_id", orgID.String()))
 				// SECURITY FIX: Remove PII fields from cached response to avoid exposure in Redis
 				cached.OwnerName = ""
 				cached.RCStatus = ""

@@ -32,7 +32,7 @@ const (
 
 type AccountingExport struct {
 	ID             uuid.UUID      `json:"id"`
-	OrgID          uuid.UUID      `json:"org_id"`
+	OrgID          uuid.UUID      `json:"tenant_id"`
 	ExternalSystem ExternalSystem `json:"external_system"`
 	ExportType     ExportType     `json:"export_type"`
 	Status         ExportStatus   `json:"status"`

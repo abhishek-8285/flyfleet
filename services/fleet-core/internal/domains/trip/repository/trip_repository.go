@@ -75,7 +75,7 @@ func NewTripRepository(db *pgxpool.Pool) *PostgresTripRepository {
 func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	query := `
 		INSERT INTO trips (
-			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
+			id, tenant_id, vehicle_id, driver_id, status, trip_type, title, description,
 			pickup_lat, pickup_lng, drop_lat, drop_lng,
 			planned_route, waypoints, planned_distance, estimated_duration_min,
 			cargo_details, scheduled_start, start_odometer, fuel_level_snapshot,
@@ -124,15 +124,26 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*models.Trip, error) {
 	query := `
 		SELECT
-			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
+			id, tenant_id, COALESCE(vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
+			driver_id, status, COALESCE(trip_type, 'standard') as trip_type, 
+			COALESCE(title, '') as title, 
+			COALESCE(description, '') as description,
 			pickup_lat, pickup_lng, drop_lat, drop_lng,
 			planned_route, actual_route, waypoints,
-			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
-			cargo_details, scheduled_start, start_time, end_time,
+			COALESCE(planned_distance, 0.0) as planned_distance, total_distance, 
+			COALESCE(estimated_duration_min, 0) as estimated_duration_min, actual_duration_min,
+			cargo_details, COALESCE(scheduled_start, now()) as scheduled_start, start_time, end_time,
 			start_odometer, end_odometer, fuel_level_snapshot, fuel_used, idling_time_minutes,
-			eway_bill_no, gst_classification, permit_verified, ais140_compliant,
-			customer_name, customer_phone, customer_email, cancellation_reason,
-			version, created_at, updated_at
+			COALESCE(eway_bill_no, '') as eway_bill_no, 
+			COALESCE(gst_classification, '') as gst_classification, 
+			permit_verified, ais140_compliant,
+			COALESCE(customer_name, '') as customer_name, 
+			COALESCE(customer_phone, '') as customer_phone, 
+			COALESCE(customer_email, '') as customer_email, 
+			COALESCE(cancellation_reason, '') as cancellation_reason,
+			version, 
+			COALESCE(created_at, now()) as created_at, 
+			COALESCE(updated_at, now()) as updated_at
 		FROM trips
 		WHERE id = $1 AND is_deleted = FALSE`
 
@@ -188,14 +199,21 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripListFilter) ([]*models.Trip, int, error) {
 	baseQuery := `
 		SELECT
-			id, org_id, vehicle_id, driver_id, status, trip_type, title, description,
-			planned_distance, total_distance, estimated_duration_min, actual_duration_min,
-			scheduled_start, start_time, end_time,
-			customer_name, created_at, updated_at
+			id, tenant_id, COALESCE(vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
+			driver_id, status, COALESCE(trip_type, 'standard') as trip_type, 
+			COALESCE(title, '') as title, 
+			COALESCE(description, '') as description,
+			COALESCE(planned_distance, 0.0) as planned_distance, 
+			COALESCE(total_distance, 0.0) as total_distance, 
+			COALESCE(estimated_duration_min, 0) as estimated_duration_min, 
+			COALESCE(actual_duration_min, 0) as actual_duration_min,
+			COALESCE(scheduled_start, now()) as scheduled_start, 
+			start_time, end_time,
+			COALESCE(customer_name, '') as customer_name, created_at, updated_at
 		FROM trips
-		WHERE org_id = $1 AND is_deleted = FALSE`
+		WHERE tenant_id = $1 AND is_deleted = FALSE`
 
-	countQuery := `SELECT COUNT(*) FROM trips WHERE org_id = $1 AND is_deleted = FALSE`
+	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND is_deleted = FALSE`
 
 	var conditions []string
 	args := []interface{}{filter.OrgID}
@@ -334,7 +352,7 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 
 	// Mapping Go field names to DB column names if they differ
 	fieldMap := map[string]string{
-		"OrgID":                "org_id",
+		"OrgID":                "tenant_id",
 		"PlannedDistance":      "planned_distance",
 		"TotalDistance":        "total_distance",
 		"StartTime":            "start_time",
@@ -517,7 +535,7 @@ func (r *PostgresTripRepository) AddPODDocument(ctx context.Context, tripID stri
 // GetActiveTripsForDriver retrieves trips for a driver that are not in terminal states
 func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, driverID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, driver_id, status, title, created_at, updated_at
+		SELECT id, tenant_id, vehicle_id, driver_id, status, title, created_at, updated_at
 		FROM trips
 		WHERE driver_id = $1
 		  AND status NOT IN ('COMPLETED', 'CANCELLED', 'FAILED')
@@ -631,7 +649,7 @@ func (r *PostgresTripRepository) CheckOverlappingTrips(ctx context.Context, vehi
 
 func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, driver_id, status, title, description,
+		SELECT id, tenant_id, vehicle_id, driver_id, status, title, description,
 		       planned_distance, total_distance, estimated_duration_min,
 		       actual_duration_min, scheduled_start, start_time, end_time,
 		       customer_name, created_at, updated_at
@@ -678,7 +696,7 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 			COALESCE(SUM(fuel_used), 0) as total_fuel_consumed,
 			COALESCE(SUM(idling_time_minutes), 0) as total_idle_time_minutes
 		FROM trips
-		WHERE org_id = $1
+		WHERE tenant_id = $1
 		  AND created_at >= $2
 		  AND created_at <= $3
 		  AND status IN ('COMPLETED', 'CANCELLED')
@@ -723,7 +741,7 @@ func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStat
 
 // GetTripCustomers returns distinct customer names for the filter dropdown
 func (r *PostgresTripRepository) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
-	query := `SELECT DISTINCT customer_name FROM trips WHERE org_id = $1 AND customer_name != '' AND is_deleted = FALSE ORDER BY customer_name ASC`
+	query := `SELECT DISTINCT customer_name FROM trips WHERE tenant_id = $1 AND customer_name != '' AND is_deleted = FALSE ORDER BY customer_name ASC`
 
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
@@ -754,7 +772,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID strin
 			COUNT(*) as total_trips,
 			AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END) as on_time_rate -- Simplified for demo
 		FROM trips
-		WHERE org_id = $1 AND driver_id IS NOT NULL AND is_deleted = FALSE
+		WHERE tenant_id = $1 AND driver_id IS NOT NULL AND is_deleted = FALSE
 		GROUP BY driver_id`
 
 	start := time.Now()
@@ -789,7 +807,7 @@ func (r *PostgresTripRepository) GetTripStats(ctx context.Context, orgID string)
 			COALESCE(SUM(total_distance), 0) as total_distance,
 			COALESCE(SUM(actual_duration_min), 0) / 60.0 as active_time_hours
 		FROM trips
-		WHERE org_id = $1
+		WHERE tenant_id = $1
 		  AND created_at >= NOW() - INTERVAL '7 days'
 		  AND is_deleted = FALSE
 		GROUP BY date

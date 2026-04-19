@@ -18,7 +18,7 @@ const (
 // PaymentAttempt tracks a single dunning retry
 type PaymentAttempt struct {
 	ID                uuid.UUID              `json:"id" db:"id"`
-	OrgID             uuid.UUID              `json:"org_id" db:"org_id"`
+	OrgID             uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	InvoiceID         uuid.UUID              `json:"invoice_id" db:"invoice_id"`
 	AttemptNumber     int                    `json:"attempt_number" db:"attempt_number"`
 	Status            PaymentAttemptStatus   `json:"status" db:"status"`
@@ -32,7 +32,7 @@ type PaymentAttempt struct {
 // NotificationEvent defines the payload for billing-related NATS events
 type NotificationEvent struct {
 	Type      string                 `json:"type"` // invoice_created, payment_failed, payment_success, subscription_cancelled
-	OrgID     uuid.UUID              `json:"org_id"`
+	OrgID     uuid.UUID              `json:"tenant_id"`
 	Timestamp time.Time              `json:"timestamp"`
 	Data      map[string]interface{} `json:"data"`
 }

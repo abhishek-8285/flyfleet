@@ -134,7 +134,7 @@ func (s *DriverService) GetExpenses(ctx context.Context, driverID, orgID string)
 
 // TriggerSOS triggers an emergency SOS alert
 func (s *DriverService) TriggerSOS(ctx context.Context, driverID, orgID string, location *models.Location) error {
-	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID), zap.String("org_id", orgID))
+	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID), zap.String("tenant_id", orgID))
 	// Verify driver ownership
 	driverRecord, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {

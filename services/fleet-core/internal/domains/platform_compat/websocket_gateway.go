@@ -36,7 +36,7 @@ func (g *WebsocketGateway) Start() error {
 
 	_, err = js.Subscribe("telemetry.gps", func(msg *nats.Msg) {
 		var event struct {
-			OrgID string `json:"org_id"`
+			OrgID string `json:"tenant_id"`
 		}
 		if err := json.Unmarshal(msg.Data, &event); err != nil {
 			g.logger.Debug("Failed to unmarshal telemetry event for websocket gateway", zap.Error(err))

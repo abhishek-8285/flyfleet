@@ -139,9 +139,12 @@ import Trips from "./pages/Trips";
 import TrustedDevices from "./pages/TrustedDevices";
 import VehicleDetails from "./pages/VehicleDetails";
 import VerifyEmail from "./pages/VerifyEmail";
+import { CustomerList } from "./pages/admin/CustomerList";
+import { AddCustomer } from "./pages/admin/AddCustomer";
 import { store } from "./store";
 import { setToken, setUser as setReduxUser } from "./store/authSlice";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
+import { extractUserRole, isRoleAllowed } from "./utils/rbac";
 import { useSelector } from "react-redux";
 import type { RootState } from "./store";
 
@@ -213,9 +216,9 @@ const RoleGuard: React.FC<{
 }> = ({ allowed, children }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
-  const role = effectiveUser?.role?.toLowerCase() || '';
+  const role = extractUserRole(effectiveUser);
 
-  if (allowed.length === 0 || allowed.includes(role) || allowed.includes('*')) {
+  if (isRoleAllowed(role, allowed)) {
     return <>{children}</>;
   }
 
@@ -258,19 +261,10 @@ const DynamicAdminLayout: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const role = (effectiveUser?.role_id || effectiveUser?.role || "").toLowerCase();
+  const role = extractUserRole(effectiveUser).toLowerCase();
 
-  // Allow all admin-level roles including global_admin, system_admin, and any role containing "admin"
-  if (
-    role === "super_admin" ||
-    role === "admin" ||
-    role === "support" ||
-    role === "org_admin" ||
-    role === "fleet_manager" ||
-    role === "global_admin" ||
-    role === "system_admin" ||
-    role.includes("admin")
-  ) {
+  // Allow all admin-level roles (centralized via isRoleAllowed)
+  if (isRoleAllowed(role, ['admin', 'super_admin', 'support', 'org_admin', 'fleet_manager', 'global_admin', 'system_admin'])) {
     return <GlobalAdminLayout />;
   }
 
@@ -456,30 +450,30 @@ function App() {
                 <Route path="dashboard" element={<GlobalAdminDashboard />} />
                 {/* Admin-only: org management, user management */}
                 <Route path="organizations" element={
-                  <RoleGuard allowed={["admin", "super_admin"]}><Organizations /></RoleGuard>
+                  <RoleGuard allowed={["super_admin"]}><Organizations /></RoleGuard>
                 } />
                 <Route path="organizations/new" element={
-                  <RoleGuard allowed={["admin", "super_admin"]}><AddOrganization /></RoleGuard>
+                  <RoleGuard allowed={["super_admin"]}><AddOrganization /></RoleGuard>
                 } />
                 <Route
                   path="organizations/:id"
-                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationDetail /></RoleGuard>}
+                  element={<RoleGuard allowed={["super_admin"]}><OrganizationDetail /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/edit"
-                  element={<RoleGuard allowed={["admin", "super_admin"]}><EditOrganization /></RoleGuard>}
+                  element={<RoleGuard allowed={["super_admin"]}><EditOrganization /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/settings"
-                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationSettings /></RoleGuard>}
+                  element={<RoleGuard allowed={["super_admin"]}><OrganizationSettings /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/users"
-                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationUsers /></RoleGuard>}
+                  element={<RoleGuard allowed={["super_admin"]}><OrganizationUsers /></RoleGuard>}
                 />
                 <Route
                   path="organizations/:id/vehicles"
-                  element={<RoleGuard allowed={["admin", "super_admin"]}><OrganizationVehicles /></RoleGuard>}
+                  element={<RoleGuard allowed={["super_admin"]}><OrganizationVehicles /></RoleGuard>}
                 />
                 <Route path="users" element={
                   <RoleGuard allowed={["admin", "super_admin"]}><Users /></RoleGuard>
@@ -512,6 +506,10 @@ function App() {
                 <Route path="trips/:id" element={<TripDetail />} />
                 <Route path="trips/:id/edit" element={<EditTrip />} />
                 <Route path="trips/:id/telemetry" element={<TripTelemetry />} />
+
+                {/* Customer Management */}
+                <Route path="customers" element={<CustomerList />} />
+                <Route path="customers/new" element={<AddCustomer />} />
 
                 {/* Maintenance Module */}
                 <Route
@@ -695,16 +693,16 @@ function App() {
               <Route
                 path="/admin/monitoring"
                 element={
-                  <PrivateRoute>
+                  <RoleGuard allowed={["super_admin"]}>
                     <MonitoringLayout />
-                  </PrivateRoute>
+                  </RoleGuard>
                 }
               >
-                <Route index element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><SystemHealth /></RoleGuard>} />
-                <Route path="metrics" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><MetricsHub /></RoleGuard>} />
-                <Route path="logs" element={<RoleGuard allowed={["admin", "super_admin"]}><LogViewer /></RoleGuard>} />
-                <Route path="jobs" element={<RoleGuard allowed={["admin", "super_admin"]}><QueueMonitor /></RoleGuard>} />
-                <Route path="sla" element={<RoleGuard allowed={["admin", "super_admin", "fleet_manager"]}><SLAReport /></RoleGuard>} />
+                <Route index element={<SystemHealth />} />
+                <Route path="metrics" element={<MetricsHub />} />
+                <Route path="logs" element={<LogViewer />} />
+                <Route path="jobs" element={<QueueMonitor />} />
+                <Route path="sla" element={<SLAReport />} />
               </Route>
 
               {/* Support module — admin only */}
@@ -712,7 +710,7 @@ function App() {
                 path="/support"
                 element={
                   <PrivateRoute>
-                    <RoleGuard allowed={["admin", "super_admin"]}>
+                    <RoleGuard allowed={["super_admin"]}>
                       <SupportLayout>
                         <SupportDashboard />
                       </SupportLayout>
@@ -724,7 +722,7 @@ function App() {
                 path="/support"
                 element={
                   <PrivateRoute>
-                    <RoleGuard allowed={["admin", "super_admin"]}>
+                    <RoleGuard allowed={["super_admin"]}>
                       <SupportLayout>{null}</SupportLayout>
                     </RoleGuard>
                   </PrivateRoute>

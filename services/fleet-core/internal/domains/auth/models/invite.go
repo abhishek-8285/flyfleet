@@ -9,7 +9,7 @@ import (
 type Invite struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	Code      string    `json:"code" db:"code"`
-	OrgID     uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	Role      string    `json:"role" db:"role"`
 	Expiry    time.Time `json:"expiry" db:"expiry"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`

@@ -27,7 +27,7 @@ func NewTripProfitService(repo *repository.FinanceRepository, logger *zap.Logger
 func (s *TripProfitService) CalculateTripProfit(ctx context.Context, tripID uuid.UUID, orgID uuid.UUID) (*models.TripProfitability, error) {
 	ctx, span := finTracing.StartSpan(ctx, "finance.calculate_trip_profit",
 		attribute.String("trip_id", tripID.String()),
-		attribute.String("org_id", orgID.String()),
+		attribute.String("tenant_id", orgID.String()),
 	)
 	defer span.End()
 

@@ -9,7 +9,7 @@ import (
 
 const (
 	CtxKeyUserID   = "user_id"
-	CtxKeyOrgID    = "org_id"
+	CtxKeyOrgID    = "tenant_id"
 	CtxKeyRole     = "role"
 	CtxKeyPermMask = "permissions_mask"
 	CtxKeyTokenJTI = "token_jti"

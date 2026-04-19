@@ -11,7 +11,7 @@ import (
 func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
@@ -33,7 +33,7 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
 	orgID := h.getOrgID(r)
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}

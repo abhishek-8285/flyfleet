@@ -8,6 +8,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
 	coremiddleware "github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -115,23 +116,59 @@ func (h *BillingConfigHandler) errorJSON(w http.ResponseWriter, r *http.Request,
 }
 
 func (h *BillingConfigHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
+	ctx := r.Context()
+
+	// Exhaustive list of all known organization context keys
+	keys := []interface{}{
+		coremiddleware.CtxOrgID, // internal/middleware
+		ctxkeys.OrgIDKey,        // internal/pkg/ctxkeys
+		ctxkeys.TenantIDKey,     // internal/pkg/ctxkeys
+		middleware.OrgIDKey,     // shared/pkg/middleware
+		"tenant_id",
+		"tenant_id",
+	}
+
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			// Try uuid.UUID first
+			if oid, ok := val.(uuid.UUID); ok && oid != uuid.Nil {
+				return oid
+			}
+			// Try string fallback
+			if s, ok := val.(string); ok && s != "" {
+				if oid, err := uuid.Parse(s); err == nil && oid != uuid.Nil {
+					return oid
+				}
 			}
 		}
 	}
+
 	return uuid.Nil
 }
 
 func (h *BillingConfigHandler) getUserID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
-				return id
+	ctx := r.Context()
+
+	keys := []interface{}{
+		coremiddleware.CtxUserID,
+		ctxkeys.UserIDKey,
+		middleware.UserIDKey,
+		"user_id",
+		"sub",
+	}
+
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			if uid, ok := val.(uuid.UUID); ok && uid != uuid.Nil {
+				return uid
+			}
+			if s, ok := val.(string); ok && s != "" {
+				if uid, err := uuid.Parse(s); err == nil && uid != uuid.Nil {
+					return uid
+				}
 			}
 		}
 	}
+
 	return uuid.Nil
 }

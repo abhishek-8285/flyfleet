@@ -18,7 +18,7 @@ func NewReconciliationService(repo *repository.FinanceRepository, logger *zap.Lo
 
 // ReconcileFuelCardTransactions matches external fuel card transactions with internal fuel logs.
 func (s *ReconciliationService) ReconcileFuelCardTransactions(ctx context.Context, orgID string) error {
-	s.logger.Info("Starting fuel card reconciliation", zap.String("org_id", orgID))
+	s.logger.Info("Starting fuel card reconciliation", zap.String("tenant_id", orgID))
 
 	// 1. Get unreconciled card transactions
 	cardTxs, err := s.repo.GetUnreconciledFuelCardTransactions(ctx, orgID)

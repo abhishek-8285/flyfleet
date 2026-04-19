@@ -125,7 +125,7 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	deps.eventBus.Publish(context.Background(), "trip.assigned", map[string]interface{}{
 		"trip_id":     trip.ID,
 		"shipment_id": shipmentID.String(),
-		"org_id":      orgID.String(),
+		"tenant_id":      orgID.String(),
 	}, orgID.String())
 	
 	deps.eventBus.Publish(context.Background(), "shipment.assigned", map[string]interface{}{

@@ -23,11 +23,11 @@ func NewSettingsRepository(db *pgxpool.Pool) *SettingsRepository {
 // Get retrieves settings for an organization
 func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.MaintenanceSettings, error) {
 	query := `
-		SELECT org_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
+		SELECT tenant_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			   low_stock_threshold, approval_threshold,
 			   auto_assign_enabled, notification_enabled,
 			   created_at, updated_at
-		FROM maintenance_settings WHERE org_id = $1
+		FROM maintenance_settings WHERE tenant_id = $1
 	`
 	settings := &models.MaintenanceSettings{}
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
@@ -46,11 +46,11 @@ func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.MaintenanceSettings) error {
 	query := `
 		INSERT INTO maintenance_settings (
-			org_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
+			tenant_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			low_stock_threshold, approval_threshold,
 			auto_assign_enabled, notification_enabled
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (org_id) DO UPDATE SET
+		ON CONFLICT (tenant_id) DO UPDATE SET
 			sla_p1_hours = EXCLUDED.sla_p1_hours,
 			sla_p2_hours = EXCLUDED.sla_p2_hours,
 			sla_p3_hours = EXCLUDED.sla_p3_hours,

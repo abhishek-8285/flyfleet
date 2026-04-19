@@ -18,7 +18,7 @@ const (
 
 type Payment struct {
 	ID            uuid.UUID     `json:"id"`
-	OrgID         uuid.UUID     `json:"org_id"`
+	OrgID         uuid.UUID     `json:"tenant_id"`
 	InvoiceID     *uuid.UUID    `json:"invoice_id,omitempty"`
 	Amount        float64       `json:"amount" validate:"required,gt=0"`
 	Status        PaymentStatus `json:"status"`

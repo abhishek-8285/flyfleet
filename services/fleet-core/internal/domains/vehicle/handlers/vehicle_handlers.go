@@ -35,6 +35,8 @@ type createVehicleRequestDTO struct {
 	BranchID           *uuid.UUID `json:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"`
 	GPSDeviceID        *string    `json:"gps_device_id"`
+	GPSEnabled         bool       `json:"gps_enabled"`
+	GPSDeviceType      *string    `json:"gps_device_type"`
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"`
 	AIS140Compliant    bool       `json:"ais140_compliant"`
 	Make               *string    `json:"make"`
@@ -59,6 +61,8 @@ type updateVehicleRequestDTO struct {
 	BranchID           *uuid.UUID `json:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"`
 	GPSDeviceID        *string    `json:"gps_device_id"`
+	GPSEnabled         *bool      `json:"gps_enabled"`
+	GPSDeviceType      *string    `json:"gps_device_type"`
 	ImmobilizerEnabled *bool      `json:"immobilizer_enabled"`
 	AIS140Compliant    *bool      `json:"ais140_compliant"`
 	Make               *string    `json:"make"`
@@ -133,6 +137,8 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 		BranchID:           dto.BranchID,
 		CostCenterID:       dto.CostCenterID,
 		GPSDeviceID:        dto.GPSDeviceID,
+		GPSEnabled:         dto.GPSEnabled,
+		GPSDeviceType:      dto.GPSDeviceType,
 		ImmobilizerEnabled: dto.ImmobilizerEnabled,
 		AIS140Compliant:    dto.AIS140Compliant,
 		Make:               dto.Make,
@@ -190,13 +196,13 @@ func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 // ListVehicles godoc
 func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("org_id")
+	orgIDStr := query.Get("tenant_id")
 	var orgID uuid.UUID
 	if orgIDStr != "" {
 		var err error
 		orgID, err = uuid.Parse(orgIDStr)
 		if err != nil {
-			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid org_id format", err)
+			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid tenant_id format", err)
 			return
 		}
 	} else {
@@ -257,6 +263,8 @@ func (h *VehicleHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) 
 		BranchID:           dto.BranchID,
 		CostCenterID:       dto.CostCenterID,
 		GPSDeviceID:        dto.GPSDeviceID,
+		GPSEnabled:         dto.GPSEnabled,
+		GPSDeviceType:      dto.GPSDeviceType,
 		ImmobilizerEnabled: dto.ImmobilizerEnabled,
 		AIS140Compliant:    dto.AIS140Compliant,
 		Make:               dto.Make,
@@ -361,6 +369,17 @@ func (h *VehicleHandlers) SearchVehicles(w http.ResponseWriter, r *http.Request)
 		Status:      q.Get("status"),
 		VehicleType: q.Get("vehicle_type"),
 		FuelType:    q.Get("fuel_type"),
+	}
+
+	h.logger.Info("Vehicle Search Triggered",
+		zap.String("q", params.Query),
+		zap.Any("gps_enabled", params.GPSEnabled),
+	)
+
+	if gpsEnabledStr := q.Get("gps_enabled"); gpsEnabledStr != "" {
+		if b, err := strconv.ParseBool(gpsEnabledStr); err == nil {
+			params.GPSEnabled = &b
+		}
 	}
 
 	if tenantIDStr := q.Get("tenant_id"); tenantIDStr != "" {
@@ -478,8 +497,8 @@ func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
 			return v
 		}
 	}
-	// 4. Final fallback: raw string "org_id"
-	if val := r.Context().Value("org_id"); val != nil {
+	// 4. Final fallback: raw string "tenant_id"
+	if val := r.Context().Value("tenant_id"); val != nil {
 		switch v := val.(type) {
 		case string:
 			if id, err := uuid.Parse(v); err == nil {

@@ -5,8 +5,7 @@
 
 echo "🚀 Testing Trip Service"
 
-# Service configuration
-SERVICE_URL="http://localhost:8082"
+SERVICE_URL="http://localhost:8084"
 HEALTH_ENDPOINT="$SERVICE_URL/health"
 
 # Wait for service to be ready

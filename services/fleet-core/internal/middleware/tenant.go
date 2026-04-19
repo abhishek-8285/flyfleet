@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fleet-platform/shared/pkg/middleware"
+	billingMiddleware "github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/google/uuid"
@@ -55,10 +57,16 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Ensure org_id is available in both formats for compatibility
+			// Ensure org_id is available in all required formats/keys for compatibility
 			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, orgID.String())
 			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID.String())
 			ctx = context.WithValue(ctx, iamCtx.OrgIDKey, orgID)
+			
+			// Compatibility with Shared Library
+			ctx = context.WithValue(ctx, middleware.OrgIDKey, orgID.String())
+			
+			// Compatibility with Billing Domain internal keys
+			ctx = context.WithValue(ctx, billingMiddleware.OrgIDKey, orgID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

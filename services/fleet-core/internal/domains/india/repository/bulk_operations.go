@@ -36,7 +36,7 @@ func (r *IndiaIntegrationRepositoryImpl) BulkCreateVehicleVerification(ctx conte
 			)
 		}
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO vehicle_verifications (id, vehicle_id, org_id, registration_number, status, verification_date, "+
+			"INSERT INTO vehicle_verifications (id, vehicle_id, tenant_id, registration_number, status, verification_date, "+
 				"chassis_number, engine_number, model, manufacturer, fuel_type, body_type, "+
 				"cubic_capacity, seating_capacity, color, manufacturing_year, owner_name, "+
 				"rc_status, insurance_expiry, puc_expiry, created_at) VALUES %s",
@@ -75,7 +75,7 @@ func (r *IndiaIntegrationRepositoryImpl) BulkCreateDriverVerification(ctx contex
 			)
 		}
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO driver_verifications (id, driver_id, org_id, license_number, status, verification_date, "+
+			"INSERT INTO driver_verifications (id, driver_id, tenant_id, license_number, status, verification_date, "+
 				"name, date_of_birth, validity_to, created_at) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)

@@ -74,7 +74,7 @@ func (r *CreditNoteRepository) Create(ctx context.Context, cn *models.CreditNote
 
 	query := `
 		INSERT INTO credit_notes (
-			id, credit_note_no, org_id, original_invoice_id, customer_id, customer_name,
+			id, credit_note_no, tenant_id, original_invoice_id, customer_id, customer_name,
 			customer_gstin, customer_pan, taxable_value, cgst, sgst, igst, total_amount,
 			status, reason, remarks, issue_date, created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
@@ -123,7 +123,7 @@ func (r *CreditNoteRepository) Create(ctx context.Context, cn *models.CreditNote
 // GetByID retrieves a credit note by ID
 func (r *CreditNoteRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.CreditNote, error) {
 	query := `
-		SELECT id, credit_note_no, org_id, original_invoice_id, customer_id, customer_name,
+		SELECT id, credit_note_no, tenant_id, original_invoice_id, customer_id, customer_name,
 		       customer_gstin, customer_pan, taxable_value, cgst, sgst, igst, total_amount,
 		       status, reason, remarks, applied_to_invoice_id, applied_amount, applied_at,
 		       issue_date, created_at, created_by, updated_at, updated_by
@@ -306,7 +306,7 @@ func (r *CreditNoteRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.CreditNote, int, error) {
 	offset := (page - 1) * size
 
-	countQuery := `SELECT COUNT(*) FROM credit_notes WHERE org_id = $1 AND deleted_at IS NULL`
+	countQuery := `SELECT COUNT(*) FROM credit_notes WHERE tenant_id = $1 AND deleted_at IS NULL`
 	var total int
 	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total)
 	if err != nil {
@@ -314,12 +314,12 @@ func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, p
 	}
 
 	query := `
-		SELECT id, credit_note_no, org_id, original_invoice_id, customer_id, customer_name,
+		SELECT id, credit_note_no, tenant_id, original_invoice_id, customer_id, customer_name,
 		       customer_gstin, customer_pan, taxable_value, cgst, sgst, igst, total_amount,
 		       status, reason, remarks, applied_to_invoice_id, applied_amount, applied_at,
 		       issue_date, created_at, created_by, updated_at, updated_by
 		FROM credit_notes
-		WHERE org_id = $1 AND deleted_at IS NULL
+		WHERE tenant_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
@@ -349,7 +349,7 @@ func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, p
 // ListByInvoice lists credit notes for a specific invoice
 func (r *CreditNoteRepository) ListByInvoice(ctx context.Context, invoiceID uuid.UUID) ([]models.CreditNote, error) {
 	query := `
-		SELECT id, credit_note_no, org_id, original_invoice_id, customer_id, customer_name,
+		SELECT id, credit_note_no, tenant_id, original_invoice_id, customer_id, customer_name,
 		       customer_gstin, customer_pan, taxable_value, cgst, sgst, igst, total_amount,
 		       status, reason, remarks, applied_to_invoice_id, applied_amount, applied_at,
 		       issue_date, created_at, created_by, updated_at, updated_by

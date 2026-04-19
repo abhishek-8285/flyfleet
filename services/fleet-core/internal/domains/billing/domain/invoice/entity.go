@@ -19,7 +19,7 @@ const (
 
 type Invoice struct {
 	ID              uuid.UUID     `json:"id"`
-	OrgID           uuid.UUID     `json:"org_id"`
+	OrgID           uuid.UUID     `json:"tenant_id"`
 	InvoiceNumber   string        `json:"invoice_number"`
 	CustomerName    string        `json:"customer_name" validate:"required"`
 	CustomerEmail   string        `json:"customer_email" validate:"email"`
@@ -44,7 +44,7 @@ type Invoice struct {
 
 type InvoiceItem struct {
 	ID          uuid.UUID `json:"id"`
-	OrgID       uuid.UUID `json:"org_id"`
+	OrgID       uuid.UUID `json:"tenant_id"`
 	InvoiceID   uuid.UUID `json:"invoice_id"`
 	Description string    `json:"description" validate:"required"`
 	Quantity    int       `json:"quantity" validate:"required,gt=0"`

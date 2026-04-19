@@ -1357,7 +1357,7 @@ func (h *AnalyticsHandler) GetFleetSummary(w http.ResponseWriter, r *http.Reques
 	orgID := h.getOrgID(r)
 	// Stub implementation - returns empty summary
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"org_id": orgID,
+		"tenant_id": orgID,
 		"summary": map[string]interface{}{},
 	})
 }

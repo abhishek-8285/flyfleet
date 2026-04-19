@@ -469,7 +469,7 @@ func (r *AnalyticsRepositoryImpl) SetTenantContext(ctx context.Context, tx pgx.T
 	if orgID == uuid.Nil {
 		return ErrInvalidTenant
 	}
-	_, err := tx.Exec(ctx, "SELECT set_config('app.org_id', $1, true)", orgID.String())
+	_, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", orgID.String())
 	return err
 }
 

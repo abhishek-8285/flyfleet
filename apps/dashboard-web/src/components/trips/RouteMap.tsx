@@ -89,7 +89,13 @@ export default function RouteMap({
 
   return (
     <div className={`rounded-xl border border-border-color overflow-hidden ${height} relative`}>
-      <MapContainer center={center} zoom={zoom} className="w-full h-full z-0" scrollWheelZoom>
+      <MapContainer
+        center={center}
+        zoom={zoom}
+        className="w-full h-full z-0"
+        scrollWheelZoom
+        attributionControl={false}
+      >
         <TileLayer
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

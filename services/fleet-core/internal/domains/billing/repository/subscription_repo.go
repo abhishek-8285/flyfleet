@@ -52,7 +52,7 @@ func (r *SubscriptionRepository) ListPlans(ctx context.Context) ([]models.Plan, 
 
 // IdentifyOrganizationsForInvoicing returns org IDs that need a new invoice
 func (r *SubscriptionRepository) IdentifyOrganizationsForInvoicing(ctx context.Context) ([]uuid.UUID, error) {
-	query := `SELECT org_id FROM billing_subscriptions 
+	query := `SELECT tenant_id FROM billing_subscriptions 
 	          WHERE current_period_end <= NOW() AND status = 'ACTIVE' AND cancel_at_period_end = false`
 
 	rows, err := r.db.Query(ctx, query)
@@ -65,7 +65,7 @@ func (r *SubscriptionRepository) IdentifyOrganizationsForInvoicing(ctx context.C
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("failed to scan org_id: %w", err)
+			return nil, fmt.Errorf("failed to scan tenant_id: %w", err)
 		}
 		orgIDs = append(orgIDs, id)
 	}
@@ -97,8 +97,8 @@ func (r *SubscriptionRepository) getPlanComponents(ctx context.Context, planID u
 // GetSubscription retrieves the current subscription for an organization
 func (r *SubscriptionRepository) GetSubscription(ctx context.Context, orgID uuid.UUID) (*models.Subscription, error) {
 	var s models.Subscription
-	query := `SELECT id, org_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at 
-	          FROM billing_subscriptions WHERE org_id = $1`
+	query := `SELECT id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at 
+	          FROM billing_subscriptions WHERE tenant_id = $1`
 
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
 		&s.ID, &s.OrgID, &s.PlanID, &s.Status,
@@ -149,7 +149,7 @@ func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, sub *mo
 	sub.CreatedAt = now
 	sub.UpdatedAt = now
 
-	query := `INSERT INTO billing_subscriptions (id, org_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at) 
+	query := `INSERT INTO billing_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at) 
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := r.db.Exec(ctx, query,

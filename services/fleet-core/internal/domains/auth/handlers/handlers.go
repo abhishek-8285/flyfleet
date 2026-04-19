@@ -146,7 +146,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
-		OrgID    string `json:"org_id"`
+		OrgID    string `json:"tenant_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
@@ -426,7 +426,7 @@ func (h *Handlers) CheckPermission(w http.ResponseWriter, r *http.Request) {
 			zap.Error(err),
 			zap.String("permission", permission),
 			zap.String("user_id", userID.String()),
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 		)
 		h.errorJSON(w, http.StatusInternalServerError, "permission check failed")
 		return
@@ -864,7 +864,7 @@ func (h *Handlers) ResolveOrgs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type orgResp struct {
-		OrgID   uuid.UUID `json:"org_id"`
+		OrgID   uuid.UUID `json:"tenant_id"`
 		OrgName string    `json:"org_name"`
 		OrgLogo string    `json:"org_logo"`
 	}

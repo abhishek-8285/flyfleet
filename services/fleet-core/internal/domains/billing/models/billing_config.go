@@ -9,7 +9,7 @@ import (
 // BillingConfiguration represents per-organization billing customization
 type BillingConfiguration struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrgID          uuid.UUID `json:"org_id" db:"org_id" validate:"required"`
+	OrgID          uuid.UUID `json:"tenant_id" db:"tenant_id" validate:"required"`
 	CompanyName    string    `json:"company_name" db:"company_name" validate:"required"`
 	CompanyAddress string    `json:"company_address" db:"company_address"`
 	CompanyGSTIN   string    `json:"company_gstin" db:"company_gstin"`

@@ -76,7 +76,7 @@ func (s *BillingScheduler) RunBillingCycle(ctx context.Context) error {
 	for _, orgID := range orgIDs {
 		err := s.queue.EnqueueGenerateInvoice(ctx, models.GenerateInvoicePayload{OrgID: orgID})
 		if err != nil {
-			s.logger.Error("Failed to enqueue invoice task", zap.String("org_id", orgID.String()), zap.Error(err))
+			s.logger.Error("Failed to enqueue invoice task", zap.String("tenant_id", orgID.String()), zap.Error(err))
 			continue
 		}
 	}

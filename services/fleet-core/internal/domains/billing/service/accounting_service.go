@@ -81,7 +81,7 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 
 	// 4. Store
 	// For now we just log the size and file name
-	s.logger.Info("Ledger exported successfully", zap.String("org_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
+	s.logger.Info("Ledger exported successfully", zap.String("tenant_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
 	fileKey := fmt.Sprintf("exports/%s/%s", orgID, fileName)
 	// We'll reuse Invoice model for Save method context or update interface
 	// For now, let's assume Save can take a string key too or we use a temporary hack
@@ -127,7 +127,7 @@ func (s *AccountingService) ExportInvoices(ctx context.Context, orgID uuid.UUID,
 	}
 
 	// 4. Update status
-	s.logger.Info("Invoices exported successfully", zap.String("org_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
+	s.logger.Info("Invoices exported successfully", zap.String("tenant_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
 	fileKey := fmt.Sprintf("exports/%s/%s", orgID, fileName)
 	err = s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusCompleted, fileKey, len(invoices), "")
 	return export, err

@@ -252,7 +252,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
-		OrgID    string `json:"org_id,omitempty"`
+		OrgID    string `json:"tenant_id,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)

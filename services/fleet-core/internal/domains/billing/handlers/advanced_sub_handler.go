@@ -25,7 +25,7 @@ func (h *BillingHandler) ProrateUpgrade(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.advSubService.UpgradePlan(r.Context(), orgID, req.NewPlanID); err != nil {
-		h.logger.Error("Failed to upgrade plan with proration", zap.Error(err), zap.String("org_id", orgID.String()))
+		h.logger.Error("Failed to upgrade plan with proration", zap.Error(err), zap.String("tenant_id", orgID.String()))
 		h.errorJSON(w, r, "Failed to upgrade plan: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -52,7 +52,7 @@ func (h *BillingHandler) RedeemCoupon(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.advSubService.RedeemCoupon(r.Context(), orgID, req.Code, req.SubscriptionID, req.InvoiceID); err != nil {
-		h.logger.Error("Failed to redeem coupon", zap.Error(err), zap.String("org_id", orgID.String()), zap.String("code", req.Code))
+		h.logger.Error("Failed to redeem coupon", zap.Error(err), zap.String("tenant_id", orgID.String()), zap.String("code", req.Code))
 		h.errorJSON(w, r, "Failed to redeem coupon: "+err.Error(), http.StatusBadRequest)
 		return
 	}

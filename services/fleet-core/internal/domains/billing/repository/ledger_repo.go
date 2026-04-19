@@ -27,9 +27,9 @@ func (r *LedgerRepository) GetOrCreateBalance(ctx context.Context, orgID uuid.UU
 
 	var b models.CustomerBalance
 	err := r.db.QueryRow(ctx, `
-		SELECT id, org_id, currency, balance, credit_limit, status, created_at, updated_at
+		SELECT id, tenant_id, currency, balance, credit_limit, status, created_at, updated_at
 		FROM billing_customer_balances
-		WHERE org_id = $1 AND currency = $2
+		WHERE tenant_id = $1 AND currency = $2
 	`, orgID, currency).Scan(
 		&b.ID, &b.OrgID, &b.Currency, &b.Balance, &b.CreditLimit, &b.Status, &b.CreatedAt, &b.UpdatedAt,
 	)
@@ -46,9 +46,9 @@ func (r *LedgerRepository) GetOrCreateBalance(ctx context.Context, orgID uuid.UU
 
 		// Try to insert, but if a concurrent request already inserted, just read the existing one
 		_, err = r.db.Exec(ctx, `
-			INSERT INTO billing_customer_balances (id, org_id, currency, balance, credit_limit, status)
+			INSERT INTO billing_customer_balances (id, tenant_id, currency, balance, credit_limit, status)
 			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (org_id, currency) DO NOTHING
+			ON CONFLICT (tenant_id, currency) DO NOTHING
 		`, b.ID, b.OrgID, b.Currency, b.Balance, b.CreditLimit, b.Status)
 		if err != nil {
 			return nil, err
@@ -57,9 +57,9 @@ func (r *LedgerRepository) GetOrCreateBalance(ctx context.Context, orgID uuid.UU
 		// Regardless of whether we inserted or someone else did, read the current balance
 		// This could still error, but we've at least attempted creation
 		err = r.db.QueryRow(ctx, `
-			SELECT id, org_id, currency, balance, credit_limit, status, created_at, updated_at
+			SELECT id, tenant_id, currency, balance, credit_limit, status, created_at, updated_at
 			FROM billing_customer_balances
-			WHERE org_id = $1 AND currency = $2
+			WHERE tenant_id = $1 AND currency = $2
 		`, orgID, currency).Scan(
 			&b.ID, &b.OrgID, &b.Currency, &b.Balance, &b.CreditLimit, &b.Status, &b.CreatedAt, &b.UpdatedAt,
 		)
@@ -132,7 +132,7 @@ func (r *LedgerRepository) RecordLedgerEntry(ctx context.Context, entry *models.
 	}
 
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO billing_ledger_entries (id, org_id, entry_type, amount, currency, invoice_id, payment_id, credit_note_id, ledger_account, description)
+		INSERT INTO billing_ledger_entries (id, tenant_id, entry_type, amount, currency, invoice_id, payment_id, credit_note_id, ledger_account, description)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`, entry.ID, entry.OrgID, entry.EntryType, entry.Amount, entry.Currency, entry.InvoiceID, entry.PaymentID, entry.CreditNoteID, entry.LedgerAccount, entry.Description)
 
@@ -144,7 +144,7 @@ func (r *LedgerRepository) CreateRevenueSchedule(ctx context.Context, s *models.
 		s.ID = uuid.New()
 	}
 	_, err := r.db.Exec(ctx, `
-		INSERT INTO billing_revenue_schedules (id, org_id, invoice_line_item_id, total_amount, currency, start_date, end_date, status)
+		INSERT INTO billing_revenue_schedules (id, tenant_id, invoice_line_item_id, total_amount, currency, start_date, end_date, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`, s.ID, s.OrgID, s.InvoiceLineItemID, s.TotalAmount, s.Currency, s.StartDate, s.EndDate, s.Status)
 	return err
@@ -152,9 +152,9 @@ func (r *LedgerRepository) CreateRevenueSchedule(ctx context.Context, s *models.
 
 func (r *LedgerRepository) GetEntriesByOrg(ctx context.Context, orgID uuid.UUID, limit int) ([]models.LedgerEntry, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, org_id, entry_type, amount, currency, invoice_id, payment_id, credit_note_id, ledger_account, description, created_at
+		SELECT id, tenant_id, entry_type, amount, currency, invoice_id, payment_id, credit_note_id, ledger_account, description, created_at
 		FROM billing_ledger_entries
-		WHERE org_id = $1
+		WHERE tenant_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2
 	`, orgID, limit)

@@ -20,7 +20,7 @@ const (
 
 // GenerateInvoicePayload represents the payload for TypeGenerateInvoice
 type GenerateInvoicePayload struct {
-	OrgID uuid.UUID `json:"org_id"`
+	OrgID uuid.UUID `json:"tenant_id"`
 }
 
 // ProcessDunningPayload represents the payload for TypeProcessDunning

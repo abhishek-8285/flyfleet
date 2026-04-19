@@ -98,7 +98,7 @@ func (s *BillingConfigService) UpdateConfig(ctx context.Context, orgID, userID u
 	}
 
 	s.logger.Info("Billing configuration updated",
-		zap.String("org_id", orgID.String()),
+		zap.String("tenant_id", orgID.String()),
 		zap.String("company_name", config.CompanyName),
 	)
 

@@ -15,7 +15,7 @@ const (
 // BillingCycle represents a distinct time period over which usage is aggregated and billed.
 type BillingCycle struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
-	OrgID          uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID          uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	SubscriptionID uuid.UUID  `json:"subscription_id" db:"subscription_id"`
 	CycleStart     time.Time  `json:"cycle_start" db:"cycle_start"`
 	CycleEnd       time.Time  `json:"cycle_end" db:"cycle_end"`
@@ -46,7 +46,7 @@ type Coupon struct {
 type CouponRedemption struct {
 	ID             uuid.UUID  `json:"id" db:"id"`
 	CouponID       uuid.UUID  `json:"coupon_id" db:"coupon_id"`
-	OrgID          uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID          uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	SubscriptionID *uuid.UUID `json:"subscription_id,omitempty" db:"subscription_id"`
 	InvoiceID      *uuid.UUID `json:"invoice_id,omitempty" db:"invoice_id"`
 	RedeemedAt     time.Time  `json:"redeemed_at" db:"redeemed_at"`

@@ -75,7 +75,8 @@ const slideVariants = {
 const OrgSelectStep: React.FC = () => {
   const { organizations, setSelectedOrgId, finishAuth, completeAuthData, setGlobalError, setLoading, setState } = useLoginStore();
   
-  const handleOrgSelect = async (orgId: string) => {
+  const handleOrgSelect = async (org: any) => {
+    const orgId = org.id || org.org_id || org.tenant_id;
     setSelectedOrgId(orgId);
     setLoading(true);
     setGlobalError(null);
@@ -116,23 +117,25 @@ const OrgSelectStep: React.FC = () => {
       <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest text-center mb-4">Select Workspace</h3>
       <div className="grid grid-cols-1 gap-3">
         {organizations.map((org: any) => {
-          const orgId = org.id || org.org_id;
-          const orgName = org.name || org.org_name;
+          const orgId = org.id || org.org_id || org.tenant_id;
+          const orgName = org.name || org.org_name || org.tenant_name || "Unknown Workspace";
+          
           return (
-          <button
-            key={orgId}
-            onClick={() => handleOrgSelect(orgId)}
-            className="p-4 bg-slate-800/30 border border-white/5 rounded-2xl hover:border-primary/50 hover:bg-slate-800/50 transition-all text-left flex items-center gap-3 group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-              <span className="material-symbols-outlined">corporate_fare</span>
-            </div>
-            <div>
-              <div className="text-sm font-bold text-white">{orgName}</div>
-              <div className="text-xs text-slate-500 font-mono mt-0.5">{orgId.slice(0, 8)}</div>
-            </div>
-          </button>
-        )})}
+            <button
+              key={orgId || Math.random().toString()}
+              onClick={() => handleOrgSelect(org)}
+              className="p-4 bg-slate-800/30 border border-white/5 rounded-2xl hover:border-primary/50 hover:bg-slate-800/50 transition-all text-left flex items-center gap-3 group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                <span className="material-symbols-outlined">corporate_fare</span>
+              </div>
+              <div>
+                <div className="text-sm font-bold text-white">{orgName}</div>
+                <div className="text-xs text-slate-500 font-mono mt-0.5">{orgId?.slice(0, 8) || "--------"}</div>
+              </div>
+            </button>
+          )
+        })}
       </div>
       <button onClick={() => setState(LoginState.AUTHENTICATE)} className="text-[10px] text-slate-500 hover:text-primary transition-colors block text-center w-full uppercase tracking-widest pt-2">
         Back
@@ -379,15 +382,20 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const finishAuth = (authData: any) => {
+    const responseOrgId = authData.user?.org_id || 
+                         authData.user?.tenant_id || 
+                         authData.organization?.id || 
+                         authData.organization?.org_id;
+
     const userData = {
       ...authData.user,
+      org_id: responseOrgId,
       permissions: authData.permissions?.map((p: any) => typeof p === "string" ? p : `${p.module}:${p.action}`) || [],
     };
 
     const token = authData.token || authData.access_token;
     const refreshTokenResult = authData.refresh_token || "";
 
-    const responseOrgId = authData.user?.org_id || authData.organization?.id;
     if (responseOrgId) {
       localStorage.setItem('org_id', responseOrgId);
     }
@@ -411,15 +419,27 @@ const Login: React.FC = () => {
   const checkOrgsAndComplete = async (authData: any) => {
     try {
       const token = authData.token || authData.access_token;
-      let apiUrl = import.meta.env.VITE_API_URL || "/api/v1";
-      if (/^https?:\/\/[^\/]+\/?$/.test(apiUrl)) {
-        apiUrl = apiUrl.replace(/\/$/, '') + '/api/v1';
+      const userRole = (authData.user?.role || "").toLowerCase();
+      const hasOrgContext = !!(authData.user?.org_id || authData.organization?.id);
+
+      // OPTIMIZATION: If we have an org context and aren't a super_admin, skip discovery.
+      // Org admins will handle switching via the OrgSelection page if needed.
+      if (hasOrgContext && !userRole.includes("super_admin")) {
+        finishAuth(authData);
+        return;
       }
 
-      const userOrgs = await axios.get(`${apiUrl}/auth/orgs`, {
-         headers: { Authorization: `Bearer ${token}` },
-         withCredentials: true
-      }).then((res: any) => res.data) as any;
+      let apiUrl = import.meta.env.VITE_API_URL || "/api/v1";
+      if (/^https?:\/\/[^\/]+\/?$/.test(apiUrl)) {
+        apiUrl = apiUrl.replace(/\/$/, "") + "/api/v1";
+      }
+
+      const userOrgs = (await axios
+        .get(`${apiUrl}/auth/orgs`, {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        })
+        .then((res: any) => res.data)) as any;
 
       if (userOrgs && userOrgs.length > 1) {
         setOrganizations(userOrgs);
@@ -428,7 +448,7 @@ const Login: React.FC = () => {
         setLoading(false);
         return;
       }
-    } catch(e) {
+    } catch (e) {
       console.warn("Could not fetch orgs", e);
     }
 

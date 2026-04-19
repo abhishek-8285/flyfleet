@@ -124,8 +124,13 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 				r.Header.Set("X-User-ID", sub)
 			}
 
-			if orgID, ok := claims["org_id"].(string); ok {
+			if tenantID, ok := claims["tenant_id"].(string); ok {
+				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, tenantID)
+				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
+				r.Header.Set("X-Org-ID", tenantID)
+			} else if orgID, ok := claims["org_id"].(string); ok {
 				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID)
+				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, orgID)
 				r.Header.Set("X-Org-ID", orgID)
 			}
 

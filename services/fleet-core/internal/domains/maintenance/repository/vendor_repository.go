@@ -26,7 +26,7 @@ func NewVendorRepository(db *pgxpool.Pool) *VendorRepository {
 func (r *VendorRepository) Create(ctx context.Context, vendor *models.MaintenanceVendor) error {
 	query := `
 		INSERT INTO maintenance_vendors (
-			org_id, name, specialization, rating,
+			tenant_id, name, specialization, rating,
 			contact_info, payment_terms, status
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at, updated_at
@@ -40,7 +40,7 @@ func (r *VendorRepository) Create(ctx context.Context, vendor *models.Maintenanc
 // GetByID retrieves a vendor by ID
 func (r *VendorRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.MaintenanceVendor, error) {
 	query := `
-		SELECT id, org_id, name, specialization, rating,
+		SELECT id, tenant_id, name, specialization, rating,
 			   contact_info, payment_terms, status, created_at, updated_at
 		FROM maintenance_vendors WHERE id = $1
 	`
@@ -82,7 +82,7 @@ func (r *VendorRepository) List(ctx context.Context, orgID uuid.UUID, search str
 	var args []interface{}
 	argIdx := 1
 
-	conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIdx))
+	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
 	args = append(args, orgID)
 	argIdx++
 
@@ -99,7 +99,7 @@ func (r *VendorRepository) List(ctx context.Context, orgID uuid.UUID, search str
 
 	whereClause := strings.Join(conditions, " AND ")
 	query := fmt.Sprintf(`
-		SELECT id, org_id, name, specialization, rating,
+		SELECT id, tenant_id, name, specialization, rating,
 			   contact_info, payment_terms, status, created_at, updated_at
 		FROM maintenance_vendors WHERE %s
 		ORDER BY name ASC

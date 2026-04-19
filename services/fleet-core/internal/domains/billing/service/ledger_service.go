@@ -46,7 +46,7 @@ func (s *LedgerService) ApplyCredit(ctx context.Context, orgID uuid.UUID, amount
 	}
 
 	if err := s.repo.ApplyCreditTransaction(ctx, tx); err != nil {
-		s.logger.Error("Failed to apply credit", zap.Error(err), zap.String("org_id", orgID.String()))
+		s.logger.Error("Failed to apply credit", zap.Error(err), zap.String("tenant_id", orgID.String()))
 		return fmt.Errorf("failed to apply credit: %w", err)
 	}
 

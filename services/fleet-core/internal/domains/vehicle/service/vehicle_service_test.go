@@ -77,6 +77,11 @@ func (m *MockVehicleRepository) Search(ctx context.Context, params models.Vehicl
 	return args.Get(0).([]*models.Vehicle), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockVehicleRepository) IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
+	args := m.Called(ctx, orgID, deviceID, excludingVehicleID)
+	return args.Bool(0), args.String(1), args.Error(2)
+}
+
 func setupTestService(t *testing.T) (*VehicleService, *MockVehicleRepository) {
 	logger := zap.NewNop()
 	mockRepo := &MockVehicleRepository{}

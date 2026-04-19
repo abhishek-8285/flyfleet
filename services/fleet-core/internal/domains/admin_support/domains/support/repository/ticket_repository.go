@@ -56,7 +56,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 
 	query := `
 		INSERT INTO support_tickets (
-			id, ticket_id, org_id, title, description, status, priority, category, 
+			id, ticket_id, tenant_id, title, description, status, priority, category, 
 			assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, tags, metadata
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, created_at, updated_at`
@@ -89,7 +89,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 
 func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*models.SupportTicket, error) {
 	query := `
-		SELECT id, ticket_id, org_id, title, description, status, priority, category,
+		SELECT id, ticket_id, tenant_id, title, description, status, priority, category,
 		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at,
 		       sla_deadline, tags, metadata
 		FROM support_tickets
@@ -115,7 +115,7 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 
 func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID string) (*models.SupportTicket, error) {
 	query := `
-		SELECT id, ticket_id, org_id, title, description, status, priority, category,
+		SELECT id, ticket_id, tenant_id, title, description, status, priority, category,
 		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at,
 		       sla_deadline, tags, metadata
 		FROM support_tickets
@@ -171,7 +171,7 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 
 	// Main query
 	query := `
-		SELECT id, ticket_id, org_id, title, description, status, priority, category,
+		SELECT id, ticket_id, tenant_id, title, description, status, priority, category,
 		       assigned_to, reporter_id, created_at, created_by, updated_at, updated_by, resolved_at, 
 		       sla_deadline, tags, metadata
 		FROM support_tickets 
@@ -317,11 +317,11 @@ func (r *ticketRepository) AssignTicket(ctx context.Context, id uuid.UUID, assig
 
 func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
 	query := `
-		SELECT id, ticket_id, org_id, title, description, status, priority, category,
+		SELECT id, ticket_id, tenant_id, title, description, status, priority, category,
 		       assigned_to, reporter_id, created_at, updated_at, resolved_at, 
 		       sla_deadline, tags, metadata
 		FROM support_tickets 
-		WHERE org_id = $1 AND status != 'RESOLVED'
+		WHERE tenant_id = $1 AND status != 'RESOLVED'
 		ORDER BY updated_at DESC 
 		LIMIT $2`
 
@@ -362,7 +362,7 @@ func (r *ticketRepository) GetDashboardSummary(ctx context.Context, orgID uuid.U
 			COUNT(*) FILTER (WHERE priority = 'CRITICAL') as active_errors,
 			AVG(EXTRACT(EPOCH FROM (resolved_at - created_at))/3600) as avg_resolution_hrs
 		FROM support_tickets 
-		WHERE org_id = $1`
+		WHERE tenant_id = $1`
 
 	var summary models.DashboardSummary
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
@@ -448,10 +448,10 @@ func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.
 
 func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error) {
 	query := `
-		SELECT org_id, open_tickets, resolved_tickets, avg_resolution_time,
+		SELECT tenant_id, open_tickets, resolved_tickets, avg_resolution_time,
 		       sla_breaches, critical_issues, last_calculated, updated_at
 		FROM org_support_metrics
-		WHERE org_id = $1`
+		WHERE tenant_id = $1`
 
 	var metrics models.OrgSupportMetrics
 	err := r.db.QueryRow(ctx, query, orgID).Scan(
@@ -473,10 +473,10 @@ func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (
 func (r *ticketRepository) UpdateOrgMetrics(ctx context.Context, metrics *models.OrgSupportMetrics) error {
 	query := `
 		INSERT INTO org_support_metrics (
-			org_id, open_tickets, resolved_tickets, avg_resolution_time,
+			tenant_id, open_tickets, resolved_tickets, avg_resolution_time,
 			sla_breaches, critical_issues, last_calculated, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (org_id)
+		ON CONFLICT (tenant_id)
 		DO UPDATE SET
 			open_tickets = $2, resolved_tickets = $3, avg_resolution_time = $4,
 			sla_breaches = $5, critical_issues = $6, last_calculated = $7, updated_at = $8`

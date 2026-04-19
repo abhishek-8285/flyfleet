@@ -28,7 +28,7 @@ func NewWorkOrderRepository(db *pgxpool.Pool) *WorkOrderRepository {
 func (r *WorkOrderRepository) Create(ctx context.Context, wo *models.WorkOrder) error {
 	query := `
 		INSERT INTO work_orders (
-			org_id, vehicle_id, title, description,
+			tenant_id, vehicle_id, title, description,
 			maintenance_type, priority, status, assigned_to,
 			scheduled_date, estimated_cost, created_by,
 			vendor_id, approval_status, cost_breakdown, inspection_id
@@ -49,7 +49,7 @@ func (r *WorkOrderRepository) Create(ctx context.Context, wo *models.WorkOrder) 
 // GetByID retrieves a work order by ID
 func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.WorkOrder, error) {
 	query := `
-		SELECT id, org_id, vehicle_id, title, description,
+		SELECT id, tenant_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
 			   created_by, created_at, updated_at,
@@ -111,7 +111,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	var args []interface{}
 	argIdx := 1
 
-	conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIdx))
+	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
 	args = append(args, filter.OrgID)
 	argIdx++
 
@@ -178,7 +178,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, org_id, vehicle_id, title, description,
+		SELECT id, tenant_id, vehicle_id, title, description,
 			   maintenance_type, priority, status, assigned_to,
 			   scheduled_date, completed_date, estimated_cost, actual_cost,
 			   created_by, created_at, updated_at,
@@ -249,7 +249,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Active work orders (not completed)
 	err := r.db.QueryRow(ctx,
-		"SELECT COUNT(*) FROM work_orders WHERE org_id = $1 AND status != 'COMPLETED'",
+		"SELECT COUNT(*) FROM work_orders WHERE tenant_id = $1 AND status != 'COMPLETED'",
 		orgID,
 	).Scan(&stats.ActiveWorkOrders)
 	if err != nil {
@@ -258,7 +258,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Status breakdown
 	rows, err := r.db.Query(ctx,
-		"SELECT status, COUNT(*) FROM work_orders WHERE org_id = $1 GROUP BY status",
+		"SELECT status, COUNT(*) FROM work_orders WHERE tenant_id = $1 GROUP BY status",
 		orgID,
 	)
 	if err != nil {
@@ -276,7 +276,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 
 	// Priority breakdown
 	rows, err = r.db.Query(ctx,
-		"SELECT priority, COUNT(*) FROM work_orders WHERE org_id = $1 AND status != 'COMPLETED' GROUP BY priority",
+		"SELECT priority, COUNT(*) FROM work_orders WHERE tenant_id = $1 AND status != 'COMPLETED' GROUP BY priority",
 		orgID,
 	)
 	if err != nil {

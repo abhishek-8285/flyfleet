@@ -79,6 +79,7 @@ func getMainSidebar() []MenuItem {
 		{Label: "Maintenance", Path: "/admin/maintenance/work-orders", Icon: "build"},
 		{Label: "Fuel", Path: "/admin/finance/fuel", Icon: "local_gas_station"},
 		{Label: "Organizations", Path: "/admin/organizations", Icon: "business"},
+		{Label: "Customers", Path: "/admin/customers", Icon: "person_search"},
 		{Label: "Users", Path: "/admin/users", Icon: "people"},
 		{Label: "Devices", Path: "/admin/devices", Icon: "devices"},
 		{Label: "Integrations", Path: "/admin/integrations", Icon: "hub"},
@@ -114,6 +115,18 @@ func NewUIConfigHandler() *UIConfigHandler {
 
 func (h *UIConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
+		"ui_strings": map[string]interface{}{
+			"global": map[string]string{
+				"app_name": "FlyFleet",
+			},
+			"auth_layout": map[string]string{
+				"login_title": "Sign In",
+			},
+			"auth_extended": map[string]string{
+				"placeholder_email": "Email or Employee ID",
+				"btn_sign_in":       "LOGIN TO DASHBOARD",
+			},
+		},
 		"app_name":         "FlyFleet",
 		"logo_url":         "",
 		"primary_color":    "#137fec",
@@ -257,6 +270,19 @@ func (h *AdminHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				{"field": "driver", "header": "Driver", "width": "150px"},
 				{"field": "status", "header": "Status", "width": "100px"},
 			},
+		}
+		json.NewEncoder(w).Encode(resp)
+		return
+	}
+
+	// /api/v1/ui/settings/gps-types
+	if path == "/api/v1/ui/settings/gps-types" {
+		resp := []map[string]string{
+			{"value": "AIS140_OBD", "label": "AIS-140 OBD"},
+			{"value": "AIS140_HARDWIRED", "label": "AIS-140 Hardwired"},
+			{"value": "INTERNAL_SENSOR", "label": "Internal Sensor"},
+			{"value": "MOBILE_APP", "label": "Mobile App Hub"},
+			{"value": "PLATFORM_MOCK", "label": "Platform Mock (Test)"},
 		}
 		json.NewEncoder(w).Encode(resp)
 		return

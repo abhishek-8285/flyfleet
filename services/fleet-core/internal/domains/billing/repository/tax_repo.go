@@ -83,7 +83,7 @@ func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uui
 	// Lock the sequence row for this organization
 	err = tx.QueryRow(ctx, `
 		SELECT prefix, next_value, suffix FROM billing_invoice_sequences 
-		WHERE org_id = $1 FOR UPDATE
+		WHERE tenant_id = $1 FOR UPDATE
 	`, orgID).Scan(&prefix, &nextValue, &suffix)
 
 	if err == pgx.ErrNoRows {
@@ -92,14 +92,14 @@ func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uui
 		nextValue = 1
 		suffix = ""
 		_, err = tx.Exec(ctx, `
-			INSERT INTO billing_invoice_sequences (org_id, prefix, next_value, suffix)
+			INSERT INTO billing_invoice_sequences (tenant_id, prefix, next_value, suffix)
 			VALUES ($1, $2, $3, $4)
 		`, orgID, prefix, nextValue+1, suffix)
 	} else if err == nil {
 		// Update existing sequence
 		_, err = tx.Exec(ctx, `
 			UPDATE billing_invoice_sequences SET next_value = next_value + 1, updated_at = CURRENT_TIMESTAMP
-			WHERE org_id = $1
+			WHERE tenant_id = $1
 		`, orgID)
 	}
 

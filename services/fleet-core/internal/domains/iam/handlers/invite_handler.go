@@ -153,7 +153,7 @@ func (h *InviteHandler) ValidateInviteToken(w http.ResponseWriter, r *http.Reque
 	// Return public-safe invite info (no token)
 	h.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"email":      invite.Email,
-		"org_id":     invite.OrgID,
+		"tenant_id":     invite.OrgID,
 		"message":    invite.Message,
 		"expires_at": invite.ExpiresAt.Format("2006-01-02T15:04:05Z"),
 	})

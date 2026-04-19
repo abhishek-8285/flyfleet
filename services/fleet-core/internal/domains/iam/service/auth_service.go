@@ -182,7 +182,7 @@ func (s *AuthService) VerifyMFA(ctx context.Context, req models.MFAVerifyRequest
 
 	userIDStr, _ := claims["sub"].(string)
 	userID, _ := uuid.Parse(userIDStr)
-	orgIDStr, _ := claims["org_id"].(string)
+	orgIDStr, _ := claims["tenant_id"].(string)
 
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -215,7 +215,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, ua string) 
 	}
 
 	userIDStr, _ := claims["sub"].(string)
-	orgIDStr, _ := claims["org_id"].(string)
+	orgIDStr, _ := claims["tenant_id"].(string)
 	jti, _ := claims["jti"].(string)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -321,7 +321,7 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	}
 	orgUUID, err := uuid.Parse(orgID)
 	if err != nil {
-		s.log.Warn("invalid_org_id_in_login", zap.String("org_id", orgID))
+		s.log.Warn("invalid_org_id_in_login", zap.String("tenant_id", orgID))
 		return nil, errors.New("invalid_org_id")
 	}
 	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
@@ -373,7 +373,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 	accessClaims := jwt.MapClaims{
 		"sub":                user.ID.String(),
 		"user_id":            user.ID.String(),
-		"org_id":             orgID,
+		"tenant_id":             orgID,
 		"role":               role,
 		"permissions_mask":   mask,
 		"type":               "access",
@@ -393,7 +393,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 	refreshClaims := jwt.MapClaims{
 		"sub":     user.ID.String(),
 		"user_id": user.ID.String(),
-		"org_id":  orgID,
+		"tenant_id":  orgID,
 		"type":    "refresh",
 		"jti":     refreshJTI,
 	}
@@ -446,7 +446,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 func (s *AuthService) generateActionToken(userID uuid.UUID, orgID, tokenType string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":     userID.String(),
-		"org_id":  orgID,
+		"tenant_id":  orgID,
 		"type":    tokenType,
 		"jti":     uuid.New().String(),
 		"exp":     time.Now().Add(s.config.JWTActionTTL).Unix(),
@@ -742,7 +742,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	accessClaims := jwt.MapClaims{
 		"sub":              userID.String(),
 		"user_id":          userID.String(),
-		"org_id":           targetOrgID.String(),
+		"tenant_id":           targetOrgID.String(),
 		"role":             userRole,
 		"permissions_mask": mask,
 		"type":             "access",
@@ -761,7 +761,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	refreshClaims := jwt.MapClaims{
 		"sub":     userID.String(),
 		"user_id": userID.String(),
-		"org_id":  targetOrgID.String(),
+		"tenant_id":  targetOrgID.String(),
 		"type":    "refresh",
 		"jti":     refreshJTI,
 	}

@@ -12,7 +12,7 @@ import (
 type contextKey string
 
 const (
-	OrgIDKey  contextKey = "org_id"
+	OrgIDKey  contextKey = "tenant_id"
 	UserIDKey contextKey = "user_id"
 	RoleKey   contextKey = "role"
 )
@@ -48,7 +48,7 @@ func Auth(secret []byte) func(http.Handler) http.Handler {
 				return
 			}
 
-			orgIDStr, _ := claims["org_id"].(string)
+			orgIDStr, _ := claims["tenant_id"].(string)
 			userIDStr, _ := claims["sub"].(string)
 			role, _ := claims["role"].(string)
 

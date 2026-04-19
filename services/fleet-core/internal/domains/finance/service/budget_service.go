@@ -59,7 +59,7 @@ func (s *BudgetService) TrackExpense(ctx context.Context, orgID, category string
 	usagePct := (newSpent / budget.LimitAmount) * 100
 	if usagePct >= float64(budget.AlertThresholdPct) {
 		s.logger.Warn("Budget threshold reached",
-			zap.String("org_id", orgID),
+			zap.String("tenant_id", orgID),
 			zap.String("category", category),
 			zap.Float64("usage_pct", usagePct),
 			zap.Float64("limit", budget.LimitAmount),

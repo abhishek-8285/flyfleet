@@ -66,7 +66,7 @@ func (h *ReportHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
 	// Get Organization ID and User ID from context (should be set by auth middleware)
 	orgID := middleware.GetOrgID(r.Context())
 	if orgID == uuid.Nil {
-		h.logger.Warn("Missing org_id in context - request likely bypassed authentication middleware")
+		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization context required", nil)
 		return
 	}

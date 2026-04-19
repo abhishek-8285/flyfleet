@@ -52,25 +52,28 @@ apiClient.interceptors.request.use(
     let orgId = localStorage.getItem('org_id');
 
     // If org_id is not in localStorage but we have user data in Redux, use that
-    if (!orgId && state.auth.user?.org_id) {
-      orgId = state.auth.user.org_id;
-      localStorage.setItem('org_id', orgId);
-    }
-
-    // CRITICAL: Always ensure org_id is set for authenticated requests
-    if (token && !orgId) {
-      console.warn('[apiClient] Token present but org_id missing!');
+    // Normalization: check both org_id and tenant_id
+    if (!orgId) {
+      if (state.auth.user?.org_id) {
+        orgId = state.auth.user.org_id;
+      } else if ((state.auth.user as any)?.tenant_id) {
+        orgId = (state.auth.user as any).tenant_id;
+      }
+      
+      if (orgId) {
+        localStorage.setItem('org_id', orgId);
+      }
     }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (orgId) {
+    if (orgId && token) {
       config.headers['X-Org-ID'] = orgId;
-      console.log('[apiClient] Request with org_id:', orgId, 'to:', config.url);
-    } else if (config.url?.includes('/dashboard') || config.url?.includes('/auth/profile')) {
-      console.error('[apiClient] CRITICAL: Missing org_id for authenticated request to', config.url);
+      console.log('[apiClient] Authenticated request with org_id:', orgId, 'to:', config.url);
+    } else if (orgId) {
+      console.debug('[apiClient] Public request context — suppressing X-Org-ID for:', config.url);
     }
 
     const traceId = createTraceId();
@@ -118,16 +121,19 @@ apiClient.interceptors.response.use(
     const configUrl = response.config?.url || '';
     
     if (configUrl.includes('/auth/')) {
-      // Try multiple paths to find org_id
-      const orgId = responseData?.user?.org_id || responseData?.org_id;
+      // Normalization: Handle both org_id and tenant_id in both flat and nested structures
+      const userPayload = responseData?.user || responseData;
+      const orgId = userPayload?.org_id || 
+                    userPayload?.tenant_id || 
+                    responseData?.organization?.id || 
+                    responseData?.organization?.org_id;
+
       if (orgId) {
         localStorage.setItem('org_id', orgId);
-        console.log('[apiClient] ✅ Stored org_id from', configUrl, ':', orgId);
-      } else if (configUrl.includes('/login') || configUrl.includes('/refresh')) {
-        console.warn('[apiClient] ⚠️ Auth response missing org_id:', configUrl);
+        console.log('[apiClient] ✅ Stored normalized org_id from', configUrl, ':', orgId);
       }
     }
-    return responseData; // Unwrap data directly for cleaner usage
+    return responseData;
   },
   async (error) => {
     const originalRequest = error.config;

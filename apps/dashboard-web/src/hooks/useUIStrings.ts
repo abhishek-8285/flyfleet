@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import apiClient from "../services/apiClient";
 
 export interface UIStrings {
   [key: string]: any;
@@ -11,9 +12,7 @@ export const useUIStrings = (section: string) => {
   useEffect(() => {
     const fetchStrings = async () => {
       try {
-        const res = await fetch("/api/v1/ui/global_config");
-        if (!res.ok) throw new Error("Failed to fetch UI strings");
-        const data = await res.json();
+        const data = await apiClient.get("ui/global_config") as any;
 
         // Check both direct ui_strings and nested system_metadata
         const strings =

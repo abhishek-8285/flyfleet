@@ -28,7 +28,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 
 	query := `
 		INSERT INTO invoices (
-			org_id, invoice_number, customer_name, customer_email, billing_address,
+			tenant_id, invoice_number, customer_name, customer_email, billing_address,
 			due_date, status, subtotal, tax_amount, total_amount, currency, notes,
 			created_by, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -70,7 +70,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 		}
 		// Note: created_at defaults to NOW() in schema, so we don't need to provide it
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO invoice_items (id, org_id, invoice_id, description, quantity, unit_price, amount, created_by, updated_by) VALUES %s",
+			"INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount, created_by, updated_by) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err = tx.Exec(ctx, batchQuery, args...)
@@ -88,11 +88,11 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 
 func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*invoice.Invoice, error) {
 	query := `
-		SELECT id, org_id, invoice_number, customer_name, customer_email, billing_address,
+		SELECT id, tenant_id, invoice_number, customer_name, customer_email, billing_address,
 		       due_date, status, subtotal, tax_amount, total_amount, amount_paid, amount_remaining,
 		       currency, notes, created_at, created_by, updated_at, updated_by
 		FROM invoices
-		WHERE id = $1 AND org_id = $2 AND is_deleted = false
+		WHERE id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
 	inv := &invoice.Invoice{}
 	err := r.pool.QueryRow(ctx, query, id, orgID).Scan(
@@ -108,7 +108,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 	itemQuery := `
 		SELECT id, invoice_id, description, quantity, unit_price, amount, created_at, created_by, updated_at, updated_by
 		FROM invoice_items
-		WHERE invoice_id = $1 AND org_id = $2 AND is_deleted = false
+		WHERE invoice_id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
 	rows, err := r.pool.Query(ctx, itemQuery, id, orgID)
 	if err != nil {
@@ -129,7 +129,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 }
 
 func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]invoice.Invoice, int64, error) {
-	countQuery := `SELECT COUNT(*) FROM invoices WHERE org_id = $1 AND is_deleted = false`
+	countQuery := `SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND is_deleted = false`
 	var total int64
 	err := r.pool.QueryRow(ctx, countQuery, orgID).Scan(&total)
 	if err != nil {
@@ -137,9 +137,9 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	}
 
 	query := `
-		SELECT id, org_id, invoice_number, customer_name, status, total_amount, due_date, created_at, created_by, updated_at, updated_by
+		SELECT id, tenant_id, invoice_number, customer_name, status, total_amount, due_date, created_at, created_by, updated_at, updated_by
 		FROM invoices
-		WHERE org_id = $1 AND is_deleted = false
+		WHERE tenant_id = $1 AND is_deleted = false
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -163,13 +163,13 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 }
 
 func (r *InvoiceRepository) UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status invoice.InvoiceStatus, updatedBy uuid.UUID) error {
-	query := `UPDATE invoices SET status = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3 AND org_id = $4 AND is_deleted = false`
+	query := `UPDATE invoices SET status = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3 AND tenant_id = $4 AND is_deleted = false`
 	_, err := r.pool.Exec(ctx, query, status, updatedBy, id, orgID)
 	return err
 }
 
 func (r *InvoiceRepository) Delete(ctx context.Context, orgID, id uuid.UUID) error {
-	query := `UPDATE invoices SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND org_id = $2`
+	query := `UPDATE invoices SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2`
 	_, err := r.pool.Exec(ctx, query, id, orgID)
 	return err
 }

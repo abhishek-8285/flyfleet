@@ -66,7 +66,7 @@ func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email stri
 			o.created_at,
 			o.updated_at
 		FROM organizations o
-		JOIN user_organizations uo ON o.id = uo.org_id
+		JOIN user_organizations uo ON o.id = uo.tenant_id
 		JOIN users u ON uo.user_id = u.id
 		WHERE u.email = $1
 	`

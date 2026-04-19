@@ -35,7 +35,7 @@ func NewGeofenceService(repo *repository.GeofenceRepository, nats *nats.Conn, lo
 // Create creates a new geofence
 func (s *GeofenceService) Create(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req *models.CreateGeofenceRequest) (*models.Geofence, error) {
 	ctx, span := otel.Tracer("geofencing.service").Start(ctx, "create_geofence")
-	span.SetAttributes(attribute.String("org_id", orgID.String()))
+	span.SetAttributes(attribute.String("tenant_id", orgID.String()))
 	defer span.End()
 	// Validate the request
 	if err := s.validateCreateRequest(req); err != nil {
@@ -78,7 +78,7 @@ func (s *GeofenceService) Create(ctx context.Context, orgID uuid.UUID, userID uu
 	event := map[string]interface{}{
 		"event_type":  "geofence.created",
 		"geofence_id": geofence.ID.String(),
-		"org_id":      orgID.String(),
+		"tenant_id":      orgID.String(),
 		"name":        req.Name,
 		"type":        req.Type,
 		"created_by":  userID.String(),
@@ -109,7 +109,7 @@ func (s *GeofenceService) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.
 func (s *GeofenceService) List(ctx context.Context, orgID uuid.UUID, req *models.ListGeofencesRequest) (*models.GeofenceListResponse, error) {
 	geofences, total, err := s.repo.List(ctx, orgID, req)
 	if err != nil {
-		s.logger.Error("Failed to list geofences", zap.String("org_id", orgID.String()), zap.Error(err))
+		s.logger.Error("Failed to list geofences", zap.String("tenant_id", orgID.String()), zap.Error(err))
 		return nil, fmt.Errorf("failed to list geofences: %w", err)
 	}
 
@@ -127,7 +127,7 @@ func (s *GeofenceService) List(ctx context.Context, orgID uuid.UUID, req *models
 // Update updates an existing geofence
 func (s *GeofenceService) Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req *models.UpdateGeofenceRequest) (*models.Geofence, error) {
 	ctx, span := otel.Tracer("geofencing.service").Start(ctx, "update_geofence")
-	span.SetAttributes(attribute.String("org_id", orgID.String()), attribute.String("geofence_id", id.String()))
+	span.SetAttributes(attribute.String("tenant_id", orgID.String()), attribute.String("geofence_id", id.String()))
 	defer span.End()
 	// Validate the update request
 	if err := s.validateUpdateRequest(req); err != nil {

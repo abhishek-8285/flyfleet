@@ -341,7 +341,7 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 	}
 
 	if len(contacts) == 0 {
-		s.log.Warn("No emergency contacts found for organization", zap.String("org_id", incident.OrgID.String()))
+		s.log.Warn("No emergency contacts found for organization", zap.String("tenant_id", incident.OrgID.String()))
 		s.logTimelineEvent(ctx, incident.ID, "ESCALATION_FAILED", "SYSTEM", map[string]string{"reason": "no_contacts"})
 
 		// Fallback for critical
@@ -693,7 +693,7 @@ func (s *EmergencyService) FleetHalt(ctx context.Context, orgID uuid.UUID, reaso
 	// 1. Get all active vehicles for org (Simplified: we'd usually use a vehicle service)
 	// For production, we publish a global NATS command that all edge devices/gateways listen to
 	cmd := map[string]interface{}{
-		"org_id":    orgID,
+		"tenant_id":    orgID,
 		"command":   "HALT",
 		"reason":    reason,
 		"issued_by": userName,
@@ -706,7 +706,7 @@ func (s *EmergencyService) FleetHalt(ctx context.Context, orgID uuid.UUID, reaso
 
 func (s *EmergencyService) FleetResume(ctx context.Context, orgID uuid.UUID, userName string) error {
 	cmd := map[string]interface{}{
-		"org_id":    orgID,
+		"tenant_id":    orgID,
 		"command":   "RESUME",
 		"issued_by": userName,
 		"timestamp": time.Now(),
@@ -825,7 +825,7 @@ func (s *EmergencyService) TriggerDrill(ctx context.Context, req models.CreateSO
 
 	s.log.Info("Emergency drill completed",
 		zap.String("incident_id", incident.ID.String()),
-		zap.String("org_id", incident.OrgID.String()),
+		zap.String("tenant_id", incident.OrgID.String()),
 	)
 	return incident, nil
 }

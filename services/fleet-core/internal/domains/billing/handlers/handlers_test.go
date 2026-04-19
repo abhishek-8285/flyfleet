@@ -11,6 +11,7 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
+	coremiddleware "github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -30,7 +31,7 @@ type mockBillingService struct {
 	payErr    error
 }
 
-func (m *mockBillingService) ListInvoices(_ interface{}, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
+func (m *mockBillingService) ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	if m.listErr != nil {
 		return nil, 0, m.listErr
 	}
@@ -43,7 +44,7 @@ func (m *mockBillingService) ListInvoices(_ interface{}, orgID uuid.UUID, page, 
 	return result, len(result), nil
 }
 
-func (m *mockBillingService) CreateInvoice(_ interface{}, inv *models.Invoice) error {
+func (m *mockBillingService) CreateInvoice(ctx context.Context, inv *models.Invoice) error {
 	if m.createErr != nil {
 		return m.createErr
 	}
@@ -54,7 +55,7 @@ func (m *mockBillingService) CreateInvoice(_ interface{}, inv *models.Invoice) e
 	return nil
 }
 
-func (m *mockBillingService) GetInvoice(_ interface{}, id uuid.UUID) (*models.Invoice, error) {
+func (m *mockBillingService) GetInvoice(ctx context.Context, id uuid.UUID) (*models.Invoice, error) {
 	if m.getErr != nil {
 		return nil, m.getErr
 	}
@@ -66,7 +67,7 @@ func (m *mockBillingService) GetInvoice(_ interface{}, id uuid.UUID) (*models.In
 	return nil, nil
 }
 
-func (m *mockBillingService) UpdateInvoice(_ interface{}, inv *models.Invoice) error {
+func (m *mockBillingService) UpdateInvoice(ctx context.Context, inv *models.Invoice) error {
 	if m.updateErr != nil {
 		return m.updateErr
 	}
@@ -79,7 +80,7 @@ func (m *mockBillingService) UpdateInvoice(_ interface{}, inv *models.Invoice) e
 	return service.ErrInvoiceNotFound
 }
 
-func (m *mockBillingService) DeleteInvoice(_ interface{}, id uuid.UUID) error {
+func (m *mockBillingService) DeleteInvoice(ctx context.Context, id uuid.UUID) error {
 	if m.deleteErr != nil {
 		return m.deleteErr
 	}
@@ -92,7 +93,7 @@ func (m *mockBillingService) DeleteInvoice(_ interface{}, id uuid.UUID) error {
 	return service.ErrInvoiceNotFound
 }
 
-func (m *mockBillingService) RecordPayment(_ interface{}, id uuid.UUID, amount float64) error {
+func (m *mockBillingService) RecordPayment(ctx context.Context, id uuid.UUID, amount float64) error {
 	if m.payErr != nil {
 		return m.payErr
 	}
@@ -106,7 +107,7 @@ func (m *mockBillingService) RecordPayment(_ interface{}, id uuid.UUID, amount f
 	return service.ErrInvoiceNotFound
 }
 
-func (m *mockBillingService) GetSettings(_ interface{}, orgID uuid.UUID) (*models.BillingSettings, error) {
+func (m *mockBillingService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
 	if m.settings == nil {
 		return &models.BillingSettings{
 			OrgID:                orgID,
@@ -119,23 +120,45 @@ func (m *mockBillingService) GetSettings(_ interface{}, orgID uuid.UUID) (*model
 	return m.settings, nil
 }
 
-func (m *mockBillingService) UpdateSettings(_ interface{}, s *models.BillingSettings) error {
+func (m *mockBillingService) UpdateSettings(ctx context.Context, s *models.BillingSettings) error {
 	m.settings = s
 	return nil
 }
 
-func (m *mockBillingService) GetMetrics(_ interface{}, _ uuid.UUID) (*models.BillingMetrics, error) {
+func (m *mockBillingService) GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error) {
 	if m.metrics == nil {
 		return &models.BillingMetrics{}, nil
 	}
 	return m.metrics, nil
 }
 
+func (m *mockBillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UUID) (*models.Invoice, error) {
+	if m.createErr != nil {
+		return nil, m.createErr
+	}
+	inv := &models.Invoice{
+		ID:            uuid.New(),
+		OrgID:         orgID,
+		InvoiceNumber: "DRAFT-TEST",
+		Status:        "DRAFT",
+	}
+	m.invoices = append(m.invoices, inv)
+	return inv, nil
+}
+
 func newTestHandler(svc *mockBillingService) *BillingHandler {
 	return NewBillingHandler(
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		svc,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		zap.NewNop(),
 	)
+}
+
+func contextWithOrgID(parent context.Context, orgID uuid.UUID) context.Context {
+	if orgID == uuid.Nil {
+		orgID = uuid.New()
+	}
+	return context.WithValue(parent, coremiddleware.CtxOrgID, orgID)
 }
 
 // ─── Test ListInvoices Handler ──────────────────────────────────────────────
@@ -174,6 +197,7 @@ func TestListInvoicesHandler(t *testing.T) {
 			h := newTestHandler(svc)
 
 			req := httptest.NewRequest(http.MethodGet, tt.query, nil)
+			req = req.WithContext(contextWithOrgID(req.Context(), orgID))
 			rr := httptest.NewRecorder()
 
 			h.ListInvoices(rr, req)
@@ -207,8 +231,8 @@ func TestCreateInvoiceHandler(t *testing.T) {
 			name: "valid invoice creation",
 			body: map[string]interface{}{
 				"customer_name": "Acme Corp",
-				"invoice_date":  "2026-04-01",
-				"due_date":      "2026-05-01",
+				"invoice_date":  time.Now().Format(time.RFC3339),
+				"due_date":      time.Now().AddDate(0, 1, 0).Format(time.RFC3339),
 				"currency":      "INR",
 				"items": []map[string]interface{}{
 					{"description": "Fleet Management", "quantity": 1, "unit_price": 5000.0, "tax_percent": 18.0},
@@ -237,6 +261,7 @@ func TestCreateInvoiceHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/billing/invoices", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(contextWithOrgID(req.Context(), uuid.New())) // Use a fresh random orgID
 			rr := httptest.NewRecorder()
 
 			h.CreateInvoice(rr, req)
@@ -275,6 +300,7 @@ func TestGetInvoiceHandler(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			req = req.WithContext(contextWithOrgID(req.Context(), svc.invoices[0].OrgID))
 			rr := httptest.NewRecorder()
 
 			h.GetInvoice(rr, req)
@@ -337,6 +363,7 @@ func TestRecordPaymentHandler(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			req = req.WithContext(contextWithOrgID(req.Context(), svc.invoices[0].OrgID))
 			rr := httptest.NewRecorder()
 
 			h.RecordPayment(rr, req)
@@ -355,6 +382,7 @@ func TestGetSettingsHandler(t *testing.T) {
 	h := newTestHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/billing/settings", nil)
+	req = req.WithContext(contextWithOrgID(req.Context(), uuid.New()))
 	rr := httptest.NewRecorder()
 
 	h.GetSettings(rr, req)
@@ -385,6 +413,7 @@ func TestGetMetricsHandler(t *testing.T) {
 	h := newTestHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/billing/metrics", nil)
+	req = req.WithContext(contextWithOrgID(req.Context(), uuid.New()))
 	rr := httptest.NewRecorder()
 
 	h.GetMetrics(rr, req)
@@ -403,10 +432,11 @@ func TestGetMetricsHandler(t *testing.T) {
 // ─── Test DeleteInvoice Handler ─────────────────────────────────────────────
 
 func TestDeleteInvoiceHandler(t *testing.T) {
+	fixedOrgID := uuid.New()
 	invID := uuid.New()
 	svc := &mockBillingService{
 		invoices: []*models.Invoice{
-			{ID: invID, OrgID: uuid.New(), CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "DRAFT", Currency: "INR", TotalAmount: 10000},
+			{ID: invID, OrgID: fixedOrgID, CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "DRAFT", Currency: "INR", TotalAmount: 10000},
 		},
 	}
 	h := newTestHandler(svc)
@@ -423,6 +453,7 @@ func TestDeleteInvoiceHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/api/v1/billing/invoices/"+tt.id, nil)
+			req = req.WithContext(contextWithOrgID(req.Context(), fixedOrgID))
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

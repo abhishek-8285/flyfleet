@@ -6,7 +6,7 @@ import "time"
 type VehicleAlert struct {
 	ID            string                 `json:"id" db:"id"`
 	VehicleID     string                 `json:"vehicle_id" db:"vehicle_id"`
-	OrgID         string                 `json:"org_id" db:"org_id"`
+	OrgID         string                 `json:"tenant_id" db:"tenant_id"`
 	Type          string                 `json:"alert_type" db:"alert_type"`
 	Severity      string                 `json:"severity" db:"severity"`
 	Description   string                 `json:"description" db:"description"`

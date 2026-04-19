@@ -58,7 +58,7 @@ type SOSIncident struct {
 	Metadata         json.RawMessage `db:"metadata" json:"metadata"`
 	AcknowledgedBy   *uuid.UUID      `db:"acknowledged_by" json:"acknowledged_by,omitempty"`
 	ResolvedBy       *uuid.UUID      `db:"resolved_by" json:"resolved_by,omitempty"`
-	OrgID            uuid.UUID       `db:"org_id" json:"org_id"`
+	OrgID            uuid.UUID       `db:"tenant_id" json:"tenant_id"`
 	HighRiskLocation bool            `db:"high_risk_location" json:"high_risk_location"`
 	SimulationMode   bool            `db:"simulation_mode" json:"simulation_mode"`
 	DriverFeedback   *string         `db:"driver_feedback" json:"driver_feedback,omitempty"`
@@ -110,7 +110,7 @@ type EmergencyEscalation struct {
 // EmergencyResponseUnit for Indian emergency services
 type EmergencyResponseUnit struct {
 	ID            uuid.UUID `db:"id" json:"id"`
-	OrgID         uuid.UUID `db:"org_id" json:"org_id"`
+	OrgID         uuid.UUID `db:"tenant_id" json:"tenant_id"`
 	UnitType      string    `db:"unit_type" json:"unit_type"`
 	Name          string    `db:"name" json:"name"`
 	Phone         string    `db:"phone" json:"phone"`
@@ -127,7 +127,7 @@ type EmergencyResponseUnit struct {
 // EmergencyVehicleState for persistence
 type EmergencyVehicleState struct {
 	VehicleID uuid.UUID `db:"vehicle_id" json:"vehicle_id"`
-	OrgID     uuid.UUID `db:"org_id" json:"org_id"`
+	OrgID     uuid.UUID `db:"tenant_id" json:"tenant_id"`
 	Halted    bool      `db:"halted" json:"halted"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
@@ -135,7 +135,7 @@ type EmergencyVehicleState struct {
 // CreateSOSRequest updated for AIS-140
 type CreateSOSRequest struct {
 	VehicleID       string          `json:"vehicle_id" validate:"required,uuid"`
-	OrgID           uuid.UUID       `json:"org_id"` // Standardized
+	OrgID           uuid.UUID       `json:"tenant_id"` // Standardized
 	DeviceID        string          `json:"device_id" validate:"omitempty,uuid"`
 	DriverID        string          `json:"driver_id" validate:"omitempty,uuid"`
 	TripID          string          `json:"trip_id" validate:"omitempty,uuid"`
@@ -160,7 +160,7 @@ type UpdateIncidentRequest struct {
 // EmergencyContact represents a point of contact for escalation
 type EmergencyContact struct {
 	ID        uuid.UUID `db:"id" json:"id"`
-	OrgID     uuid.UUID `db:"org_id" json:"org_id"`
+	OrgID     uuid.UUID `db:"tenant_id" json:"tenant_id"`
 	Name      string    `db:"name" json:"name"`
 	Role      string    `db:"role" json:"role"`
 	Phone     string    `db:"phone" json:"phone"`
@@ -277,7 +277,7 @@ type DeviceEventQueueItem struct {
 
 // EmergencyDrillRequest is the request body for the drill simulation endpoint.
 type EmergencyDrillRequest struct {
-	OrgID        string  `json:"org_id" validate:"required,uuid"`
+	OrgID        string  `json:"tenant_id" validate:"required,uuid"`
 	VehicleID    string  `json:"vehicle_id" validate:"required,uuid"`
 	Latitude     float64 `json:"latitude" validate:"required"`
 	Longitude    float64 `json:"longitude" validate:"required"`
@@ -311,7 +311,7 @@ type IncidentSnapshot struct {
 	ID           uuid.UUID       `db:"id" json:"id"`
 	IncidentID   uuid.UUID       `db:"incident_id" json:"incident_id"`
 	VehicleID    uuid.UUID       `db:"vehicle_id" json:"vehicle_id"`
-	OrgID        uuid.UUID       `db:"org_id" json:"org_id"`
+	OrgID        uuid.UUID       `db:"tenant_id" json:"tenant_id"`
 	IncidentType IncidentType    `db:"incident_type" json:"incident_type"`
 	Severity     SOSSeverity     `db:"severity" json:"severity"`
 	Status       SOSStatus       `db:"status" json:"status"`

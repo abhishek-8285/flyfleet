@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,14 +13,29 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
 	"github.com/flyfleet/fleet-core/internal/domains/billing/storage"
 	coremiddleware "github.com/flyfleet/fleet-core/internal/middleware"
+	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
+type Service interface {
+	ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error)
+	GetInvoice(ctx context.Context, id uuid.UUID) (*models.Invoice, error)
+	CreateInvoice(ctx context.Context, inv *models.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *models.Invoice) error
+	DeleteInvoice(ctx context.Context, id uuid.UUID) error
+	RecordPayment(ctx context.Context, id uuid.UUID, amount float64) error
+	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error)
+	UpdateSettings(ctx context.Context, s *models.BillingSettings) error
+	GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error)
+	GenerateDraftInvoice(ctx context.Context, orgID uuid.UUID) (*models.Invoice, error)
+}
+
 type BillingHandler struct {
-	service           *service.BillingService
+	service           Service
 	invoiceServ       *service.InvoiceService
 	subService        *service.SubscriptionService
 	meterService      *service.MeteringService
@@ -33,7 +49,7 @@ type BillingHandler struct {
 	validator         *validator.Validate
 }
 
-func NewBillingHandler(s *service.BillingService, invServ *service.InvoiceService, subServ *service.SubscriptionService, meterServ *service.MeteringService, cnServ *service.CreditNoteService, hwServ *service.HardwareService, ledgerServ *service.LedgerService, advSubServ *service.AdvancedSubService, analyticsH *AnalyticsHandler, accountingH *AccountingHandler, logger *zap.Logger) *BillingHandler {
+func NewBillingHandler(s Service, invServ *service.InvoiceService, subServ *service.SubscriptionService, meterServ *service.MeteringService, cnServ *service.CreditNoteService, hwServ *service.HardwareService, ledgerServ *service.LedgerService, advSubServ *service.AdvancedSubService, analyticsH *AnalyticsHandler, accountingH *AccountingHandler, logger *zap.Logger) *BillingHandler {
 	return &BillingHandler{
 		service:           s,
 		invoiceServ:       invServ,
@@ -79,6 +95,7 @@ func (h *BillingHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/subscription/cancel", h.CancelSubscription)
 
 	// Metering & Draft Invoicing
+	r.Get("/usage/summary", h.GetUsageSummary)
 	r.Post("/usage/record", h.RecordUsage)
 	r.Post("/invoices/generate-draft", h.GenerateDraftInvoice)
 
@@ -129,29 +146,66 @@ func (h *BillingHandler) errorJSON(w http.ResponseWriter, r *http.Request, messa
 }
 
 func (h *BillingHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		// Try uuid.UUID first (set by JWKS auth gate)
-		if oid, ok := val.(uuid.UUID); ok {
-			return oid
-		}
-		// Fallback to string (set by BFF auth gate)
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
+	ctx := r.Context()
+
+	// Exhaustive list of all known organization context keys used across the platform
+	keys := []interface{}{
+		coremiddleware.CtxOrgID, // internal/middleware
+		iamCtx.OrgIDKey,          // internal/platform/iam/middleware
+		ctxkeys.OrgIDKey,         // internal/pkg/ctxkeys
+		ctxkeys.TenantIDKey,      // internal/pkg/ctxkeys
+		middleware.OrgIDKey,      // shared/pkg/middleware
+		"org_id",                 // standard string key
+		"tenant_id",              // raw fallback
+		"organization_id",        // raw fallback
+	}
+
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			// Try uuid.UUID first
+			if oid, ok := val.(uuid.UUID); ok && oid != uuid.Nil {
+				return oid
+			}
+			// Try string fallback
+			if s, ok := val.(string); ok && s != "" {
+				if oid, err := uuid.Parse(s); err == nil && oid != uuid.Nil {
+					return oid
+				}
 			}
 		}
 	}
+
 	return uuid.Nil
 }
 
 func (h *BillingHandler) getUserID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
-				return id
+	ctx := r.Context()
+
+	// Exhaustive list of all known user context keys
+	keys := []interface{}{
+		coremiddleware.CtxUserID,
+		iamCtx.UserIDKey,
+		ctxkeys.UserIDKey,
+		middleware.UserIDKey,
+		"user_id",
+		"sub",
+	}
+
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			// Try uuid.UUID first
+			if uid, ok := val.(uuid.UUID); ok && uid != uuid.Nil {
+				return uid
+			}
+			// Try string fallback
+			if s, ok := val.(string); ok && s != "" {
+				if uid, err := uuid.Parse(s); err == nil && uid != uuid.Nil {
+					return uid
+				}
 			}
 		}
 	}
+
 	return uuid.Nil
 }
 
@@ -212,13 +266,23 @@ func (h *BillingHandler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enrich with context data BEFORE validation
+	inv.OrgID = orgID
+	if inv.Status == "" {
+		inv.Status = models.StatusPending
+	}
+	if inv.ID == uuid.Nil {
+		inv.ID = uuid.New()
+	}
+	for i := range inv.Items {
+		inv.Items[i].InvoiceID = inv.ID
+	}
+
 	// Validate invoice
 	if err := h.validator.Struct(&inv); err != nil {
 		h.errorJSON(w, r, "Validation failed: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	inv.OrgID = orgID
 
 	if err := h.service.CreateInvoice(r.Context(), &inv); err != nil {
 		h.logger.Error("Failed to create invoice", zap.Error(err))
@@ -335,8 +399,12 @@ func (h *BillingHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 
 	settings, err := h.service.GetSettings(r.Context(), orgID)
 	if err != nil {
-		h.logger.Error("Failed to get settings", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.logger.Error("Failed to get billing settings", 
+			zap.Error(err), 
+			zap.String("org_id", orgID.String()),
+			zap.String("path", r.URL.Path),
+		)
+		h.errorJSON(w, r, "Failed to retrieve billing settings: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -494,6 +562,23 @@ func (h *BillingHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.json(w, status, http.StatusOK)
+}
+
+func (h *BillingHandler) GetUsageSummary(w http.ResponseWriter, r *http.Request) {
+	orgID := h.getOrgID(r)
+	if orgID == uuid.Nil {
+		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		return
+	}
+
+	usage, err := h.meterService.GetUnbilledUsageByOrg(r.Context(), orgID)
+	if err != nil {
+		h.logger.Error("Failed to get usage summary", zap.Error(err))
+		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	h.json(w, usage, http.StatusOK)
 }
 
 // GetStats returns billing statistics

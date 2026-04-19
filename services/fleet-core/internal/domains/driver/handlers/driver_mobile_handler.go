@@ -218,7 +218,7 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 
 	// Extract orgID from context or header
 	orgID := h.getOrgID(r)
-	h.logger.Info("TriggerSOS: extracted orgID", zap.String("org_id", orgID.String()))
+	h.logger.Info("TriggerSOS: extracted orgID", zap.String("tenant_id", orgID.String()))
 
 	if err := h.service.TriggerSOS(r.Context(), driverID, orgID.String(), &loc); err != nil {
 		h.logger.Error("failed to trigger SOS in service", zap.Error(err))

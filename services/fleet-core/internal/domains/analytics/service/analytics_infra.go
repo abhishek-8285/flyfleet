@@ -96,7 +96,7 @@ func (s *AnalyticsServiceImpl) InvalidateVehicleCache(ctx context.Context, vehic
 		return err
 	}
 
-	s.logger.Info("Enqueued vehicle analytics cache invalidation", zap.String("org_id", orgID.String()), zap.String("vehicle_id", vehicleID.String()))
+	s.logger.Info("Enqueued vehicle analytics cache invalidation", zap.String("tenant_id", orgID.String()), zap.String("vehicle_id", vehicleID.String()))
 	return nil
 }
 
@@ -172,7 +172,7 @@ func (s *AnalyticsServiceImpl) InvalidateDriverCache(ctx context.Context, driver
 		return err
 	}
 
-	s.logger.Info("Enqueued driver analytics cache invalidation", zap.String("org_id", orgID.String()), zap.String("driver_id", driverID.String()))
+	s.logger.Info("Enqueued driver analytics cache invalidation", zap.String("tenant_id", orgID.String()), zap.String("driver_id", driverID.String()))
 	return nil
 }
 
@@ -189,7 +189,7 @@ func (s *AnalyticsServiceImpl) InvalidateFleetCache(ctx context.Context, orgID u
 		return err
 	}
 
-	s.logger.Info("Incremented fleet analytics cache version", zap.String("org_id", orgID.String()))
+	s.logger.Info("Incremented fleet analytics cache version", zap.String("tenant_id", orgID.String()))
 	return nil
 }
 
@@ -316,7 +316,7 @@ func (s *AnalyticsServiceImpl) GetAnalyticsQuota(ctx context.Context, orgID uuid
 func (s *AnalyticsServiceImpl) CheckQuota(ctx context.Context, orgID uuid.UUID, credits int64) (bool, error) {
 	quota, err := s.repo.GetAnalyticsQuota(ctx, orgID)
 	if err != nil {
-		s.logger.Warn("could not retrieve quota", zap.Error(err), zap.String("org_id", orgID.String()))
+		s.logger.Warn("could not retrieve quota", zap.Error(err), zap.String("tenant_id", orgID.String()))
 		return true, nil
 	}
 
@@ -328,14 +328,14 @@ func (s *AnalyticsServiceImpl) CheckQuota(ctx context.Context, orgID uuid.UUID, 
 
 // RunReconciliation ensures consistency between telemetry and aggregates
 func (s *AnalyticsServiceImpl) RunReconciliation(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) error {
-	s.logger.Info("starting analytics reconciliation", zap.String("org_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
+	s.logger.Info("starting analytics reconciliation", zap.String("tenant_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
 	// Placeholder: In a real-world scenario, this would query raw telemetry vs daily stats and trigger repairs
 	return nil
 }
 
 // RunHistoricalBackfill recomputes historical stats
 func (s *AnalyticsServiceImpl) RunHistoricalBackfill(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) error {
-	s.logger.Info("starting historical analytics backfill", zap.String("org_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
+	s.logger.Info("starting historical analytics backfill", zap.String("tenant_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
 	// Logic to trigger background jobs via Asynq
 	return nil
 }

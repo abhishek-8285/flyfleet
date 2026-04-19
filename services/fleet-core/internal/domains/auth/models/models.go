@@ -9,7 +9,7 @@ import (
 
 type User struct {
 	ID                  uuid.UUID      `json:"id"`
-	OrgID               uuid.UUID      `json:"org_id"`
+	OrgID               uuid.UUID      `json:"tenant_id"`
 	Email               string         `json:"email"`
 	Role                string         `json:"role"`
 	PasswordHash        string         `json:"-"`
@@ -33,14 +33,14 @@ type Permission struct {
 	Category    string     `json:"category"`
 	Description string     `json:"description"`
 	IsGlobal    bool       `json:"is_global"`
-	OrgID       *uuid.UUID `json:"org_id,omitempty"`
+	OrgID       *uuid.UUID `json:"tenant_id,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
 type Role struct {
 	ID          uuid.UUID    `json:"id"`
 	Name        string       `json:"name"`
-	OrgID       *uuid.UUID   `json:"org_id,omitempty"`
+	OrgID       *uuid.UUID   `json:"tenant_id,omitempty"`
 	Description string       `json:"description"`
 	IsSystem    bool         `json:"is_system"`
 	CreatedAt   time.Time    `json:"created_at"`
@@ -51,7 +51,7 @@ type Role struct {
 type UserRole struct {
 	UserID    uuid.UUID `json:"user_id"`
 	RoleID    uuid.UUID `json:"role_id"`
-	OrgID     uuid.UUID `json:"org_id"`
+	OrgID     uuid.UUID `json:"tenant_id"`
 	GrantedAt time.Time `json:"granted_at"`
 }
 
@@ -113,7 +113,7 @@ type RefreshToken struct {
 
 type TokenClaims struct {
 	UserID         string   `json:"user_id"`
-	OrgID          string   `json:"org_id"`
+	OrgID          string   `json:"tenant_id"`
 	Role           string   `json:"role"`
 	TenantType     string   `json:"tenant_type,omitempty"`
 	Type           string   `json:"type"` // "access" or "refresh"
@@ -174,7 +174,7 @@ type SigningKey struct {
 
 type APIKey struct {
 	ID          uuid.UUID  `json:"id"`
-	OrgID       uuid.UUID  `json:"org_id"`
+	OrgID       uuid.UUID  `json:"tenant_id"`
 	UserID      uuid.UUID  `json:"user_id"`
 	Name        string     `json:"name"`
 	Prefix      string     `json:"prefix"`
@@ -202,7 +202,7 @@ type Organization struct {
 
 type OrganizationMembership struct {
 	ID        uuid.UUID `json:"id"`
-	OrgID     uuid.UUID `json:"org_id"`
+	OrgID     uuid.UUID `json:"tenant_id"`
 	UserID    uuid.UUID `json:"user_id"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
@@ -210,7 +210,7 @@ type OrganizationMembership struct {
 
 type ServiceAccount struct {
 	ID               uuid.UUID  `json:"id"`
-	OrgID            uuid.UUID  `json:"org_id"`
+	OrgID            uuid.UUID  `json:"tenant_id"`
 	Name             string     `json:"name"`
 	Description      string     `json:"description"`
 	ClientID         string     `json:"client_id"`

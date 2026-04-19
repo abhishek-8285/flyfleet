@@ -29,7 +29,7 @@ func NewDriverRepository(db *pgxpool.Pool) *DriverRepository {
 func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) error {
 	query := `
 		INSERT INTO drivers (
-			id, org_id, first_name, last_name, email, phone,
+			id, tenant_id, first_name, last_name, email, phone,
 			employee_code, aadhaar_number, pan_number,
 			license_number, license_type, license_issue_date, license_expiry, license_authority,
 			date_of_birth, address, emergency_contact, status, employment_type, joining_date,
@@ -75,7 +75,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 
 // GetByEmail retrieves a driver by email address
 func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
-	query := `SELECT id, org_id, first_name, last_name, full_name, email, status, created_at
+	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, status, created_at
 	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -95,7 +95,7 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 
 // GetByLicenseNumber retrieves a driver by license number
 func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
-	query := `SELECT id, org_id, first_name, last_name, full_name, email, license_number, status, created_at
+	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, license_number, status, created_at
 	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -116,7 +116,7 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 // GetByID retrieves a driver by its ID
 func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	query := `
-		SELECT id, org_id, first_name, last_name, full_name, email, phone,
+		SELECT id, tenant_id, first_name, last_name, full_name, email, phone,
 		       employee_code, aadhaar_number, pan_number,
 		       license_number, license_type, license_issue_date, license_expiry, license_authority,
 		       date_of_birth, address, emergency_contact, status, employment_type, current_vehicle_id,
@@ -185,7 +185,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 // GetAttendance retrieves all attendance records for a driver from the normalized table
 func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) ([]models.AttendanceRecord, error) {
 	query := `
-		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		SELECT id, driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
 		FROM driver_attendance
 		WHERE driver_id = $1
 		ORDER BY attendance_date DESC
@@ -221,7 +221,7 @@ func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) (
 // CreateAttendance creates a new attendance record for a driver
 func (r *DriverRepository) CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error {
 	query := `
-		INSERT INTO driver_attendance (driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at)
+		INSERT INTO driver_attendance (driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 	`
 	_, err := r.db.Exec(ctx, query, attendance.DriverID, attendance.OrgID, attendance.AttendanceDate, attendance.Status, attendance.CheckInTime, attendance.CheckOutTime, attendance.Remarks)
@@ -231,7 +231,7 @@ func (r *DriverRepository) CreateAttendance(ctx context.Context, attendance *mod
 // GetAttendanceByID retrieves an attendance record by ID
 func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error) {
 	query := `
-		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		SELECT id, driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
 		FROM driver_attendance
 		WHERE id = $1
 	`
@@ -249,9 +249,9 @@ func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) 
 // GetAttendanceByDriver retrieves attendance records for a driver within a date range
 func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
 	query := `
-		SELECT id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
+		SELECT id, driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
 		FROM driver_attendance
-		WHERE driver_id = $1 AND org_id = $2 AND attendance_date BETWEEN $3 AND $4
+		WHERE driver_id = $1 AND tenant_id = $2 AND attendance_date BETWEEN $3 AND $4
 		ORDER BY attendance_date DESC
 	`
 	rows, err := r.db.Query(ctx, query, driverID, orgID, from, to)
@@ -280,7 +280,7 @@ func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UU
 	query := `
 		UPDATE driver_attendance
 		SET check_out_time = $1, remarks = $2, updated_at = NOW()
-		WHERE id = $3 AND org_id = $4
+		WHERE id = $3 AND tenant_id = $4
 	`
 	_, err := r.db.Exec(ctx, query, checkOut, remarks, id, orgID)
 	return err
@@ -289,7 +289,7 @@ func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UU
 // CreateSchedule creates a new work schedule for a driver
 func (r *DriverRepository) CreateSchedule(ctx context.Context, schedule *models.DriverSchedule) error {
 	query := `
-		INSERT INTO driver_schedules (driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at)
+		INSERT INTO driver_schedules (driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 	`
 	_, err := r.db.Exec(ctx, query, schedule.DriverID, schedule.OrgID, schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, schedule.IsWorking)
@@ -299,7 +299,7 @@ func (r *DriverRepository) CreateSchedule(ctx context.Context, schedule *models.
 // GetScheduleByID retrieves a work schedule by ID
 func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error) {
 	query := `
-		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		SELECT id, driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
 		FROM driver_schedules
 		WHERE id = $1
 	`
@@ -317,9 +317,9 @@ func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*
 // GetSchedulesByDriver retrieves all work schedules for a driver
 func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
 	query := `
-		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		SELECT id, driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
 		FROM driver_schedules
-		WHERE driver_id = $1 AND org_id = $2
+		WHERE driver_id = $1 AND tenant_id = $2
 		ORDER BY day_of_week
 	`
 	rows, err := r.db.Query(ctx, query, driverID, orgID)
@@ -356,7 +356,7 @@ func (r *DriverRepository) UpdateSchedule(ctx context.Context, schedule *models.
 
 // DeleteSchedule deletes a work schedule
 func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
-	query := `DELETE FROM driver_schedules WHERE id = $1 AND org_id = $2`
+	query := `DELETE FROM driver_schedules WHERE id = $1 AND tenant_id = $2`
 	_, err := r.db.Exec(ctx, query, id, orgID)
 	return err
 }
@@ -364,7 +364,7 @@ func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UU
 // GetSchedules retrieves all work schedules for a driver from the normalized table
 func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([]models.WorkSchedule, error) {
 	query := `
-		SELECT id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
+		SELECT id, driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
 		FROM driver_schedules
 		WHERE driver_id = $1
 		ORDER BY day_of_week
@@ -410,7 +410,7 @@ func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([
 // List retrieves drivers with filtering and pagination
 func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error) {
 	baseQuery := `
-		SELECT id, org_id, first_name, last_name, full_name, email, phone,
+		SELECT id, tenant_id, first_name, last_name, full_name, email, phone,
 		       license_number, license_type, status, current_vehicle_id,
 		       rating, total_trips, behavior_score, created_at, updated_at
 		FROM drivers WHERE deleted_at IS NULL`
@@ -422,7 +422,7 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	argIndex := 1
 
 	if filter.OrgID != "" {
-		conditions = append(conditions, fmt.Sprintf("org_id = $%d", argIndex))
+		conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIndex))
 		args = append(args, filter.OrgID)
 		argIndex++
 	}
@@ -600,11 +600,11 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 
 // replaceAttendance deletes and recreates driver attendance records from a slice
 func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID string, records interface{}) error {
-	// Get driver's org_id first (needed for attendance records)
+	// Get driver's tenant_id first (needed for attendance records)
 	var orgID uuid.UUID
-	err := r.db.QueryRow(ctx, `SELECT org_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
 	if err != nil {
-		return fmt.Errorf("failed to get driver org_id: %w", err)
+		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
 	// Delete existing attendance records for this driver
@@ -647,7 +647,7 @@ func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID strin
 	}
 
 	query := fmt.Sprintf(
-		`INSERT INTO driver_attendance (id, driver_id, org_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at) VALUES %s`,
+		`INSERT INTO driver_attendance (id, driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at) VALUES %s`,
 		strings.Join(placeholders, ", "),
 	)
 
@@ -660,11 +660,11 @@ func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID strin
 
 // replaceSchedules deletes and recreates driver work schedules from a slice
 func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string, schedules interface{}) error {
-	// Get driver's org_id
+	// Get driver's tenant_id
 	var orgID uuid.UUID
-	err := r.db.QueryRow(ctx, `SELECT org_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
 	if err != nil {
-		return fmt.Errorf("failed to get driver org_id: %w", err)
+		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
 	// Delete existing schedules
@@ -707,7 +707,7 @@ func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string
 	}
 
 	query := fmt.Sprintf(
-		`INSERT INTO driver_schedules (id, driver_id, org_id, day_of_week, start_time, end_time, is_working, created_at, updated_at) VALUES %s`,
+		`INSERT INTO driver_schedules (id, driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at) VALUES %s`,
 		strings.Join(placeholders, ", "),
 	)
 
@@ -802,7 +802,7 @@ func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID str
 func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
 	query := `
 		INSERT INTO driver_behavior_logs (
-			driver_id, org_id, old_score, new_score, reason, event_type,
+			driver_id, tenant_id, old_score, new_score, reason, event_type,
 			user_id, user_email, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 	`
@@ -888,7 +888,7 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 // GetActiveDriversForVehicle retrieves active drivers for a vehicle
 func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
 	query := `
-		SELECT id, org_id, first_name, last_name, full_name, email, phone,
+		SELECT id, tenant_id, first_name, last_name, full_name, email, phone,
 		       license_number, license_type, status, rating, behavior_score,
 		       created_at, updated_at
 		FROM drivers
@@ -930,7 +930,7 @@ func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehic
 func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *models.DriverBehavior) error {
 	query := `
 		INSERT INTO driver_behavior (
-			id, driver_id, org_id, period_start, period_end, score, safety_score,
+			id, driver_id, tenant_id, period_start, period_end, score, safety_score,
 			efficiency_score, compliance_score, harsh_accelerations, harsh_brakings,
 			harsh_cornerings, speeding_incidents, phone_usage, seatbelt_violations,
 			fuel_consumption, distance_driven, idle_time, eco_driving_score,
@@ -981,7 +981,7 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 // GetBehaviorRecords retrieves behavior records for a driver
 func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DriverBehavior, error) {
 	query := `
-		SELECT id, driver_id, org_id, period_start, period_end, score, safety_score,
+		SELECT id, driver_id, tenant_id, period_start, period_end, score, safety_score,
 			efficiency_score, compliance_score, harsh_accelerations, harsh_brakings,
 			harsh_cornerings, speeding_incidents, phone_usage, seatbelt_violations,
 			fuel_consumption, distance_driven, idle_time, eco_driving_score,
@@ -1047,7 +1047,7 @@ func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID stri
 func (r *DriverRepository) CreateIncident(ctx context.Context, incident *models.DriverIncident) error {
 	query := `
 		INSERT INTO driver_incidents (
-			id, driver_id, org_id, type, severity, timestamp, location,
+			id, driver_id, tenant_id, type, severity, timestamp, location,
 			speed, details, resolved, resolution_notes, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at`
@@ -1083,7 +1083,7 @@ func (r *DriverRepository) CreateIncident(ctx context.Context, incident *models.
 // GetIncidents retrieves incidents for a driver
 func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, filter models.BehaviorReportRequest) ([]*models.DriverIncident, error) {
 	baseQuery := `
-		SELECT id, driver_id, org_id, type, severity, timestamp, location,
+		SELECT id, driver_id, tenant_id, type, severity, timestamp, location,
 			speed, details, resolved, resolution_notes, created_at
 		FROM driver_incidents WHERE driver_id = $1`
 
@@ -1242,7 +1242,7 @@ func (r *DriverRepository) GetBehaviorSummary(ctx context.Context, driverID stri
 func (r *DriverRepository) CreateAuditLog(ctx context.Context, audit *models.DriverAuditLog) error {
 	query := `
 		INSERT INTO driver_audit_logs (
-			id, driver_id, org_id, action, old_value, new_value,
+			id, driver_id, tenant_id, action, old_value, new_value,
 			user_id, user_type, user_email, reason, metadata,
 			ip_address, user_agent, created_at
 		) VALUES ($1, $2, $3, $4, ($5)::jsonb, ($6)::jsonb, $7, $8, $9, $10, ($11)::jsonb, $12, $13, $14)

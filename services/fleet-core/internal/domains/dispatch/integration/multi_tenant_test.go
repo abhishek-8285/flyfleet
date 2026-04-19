@@ -73,13 +73,13 @@ func TestMultiTenant_TripScopedToCreatingOrg(t *testing.T) {
 	orgA := uuid.New()
 	tripID := uuid.New().String()
 
-	// Trip's org_id comes from the authenticated context, not the request body
+	// Trip's tenant_id comes from the authenticated context, not the request body
 	tripOrg := orgA // Set by TenantContextMiddleware
 
-	// Even if request tries to spoof a different org_id,
-	// the middleware overrides it with the JWT-extracted org_id
+	// Even if request tries to spoof a different tenant_id,
+	// the middleware overrides it with the JWT-extracted tenant_id
 	assert.Equal(t, orgA, tripOrg,
-		"Trip org_id must come from JWT, not request")
+		"Trip tenant_id must come from JWT, not request")
 
 	_ = tripID // Trip belongs to tripOrg
 }
@@ -91,7 +91,7 @@ func TestMultiTenant_DashboardReturnsOnlyOwnOrgData(t *testing.T) {
 	// Simulate dashboard query for Org A
 	dashboardOrgA := orgA
 
-	// All queries must be scoped: WHERE org_id = $1
+	// All queries must be scoped: WHERE tenant_id = $1
 	// Trip summary, pending shipments, available vehicles/drivers
 	// must all filter by dashboardOrgA
 
@@ -135,7 +135,7 @@ func TestMultiTenant_SuggestionEngineReturnsOnlyOwnOrgVehicles(t *testing.T) {
 func TestMultiTenant_ShardedNATSEvents(t *testing.T) {
 	orgA := uuid.New()
 
-	// NATS events must include org_id for proper routing
+	// NATS events must include tenant_id for proper routing
 	eventA := struct {
 		Subject string
 		OrgID   string
@@ -146,7 +146,7 @@ func TestMultiTenant_ShardedNATSEvents(t *testing.T) {
 
 	// Org B consumers must NOT receive Org A events
 	assert.Equal(t, orgA.String(), eventA.OrgID,
-		"Event org_id must match the dispatching org")
+		"Event tenant_id must match the dispatching org")
 }
 
 func TestMultiTenant_ReadOnlyOrgCannotDispatch(t *testing.T) {
@@ -173,17 +173,17 @@ func TestMultiTenant_ReadOnlyOrgCannotDispatch(t *testing.T) {
 }
 
 func TestMultiTenant_ContextPropagation(t *testing.T) {
-	// Verify org_id flows through the entire dispatch chain
+	// Verify tenant_id flows through the entire dispatch chain
 	orgID := uuid.New()
 
-	ctx := context.WithValue(context.Background(), "org_id", orgID.String())
+	ctx := context.WithValue(context.Background(), "tenant_id", orgID.String())
 
 	// Extract org from context (simulates TenantContextMiddleware)
-	extractedOrgStr, ok := ctx.Value("org_id").(string)
-	require.True(t, ok, "org_id must be in context")
+	extractedOrgStr, ok := ctx.Value("tenant_id").(string)
+	require.True(t, ok, "tenant_id must be in context")
 
 	extractedOrg, err := uuid.Parse(extractedOrgStr)
 	require.NoError(t, err)
 	assert.Equal(t, orgID, extractedOrg,
-		"Extracted org_id must match the original")
+		"Extracted tenant_id must match the original")
 }

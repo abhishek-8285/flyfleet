@@ -9,7 +9,7 @@ import (
 
 func (r *IndiaIntegrationRepositoryImpl) GetExpiringVehicleVerifications(ctx context.Context, days int) ([]*models.VehicleVerification, error) {
 	query := `
-		SELECT id, vehicle_id, org_id, registration_number, status, verification_date,
+		SELECT id, vehicle_id, tenant_id, registration_number, status, verification_date,
 		       chassis_number, engine_number, model, manufacturer, fuel_type, body_type,
 		       cubic_capacity, seating_capacity, color, manufacturing_year, owner_name,
 		       rc_status, insurance_expiry, puc_expiry, created_at
@@ -43,7 +43,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringVehicleVerifications(ctx con
 // GetExpiringDriverVerifications fetches driver verifications expiring within X days
 func (r *IndiaIntegrationRepositoryImpl) GetExpiringDriverVerifications(ctx context.Context, days int) ([]*models.DriverVerification, error) {
 	query := `
-		SELECT id, driver_id, org_id, license_number, status, verification_date,
+		SELECT id, driver_id, tenant_id, license_number, status, verification_date,
 		       name, date_of_birth, validity_to, created_at
 		FROM driver_verifications
 		WHERE validity_to <= $1 AND status = 'verified'`
@@ -73,7 +73,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringDriverVerifications(ctx cont
 // GetExpiringLocalPermits fetches local permits expiring within X days
 func (r *IndiaIntegrationRepositoryImpl) GetExpiringLocalPermits(ctx context.Context, days int) ([]*models.LocalPermit, error) {
 	query := `
-		SELECT id, vehicle_id, driver_id, org_id, permit_number, permit_type, permit_category,
+		SELECT id, vehicle_id, driver_id, tenant_id, permit_number, permit_type, permit_category,
 		       permit_sub_category, valid_from, valid_to, issuing_authority, jurisdiction, route_details,
 		       number_of_trips, max_load_capacity, number_of_seats, fare, status, remarks,
 		       created_at
@@ -107,7 +107,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringLocalPermits(ctx context.Con
 // GetNonCompliantGSTRecords fetches non-compliant GST records
 func (r *IndiaIntegrationRepositoryImpl) GetNonCompliantGSTRecords(ctx context.Context) ([]*models.GSTCompliance, error) {
 	query := `
-		SELECT id, org_id, gstin, status, legal_name, trade_name, address,
+		SELECT id, tenant_id, gstin, status, legal_name, trade_name, address,
 		       centre_jurisdiction, state_jurisdiction, date_of_registration, date_of_cancellation,
 		       last_updated, return_filing_frequency, return_filing_status, payment_status,
 		       created_at

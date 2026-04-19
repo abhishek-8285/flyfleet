@@ -62,6 +62,7 @@ const LiveOperationsMap: React.FC<{ vehicles: VehicleMarker[] }> = ({
         zoom={5}
         style={{ height: "100%", width: "100%" }}
         zoomControl={false}
+        attributionControl={false}
         className="z-0"
       >
         <TileLayer

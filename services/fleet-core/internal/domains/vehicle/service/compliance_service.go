@@ -43,7 +43,7 @@ func (s *ComplianceService) VerifyCompliance(ctx context.Context, vehicleID, org
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized compliance verification attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("org_id", orgID.String()),
+			zap.String("tenant_id", orgID.String()),
 			zap.String("vehicle_tenant", vehicle.TenantID.String()))
 		return nil, nil, fmt.Errorf("vehicle not found")
 	}
@@ -88,7 +88,7 @@ func (s *ComplianceService) GetCompliance(ctx context.Context, vehicleID, orgID 
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized compliance access attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		return nil, &models.ComplianceStatus{IsCompliant: false}, nil
 	}
 

@@ -74,6 +74,20 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		return nil, ErrVehicleAlreadyExists
 	}
 
+	// GPS Validation
+	if req.GPSEnabled {
+		if req.GPSDeviceID == nil || *req.GPSDeviceID == "" || req.GPSDeviceType == nil || *req.GPSDeviceType == "" {
+			return nil, ErrGPSRequired
+		}
+		available, msg, err := s.repo.IsGPSAvailable(ctx, orgID, *req.GPSDeviceID, nil)
+		if err != nil {
+			return nil, err
+		}
+		if !available {
+			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceConflict, msg)
+		}
+	}
+
 	vehicle := &models.Vehicle{
 		ID:                 uuid.New(),
 		TenantID:           orgID,
@@ -90,6 +104,8 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		BranchID:           req.BranchID,
 		CostCenterID:       req.CostCenterID,
 		GPSDeviceID:        req.GPSDeviceID,
+		GPSEnabled:         req.GPSEnabled,
+		GPSDeviceType:      req.GPSDeviceType,
 		ImmobilizerEnabled: req.ImmobilizerEnabled,
 		AIS140Compliant:    req.AIS140Compliant,
 		Make:               req.Make,
@@ -212,6 +228,35 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 		return nil, ErrVehicleCannotBeUpdated
 	}
 
+	// GPS Validation
+	gpsEnabled := vehicle.GPSEnabled
+	if req.GPSEnabled != nil {
+		gpsEnabled = *req.GPSEnabled
+	}
+
+	if gpsEnabled {
+		serial := vehicle.GPSDeviceID
+		if req.GPSDeviceID != nil {
+			serial = req.GPSDeviceID
+		}
+		deviceType := vehicle.GPSDeviceType
+		if req.GPSDeviceType != nil {
+			deviceType = req.GPSDeviceType
+		}
+
+		if serial == nil || *serial == "" || deviceType == nil || *deviceType == "" {
+			return nil, ErrGPSRequired
+		}
+
+		available, msg, err := s.repo.IsGPSAvailable(ctx, vehicle.TenantID, *serial, &id)
+		if err != nil {
+			return nil, err
+		}
+		if !available {
+			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceConflict, msg)
+		}
+	}
+
 	if req.VehicleType != nil {
 		vehicle.VehicleType = *req.VehicleType
 	}
@@ -244,6 +289,12 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	}
 	if req.GPSDeviceID != nil {
 		vehicle.GPSDeviceID = req.GPSDeviceID
+	}
+	if req.GPSEnabled != nil {
+		vehicle.GPSEnabled = *req.GPSEnabled
+	}
+	if req.GPSDeviceType != nil {
+		vehicle.GPSDeviceType = req.GPSDeviceType
 	}
 	if req.ImmobilizerEnabled != nil {
 		vehicle.ImmobilizerEnabled = *req.ImmobilizerEnabled
@@ -300,7 +351,7 @@ func (s *VehicleService) DeleteVehicle(ctx context.Context, id, orgID uuid.UUID)
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized delete vehicle attempt",
 			zap.String("vehicle_id", id.String()),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		return fmt.Errorf("vehicle not found")
 	}
 	if vehicle.Status == models.StatusDecommissioned {
@@ -321,7 +372,7 @@ func (s *VehicleService) AssignDriver(ctx context.Context, vehicleID, orgID, dri
 	if vehicle.TenantID != orgID {
 		s.logger.Warn("unauthorized assign driver attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("org_id", orgID.String()))
+			zap.String("tenant_id", orgID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
 	if err := s.repo.AssignDriver(ctx, vehicleID, orgID, driverID); err != nil {

@@ -55,7 +55,7 @@ export const addVehicleLayers = (map: maplibregl.Map) => {
     source: "vehicles",
     filter: ["!", ["has", "point_count"]],
     layout: {
-      "icon-image": "vehicle-marker", // Needs to be loaded separately
+      "icon-image": "vehicle-marker",
       "icon-size": 0.6,
       "icon-rotate": ["get", "heading"],
       "icon-allow-overlap": true,
@@ -71,18 +71,59 @@ export const addVehicleLayers = (map: maplibregl.Map) => {
     },
   });
 
-  // Load active vehicle icon
-  map
-    .loadImage("https://img.icons8.com/m_outlined/512/FFFFFF/long-arrow-up.png")
-    .then((response: any) => {
-      const image = response.data;
-      if (image && !map.hasImage("vehicle-marker")) {
-        map.addImage("vehicle-marker", image);
-      }
-    })
-    .catch((error: any) => {
-      console.error("Failed to load vehicle marker icon", error);
-    });
+  // Add Identity Labels Layer
+  map.addLayer({
+    id: "vehicle-labels",
+    type: "symbol",
+    source: "vehicles",
+    filter: ["!", ["has", "point_count"]],
+    layout: {
+      "text-field": ["get", "registration"],
+      "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+      "text-size": 10,
+      "text-offset": [0, 1.5],
+      "text-anchor": "top",
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "text-halo-color": "#000000",
+      "text-halo-width": 1,
+    },
+  });
+
+  // Generate a local vehicle marker icon (avoids CORS/COEP issues)
+  const generateVehicleMarker = () => {
+    const size = 64;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    // Draw Arrow / Marker
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
+    ctx.fillStyle = "#3b82f6"; // Primary blue
+    ctx.beginPath();
+    ctx.moveTo(size / 2, 5);
+    ctx.lineTo(size - 10, size - 10);
+    ctx.lineTo(size / 2, size - 20);
+    ctx.lineTo(10, size - 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Add white outline
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    return ctx.getImageData(0, 0, size, size);
+  };
+
+  const imageData = generateVehicleMarker();
+  if (imageData && !map.hasImage("vehicle-marker")) {
+    map.addImage("vehicle-marker", imageData);
+  }
 };
 
 export const updateVehicleSource = (map: maplibregl.Map, vehicles: any[]) => {
@@ -91,14 +132,17 @@ export const updateVehicleSource = (map: maplibregl.Map, vehicles: any[]) => {
 
   const geojson: GeoJSON.FeatureCollection = {
     type: "FeatureCollection",
-    features: vehicles.map((v) => ({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [v.longitude, v.latitude],
-      },
+    features: vehicles
+      .filter((v) => v.latitude != null && v.longitude != null && v.gpsEnabled === true)
+      .map((v) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [v.longitude, v.latitude],
+        },
       properties: {
         id: v.id,
+        registration: v.registrationNumber || v.registration || `Asset ${String(v.id).substring(0, 8)}`,
         heading: v.heading || 0,
         speed: v.speed || 0,
         status: v.status || "active",

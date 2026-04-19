@@ -28,7 +28,7 @@ func TestBulkDispatchHandler_HappyPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/bulk-assign", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -63,7 +63,7 @@ func TestBulkDispatchHandler_EmptyAssignments(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/bulk-assign", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -88,7 +88,7 @@ func TestBulkDispatchHandler_PartialSuccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/bulk-assign", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()

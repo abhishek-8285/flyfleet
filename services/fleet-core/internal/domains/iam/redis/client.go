@@ -12,7 +12,7 @@ import (
 // SessionData represents an authenticated session stored in Redis.
 type SessionData struct {
 	UserID     uuid.UUID `json:"user_id"`
-	OrgID      uuid.UUID `json:"org_id"`
+	OrgID      uuid.UUID `json:"tenant_id"`
 	Role       string    `json:"role"`
 	Device     string    `json:"device"`
 	IP         string    `json:"ip"`

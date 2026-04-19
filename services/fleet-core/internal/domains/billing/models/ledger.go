@@ -36,7 +36,7 @@ const (
 // CustomerBalance represents a prepaid wallet or promotional credit balance for an Organization.
 type CustomerBalance struct {
 	ID          uuid.UUID `json:"id" db:"id"`
-	OrgID       uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID       uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	Currency    string    `json:"currency" db:"currency"`
 	Balance     float64   `json:"balance" db:"balance"`
 	CreditLimit float64   `json:"credit_limit" db:"credit_limit"`
@@ -62,7 +62,7 @@ type CreditTransaction struct {
 // LedgerEntry represents a single, immutable journal entry for Double-Entry Accounting tracking.
 type LedgerEntry struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
-	OrgID         uuid.UUID  `json:"org_id" db:"org_id"`
+	OrgID         uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	EntryType     string     `json:"entry_type" db:"entry_type"`
 	Amount        float64    `json:"amount" db:"amount"`
 	Currency      string     `json:"currency" db:"currency"`
@@ -77,7 +77,7 @@ type LedgerEntry struct {
 // RevenueSchedule tracks the amortization of upfront billed items (like Annual CRM plans).
 type RevenueSchedule struct {
 	ID                uuid.UUID `json:"id" db:"id"`
-	OrgID             uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID             uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	InvoiceLineItemID uuid.UUID `json:"invoice_line_item_id" db:"invoice_line_item_id"`
 	TotalAmount       float64   `json:"total_amount" db:"total_amount"`
 	Currency          string    `json:"currency" db:"currency"`

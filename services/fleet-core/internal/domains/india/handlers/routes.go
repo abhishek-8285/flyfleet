@@ -78,7 +78,7 @@ func (h *IndiaIntegrationHandlers) RegisterRoutes(r chi.Router) {
 		r.Post("/", h.CreateIntegrationConfig)
 		r.Get("/", h.ListIntegrationConfigs)
 		r.Get("/{id}", h.GetIntegrationConfig)
-		r.Get("/org/{org_id}/service/{service_type}", h.GetIntegrationConfigByServiceType)
+		r.Get("/org/{tenant_id}/service/{service_type}", h.GetIntegrationConfigByServiceType)
 		r.Put("/{id}", h.UpdateIntegrationConfig)
 		r.Delete("/{id}", h.DeleteIntegrationConfig)
 	})

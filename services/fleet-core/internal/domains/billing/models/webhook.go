@@ -9,7 +9,7 @@ import (
 // WebhookSubscription represents a webhook subscription
 type WebhookSubscription struct {
 	ID                   uuid.UUID              `json:"id" db:"id"`
-	OrgID                uuid.UUID              `json:"org_id" db:"org_id"`
+	OrgID                uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Name                 string                 `json:"name" db:"name"`
 	URL                  string                 `json:"url" db:"url"`
 	Secret               string                 `json:"-" db:"secret"` // Never expose in JSON
@@ -67,7 +67,7 @@ type WebhookEventType struct {
 // WebhookStats represents webhook delivery statistics
 type WebhookStats struct {
 	ID                   uuid.UUID  `json:"id"`
-	OrgID                uuid.UUID  `json:"org_id"`
+	OrgID                uuid.UUID  `json:"tenant_id"`
 	Name                 string     `json:"name"`
 	URL                  string     `json:"url"`
 	IsActive             bool       `json:"is_active"`

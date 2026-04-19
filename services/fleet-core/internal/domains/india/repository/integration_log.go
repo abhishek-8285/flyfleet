@@ -12,7 +12,7 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationLog(ctx context.Context, log *models.IntegrationLog) error {
 	query := `
 		INSERT INTO india_integration_logs (
-			id, service_type, request_payload, response_payload, status, error_message, org_id, created_at
+			id, service_type, request_payload, response_payload, status, error_message, tenant_id, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	reqJSON, _ := json.Marshal(log.RequestPayload)

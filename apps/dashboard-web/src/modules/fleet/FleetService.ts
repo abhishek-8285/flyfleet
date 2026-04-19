@@ -68,13 +68,17 @@ class FleetService {
 
     // Fallback: fetch vehicles from REST API
     try {
-      const response = await apiClient.get("/admin/vehicles", {
+      const isSearch = query || filters?.status || filters?.org || filters?.gps_enabled;
+      const endpoint = isSearch ? "/admin/vehicles/search" : "/admin/vehicles";
+
+      const response = await apiClient.get(endpoint, {
         params: {
           page: 1,
           size: 100,
-          ...(query ? { search: query } : {}),
+          ...(query ? { q: query } : {}),
           ...(filters?.status ? { status: filters.status } : {}),
-          ...(filters?.org ? { org_id: filters.org } : {}),
+          ...(filters?.org ? { tenant_id: filters.org } : {}),
+          ...(filters?.gps_enabled ? { gps_enabled: filters.gps_enabled } : {}),
         },
       }) as any;
 
@@ -89,16 +93,24 @@ class FleetService {
         || raw?.data
         || [];
 
-      return vehicles.map((v: any) => ({
-        id: v.id,
-        name: v.name || v.registration || v.plate_number || `Asset ${v.id?.substring(0, 8)}`,
-        status: (v.status || "ACTIVE").toUpperCase(),
-        lastUpdate: v.updated_at || v.last_update || v.last_seen || new Date().toISOString(),
-        metadata: {
-          capacity: v.capacity || v.metadata?.capacity,
-        },
-        ...v,
-      }));
+      return vehicles.map((v: any) => {
+        const registration = v.registration_number || v.registration || v.license_plate || v.plate_number;
+        
+        return {
+          id: v.id,
+          registrationNumber: registration || `Asset ${v.id?.substring(0, 8)}`,
+          name: v.name || registration || `Asset ${v.id?.substring(0, 8)}`,
+          status: (v.status || "ACTIVE").toUpperCase(),
+          derived_status: (v.status || "ACTIVE").toLowerCase(),
+          lastUpdate: v.updated_at || v.last_update || v.last_seen || new Date().toISOString(),
+          latitude: v.latitude,
+          longitude: v.longitude,
+          metadata: {
+            capacity: v.capacity_tonnage || v.capacity || v.metadata?.capacity || 0,
+          },
+          ...v,
+        };
+      });
     } catch (error) {
       console.error("[FleetService] REST API fallback failed:", error);
       return [];
@@ -122,7 +134,13 @@ class FleetService {
     // If worker is available, use it
     if (this.worker) {
       return new Promise((resolve) => {
-        const handler = (e: any) => {
+        const timeout = setTimeout(() => {
+          window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
+          resolve({ orgs: [], statuses: [] });
+        }, 2000);
+
+        function handler(e: any) {
+          clearTimeout(timeout);
           window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
           resolve(e.detail);
         };

@@ -24,37 +24,37 @@ func NewFinanceMetrics() *FinanceMetrics {
 		FuelCostTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_fuel_cost_total",
 			Help: "Total fuel cost ingested (INR)",
-		}, []string{"org_id", "vehicle_type"}),
+		}, []string{"tenant_id", "vehicle_type"}),
 
 		ExpenseTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_expense_total",
 			Help: "Total expense amount submitted (INR)",
-		}, []string{"org_id", "category"}),
+		}, []string{"tenant_id", "category"}),
 
 		TripProfitMargin: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "flyfleet_trip_profit_margin",
 			Help: "Current trip profit margin percentage",
-		}, []string{"org_id"}),
+		}, []string{"tenant_id"}),
 
 		AnomaliesDetected: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_anomalies_detected",
 			Help: "Total fuel/finance anomalies detected",
-		}, []string{"org_id", "anomaly_type"}),
+		}, []string{"tenant_id", "anomaly_type"}),
 
 		FraudIncidentsTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_fraud_incidents_total",
 			Help: "Total fraud incidents flagged",
-		}, []string{"org_id", "risk_level"}),
+		}, []string{"tenant_id", "risk_level"}),
 
 		TDSDeductedTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_tds_deducted_total",
 			Help: "Total TDS deducted from vendor payments (INR)",
-		}, []string{"org_id", "tds_section"}),
+		}, []string{"tenant_id", "tds_section"}),
 
 		VendorPaymentsTotal: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name: "flyfleet_vendor_payments_total",
 			Help: "Total vendor payments processed (INR)",
-		}, []string{"org_id", "payment_mode"}),
+		}, []string{"tenant_id", "payment_mode"}),
 
 		EInvoicesGenerated: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "flyfleet_einvoices_generated_total",
@@ -69,6 +69,6 @@ func NewFinanceMetrics() *FinanceMetrics {
 		BudgetUtilization: promauto.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "flyfleet_budget_utilization_pct",
 			Help: "Budget utilization percentage per org/category",
-		}, []string{"org_id", "category"}),
+		}, []string{"tenant_id", "category"}),
 	}
 }

@@ -35,7 +35,7 @@ type HardwareProduct struct {
 
 type DeviceAssignment struct {
 	ID          uuid.UUID   `json:"id" db:"id"`
-	OrgID       uuid.UUID   `json:"org_id" db:"org_id"`
+	OrgID       uuid.UUID   `json:"tenant_id" db:"tenant_id"`
 	DeviceID    string      `json:"device_id" db:"device_id"`
 	ProductID   uuid.UUID   `json:"product_id" db:"product_id"`
 	BillingType BillingType `json:"billing_type" db:"billing_type"`

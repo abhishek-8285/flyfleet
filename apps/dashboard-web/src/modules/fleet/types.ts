@@ -8,6 +8,7 @@ export type VehicleStatus =
 
 export interface Vehicle {
   id: string; // VIN or Internal UUID
+  registrationNumber: string;
   name: string;
   type: string; // 'TRUCK', 'VAN', 'HEAVY_HAUL'
   status: VehicleStatus;
@@ -22,6 +23,9 @@ export interface Vehicle {
     capacity: number; // in tons or cubic meters
     licensePlate: string;
   };
+  gps_enabled?: boolean;
+  gps_device_id?: string;
+  gps_device_type?: string;
   telemetry?: {
     latitude: number;
     longitude: number;

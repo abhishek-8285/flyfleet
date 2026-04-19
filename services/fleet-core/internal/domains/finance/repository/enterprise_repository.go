@@ -18,7 +18,7 @@ func (r *FinanceRepository) CreateGSTInvoice(ctx context.Context, inv *models.GS
 	query := `
 		INSERT INTO gst_invoices (
 			id, invoice_number, irn, ack_number, ack_date, qr_code, signed_invoice,
-			status, entity_type, entity_id, org_id, gstin, buyer_gstin,
+			status, entity_type, entity_id, tenant_id, gstin, buyer_gstin,
 			total_amount, taxable_amount, cgst_amount, sgst_amount, igst_amount,
 			error_message, created_at, updated_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`
@@ -35,7 +35,7 @@ func (r *FinanceRepository) CreateGSTInvoice(ctx context.Context, inv *models.GS
 
 func (r *FinanceRepository) GetGSTInvoice(ctx context.Context, id uuid.UUID) (*models.GSTInvoice, error) {
 	query := `SELECT id, invoice_number, irn, ack_number, ack_date, qr_code, signed_invoice,
-	                 status, entity_type, entity_id, org_id, gstin, buyer_gstin,
+	                 status, entity_type, entity_id, tenant_id, gstin, buyer_gstin,
 	                 total_amount, taxable_amount, cgst_amount, sgst_amount, igst_amount,
 	                 error_message, created_at, updated_at
 	          FROM gst_invoices WHERE id = $1`
@@ -63,7 +63,7 @@ func (r *FinanceRepository) GetGSTInvoice(ctx context.Context, id uuid.UUID) (*m
 func (r *FinanceRepository) CreateTDSRecord(ctx context.Context, rec *models.TDSRecord) error {
 	query := `
 		INSERT INTO tds_records (
-			id, entity_type, entity_id, vendor_id, org_id, pan_number, tds_section,
+			id, entity_type, entity_id, vendor_id, tenant_id, pan_number, tds_section,
 			gross_amount, tds_rate, tds_amount, net_amount, deducted_at,
 			deposited, financial_year, quarter, created_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`
@@ -77,10 +77,10 @@ func (r *FinanceRepository) CreateTDSRecord(ctx context.Context, rec *models.TDS
 }
 
 func (r *FinanceRepository) GetTDSRecords(ctx context.Context, orgID uuid.UUID, fy, quarter string) ([]models.TDSRecord, error) {
-	query := `SELECT id, entity_type, entity_id, vendor_id, org_id, pan_number, tds_section,
+	query := `SELECT id, entity_type, entity_id, vendor_id, tenant_id, pan_number, tds_section,
 	                 gross_amount, tds_rate, tds_amount, net_amount, deducted_at,
 	                 deposited, financial_year, quarter, created_at
-	          FROM tds_records WHERE org_id = $1`
+	          FROM tds_records WHERE tenant_id = $1`
 	args := []interface{}{orgID}
 
 	if fy != "" {
@@ -120,7 +120,7 @@ func (r *FinanceRepository) GetTDSRecords(ctx context.Context, orgID uuid.UUID, 
 func (r *FinanceRepository) CreateVendorPayment(ctx context.Context, p *models.VendorPayment) error {
 	query := `
 		INSERT INTO vendor_payments (
-			id, vendor_id, org_id, invoice_number, amount, tds_deducted, net_payable,
+			id, vendor_id, tenant_id, invoice_number, amount, tds_deducted, net_payable,
 			currency, payment_status, payment_mode, payment_reference, bank_account,
 			ifsc_code, payment_date, paid_at, gst_invoice_id, tds_record_id,
 			notes, created_by, created_at, updated_at
@@ -137,11 +137,11 @@ func (r *FinanceRepository) CreateVendorPayment(ctx context.Context, p *models.V
 }
 
 func (r *FinanceRepository) ListVendorPayments(ctx context.Context, orgID uuid.UUID, vendorID *uuid.UUID) ([]models.VendorPayment, error) {
-	query := `SELECT id, vendor_id, org_id, invoice_number, amount, tds_deducted, net_payable,
+	query := `SELECT id, vendor_id, tenant_id, invoice_number, amount, tds_deducted, net_payable,
 	                 currency, payment_status, payment_mode, payment_reference, bank_account,
 	                 ifsc_code, payment_date, paid_at, gst_invoice_id, tds_record_id,
 	                 notes, created_by, created_at, updated_at
-	          FROM vendor_payments WHERE org_id = $1`
+	          FROM vendor_payments WHERE tenant_id = $1`
 	args := []interface{}{orgID}
 
 	if vendorID != nil {
@@ -181,12 +181,12 @@ func (r *FinanceRepository) ListVendorPayments(ctx context.Context, orgID uuid.U
 func (r *FinanceRepository) CreateExpenseItem(ctx context.Context, item *models.ExpenseItem) error {
 	query := `
 		INSERT INTO expense_items (
-			id, org_id, report_id, invoice_number, category, amount, gst_amount, gst_rate,
+			id, tenant_id, report_id, invoice_number, category, amount, gst_amount, gst_rate,
 			receipt_url, description, vendor_name, vendor_gstin,
 			transaction_date, ocr_processed, ocr_confidence, created_at
 		) VALUES (
 			$1,
-			COALESCE((SELECT org_id::uuid FROM expense_reports WHERE id = $2), '00000000-0000-0000-0000-000000000000'::uuid),
+			COALESCE((SELECT tenant_id::uuid FROM expense_reports WHERE id = $2), '00000000-0000-0000-0000-000000000000'::uuid),
 			$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
 		)`
 
@@ -240,7 +240,7 @@ func (r *FinanceRepository) MarkExpenseItemOCRProcessed(ctx context.Context, id 
 func (r *FinanceRepository) CreateFuelCardReconciliation(ctx context.Context, rec *models.FuelCardReconciliation) error {
 	query := `
 		INSERT INTO fuel_card_reconciliation (
-			id, card_transaction_id, internal_transaction_id, org_id,
+			id, card_transaction_id, internal_transaction_id, tenant_id,
 			status, variance, card_amount, internal_amount,
 			reconciled_by, reconciled_at, notes, created_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`
@@ -268,7 +268,7 @@ func (r *FinanceRepository) UpdateReconciliationStatus(ctx context.Context, reco
 func (r *FinanceRepository) CreateFraudIncident(ctx context.Context, inc *models.FraudIncident) error {
 	query := `
 		INSERT INTO fraud_incidents (
-			id, entity_type, entity_id, org_id, vehicle_id, driver_id,
+			id, entity_type, entity_id, tenant_id, vehicle_id, driver_id,
 			fraud_score, risk_level, signals, status, created_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
 
@@ -316,7 +316,7 @@ func (r *FinanceRepository) GetRecentFuelLogsForFraud(ctx context.Context, since
 func (r *FinanceRepository) UpsertTripProfitability(ctx context.Context, tp *models.TripProfitability) error {
 	query := `
 		INSERT INTO trip_profitability (
-			id, trip_id, org_id, vehicle_id, driver_id, trip_revenue,
+			id, trip_id, tenant_id, vehicle_id, driver_id, trip_revenue,
 			fuel_cost, toll_cost, driver_cost, maintenance_cost, other_cost,
 			profit_margin, distance_km, cost_per_km, calculated_at, created_at, updated_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
@@ -337,7 +337,7 @@ func (r *FinanceRepository) UpsertTripProfitability(ctx context.Context, tp *mod
 }
 
 func (r *FinanceRepository) GetTripProfitability(ctx context.Context, tripID uuid.UUID) (*models.TripProfitability, error) {
-	query := `SELECT id, trip_id, org_id, vehicle_id, driver_id, trip_revenue,
+	query := `SELECT id, trip_id, tenant_id, vehicle_id, driver_id, trip_revenue,
 	                 fuel_cost, toll_cost, driver_cost, maintenance_cost, other_cost,
 	                 total_cost, profit, profit_margin, distance_km, cost_per_km, calculated_at
 	          FROM trip_profitability WHERE trip_id = $1`
@@ -452,9 +452,9 @@ func (r *FinanceRepository) RefreshFinanceDashboard(ctx context.Context) error {
 }
 
 func (r *FinanceRepository) GetFinanceDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.FinanceDashboardMetrics, error) {
-	query := `SELECT org_id, metric_month, total_revenue, total_fuel_cost,
+	query := `SELECT tenant_id, metric_month, total_revenue, total_fuel_cost,
 	                 total_expenses, profit_margin, avg_cost_per_km
-	          FROM finance_dashboard_metrics WHERE org_id = $1`
+	          FROM finance_dashboard_metrics WHERE tenant_id = $1`
 
 	var m models.FinanceDashboardMetrics
 	err := r.db.QueryRow(ctx, query, orgID).Scan(

@@ -92,7 +92,7 @@ func TestAssignShipment_UsesRealTripCreation(t *testing.T) {
 		"trip_id":     trip.ID,
 		"vehicle_id":  vehicleID.String(),
 		"driver_id":   driverID.String(),
-		"org_id":      orgID.String(),
+		"tenant_id":      orgID.String(),
 	}, orgID.String())
 
 	require.Len(t, eventBus.published, 1, "NATS event must be published (not commented out)")

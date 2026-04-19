@@ -20,6 +20,7 @@ type VehicleRepositoryInterface interface {
 	// Enterprise extensions
 	GetByRegistrationNumber(ctx context.Context, tenantID uuid.UUID, registrationNumber string) (*models.Vehicle, error)
 	Search(ctx context.Context, params models.VehicleSearchParams) ([]*models.Vehicle, int64, error)
+	IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error)
 }
 
 // ComplianceRepositoryInterface is the compliance sub-domain data access contract.

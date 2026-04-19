@@ -11,7 +11,7 @@ type SuggestionEngine interface {
 }
 
 type SuggestionRequest struct {
-	OrgID        uuid.UUID `json:"org_id"`
+	OrgID        uuid.UUID `json:"tenant_id"`
 	ShipmentID   uuid.UUID `json:"shipment_id"`
 	PickupLat    float64   `json:"pickup_lat"`
 	PickupLng    float64   `json:"pickup_lng"`

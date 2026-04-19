@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import apiClient from "../../../services/apiClient";
 import { 
   FUEL_TYPES, VEHICLE_TYPES, OWNERSHIP_TYPES, 
-  STATUS_OPTIONS, WEIGHT_UNITS, getFuelUnits 
+  STATUS_OPTIONS, WEIGHT_UNITS, getFuelUnits,
+  GPS_DEVICE_TYPES 
 } from "./constants";
 import { toKm, toTonnes, toLitres } from "./utils";
 import { TextInput, SelectInput, ToggleInput } from "../../../components/common/FormFields";
+import { DropdownOption } from "../../../types/common";
 
 interface FormState {
   make: string;
@@ -19,6 +21,8 @@ interface FormState {
   capacity_tonnage: string;
   fuel_tank_capacity: string;
   gps_device_id: string;
+  gps_enabled: boolean;
+  gps_device_type: string;
   color: string;
   chassis_number: string;
   engine_number: string;
@@ -41,7 +45,7 @@ export const EditVehicle: React.FC = () => {
   const [form, setForm] = useState<FormState>({
     make: "", model: "", year: "", vin_number: "", fuel_type: "DIESEL",
     vehicle_type: "", ownership_type: "OWNED", capacity_tonnage: "",
-    fuel_tank_capacity: "", gps_device_id: "", color: "", chassis_number: "",
+    fuel_tank_capacity: "", gps_device_id: "", gps_enabled: false, gps_device_type: "AIS140_HARDWIRED", color: "", chassis_number: "",
     engine_number: "", parent_vehicle_id: "", branch_id: "", cost_center_id: "",
     immobilizer_enabled: false, ais140_compliant: false, status: "ACTIVE", notes: "",
     odometer: "0", odometer_unit: "km", speed_limit: "0", current_driver_id: "",
@@ -54,6 +58,7 @@ export const EditVehicle: React.FC = () => {
   const [vehicle, setVehicle] = useState<any>(null);
   const [charCount, setCharCount] = useState(0);
 
+  const [gpsDeviceTypes, setGpsDeviceTypes] = useState<DropdownOption[]>([]);
   const [dropdowns, setDropdowns] = useState({
     vehicles: [] as { value: string; label: string }[],
     drivers: [] as { value: string; label: string }[],
@@ -68,11 +73,12 @@ export const EditVehicle: React.FC = () => {
 
   const fetchDropdowns = async () => {
     try {
-      const [vResp, dResp, bResp, cResp] = await Promise.all([
+      const [vResp, dResp, bResp, cResp, tResp] = await Promise.all([
         apiClient.get("/admin/vehicles"),
         apiClient.get("/admin/drivers"),
         apiClient.get("/admin/branches"),
-        apiClient.get("/admin/cost-centers")
+        apiClient.get("/admin/cost-centers"),
+        apiClient.get("/ui/settings/gps-types")
       ]);
       setDropdowns(prev => ({
         ...prev,
@@ -87,8 +93,14 @@ export const EditVehicle: React.FC = () => {
         branches: bResp.data?.data || bResp.data || [],
         costCenters: cResp.data?.data || cResp.data || []
       }));
+      setGpsDeviceTypes(tResp.data || []);
     } catch (err) {
       console.error("Failed to fetch dropdown data:", err);
+      // Fallback for mission-critical UX
+      setGpsDeviceTypes([
+         { value: "AIS140_HARDWIRED", label: "AIS-140 Hardwired (Static)" },
+         { value: "AIS140_OBD", label: "AIS-140 OBD (Static)" }
+      ]);
     }
   };
 
@@ -103,7 +115,10 @@ export const EditVehicle: React.FC = () => {
         vehicle_type: v.vehicle_type || "", ownership_type: v.ownership_type || "OWNED",
         capacity_tonnage: v.capacity_tonnage ? v.capacity_tonnage.toString() : "",
         fuel_tank_capacity: v.fuel_tank_capacity ? v.fuel_tank_capacity.toString() : "",
-        gps_device_id: v.gps_device_id || "", color: v.color || "",
+        gps_device_id: v.gps_device_id || "",
+        gps_enabled: v.gps_enabled || false,
+        gps_device_type: v.gps_device_type || "AIS140_HARDWIRED",
+        color: v.color || "",
         chassis_number: v.chassis_number || "", engine_number: v.engine_number || "",
         parent_vehicle_id: v.parent_vehicle_id || "", branch_id: v.branch_id || "",
         cost_center_id: v.cost_center_id || "",
@@ -163,6 +178,13 @@ export const EditVehicle: React.FC = () => {
     if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
     if (form.odometer) payload.odometer = Math.round(toKm(parseFloat(form.odometer), form.odometer_unit) * 1000);
     if (form.speed_limit) payload.speed_limit = parseFloat(form.speed_limit);
+    
+    payload.gps_enabled = form.gps_enabled;
+    if (payload.gps_enabled) {
+      payload.gps_device_id = form.gps_device_id.trim();
+      payload.gps_device_type = form.gps_device_type;
+    }
+
     payload.immobilizer_enabled = form.immobilizer_enabled;
     payload.ais140_compliant = form.ais140_compliant;
 
@@ -302,10 +324,68 @@ export const EditVehicle: React.FC = () => {
                 onChange={handleChange} options={dropdowns.drivers} icon="person"
                 placeholder="Assign a driver"
               />
-              <TextInput
-                label="GPS Device ID" name="gps_device_id" value={form.gps_device_id}
-                onChange={handleChange} placeholder="IMEI or Serial Number" icon="gps_fixed"
-              />
+            </div>
+          </div>
+
+          {/* Section: Hardware & Tracking (Consolidated) */}
+          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <span className="material-symbols-outlined text-6xl text-white">satellite_alt</span>
+            </div>
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
+              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+                <span className="material-symbols-outlined text-[18px]">router</span>
+              </div>
+              <h3 className="text-white font-semibold text-sm">Hardware & Telemetry</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-surface-darker/50 rounded-xl p-6 border border-border-color/50 space-y-6">
+                <ToggleInput
+                  label="Enable GPS Tracking"
+                  description="Broadcast real-time location to dispatch center"
+                  checked={form.gps_enabled}
+                  onChange={(checked) => setForm((prev) => ({ ...prev, gps_enabled: checked }))}
+                />
+
+                {form.gps_enabled && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <TextInput
+                      name="gps_device_id"
+                      value={form.gps_device_id}
+                      onChange={handleChange}
+                      label="GPS Device Serial / IMEI"
+                      placeholder="e.g. 35789210..."
+                      icon="gps_fixed"
+                      maxLength={100}
+                      hint="Must be registered in Asset Inventory"
+                    />
+                    <SelectInput
+                      name="gps_device_type"
+                      value={form.gps_device_type}
+                      onChange={handleChange}
+                      label="Device Protocol"
+                      options={gpsDeviceTypes}
+                      icon="settings_input_component"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <ToggleInput
+                    label="Immobilizer" description="Remote engine lock capability"
+                    checked={form.immobilizer_enabled}
+                    onChange={(checked) => setForm(p => ({ ...p, immobilizer_enabled: checked }))}
+                    icon="lock"
+                  />
+                  <ToggleInput
+                    label="AIS-140 Compliant" description="Govt tracking standards"
+                    checked={form.ais140_compliant}
+                    onChange={(checked) => setForm(p => ({ ...p, ais140_compliant: checked }))}
+                    icon="gavel"
+                  />
+              </div>
             </div>
           </div>
 
@@ -409,8 +489,8 @@ export const EditVehicle: React.FC = () => {
               </div>
 
               <TextInput
-                label="GPS Device ID" name="gps_device_id" value={form.gps_device_id}
-                onChange={handleChange} placeholder="e.g. GPS-12345" icon="router"
+                label="Exterior Color" name="color" value={form.color}
+                onChange={handleChange} placeholder="e.g. Arctic White" icon="palette"
               />
             </div>
           </div>
@@ -418,29 +498,7 @@ export const EditVehicle: React.FC = () => {
           {/* Section 4: Notes & Metadata */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
-              {/* Telemetry & Compliance */}
-              <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
-                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                    <span className="material-symbols-outlined text-[18px]">verified</span>
-                  </div>
-                  <h3 className="text-white font-semibold text-sm">Telemetry & Compliance</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <ToggleInput
-                    label="Immobilizer" description="Remote engine lock capability"
-                    checked={form.immobilizer_enabled}
-                    onChange={(checked) => setForm(p => ({ ...p, immobilizer_enabled: checked }))}
-                    icon="lock"
-                  />
-                  <ToggleInput
-                    label="AIS-140 Compliant" description="Govt tracking standards"
-                    checked={form.ais140_compliant}
-                    onChange={(checked) => setForm(p => ({ ...p, ais140_compliant: checked }))}
-                    icon="gavel"
-                  />
-                </div>
-              </div>
+              {/* COMPLIANCE SECTION REMOVED - MERGED INTO HARDWARE */}
 
               {/* Notes */}
               <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">

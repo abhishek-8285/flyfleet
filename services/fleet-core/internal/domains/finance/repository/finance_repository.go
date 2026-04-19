@@ -77,7 +77,7 @@ func (r *FinanceRepository) GetFuelTransactionsByVehicle(ctx context.Context, ve
 func (r *FinanceRepository) CreateExpensePolicy(ctx context.Context, policy *models.ExpensePolicy) error {
 	query := `
 		INSERT INTO expense_policies (
-			id, org_id, category, limit_amount, currency,
+			id, tenant_id, category, limit_amount, currency,
 			requires_approval, receipt_required, description,
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -95,9 +95,9 @@ func (r *FinanceRepository) CreateExpensePolicy(ctx context.Context, policy *mod
 }
 
 func (r *FinanceRepository) GetExpensePolicies(ctx context.Context, orgID string) ([]models.ExpensePolicy, error) {
-	query := `SELECT id, org_id, category, limit_amount, currency,
+	query := `SELECT id, tenant_id, category, limit_amount, currency,
 			requires_approval, receipt_required, description,
-			created_at, updated_at FROM expense_policies WHERE org_id = $1`
+			created_at, updated_at FROM expense_policies WHERE tenant_id = $1`
 
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
@@ -125,7 +125,7 @@ func (r *FinanceRepository) GetExpensePolicies(ctx context.Context, orgID string
 func (r *FinanceRepository) CreateExpenseReport(ctx context.Context, report *models.ExpenseReport) error {
 	query := `
 		INSERT INTO expense_reports (
-			id, org_id, submitter_id, period_start, period_end,
+			id, tenant_id, submitter_id, period_start, period_end,
 			total_amount, currency, status, metadata,
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -171,7 +171,7 @@ func (r *FinanceRepository) UpdateExpenseReportStatus(ctx context.Context, repor
 }
 
 func (r *FinanceRepository) ListExpenseReports(ctx context.Context, orgID, status string, limit, offset int) ([]models.ExpenseReport, int, error) {
-	countQuery := `SELECT COUNT(*) FROM expense_reports WHERE org_id = $1`
+	countQuery := `SELECT COUNT(*) FROM expense_reports WHERE tenant_id = $1`
 	countArgs := []any{orgID}
 	if status != "" {
 		countQuery += ` AND status = $2`
@@ -183,10 +183,10 @@ func (r *FinanceRepository) ListExpenseReports(ctx context.Context, orgID, statu
 	}
 
 	query := `
-		SELECT id, org_id, submitter_id, period_start, period_end, total_amount, currency,
+		SELECT id, tenant_id, submitter_id, period_start, period_end, total_amount, currency,
 		       status, approved_by, approval_date, rejection_reason, metadata, created_at, updated_at
 		FROM expense_reports
-		WHERE org_id = $1`
+		WHERE tenant_id = $1`
 	args := []any{orgID}
 	if status != "" {
 		query += ` AND status = $2`
@@ -223,9 +223,9 @@ func (r *FinanceRepository) ListExpenseReports(ctx context.Context, orgID, statu
 func (r *FinanceRepository) UpsertExpensePolicy(ctx context.Context, policy *models.ExpensePolicy) error {
 	query := `
 		INSERT INTO expense_policies (
-			id, org_id, category, limit_amount, currency, requires_approval, receipt_required, description, created_at, updated_at
+			id, tenant_id, category, limit_amount, currency, requires_approval, receipt_required, description, created_at, updated_at
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-		ON CONFLICT (org_id, category) DO UPDATE SET
+		ON CONFLICT (tenant_id, category) DO UPDATE SET
 			limit_amount = EXCLUDED.limit_amount,
 			currency = EXCLUDED.currency,
 			requires_approval = EXCLUDED.requires_approval,
@@ -321,7 +321,7 @@ func itoa(v int) string { return fmt.Sprintf("%d", v) }
 func (r *FinanceRepository) GetUnreconciledFuelCardTransactions(ctx context.Context, orgID string) ([]models.FuelCardTransaction, error) {
 	query := `SELECT id, card_number, vendor, amount, currency, transaction_time, location, status
 	          FROM fuel_card_transactions 
-	          WHERE org_id = $1 AND id NOT IN (SELECT card_transaction_id FROM fuel_card_reconciliation WHERE card_transaction_id IS NOT NULL)`
+	          WHERE tenant_id = $1 AND id NOT IN (SELECT card_transaction_id FROM fuel_card_reconciliation WHERE card_transaction_id IS NOT NULL)`
 
 	rows, err := r.db.Query(ctx, query, orgID)
 	if err != nil {
@@ -365,7 +365,7 @@ func (r *FinanceRepository) GetFuelLogForMatching(ctx context.Context, orgID str
 // --- Approval System stubs ---
 
 func (r *FinanceRepository) GetMatchingApprovalConfig(ctx context.Context, orgID, entityType string, amount float64) (*models.ApprovalConfig, error) {
-	query := `SELECT id, org_id, entity_type, min_amount, levels, created_at FROM approval_configs WHERE org_id = $1 AND entity_type = $2 AND min_amount <= $3 ORDER BY min_amount DESC LIMIT 1`
+	query := `SELECT id, tenant_id, entity_type, min_amount, levels, created_at FROM approval_configs WHERE tenant_id = $1 AND entity_type = $2 AND min_amount <= $3 ORDER BY min_amount DESC LIMIT 1`
 	var config models.ApprovalConfig
 	err := r.db.QueryRow(ctx, query, orgID, entityType, amount).Scan(&config.ID, &config.OrgID, &config.EntityType, &config.MinAmount, &config.Levels, &config.CreatedAt)
 	if err != nil {
@@ -391,7 +391,7 @@ func (r *FinanceRepository) GetApprovalInstanceEffectively(ctx context.Context, 
 }
 
 func (r *FinanceRepository) GetApprovalConfigByID(ctx context.Context, id string) (*models.ApprovalConfig, error) {
-	query := `SELECT id, org_id, entity_type, min_amount, levels, created_at FROM approval_configs WHERE id = $1`
+	query := `SELECT id, tenant_id, entity_type, min_amount, levels, created_at FROM approval_configs WHERE id = $1`
 	var config models.ApprovalConfig
 	err := r.db.QueryRow(ctx, query, id).Scan(&config.ID, &config.OrgID, &config.EntityType, &config.MinAmount, &config.Levels, &config.CreatedAt)
 	if err != nil {
@@ -415,7 +415,7 @@ func (r *FinanceRepository) UpdateApprovalInstance(ctx context.Context, inst *mo
 // --- Budgeting stubs ---
 
 func (r *FinanceRepository) GetBudget(ctx context.Context, orgID, category string, now time.Time) (*models.Budget, error) {
-	query := `SELECT id, org_id, category, year, month, limit_amount, spent_amount, currency, alert_threshold_pct, period_start, period_end, updated_at FROM budgets WHERE org_id = $1 AND category = $2 AND period_start <= $3 AND period_end >= $3`
+	query := `SELECT id, tenant_id, category, year, month, limit_amount, spent_amount, currency, alert_threshold_pct, period_start, period_end, updated_at FROM budgets WHERE tenant_id = $1 AND category = $2 AND period_start <= $3 AND period_end >= $3`
 	var b models.Budget
 	err := r.db.QueryRow(ctx, query, orgID, category, now).Scan(&b.ID, &b.OrgID, &b.Category, &b.Year, &b.Month, &b.LimitAmount, &b.SpentAmount, &b.Currency, &b.AlertThresholdPct, &b.PeriodStart, &b.PeriodEnd, &b.UpdatedAt)
 	if err != nil {

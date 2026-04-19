@@ -87,7 +87,7 @@ func NewEmergencyRepository(db *pgxpool.Pool) EmergencyRepository {
 
 func (r *emergencyRepository) CreateIncident(ctx context.Context, incident *models.SOSIncident) error {
 	query := `
-		INSERT INTO sos_incidents (id, vehicle_id, driver_id, trip_id, device_id, org_id, timestamp, latitude, longitude, location_address, status, severity, incident_type, panic_source, speed, heading, metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes, created_at, updated_at)
+		INSERT INTO sos_incidents (id, vehicle_id, driver_id, trip_id, device_id, tenant_id, timestamp, latitude, longitude, location_address, status, severity, incident_type, panic_source, speed, heading, metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 	`
 	start := time.Now()
@@ -107,7 +107,7 @@ func (r *emergencyRepository) CreateIncident(ctx context.Context, incident *mode
 
 func (r *emergencyRepository) GetIncidentByID(ctx context.Context, id uuid.UUID) (*models.SOSIncident, error) {
 	query := `
-		SELECT id, vehicle_id, driver_id, trip_id, device_id, org_id, timestamp, latitude, longitude,
+		SELECT id, vehicle_id, driver_id, trip_id, device_id, tenant_id, timestamp, latitude, longitude,
 			   location_address, status, severity, incident_type, panic_source, speed, heading,
 			   metadata, high_risk_location, simulation_mode, driver_feedback, feedback_notes,
 			   acknowledged_at, resolved_at, acknowledged_by, resolved_by, created_at, updated_at
@@ -137,14 +137,14 @@ func (r *emergencyRepository) GetIncidentByID(ctx context.Context, id uuid.UUID)
 
 func (r *emergencyRepository) GetActiveIncidentsByOrg(ctx context.Context, orgID uuid.UUID) ([]models.SOSIncident, error) {
 	query := `
-		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.org_id, i.timestamp, i.latitude, i.longitude,
+		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.tenant_id, i.timestamp, i.latitude, i.longitude,
 			   i.location_address, i.status, i.severity, i.incident_type, i.panic_source, i.speed, i.heading,
 			   i.metadata, i.acknowledged_by, i.resolved_by, i.created_at, i.updated_at,
 			   v.registration_number as vehicle_reg_number, d.full_name as driver_name
 		FROM sos_incidents i
 		LEFT JOIN vehicles v ON i.vehicle_id = v.id
 		LEFT JOIN drivers d ON i.driver_id = d.id
-		WHERE i.org_id = $1 AND i.status IN ('TRIGGERED', 'ACKNOWLEDGED')
+		WHERE i.tenant_id = $1 AND i.status IN ('TRIGGERED', 'ACKNOWLEDGED')
 		ORDER BY i.timestamp DESC
 	`
 	start := time.Now()
@@ -176,7 +176,7 @@ func (r *emergencyRepository) GetActiveIncidentsByOrg(ctx context.Context, orgID
 
 func (r *emergencyRepository) ListActiveIncidents(ctx context.Context) ([]models.SOSIncident, error) {
 	query := `
-		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.org_id, i.timestamp, i.latitude, i.longitude,
+		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.tenant_id, i.timestamp, i.latitude, i.longitude,
 			   i.location_address, i.status, i.severity, i.incident_type, i.panic_source, i.speed, i.heading,
 			   i.metadata, i.acknowledged_at, i.resolved_at, i.acknowledged_by, i.resolved_by, i.created_at, i.updated_at,
 			   v.registration_number as vehicle_reg_number, d.full_name as driver_name
@@ -254,7 +254,7 @@ func (r *emergencyRepository) LogIncidentAction(ctx context.Context, log *models
 }
 
 func (r *emergencyRepository) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
-	query := `SELECT id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE org_id = $1 AND is_active = TRUE ORDER BY priority ASC`
+	query := `SELECT id, tenant_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE tenant_id = $1 AND is_active = TRUE ORDER BY priority ASC`
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
@@ -283,7 +283,7 @@ func (r *emergencyRepository) GetEmergencyContacts(ctx context.Context, orgID uu
 
 func (r *emergencyRepository) GetRecentSOSByVehicle(ctx context.Context, vehicleID uuid.UUID, minutes int, incidentType models.IncidentType) (*models.SOSIncident, error) {
 	query := `
-		SELECT id, vehicle_id, driver_id, trip_id, device_id, org_id, timestamp, latitude, longitude,
+		SELECT id, vehicle_id, driver_id, trip_id, device_id, tenant_id, timestamp, latitude, longitude,
 			   location_address, status, severity, incident_type, panic_source, speed, heading,
 			   metadata, acknowledged_by, resolved_by, created_at, updated_at
 		FROM sos_incidents
@@ -340,7 +340,7 @@ func (r *emergencyRepository) GetIncidentMetrics(ctx context.Context, orgID uuid
 			AVG(EXTRACT(EPOCH FROM (acknowledged_at - timestamp)) / 60) FILTER (WHERE status IN ('ACKNOWLEDGED', 'RESOLVED')) as avg_response,
 			AVG(EXTRACT(EPOCH FROM (resolved_at - timestamp)) / 60) FILTER (WHERE status = 'RESOLVED') as avg_resolution
 		FROM sos_incidents i
-		WHERE i.org_id = $1
+		WHERE i.tenant_id = $1
 		  AND i.timestamp >= $2
 		  AND i.timestamp <= $3
 	`
@@ -449,7 +449,7 @@ func (r *emergencyRepository) UpdateEscalationStatus(ctx context.Context, id uui
 
 func (r *emergencyRepository) CreateContact(ctx context.Context, contact *models.EmergencyContact) error {
 	query := `
-		INSERT INTO emergency_contacts (id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at)
+		INSERT INTO emergency_contacts (id, tenant_id, name, role, phone, email, priority, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, contact.ID, contact.OrgID, contact.Name, contact.Role, contact.Phone, contact.Email, contact.Priority, contact.IsActive, contact.CreatedAt, contact.UpdatedAt)
@@ -458,7 +458,7 @@ func (r *emergencyRepository) CreateContact(ctx context.Context, contact *models
 }
 
 func (r *emergencyRepository) ListContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
-	query := `SELECT id, org_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE org_id = $1 ORDER BY priority ASC`
+	query := `SELECT id, tenant_id, name, role, phone, email, priority, is_active, created_at, updated_at FROM emergency_contacts WHERE tenant_id = $1 ORDER BY priority ASC`
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
@@ -480,7 +480,7 @@ func (r *emergencyRepository) ListContacts(ctx context.Context, orgID uuid.UUID)
 
 func (r *emergencyRepository) CreateResponseUnit(ctx context.Context, unit *models.EmergencyResponseUnit) error {
 	query := `
-		INSERT INTO emergency_response_units (id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active)
+		INSERT INTO emergency_response_units (id, tenant_id, unit_type, name, phone, coverage_city, coverage_state, is_active)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, unit.ID, unit.OrgID, unit.UnitType, unit.Name, unit.Phone, unit.CoverageCity, unit.CoverageState, unit.IsActive)
@@ -489,7 +489,7 @@ func (r *emergencyRepository) CreateResponseUnit(ctx context.Context, unit *mode
 }
 
 func (r *emergencyRepository) ListResponseUnits(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
-	query := `SELECT id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active FROM emergency_response_units WHERE org_id = $1 AND is_active = TRUE`
+	query := `SELECT id, tenant_id, unit_type, name, phone, coverage_city, coverage_state, is_active FROM emergency_response_units WHERE tenant_id = $1 AND is_active = TRUE`
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
 	sharedmetrics.RecordDBQuery(query, time.Since(start))
@@ -514,7 +514,7 @@ func (r *emergencyRepository) ListResponseUnits(ctx context.Context, orgID uuid.
 
 func (r *emergencyRepository) UpdateVehicleHaltState(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, halted bool) error {
 	query := `
-		INSERT INTO emergency_vehicle_state (vehicle_id, org_id, halted, updated_at)
+		INSERT INTO emergency_vehicle_state (vehicle_id, tenant_id, halted, updated_at)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (vehicle_id) DO UPDATE SET halted = $3, updated_at = $4
 	`
@@ -630,7 +630,7 @@ func (r *emergencyRepository) GetIncidentsByDay(ctx context.Context, orgID uuid.
 	query := `
 		SELECT TO_CHAR(timestamp, 'YYYY-MM-DD') as date, COUNT(*) as count
 		FROM sos_incidents
-		WHERE org_id = $1 AND timestamp >= NOW() - ($2 || ' days')::INTERVAL
+		WHERE tenant_id = $1 AND timestamp >= NOW() - ($2 || ' days')::INTERVAL
 		GROUP BY date
 		ORDER BY date ASC`
 	start := time.Now()
@@ -656,7 +656,7 @@ func (r *emergencyRepository) GetIncidentTypeDistribution(ctx context.Context, o
 	query := `
 		SELECT incident_type as type, COUNT(*) as count
 		FROM sos_incidents
-		WHERE org_id = $1
+		WHERE tenant_id = $1
 		GROUP BY type`
 	start := time.Now()
 	rows, err := r.db.Query(ctx, query, orgID)
@@ -747,7 +747,7 @@ func (r *emergencyRepository) GetCriticalIncidentsForSnapshot(ctx context.Contex
 
 func (r *emergencyRepository) CreateIncidentSnapshot(ctx context.Context, snapshot *models.IncidentSnapshot) error {
 	query := `
-		INSERT INTO emergency_incident_snapshots (incident_id, vehicle_id, org_id, incident_type, severity, status, latitude, longitude, snapshot_data)
+		INSERT INTO emergency_incident_snapshots (incident_id, vehicle_id, tenant_id, incident_type, severity, status, latitude, longitude, snapshot_data)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	start := time.Now()
@@ -764,10 +764,10 @@ func (r *emergencyRepository) ExportIncidents(ctx context.Context, orgID uuid.UU
 		SELECT
 			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
 			status, severity, incident_type, panic_source, speed, heading, metadata,
-			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			acknowledged_by, resolved_by, tenant_id, high_risk_location, simulation_mode,
 			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
 		FROM sos_incidents
-		WHERE org_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		ORDER BY timestamp DESC
 	`
 	queryStart := time.Now()
@@ -801,13 +801,13 @@ func (r *emergencyRepository) ArchiveOldIncidents(ctx context.Context, olderThan
 		INSERT INTO emergency_incidents_archive (
 			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
 			status, severity, incident_type, panic_source, speed, heading, metadata,
-			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			acknowledged_by, resolved_by, tenant_id, high_risk_location, simulation_mode,
 			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
 		)
 		SELECT
 			id, vehicle_id, driver_id, trip_id, timestamp, latitude, longitude, location_address,
 			status, severity, incident_type, panic_source, speed, heading, metadata,
-			acknowledged_by, resolved_by, org_id, high_risk_location, simulation_mode,
+			acknowledged_by, resolved_by, tenant_id, high_risk_location, simulation_mode,
 			driver_feedback, feedback_notes, acknowledged_at, resolved_at, created_at, updated_at, device_id
 		FROM sos_incidents
 		WHERE (status = 'RESOLVED' OR status = 'FALSE_ALARM') AND updated_at < $1
@@ -890,7 +890,7 @@ func (r *emergencyRepository) GetTopLocations(ctx context.Context, orgID uuid.UU
 	query := `
 		SELECT location_address
 		FROM sos_incidents
-		WHERE org_id = $1 AND location_address IS NOT NULL AND location_address != ''
+		WHERE tenant_id = $1 AND location_address IS NOT NULL AND location_address != ''
 		GROUP BY location_address
 		ORDER BY COUNT(*) DESC
 		LIMIT $2
@@ -914,7 +914,7 @@ func (r *emergencyRepository) GetTopLocations(ctx context.Context, orgID uuid.UU
 }
 
 func (r *emergencyRepository) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
-	query := `SELECT COUNT(*) FROM sos_incidents WHERE org_id = $1 AND created_at >= $2`
+	query := `SELECT COUNT(*) FROM sos_incidents WHERE tenant_id = $1 AND created_at >= $2`
 	start := time.Now()
 	var count int
 	err := r.db.QueryRow(ctx, query, orgID, since).Scan(&count)
@@ -1033,7 +1033,7 @@ func (r *emergencyRepository) IncrementDeviceEventRetry(ctx context.Context, id 
 // GetStalledIncidents returns TRIGGERED incidents not updated within stalledFor duration
 func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
 	query := `
-		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.org_id, i.timestamp, i.latitude, i.longitude,
+		SELECT i.id, i.vehicle_id, i.driver_id, i.trip_id, i.device_id, i.tenant_id, i.timestamp, i.latitude, i.longitude,
 			   i.location_address, i.status, i.severity, i.incident_type, i.panic_source, i.speed, i.heading,
 			   i.metadata, i.acknowledged_by, i.resolved_by, i.created_at, i.updated_at
 		FROM sos_incidents i
@@ -1069,7 +1069,7 @@ func (r *emergencyRepository) GetStalledIncidents(ctx context.Context, stalledFo
 func (r *emergencyRepository) GetAuthoritiesByLocation(ctx context.Context, lat, lng float64) ([]models.EmergencyResponseUnit, error) {
 	// Simplified: return all active units. In production, this would use geospatial queries.
 	query := `
-		SELECT id, org_id, unit_type, name, phone, coverage_city, coverage_state, is_active, type, contact_number, api_endpoint, created_at
+		SELECT id, tenant_id, unit_type, name, phone, coverage_city, coverage_state, is_active, type, contact_number, api_endpoint, created_at
 		FROM emergency_response_units
 		WHERE is_active = true
 		ORDER BY RANDOM()`

@@ -72,7 +72,7 @@ func TestDispatchHandler_Assign_HappyPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/assign", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -90,7 +90,7 @@ func TestDispatchHandler_Assign_InvalidBody(t *testing.T) {
 		bytes.NewReader([]byte("invalid json")))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -108,7 +108,7 @@ func TestDispatchHandler_Assign_MissingOrg(t *testing.T) {
 	bodyBytes, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/assign", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-	// No org_id in context
+	// No tenant_id in context
 
 	rr := httptest.NewRecorder()
 	handler.Assign(rr, req)
@@ -137,7 +137,7 @@ func TestDispatchHandler_Suggest_ReturnsTopN(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/suggest", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -154,7 +154,7 @@ func TestDispatchHandler_Suggest_InvalidShipmentID(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/suggest", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -167,7 +167,7 @@ func TestDispatchHandler_Dashboard_DoesNotPanic(t *testing.T) {
 	handler := &DispatchHandler{logger: testLogger()}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dispatch/dashboard", nil)
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()
@@ -193,7 +193,7 @@ func TestDispatchHandler_Redispatch_HappyPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/dispatch/redispatch", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := context.WithValue(req.Context(), "org_id", uuid.New().String())
+	ctx := context.WithValue(req.Context(), "tenant_id", uuid.New().String())
 	req = req.WithContext(ctx)
 
 	rr := httptest.NewRecorder()

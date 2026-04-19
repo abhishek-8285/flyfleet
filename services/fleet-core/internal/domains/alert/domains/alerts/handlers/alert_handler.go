@@ -104,7 +104,7 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 	rule, err := h.service.CreateRule(r.Context(), orgID, &req)
 	if err != nil {
 		// SECURITY FIX: Log detailed error but return generic message to client
-		h.logger.Error("failed to create alert rule", zap.Error(err), zap.String("org_id", orgID.String()))
+		h.logger.Error("failed to create alert rule", zap.Error(err), zap.String("tenant_id", orgID.String()))
 		h.errorJSON(w, "Failed to create alert rule", http.StatusInternalServerError)
 		return
 	}
@@ -241,7 +241,7 @@ func (h *AlertHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
 func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	orgIDStr := query.Get("org_id")
+	orgIDStr := query.Get("tenant_id")
 	if orgIDStr == "" {
 		orgID := h.getOrgID(r)
 		if orgID != uuid.Nil {

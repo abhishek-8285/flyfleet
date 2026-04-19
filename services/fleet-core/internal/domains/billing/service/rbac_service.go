@@ -159,7 +159,7 @@ func (s *RBACService) InitializeDefaultRoles(ctx context.Context, orgID uuid.UUI
 	}
 
 	s.logger.Info("Default role permissions initialized",
-		zap.String("org_id", orgID.String()),
+		zap.String("tenant_id", orgID.String()),
 	)
 
 	return nil
@@ -180,7 +180,7 @@ func (s *RBACService) UpdateRolePermissions(ctx context.Context, orgID uuid.UUID
 	}
 
 	s.logger.Info("Role permissions updated",
-		zap.String("org_id", orgID.String()),
+		zap.String("tenant_id", orgID.String()),
 		zap.String("role", roleName),
 	)
 
@@ -196,7 +196,7 @@ func (s *RBACService) SetUserAccessOverride(ctx context.Context, access *models.
 
 	s.logger.Info("User access override set",
 		zap.String("user_id", access.UserID.String()),
-		zap.String("org_id", access.OrgID.String()),
+		zap.String("tenant_id", access.OrgID.String()),
 		zap.Bool("override_role", access.OverrideRole),
 	)
 

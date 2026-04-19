@@ -14,7 +14,7 @@ import (
 )
 
 func withOrgID(ctx context.Context, orgID uuid.UUID) context.Context {
-	return context.WithValue(ctx, "org_id", orgID)
+	return context.WithValue(ctx, "tenant_id", orgID)
 }
 
 // ------------------------------------------------------------------
@@ -50,6 +50,10 @@ func (m *mockVehicleRepo) GetByRegistrationNumber(ctx context.Context, t uuid.UU
 }
 func (m *mockVehicleRepo) Search(ctx context.Context, p models.VehicleSearchParams) ([]*models.Vehicle, int64, error) {
 	return nil, 0, nil
+}
+func (m *mockVehicleRepo) IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
+	args := m.Called(ctx, orgID, deviceID, excludingVehicleID)
+	return args.Bool(0), args.String(1), args.Error(2)
 }
 
 type mockComplianceRepo struct{ mock.Mock }

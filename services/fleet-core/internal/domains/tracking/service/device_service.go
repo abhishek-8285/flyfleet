@@ -563,7 +563,7 @@ func (s *DeviceService) generateDeviceTokens(deviceID string) (string, string, i
 }
 
 func (s *DeviceService) getOrgID(ctx context.Context) uuid.UUID {
-	val := ctx.Value("org_id")
+	val := ctx.Value("tenant_id")
 	if val == nil {
 		return uuid.Nil
 	}

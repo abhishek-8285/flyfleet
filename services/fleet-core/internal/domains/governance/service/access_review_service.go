@@ -33,7 +33,7 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUI
 		SELECT u.id, u.role, ARRAY_AGG(p.slug) as permissions
 		FROM users u
 		LEFT JOIN user_permissions p ON u.id = p.user_id
-		WHERE u.org_id = $1
+		WHERE u.tenant_id = $1
 		GROUP BY u.id, u.role
 	`
 	rows, err := s.db.Query(ctx, usersQuery, orgID)
@@ -59,7 +59,7 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUI
 
 	report := map[string]interface{}{
 		"generated_at":    time.Now(),
-		"org_id": orgID,
+		"tenant_id": orgID,
 		"users":           users,
 	}
 

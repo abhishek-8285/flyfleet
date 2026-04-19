@@ -427,7 +427,7 @@ func (h IndiaComplianceHandler) GetDashboard(w http.ResponseWriter, r *http.Requ
 
 	metrics, err := h.dashService.GetDashboardMetrics(r.Context(), orgID)
 	if err != nil {
-		h.logger.Error("GetDashboard failed", zap.Error(err), zap.String("org_id", orgID.String()))
+		h.logger.Error("GetDashboard failed", zap.Error(err), zap.String("tenant_id", orgID.String()))
 		http.Error(w, "Failed to load dashboard metrics", http.StatusInternalServerError)
 		return
 	}

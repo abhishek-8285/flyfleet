@@ -18,7 +18,7 @@ type MFAEvent struct {
 
 type MFAPolicy struct {
 	ID                 uuid.UUID `json:"id"`
-	OrgID              uuid.UUID `json:"org_id"`
+	OrgID              uuid.UUID `json:"tenant_id"`
 	RequireMFA         bool      `json:"require_mfa"`
 	AllowedMethods     []string  `json:"allowed_methods"`
 	RememberDeviceDays int       `json:"remember_device_days"`

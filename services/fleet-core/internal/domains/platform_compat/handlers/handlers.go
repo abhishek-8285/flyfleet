@@ -72,7 +72,7 @@ func (h *Handlers) writeErrorResponse(w http.ResponseWriter, status int, err err
 func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.Header.Get("X-Org-ID")
 	if orgIDStr == "" {
-		orgIDStr = r.URL.Query().Get("org_id")
+		orgIDStr = r.URL.Query().Get("tenant_id")
 	}
 
 	authHeader := r.Header.Get("Authorization")
@@ -90,7 +90,7 @@ func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
 
 	orgID, err := uuid.Parse(orgIDStr)
 	if err != nil {
-		h.logger.Warn("Websocket connect attempt with invalid OrgID", zap.String("org_id", orgIDStr))
+		h.logger.Warn("Websocket connect attempt with invalid OrgID", zap.String("tenant_id", orgIDStr))
 		http.Error(w, "Invalid OrgID", http.StatusForbidden)
 		return
 	}
@@ -101,7 +101,7 @@ func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
 		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
 		if err == nil {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
-				if orgClaim, ok := claims["org_id"].(string); ok {
+				if orgClaim, ok := claims["tenant_id"].(string); ok {
 					jwtOrgID = orgClaim
 				}
 			}

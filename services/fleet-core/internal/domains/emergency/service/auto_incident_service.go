@@ -64,7 +64,7 @@ func (s *AutoIncidentService) Start(ctx context.Context) error {
 func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"org_id"` // Present but should NOT be trusted
+		OrgID     string  `json:"tenant_id"` // Present but should NOT be trusted
 		GForce    float64 `json:"g_force"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
@@ -79,7 +79,7 @@ func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 	if event.GForce > 4.0 {
 		s.log.Warn("High impact detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID), zap.Float64("g_force", event.GForce))
 
-		// SECURITY FIX: Validate org_id by querying the vehicle's actual organization
+		// SECURITY FIX: Validate tenant_id by querying the vehicle's actual organization
 		vehicleID, err := uuid.Parse(event.VehicleID)
 		if err != nil {
 			s.log.Error("Invalid vehicle_id in impact event", zap.String("raw_vehicle_id", event.VehicleID))
@@ -98,11 +98,11 @@ func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 
 		parsedOrgID, err := uuid.Parse(event.OrgID)
 		if err != nil {
-			s.log.Error("Invalid org_id in impact event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+			s.log.Error("Invalid tenant_id in impact event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
 			return
 		}
 
-		// CRITICAL SECURITY CHECK: Ensure the org_id from message matches vehicle's actual org
+		// CRITICAL SECURITY CHECK: Ensure the tenant_id from message matches vehicle's actual org
 		if vehicle.TenantID != parsedOrgID {
 			s.log.Error("Cross-tenant message injection attempt detected!",
 				zap.String("vehicle_id", event.VehicleID),
@@ -119,7 +119,7 @@ func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"org_id"`
+		OrgID     string  `json:"tenant_id"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
 	}
@@ -131,7 +131,7 @@ func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 
 	s.log.Warn("Vehicle rollover detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID))
 
-	// SECURITY FIX: Validate org_id by querying vehicle
+	// SECURITY FIX: Validate tenant_id by querying vehicle
 	vehicleID, err := uuid.Parse(event.VehicleID)
 	if err != nil {
 		s.log.Error("Invalid vehicle_id in rollover event", zap.String("raw_vehicle_id", event.VehicleID))
@@ -150,7 +150,7 @@ func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 
 	parsedOrgID, err := uuid.Parse(event.OrgID)
 	if err != nil {
-		s.log.Error("Invalid org_id in rollover event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		s.log.Error("Invalid tenant_id in rollover event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
 		return
 	}
 
@@ -169,7 +169,7 @@ func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"org_id"`
+		OrgID     string  `json:"tenant_id"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
 	}
@@ -181,7 +181,7 @@ func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 
 	s.log.Error("Engine fire detected! Validating org ownership", zap.String("vehicle_id", event.VehicleID))
 
-	// SECURITY FIX: Validate org_id by querying vehicle
+	// SECURITY FIX: Validate tenant_id by querying vehicle
 	vehicleID, err := uuid.Parse(event.VehicleID)
 	if err != nil {
 		s.log.Error("Invalid vehicle_id in fire event", zap.String("raw_vehicle_id", event.VehicleID))
@@ -200,7 +200,7 @@ func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 
 	parsedOrgID, err := uuid.Parse(event.OrgID)
 	if err != nil {
-		s.log.Error("Invalid org_id in fire event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		s.log.Error("Invalid tenant_id in fire event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
 		return
 	}
 

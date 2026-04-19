@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
-	"github.com/gofrs/uuid/v5"
+	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 )
@@ -76,12 +76,16 @@ func (j *JWKSAuthHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), CtxUserID, claims.UserID)
-		ctx = context.WithValue(ctx, CtxOrgID, claims.OrgID)
-		
 		// Set context keys for all standard locations
+		effectiveOrgID := claims.OrgID
+		if effectiveOrgID == uuid.Nil {
+			effectiveOrgID = claims.LegacyOrgID
+		}
+
+		ctx = context.WithValue(ctx, CtxOrgID, effectiveOrgID)
 		ctx = context.WithValue(ctx, ctxkeys.UserIDKey, claims.UserID.String())
-		ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, claims.OrgID.String())
-		ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, claims.OrgID.String())
+		ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, effectiveOrgID.String())
+		ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, effectiveOrgID.String())
 		
 		// Handle Role (singular 'rol' or first from 'roles' slice)
 		role := claims.Role
@@ -103,7 +107,8 @@ func (j *JWKSAuthHandler) Handler(next http.Handler) http.Handler {
 
 type Claims struct {
 	UserID         uuid.UUID `json:"sub"`
-	OrgID          uuid.UUID `json:"org_id"`
+	OrgID          uuid.UUID `json:"tenant_id"`
+	LegacyOrgID    uuid.UUID `json:"org_id"`
 	Role           string    `json:"rol"`
 	Roles          []string  `json:"roles"`
 	PermissionMask uint64    `json:"pmsk"`

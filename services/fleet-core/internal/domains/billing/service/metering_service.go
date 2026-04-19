@@ -25,7 +25,7 @@ func NewMeteringService(repo *repository.MeteringRepository, logger *zap.Logger)
 // RecordUsage logs a usage event from an external source
 func (s *MeteringService) RecordUsage(ctx context.Context, event *models.ConsumptionEvent) error {
 	if event.OrgID == uuid.Nil {
-		return fmt.Errorf("org_id is required")
+		return fmt.Errorf("tenant_id is required")
 	}
 	if event.MeterCode == "" {
 		return fmt.Errorf("meter_code is required")
@@ -36,7 +36,7 @@ func (s *MeteringService) RecordUsage(ctx context.Context, event *models.Consump
 
 	err := s.repo.RecordConsumption(ctx, event)
 	if err != nil {
-		s.logger.Error("failed to record usage", zap.Error(err), zap.String("org_id", event.OrgID.String()), zap.String("meter", event.MeterCode))
+		s.logger.Error("failed to record usage", zap.Error(err), zap.String("tenant_id", event.OrgID.String()), zap.String("meter", event.MeterCode))
 		return err
 	}
 

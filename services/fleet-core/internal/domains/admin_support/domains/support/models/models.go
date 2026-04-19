@@ -8,7 +8,7 @@ import (
 type SupportTicket struct {
 	ID          uuid.UUID              `json:"id" db:"id"`
 	TicketID    string                 `json:"ticket_id" db:"ticket_id"`
-	OrgID       uuid.UUID              `json:"org_id" db:"org_id"`
+	OrgID       uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Title       string                 `json:"title" db:"title"`
 	Description string                 `json:"description" db:"description"`
 	Status      string                 `json:"status" db:"status"`
@@ -79,7 +79,7 @@ type IncidentComment struct {
 }
 
 type OrgSupportMetrics struct {
-	OrgID             uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID             uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	OpenTickets       int       `json:"open_tickets" db:"open_tickets"`
 	ResolvedTickets   int       `json:"resolved_tickets" db:"resolved_tickets"`
 	AvgResolutionTime float64   `json:"avg_resolution_time" db:"avg_resolution_time"`

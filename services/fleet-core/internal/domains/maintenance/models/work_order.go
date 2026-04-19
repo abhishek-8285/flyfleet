@@ -52,7 +52,7 @@ const (
 // WorkOrder represents a maintenance work order
 type WorkOrder struct {
 	ID              uuid.UUID           `json:"id" db:"id"`
-	OrgID           uuid.UUID           `json:"org_id" db:"org_id"`
+	OrgID           uuid.UUID           `json:"tenant_id" db:"tenant_id"`
 	VehicleID       uuid.UUID           `json:"vehicle_id" db:"vehicle_id"`
 	Title           string              `json:"title" db:"title"`
 	Description     *string             `json:"description,omitempty" db:"description"`
@@ -121,7 +121,7 @@ type WorkOrderPart struct {
 // InventoryPart represents a part in inventory
 type InventoryPart struct {
 	ID                 uuid.UUID `json:"id" db:"id"`
-	OrgID              uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID              uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	PartNumber         string    `json:"part_number" db:"part_number"`
 	Name               string    `json:"name" db:"name"`
 	Description        *string   `json:"description,omitempty" db:"description"`
@@ -138,7 +138,7 @@ type InventoryPart struct {
 // MaintenanceVendor represents a service provider or part supplier
 type MaintenanceVendor struct {
 	ID             uuid.UUID      `json:"id" db:"id"`
-	OrgID          uuid.UUID      `json:"org_id" db:"org_id"`
+	OrgID          uuid.UUID      `json:"tenant_id" db:"tenant_id"`
 	Name           string         `json:"name" db:"name"`
 	Specialization string         `json:"specialization,omitempty" db:"specialization"`
 	Rating         float64        `json:"rating" db:"rating"`
@@ -152,7 +152,7 @@ type MaintenanceVendor struct {
 // InspectionTemplate defines the structure of a digital checklist
 type InspectionTemplate struct {
 	ID                     uuid.UUID       `json:"id" db:"id"`
-	OrgID                  uuid.UUID       `json:"org_id" db:"org_id"`
+	OrgID                  uuid.UUID       `json:"tenant_id" db:"tenant_id"`
 	Name                   string          `json:"name" db:"name"`
 	Description            string          `json:"description,omitempty" db:"description"`
 	ApplicableVehicleTypes []string        `json:"applicable_vehicle_types" db:"applicable_vehicle_types"`
@@ -172,7 +172,7 @@ type ChecklistItem struct {
 // VehicleInspection represents a completed inspection report
 type VehicleInspection struct {
 	ID                   uuid.UUID          `json:"id" db:"id"`
-	OrgID                uuid.UUID          `json:"org_id" db:"org_id"`
+	OrgID                uuid.UUID          `json:"tenant_id" db:"tenant_id"`
 	VehicleID            uuid.UUID          `json:"vehicle_id" db:"vehicle_id"`
 	TemplateID           *uuid.UUID         `json:"template_id,omitempty" db:"template_id"`
 	InspectorID          uuid.UUID          `json:"inspector_id" db:"inspector_id"`
@@ -194,7 +194,7 @@ type InspectionResult struct {
 
 // MaintenanceSettings represents org maintenance configuration
 type MaintenanceSettings struct {
-	OrgID               uuid.UUID `json:"org_id" db:"org_id"`
+	OrgID               uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	SLAP1Hours          int       `json:"sla_p1_hours" db:"sla_p1_hours"`
 	SLAP2Hours          int       `json:"sla_p2_hours" db:"sla_p2_hours"`
 	SLAP3Hours          int       `json:"sla_p3_hours" db:"sla_p3_hours"`

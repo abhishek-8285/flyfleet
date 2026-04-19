@@ -3,15 +3,21 @@ import {
     ChevronLeft,
     IndianRupee,
     Package,
+    MapPin,
     Plus,
     Save,
     Trash2,
     User,
+    Phone,
+    Mail,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import billingService from "../../../services/billingService";
+import { invoicingV2Service } from "../../../services/invoicingV2Service";
+import CustomerSearch from "../../../components/common/CustomerSearch";
+import { Customer } from "../../../services/customerV2Service";
 import { Invoice, InvoiceItem, InvoiceStatus } from "../../../types/billing";
 
 const InvoiceForm: React.FC = () => {
@@ -23,11 +29,15 @@ const InvoiceForm: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<Invoice>>({
     customer_name: "",
+    customer_email: "",
+    customer_phone: "",
+    billing_address: "",
     invoice_date: new Date().toISOString().split("T")[0],
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
     currency: "INR",
+    category: "Transportation",
     items: [
       {
         id: "",
@@ -142,6 +152,16 @@ const InvoiceForm: React.FC = () => {
     return calculateSubtotal() + calculateTax();
   };
 
+  const handleCustomerSelect = (customer: Customer) => {
+    setFormData((prev) => ({
+      ...prev,
+      customer_name: customer.name,
+      customer_email: customer.email || "",
+      customer_phone: customer.phone || "",
+      billing_address: customer.address || "",
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -151,30 +171,26 @@ const InvoiceForm: React.FC = () => {
       const total = calculateTotal();
 
       const payload = {
-        customer_name: formData.customer_name,
+        customer_name: formData.customer_name!,
+        customer_email: formData.customer_email || "",
+        customer_phone: formData.customer_phone!,
+        billing_address: formData.billing_address || "",
         invoice_date: formData.invoice_date,
         due_date: formData.due_date,
         currency: formData.currency || "INR",
-        status: "PENDING" as InvoiceStatus,
-        subtotal,
-        tax_amount: tax,
-        total_amount: total,
-        amount_paid: 0,
-        balance_due: total,
-        notes: formData.notes || "",
         items: (formData.items || []).map((item) => ({
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           tax_percent: item.tax_percent,
-          total: item.quantity * item.unit_price,
         })),
+        notes: formData.notes || "",
       };
 
       if (isEdit) {
-        await billingService.updateInvoice(id!, payload as Partial<Invoice>);
+        await billingService.updateInvoice(id!, payload as any);
       } else {
-        await billingService.createInvoice(payload as Partial<Invoice>);
+        await invoicingV2Service.createInvoice(payload as any);
       }
       navigate("/admin/billing");
     } catch (error: any) {
@@ -205,21 +221,57 @@ const InvoiceForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Customer & Dates Section */}
         <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-              <User className="w-4 h-4" />{" "}
-              {uiStrings?.label_customer_name || "Customer Name"}
-            </label>
-            <input
-              required
-              type="text"
-              value={formData.customer_name}
-              onChange={(e) =>
-                setFormData({ ...formData, customer_name: e.target.value })
-              }
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
-              placeholder={uiStrings?.ph_customer_name || "e.g. Acme Corp"}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <User className="w-4 h-4" />{" "}
+                {uiStrings?.label_customer_name || "Customer Name"}
+              </label>
+              <CustomerSearch 
+                defaultValue={formData.customer_name}
+                onSelect={handleCustomerSelect}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                  <Phone className="w-4 h-4" /> Mobile Number
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={formData.customer_phone}
+                  onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                  placeholder="e.g. +91 98765 43210"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                  <Mail className="w-4 h-4" /> Email (Optional)
+                </label>
+                <input
+                  type="email"
+                  value={formData.customer_email}
+                  onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+                  placeholder="customer@example.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                <MapPin className="w-4 h-4" /> Billing Address
+              </label>
+              <textarea
+                value={formData.billing_address}
+                onChange={(e) => setFormData({ ...formData, billing_address: e.target.value })}
+                placeholder="Full address for invoice"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors h-20 resize-none"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -252,6 +304,22 @@ const InvoiceForm: React.FC = () => {
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
               />
             </div>
+          </div>
+          <div className="md:col-span-2 space-y-2 pt-4 border-t border-white/5">
+            <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+              <Package className="w-4 h-4" />{" "}
+              {uiStrings?.label_category || "Category"}
+            </label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors cursor-pointer"
+            >
+              <option value="Transportation" className="bg-gray-900">Transportation</option>
+              <option value="Maintenance" className="bg-gray-900">Maintenance</option>
+              <option value="Subscription" className="bg-gray-900">Software Subscription</option>
+              <option value="Miscellaneous" className="bg-gray-900 font-bold">Miscellaneous</option>
+            </select>
           </div>
         </div>
 

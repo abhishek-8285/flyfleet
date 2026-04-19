@@ -89,7 +89,7 @@ func (s *WorkOrderService) CreateWorkOrder(ctx context.Context, orgID, userID uu
 
 	// Emit event
 	eventData, _ := json.Marshal(map[string]interface{}{
-		"org_id":        wo.OrgID.String(),
+		"tenant_id":        wo.OrgID.String(),
 		"vehicle_id":    wo.VehicleID.String(),
 		"work_order_id": wo.ID.String(),
 		"timestamp":     time.Now().Unix(),
