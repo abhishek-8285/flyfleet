@@ -1,2 +1,3 @@
 package scratch
-// This file was emptied to resolve main redeclared errors.
+
+// This tool has been moved to its own subdirectory in scratch/ to avoid package conflicts.
